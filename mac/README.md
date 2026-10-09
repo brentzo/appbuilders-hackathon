@@ -243,6 +243,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 - `-YumiPermissions mixed|granted` pretends permissions are in that state, without asking macOS.
 - `-YumiStatus startingUp|ready|listening|working|paused` sets the menu's status line.
 - `-YumiOverlayDemo <dir>` shows sample cursors and a helper chip, writes each display's overlay over white and over black as PNG files, then quits.
+- `-YumiCursorDemo YES` plays a 12-second cursor demo on screen: the main cat goes through its states, three ghosts split out of it and leap around, then all fade (Debug builds).
 - `-YumiSnapshotDir <dir>` makes the opened window the key, active window, writes it as PNG files at 1x and 2x, then quits.
   If the window never becomes key, it writes nothing and says so on standard error.
   It needs no Screen Recording permission.
@@ -264,7 +265,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 | `Yumi/Voice/` | Voice intake: the push-to-talk hot key, the microphone, the recognizers and their rule, the silence endpoint, and the typed-goal box |
 | `Yumi/Confirmation/` | Goal confirmation: the repeat-back panel, the `speak` interface, and listening for the answer |
 | `Yumi/Tiling/` | Window tiling: the consent panel, the grid, and saving and restoring window frames |
-| `Yumi/Overlay/` | The click-through cursor overlay: panels per display, the placeholder cursor drawing, motion, helper chips, and the cursor debug actions |
+| `Yumi/Overlay/` | The click-through cursor overlay: panels per display, the cat cursor and its poses (`CursorCat.xcassets`, made by `scripts/render-cursor-cat.py`), motion, helper chips, and the cursor debug actions |
 | `Yumi/Harness/` | Harness launcher and supervisor, the Unix socket, the JSON-RPC client, and event handling |
 | `Yumi/Errors/` | Error copy (the only place user-facing error text lives), the error presenter, and the error window |
 | `YumiTests/` | Unit tests (Swift Testing) |
@@ -278,7 +279,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
   The protocol cannot report it yet; this is open with the protocol and harness owners.
 - Error buttons whose feature comes in a later objective are shown disabled: for example "Try again" outside "Didn't catch speech", and "Stop" or "Keep going" when the error names no task.
 - The wake word model is openWakeWord's "hey jarvis" until "Hey Yumi" from [OBJ-12](../objectives/OBJ-12-hey-yumi-wake-word.md), with openWakeWord's default threshold, 0.5.
-- Cursors are a placeholder drawing (a black and white pointer, ghosts outlined in their color) until the Rive cat ([OBJ-19](../objectives/OBJ-19-rive-cat-cursor.md)).
+- Cursors are the cat as static poses, one per state, with small Core Animation motion: ginger for the main cursor, mint, sky, and slate for ghosts. The Rive cat ([OBJ-19](../objectives/OBJ-19-rive-cat-cursor.md)) replaces them.
 - A cursor moving to an element whose path does not resolve goes to the center of the target window, or the app's frontmost window.
 - Vision clicks (`clickAt`) are refused until the p1 vision fallback.
 - The tiling question is answered with its buttons only, and its answer stays in the app: the protocol has no method to tell the harness.
