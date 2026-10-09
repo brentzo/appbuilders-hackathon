@@ -136,13 +136,17 @@ Feature: Whisper on Android
 
 To be decided during development by testing real Taglish recordings on the Mac (p0) and the 12 GB demo phone (p1, for SPEC-10 Part B).
 
-| Option | Params | Size (full / quantized) | Notes |
-|---|---|---|---|
-| small | 244M | ~470 MB / ~180 MB | Fast everywhere. Likely too weak for Taglish, but a good baseline |
-| medium | 769M | ~1.5 GB / ~515 MB | Stronger on Tagalog than small, slower |
-| large-v3-turbo | 809M | ~1.6 GB / ~550 MB | Large-v3 encoder with a much smaller decoder. Close to medium speed with near large-v3 accuracy in many languages. Likely default to test first |
-| large-v3 | 1.55B | ~3.1 GB / ~1.1 GB | Most accurate. Probably too slow and heavy next to Qwen3.5-9B on the 16 GB Mac. Tight on the 12 GB phone next to Qwen3.5-4B, so test memory carefully |
-| Tagalog fine-tunes | varies | varies | Community Whisper models fine-tuned on Tagalog. May beat stock models on Taglish. Check license and quality |
+Sizes are confirmed file sizes from the model repositories (MB is 10^6 bytes), checked in [OBJ-11](../objectives/OBJ-11-whisper-bake-off.md) on 2026-10-09.
+whisper.cpp quantized sizes are the q5 files in `ggerganov/whisper.cpp`; WhisperKit sizes are the Core ML folders in `argmaxinc/whisperkit-coreml`.
+Results on our Taglish recordings are in [models/whisper/RESULTS.md](../models/whisper/RESULTS.md).
+
+| Option | Params | whisper.cpp size (full / quantized) | WhisperKit size (full / compressed) | Notes |
+|---|---|---|---|---|
+| small | 244M | 488 MB / 190 MB | 486 MB / 217 MB | Fast everywhere. Too weak for Taglish in OBJ-11: errors changed numbers and nouns |
+| medium | 769M | 1,534 MB / 539 MB | 1,530 MB / none | Stronger on Tagalog than small, slower. In OBJ-11 it still got verbs and a stop word wrong |
+| large-v3-turbo | 809M | 1,625 MB / 574 MB | 1,638 MB / 646 MB | Large-v3 encoder with a much smaller decoder (4 layers instead of 32). Close to medium speed with near large-v3 accuracy in many languages. Recommended for the Mac by OBJ-11 |
+| large-v3 | 1.55B | 3,095 MB / 1,081 MB | 3,090 MB / 948 MB | Most accurate. Probably too slow and heavy next to Qwen3.5-9B on the 16 GB Mac. Tight on the 12 GB phone next to Qwen3.5-4B, so test memory carefully. Not run in OBJ-11: large-v3-turbo was already good enough |
+| Tagalog fine-tunes | varies | varies | varies | Community Whisper models fine-tuned on Tagalog. May beat stock models on Taglish. Check license and quality. In OBJ-11, none was published in a format either Mac runtime loads |
 
 Not an option: `distil-whisper` models, which are English only.
 
@@ -158,6 +162,10 @@ How to decide:
 3. For each option and runtime, measure word error rate and time from end of speech to transcript.
 4. Measure memory while Qwen3.5 is also loaded, since both share the device.
 5. Pick the smallest option whose errors do not change what Yumi repeats back.
+
+Mac recommendation from OBJ-11, pending Jepoy's confirmation: **WhisperKit with large-v3-turbo, compressed (`large-v3-v20240930_turbo_632MB`), language forced to Tagalog, for English and Taglish alike.**
+It was the smallest option whose errors did not change what Yumi repeats back, took a median 632 ms per Taglish goal and 515 ms per English command, and adds about 0.8 GiB next to Qwen3.5-9B.
+Download source and checksums are in [models/manifest.json](../models/manifest.json).
 
 ## Wake word detector
 
@@ -195,6 +203,6 @@ Work this needs:
 
 ## Open questions
 
-- Which Whisper option and runtime should the Mac use? Decide with the p0 test in OBJ-11.
+- Which Whisper option and runtime should the Mac use? OBJ-11 recommends WhisperKit with `large-v3-v20240930_turbo_632MB` and Tagalog forced (see "How to decide"). Waiting for Jepoy's confirmation.
 - Which Whisper option should Android use with whisper.cpp? Decide with the p1 phone test in OBJ-28 after SPEC-10 Part B is ready.
 - Confirm openWakeWord's false-trigger rate for "Hey Yumi" is acceptable, using the test in "Wake word detector".
