@@ -8,9 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		A1000000000000000000F104 /* YumiProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000F004 /* YumiProtocol.swift */; };
-		A1000000000000000000F105 /* YumiProtocol.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1000000000000000000F005 /* YumiProtocol.framework */; };
-		A1000000000000000000F106 /* YumiProtocol.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A1000000000000000000F005 /* YumiProtocol.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		A1000000000000000000F107 /* YumiProtocol.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1000000000000000000F005 /* YumiProtocol.framework */; };
+		A1000000000000000000F105 /* libYumiProtocol.a in Frameworks */ = {isa = PBXBuildFile; fileRef = A1000000000000000000F005 /* libYumiProtocol.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -30,26 +28,12 @@
 		};
 /* End PBXContainerItemProxy section */
 
-/* Begin PBXCopyFilesBuildPhase section */
-		A1000000000000000000B004 /* Embed Frameworks */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 10;
-			files = (
-				A1000000000000000000F106 /* YumiProtocol.framework in Embed Frameworks */,
-			);
-			name = "Embed Frameworks";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
-
 /* Begin PBXFileReference section */
 		A1000000000000000000F001 /* Yumi.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Yumi.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1000000000000000000F002 /* YumiTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = YumiTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1000000000000000000F003 /* Yumi.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Yumi.entitlements; sourceTree = "<group>"; };
 		A1000000000000000000F004 /* YumiProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = YumiProtocol.swift; path = ../protocol/generated/swift/YumiProtocol.swift; sourceTree = SOURCE_ROOT; };
-		A1000000000000000000F005 /* YumiProtocol.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = YumiProtocol.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1000000000000000000F005 /* libYumiProtocol.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libYumiProtocol.a; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -70,7 +54,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A1000000000000000000F105 /* YumiProtocol.framework in Frameworks */,
+				A1000000000000000000F105 /* libYumiProtocol.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,7 +62,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A1000000000000000000F107 /* YumiProtocol.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -116,7 +99,7 @@
 			children = (
 				A1000000000000000000F001 /* Yumi.app */,
 				A1000000000000000000F002 /* YumiTests.xctest */,
-				A1000000000000000000F005 /* YumiProtocol.framework */,
+				A1000000000000000000F005 /* libYumiProtocol.a */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -131,7 +114,6 @@
 				A1000000000000000000B002 /* Sources */,
 				A1000000000000000000B001 /* Frameworks */,
 				A1000000000000000000B003 /* Resources */,
-				A1000000000000000000B004 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
@@ -180,8 +162,8 @@
 			);
 			name = YumiProtocol;
 			productName = YumiProtocol;
-			productReference = A1000000000000000000F005 /* YumiProtocol.framework */;
-			productType = "com.apple.product-type.framework";
+			productReference = A1000000000000000000F005 /* libYumiProtocol.a */;
+			productType = "com.apple.product-type.library.static";
 		};
 /* End PBXNativeTarget section */
 
@@ -350,6 +332,11 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 0.1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-force_load",
+					"$(BUILT_PRODUCTS_DIR)/libYumiProtocol.a",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = ph.appbuilders.yumi;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -378,6 +365,11 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 0.1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-force_load",
+					"$(BUILT_PRODUCTS_DIR)/libYumiProtocol.a",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = ph.appbuilders.yumi;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -422,18 +414,6 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				GENERATE_INFOPLIST_FILE = YES;
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-					"@loader_path/Frameworks",
-				);
-				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = ph.appbuilders.yumi.protocol;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
@@ -445,18 +425,6 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				GENERATE_INFOPLIST_FILE = YES;
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-					"@loader_path/Frameworks",
-				);
-				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = ph.appbuilders.yumi.protocol;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
