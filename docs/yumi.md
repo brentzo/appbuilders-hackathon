@@ -26,14 +26,14 @@ The harness owns planning state, device and lane routing, locks, handoffs, check
 ## Decisions so far
 
 - **Mac model:** Qwen3.5-9B (4-bit, ~6 GB) as the single brain for planning, tool calls, and GUI control. A `gui_act` sub-agent uses the same model with a fresh context, so the planner never sees screenshots.
-- **Android model:** Qwen3.5-4B on the 18 GB demo phone, with 9B as an option to test. The 8 GB phone runs 4B or falls back to 2B. Runs locally and decides "phone or laptop".
+- **Android model:** Qwen3.5-4B on the 12 GB demo phone. The 8 GB phone runs 4B or falls back to 2B. Runs locally and decides "phone or laptop".
 - **Why not UI-TARS:** the newest open weights are UI-TARS-1.5-7B (April 2025). UI-TARS-2 weights are not public. Qwen3.5-4B beats it on ScreenSpot-Pro (60.3 vs 49.6) and OSWorld (35.6 vs 27.5) at half the memory. Keep UI-TARS only as a fallback if it wins our own test.
 - **Voice:** Whisper for Taglish and long dictation. Native on-device STT for quick English commands, always forced on-device (Apple's new API has no Filipino).
 - **Harness:** Pi-style loop in TypeScript (fork the loop, replace the coding tools with desktop tools), plus a Swift helper for native macOS APIs (ScreenCaptureKit, Accessibility API, CGEvent, overlay cursors), talking over a local socket.
 - **Runtime:** MLX on the Mac. MNN or llama.cpp on Android, after benchmarking.
 - **Bridge:** our own VPS relays end-to-end encrypted messages between devices.
 - **Platforms:** Mac and Android first, iPhone second.
-- **Machines:** Brent's 16 GB Mac (~10 GB for models, about 3 parallel contexts). Teammate's 18 GB Android phone is the demo phone, Brent's 8 GB Android is for development.
+- **Machines:** Brent's 16 GB Mac (~10 GB for models, about 3 parallel contexts). Teammate's 12 GB Android phone is the demo phone, Brent's 8 GB Android is for development.
 - **Parallel cap:** about 3 visible cursors.
 
 ## Why not bigger models

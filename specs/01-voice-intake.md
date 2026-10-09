@@ -123,14 +123,14 @@ Feature: Voice intake on Android
 
 ## Whisper model options
 
-To be decided during development by testing real Taglish recordings on the Mac and the 18 GB demo phone.
+To be decided during development by testing real Taglish recordings on the Mac and the 12 GB demo phone.
 
 | Option | Params | Size (full / quantized) | Notes |
 |---|---|---|---|
 | small | 244M | ~470 MB / ~180 MB | Fast everywhere. Likely too weak for Taglish, but a good baseline |
 | medium | 769M | ~1.5 GB / ~515 MB | Stronger on Tagalog than small, slower |
 | large-v3-turbo | 809M | ~1.6 GB / ~550 MB | Large-v3 encoder with a much smaller decoder. Close to medium speed with near large-v3 accuracy in many languages. Likely default to test first |
-| large-v3 | 1.55B | ~3.1 GB / ~1.1 GB | Most accurate. Probably too slow and heavy next to Qwen3.5-9B on the 16 GB Mac. Fine on the 18 GB phone if speed allows |
+| large-v3 | 1.55B | ~3.1 GB / ~1.1 GB | Most accurate. Probably too slow and heavy next to Qwen3.5-9B on the 16 GB Mac. Tight on the 12 GB phone next to Qwen3.5-4B, so test memory carefully |
 | Tagalog fine-tunes | varies | varies | Community Whisper models fine-tuned on Tagalog. May beat stock models on Taglish. Check license and quality |
 
 Not an option: `distil-whisper` models, which are English only.

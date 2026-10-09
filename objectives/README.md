@@ -1,0 +1,101 @@
+# Objectives
+
+Objectives turn the specs into work.
+Each objective is a short, actionable group of tasks for one product, written so a fresh session with no memory of past conversations can pick it up and finish it.
+
+- **Specs** say what Yumi must do. They are the source of truth for behavior.
+- **Objectives** say how we get there, in small steps, and track progress.
+
+## Objective format
+
+Every objective file has the same sections.
+
+| Section | Meaning |
+|---|---|
+| Frontmatter | `id`, `title`, `product`, `touches` (other products it changes), `specs`, `status`, `priority`, `depends-on`, `tags` |
+| Project context | The same short brief about Yumi in every objective |
+| Why this objective | Where it fits and what it unlocks |
+| Read first | The specs, docs, and READMEs to read before starting |
+| Tasks | Child tasks as checkboxes, numbered `OBJ-NN.n` |
+| Expectations | What must be true when done. Each item is verified, usually by a spec scenario |
+| Outcomes | The concrete things that exist when done: code, files, interfaces |
+| Out of scope | What not to do here, and where it belongs |
+| Completion notes | Filled in when done: what was built, where, decisions, and anything the next objective needs to know |
+
+## Status
+
+| Status | Meaning |
+|---|---|
+| `todo` | Not started |
+| `in-progress` | Someone is working on it |
+| `blocked` | Waiting on something outside the objective. Say what in Completion notes |
+| `done` | Every task checked, every expectation verified, completion notes written |
+
+The frontmatter `status` is the source of truth.
+Update the tables in this file and in the product README in the same commit.
+
+## How to work an objective
+
+1. Pick a `todo` objective whose `depends-on` objectives are all `done`.
+2. Read everything under "Read first".
+3. Set `status: in-progress` and commit.
+4. Work through the tasks in order and check each one off as it is done.
+5. Verify each expectation. Where a Gherkin scenario is named, it must pass as written.
+6. Write the completion notes, set `status: done`, and update the tables.
+7. If the spec turns out to be wrong or unclear, stop and raise it. Do not quietly change behavior.
+
+## Index
+
+| ID | Objective | Product | Specs | Depends on | Status |
+|---|---|---|---|---|---|
+| [OBJ-01](OBJ-01-task-record-schemas.md) | Task record and action schemas | protocol | 02 | - | todo |
+| [OBJ-02](OBJ-02-bridge-envelope-and-crypto.md) | Bridge envelope and end-to-end crypto | protocol | 08 | - | todo |
+| [OBJ-03](OBJ-03-harness-skeleton.md) | Harness skeleton and local model client | harness | 02 | 01 | todo |
+| [OBJ-04](OBJ-04-task-store.md) | Task store and history | harness | 02 | 01, 03 | todo |
+| [OBJ-05](OBJ-05-planner-and-scheduler.md) | Planner, scheduler, and task summary | harness | 02 | 03, 04 | todo |
+| [OBJ-06](OBJ-06-resume-and-limits.md) | Resume and limits | harness | 02 | 04, 05 | todo |
+| [OBJ-07](OBJ-07-lane-router-core.md) | Lane router core | harness | 03 | 01, 04 | todo |
+| [OBJ-08](OBJ-08-locks-busy-windows-cap.md) | Window locks, busy windows, and cursor cap | harness | 03 | 07 | todo |
+| [OBJ-09](OBJ-09-ghost-handoff.md) | Ghost handoff | harness | 03 | 06, 08 | todo |
+| [OBJ-10](OBJ-10-yumi-cat-v0.md) | Yumi cat v0 in Rive | character | 04 | - | todo |
+| [OBJ-11](OBJ-11-whisper-bake-off.md) | Whisper bake-off | models | 01 | - | todo |
+| [OBJ-12](OBJ-12-hey-yumi-wake-word.md) | "Hey Yumi" wake word model | models | 01 | - | todo |
+| [OBJ-13](OBJ-13-bridge-relay-server.md) | Bridge relay server | bridge | 08 | 02 | todo |
+| [OBJ-14](OBJ-14-mac-app-shell.md) | Mac app shell, permissions, and harness link | mac | 01, 04 | 03 | todo |
+| [OBJ-15](OBJ-15-mac-voice-intake.md) | Mac voice intake | mac | 01 | 11, 14 | todo |
+| [OBJ-16](OBJ-16-mac-wake-word.md) | Mac wake word | mac | 01 | 12, 15 | todo |
+| [OBJ-17](OBJ-17-goal-confirmation.md) | Goal confirmation loop | mac | 01 | 04, 15, 18 | todo |
+| [OBJ-18](OBJ-18-cursor-overlay-and-motion.md) | Cursor overlay and motion | mac | 04 | 14 | todo |
+| [OBJ-19](OBJ-19-rive-cat-cursor.md) | Rive cat cursor | mac | 04 | 10, 18 | todo |
+| [OBJ-20](OBJ-20-window-tiling.md) | Window tiling with consent | mac | 03 | 08, 18 | todo |
+| [OBJ-21](OBJ-21-mac-bridge-client-and-pairing.md) | Mac bridge client and pairing | harness | 08 | 02, 13, 14 | todo |
+| [OBJ-22](OBJ-22-android-app-shell.md) | Android app shell and foreground service | android | 08, 01 | 10 | todo |
+| [OBJ-23](OBJ-23-android-bridge-client.md) | Android bridge client and pairing | android | 08 | 02, 13, 22 | todo |
+| [OBJ-24](OBJ-24-android-voice-intake.md) | Android voice intake and wake word | android | 01 | 11, 12, 22 | todo |
+
+## Suggested order
+
+Objectives in the same wave can run in parallel.
+
+| Wave | Objectives |
+|---|---|
+| 1 | OBJ-01, OBJ-02, OBJ-10, OBJ-11, OBJ-12 |
+| 2 | OBJ-03, OBJ-13, OBJ-22 |
+| 3 | OBJ-04, OBJ-14, OBJ-23, OBJ-24 |
+| 4 | OBJ-05, OBJ-07, OBJ-15, OBJ-18, OBJ-21 |
+| 5 | OBJ-06, OBJ-08, OBJ-16, OBJ-17, OBJ-19 |
+| 6 | OBJ-09, OBJ-20 |
+
+## Not covered yet
+
+Objectives exist only for specs whose decisions are final: SPEC-01, SPEC-02, SPEC-03, SPEC-04, and SPEC-08.
+
+| Spec | Why not yet |
+|---|---|
+| [SPEC-05 Mac GUI control](../specs/05-mac-gui-control.md) | Open question: the 3 demo tasks. Also holds the GUI model bake-off |
+| [SPEC-06 User control](../specs/06-user-control.md) | No open questions, but not reviewed yet |
+| [SPEC-07 Safety](../specs/07-safety.md) | Open question: "always allow" for risky actions |
+| [SPEC-09 Cross-device routing](../specs/09-cross-device-routing.md) | Open question: Mac busy when a phone goal arrives |
+| [SPEC-10 Yumi on Android](../specs/10-android-companion.md) | Open questions: phone model runtime, distribution |
+| [SPEC-11 User-facing errors](../specs/11-user-facing-errors.md) | No open questions, but not reviewed yet. Every objective already follows it |
+| [SPEC-12 Yumi on iPhone](../specs/12-iphone-companion.md) | p2, after Android |

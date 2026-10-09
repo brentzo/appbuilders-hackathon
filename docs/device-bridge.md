@@ -26,7 +26,7 @@ The brain sees one combined tool list and picks the device the same way the lane
 | Device | Brain | Example tools |
 |---|---|---|
 | Mac (16 GB) | Qwen3.5-9B, main brain | `gui_act`, `bash`, `read`, `write`, `open_app`, `look` |
-| Android (18 GB demo phone, 8 GB dev phone) | Qwen3.5-4B, 2B on the 8 GB phone if needed | `phone_gui_act`, `set_alarm`, `get_location`, `read_recent_photos`, `open_app` |
+| Android (12 GB demo phone, 8 GB dev phone) | Qwen3.5-4B, 2B on the 8 GB phone if needed | `phone_gui_act`, `set_alarm`, `get_location`, `read_recent_photos`, `open_app` |
 | iPhone (later) | none at first | Tools exposed by our own app, plus Shortcuts |
 
 ## Who decides
@@ -41,7 +41,7 @@ The brain sees one combined tool list and picks the device the same way the lane
 
 Two Android phones are available.
 
-- **18 GB phone (teammate's), main demo device.** ~12 GB free after Android. Qwen3.5-4B (~2.7 GB) runs with plenty of room for screenshots and context, so the app is unlikely to be killed for memory. Qwen3.5-9B (~6 GB) also fits, but test its speed and heat before using it in the demo.
+- **12 GB phone (teammate's), main demo device.** Advertised as "12 GB + 6 GB", but the extra 6 GB is extended RAM (storage used as slow swap), so only 12 GB is real memory. Android and other apps use ~4-5 GB, leaving ~7-8 GB. Qwen3.5-4B (~2.7 GB) fits with room for screenshots and context. Qwen3.5-9B (~6 GB) is too tight to run reliably.
 - **8 GB phone (Brent's), development device.** Android and other apps use ~3-4 GB, so 4B is tight. Try 4B, and fall back to 2B (~1.3 GB) if the app is killed for memory, steps are too slow, or the phone overheats.
 
 - **Read the screen:** Accessibility Service element tree first, screenshot (Android 11+) only when the tree is not enough.

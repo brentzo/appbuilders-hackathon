@@ -16,7 +16,7 @@ Our Android app is built in two parts.
 - **Part A (p0), tool host and voice remote.** No model. It listens on the device, offers phone tools to the Mac, runs a few phone-only jobs through intents, and delegates everything else to the Mac ([SPEC-09](09-cross-device-routing.md)).
 - **Part B (p1), phone brain.** A fixed local model plans phone goals, controls other apps through accessibility, and takes over as brain when the Mac is unreachable.
 
-Demo phone: 18 GB RAM. Development phone: 8 GB RAM, Part A only.
+Demo phone: 12 GB RAM (advertised as "12 GB + 6 GB", but the extra 6 GB is extended RAM: storage used as slow swap, not real memory). Development phone: 8 GB RAM, Part A only.
 
 ## Requirements
 
