@@ -19,7 +19,8 @@ tags: [objective, p0, android, bridge]
 > Yumi is a fully local, voice-driven AI companion for the Mac and Android phone, built for a local-AI hackathon.
 > You say "Hey Yumi" or use push-to-talk, Yumi repeats your goal back, and once you confirm, a cat-shaped cursor does the work across apps the way a person would.
 > It can split into parallel "ghost" cursors and invisible helpers, and the Mac and phone control each other through an end-to-end encrypted VPS bridge.
-> All AI runs on the devices: Qwen3.5-9B on the Mac (16 GB), Qwen3.5-4B on the Android demo phone (12 GB), Whisper and native on-device speech recognition for voice.
+> All AI runs on the devices: Qwen3.5-9B on the Mac (16 GB), plus Whisper and native on-device speech recognition for voice.
+> The Android phone (12 GB) starts as a tool host and voice remote with no model (p0) and gets its own model later (p1).
 > The harness, not the model, owns planning state, routing, checkpoints, and safety.
 > Repo map: [README.md](../README.md). Full overview: [docs/yumi.md](../docs/yumi.md).
 
@@ -42,14 +43,14 @@ After this objective, the phone and Mac can exchange messages in both directions
 - [ ] **OBJ-23.4** Run the WebSocket connection (OkHttp) inside the foreground service: authenticate, reconnect with backoff, and survive network changes (Wi-Fi to mobile data).
 - [ ] **OBJ-23.5** Verify signatures and drop messages from unpaired or revoked devices, recording them in the local log.
 - [ ] **OBJ-23.6** At-most-once execution: remember processed message ids and their results; on a duplicate, resend the stored result.
-- [ ] **OBJ-23.7** Never run an expired command.
+- [ ] **OBJ-23.7** Never run an expired command. Treat a `targetOffline` event as a structured error for the command that caused it.
 - [ ] **OBJ-23.8** Show connection state (connected, reconnecting, offline) on the home screen and in the notification. Use the SPEC-11 "Bridge down" and "Unpaired device" copy.
 - [ ] **OBJ-23.9** Unpair from settings, which revokes the device at the bridge.
 - [ ] **OBJ-23.10** End-to-end test with the Mac from [OBJ-21](OBJ-21-mac-bridge-client-and-pairing.md) (or a test client until it is ready): a test `ping` command each way, with the phone app in the background.
 
 ## Expectations
 
-- [ ] SPEC-08 scenarios pass from the phone side: "Pair the phone with the Mac", "Unpair a device", "Message from an unknown device is dropped", "Offline device receives queued messages", "Expired command is not run", "Duplicate delivery runs once".
+- [ ] SPEC-08 scenarios pass from the phone side: "Pair the phone with the Mac", "Unpair a device", "Message from an unknown device is dropped", "Result survives a short reconnect", "Expired command is not run", "Duplicate delivery runs once".
 - [ ] A command from the Mac reaches the backgrounded phone within 2 seconds on a normal connection.
 - [ ] Keys never appear in files or logs.
 

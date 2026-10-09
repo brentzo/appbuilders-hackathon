@@ -19,7 +19,8 @@ tags: [objective, p0, harness, mac, bridge]
 > Yumi is a fully local, voice-driven AI companion for the Mac and Android phone, built for a local-AI hackathon.
 > You say "Hey Yumi" or use push-to-talk, Yumi repeats your goal back, and once you confirm, a cat-shaped cursor does the work across apps the way a person would.
 > It can split into parallel "ghost" cursors and invisible helpers, and the Mac and phone control each other through an end-to-end encrypted VPS bridge.
-> All AI runs on the devices: Qwen3.5-9B on the Mac (16 GB), Qwen3.5-4B on the Android demo phone (12 GB), Whisper and native on-device speech recognition for voice.
+> All AI runs on the devices: Qwen3.5-9B on the Mac (16 GB), plus Whisper and native on-device speech recognition for voice.
+> The Android phone (12 GB) starts as a tool host and voice remote with no model (p0) and gets its own model later (p1).
 > The harness, not the model, owns planning state, routing, checkpoints, and safety.
 > Repo map: [README.md](../README.md). Full overview: [docs/yumi.md](../docs/yumi.md).
 
@@ -43,7 +44,7 @@ After this objective, the Mac can pair with a phone and exchange encrypted, sign
 - [ ] **OBJ-21.4** Harness: connect to the bridge over WebSocket, authenticate, and reconnect with backoff.
 - [ ] **OBJ-21.5** Harness: send and receive envelopes. Verify signatures and drop messages from unpaired or revoked devices, recording them in the local log.
 - [ ] **OBJ-21.6** Harness: at-most-once execution. Remember processed message ids and their results; on a duplicate, resend the stored result instead of running again.
-- [ ] **OBJ-21.7** Harness: never run an expired command, and surface `expired` events from the bridge to the sender's task.
+- [ ] **OBJ-21.7** Harness: never run an expired command. Surface `expired` and `targetOffline` events from the bridge to the task that sent the command, as structured errors.
 - [ ] **OBJ-21.8** Mac: show connection state (connected, reconnecting, offline) in the menu bar. Bridge failures use the SPEC-11 "Bridge down" and "Unpaired device" copy.
 - [ ] **OBJ-21.9** Tests against the deployed bridge with a test phone client: pairing, round trip, unknown device dropped, duplicate delivery, expiry, unpair.
 

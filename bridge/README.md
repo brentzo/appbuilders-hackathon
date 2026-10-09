@@ -10,7 +10,8 @@ Status: empty scaffold, nothing built yet.
 
 - Accept WebSocket connections from paired devices, authenticated by their device keys.
 - Route each message to the device named in its `to` field.
-- Store messages for offline devices and deliver them when they reconnect.
+- Tell the sender at once when a command's target is offline. Never queue commands.
+- Hold results and events through a short reconnect, until they expire.
 - Drop expired messages, and tell the sender a message expired.
 - Keep a registry of paired devices and their public keys, for authentication only.
 - Revoke a device immediately when it is unpaired.
@@ -25,13 +26,13 @@ Status: empty scaffold, nothing built yet.
 
 - The bridge is the only path between devices for the hackathon. Security comes from end-to-end encryption, device signatures, and pairing, not from a private network.
 - NetBird stays on the VPS for the team's private access to the server, logs, and dev machines. Yumi's device traffic does not use it.
-- Default command expiry: 2 minutes for UI actions, 1 hour for data requests.
+- Every command expires after 2 minutes. Commands are never queued; goals waiting for an offline device are held on the origin device ([SPEC-09](../specs/09-cross-device-routing.md)).
 
 ## Initial technical plan
 
 - TypeScript on Node.js (current LTS), sharing types and the reference crypto code from [protocol](../protocol/README.md).
 - WebSocket server behind a reverse proxy that handles TLS (for example Caddy).
-- SQLite for the device registry and the store-and-forward queue.
+- SQLite for the device registry and the short-lived holding of results and events.
 - Logs contain routing fields and errors only, never payloads.
 
 ## Specs

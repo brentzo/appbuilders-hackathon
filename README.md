@@ -17,7 +17,7 @@ The harness, not the model, owns planning state, routing, checkpoints, and safet
 | [protocol/](protocol/README.md) | Shared schemas and crypto: task records, actions, bridge messages |
 | [harness/](harness/README.md) | The agent harness on the Mac (TypeScript): loop, task store, planner, lane router |
 | [mac/](mac/README.md) | The Mac app (Swift): voice, cursors, screen capture, input, permissions |
-| [android/](android/README.md) | The Android app (Kotlin): voice, on-device model, app control, bridge client |
+| [android/](android/README.md) | The Android app (Kotlin): voice remote and phone tools first (p0), its own model and app control later (p1) |
 | [iphone/](iphone/README.md) | The iPhone app (later, p2) |
 | [bridge/](bridge/README.md) | The VPS relay between devices |
 | [character/](character/README.md) | Yumi the cat: the Rive animation shared by Mac and Android |
@@ -29,8 +29,8 @@ The harness, not the model, owns planning state, routing, checkpoints, and safet
              Mac (16 GB)                                       Android (12 GB demo phone)
  ┌─────────────────────────────────────┐               ┌──────────────────────────────────┐
  │ mac (Swift)                         │               │ android (Kotlin)                 │
- │  voice, wake word, cat cursors,     │               │  voice, wake word, Qwen3.5-4B,   │
- │  screen capture, mouse, keyboard    │               │  accessibility control, intents  │
+ │  voice, wake word, cat cursors,     │               │  voice, wake word, phone tools,  │
+ │  screen capture, mouse, keyboard    │               │  intents, app control (p1)       │
  │        ▲ local socket (JSON-RPC)    │               │                                  │
  │        ▼                            │               │                                  │
  │ harness (TypeScript)                │               │                                  │
@@ -39,7 +39,7 @@ The harness, not the model, owns planning state, routing, checkpoints, and safet
  └────────────────┬────────────────────┘               └───────────────┬──────────────────┘
                   │        end-to-end encrypted, signed messages       │
                   └──────────────────► bridge (VPS) ◄──────────────────┘
-                              relay, store-and-forward, no plaintext
+                              relay, offline notices, no plaintext 
 ```
 
 `protocol` defines every message that crosses these lines.
@@ -48,7 +48,7 @@ The harness, not the model, owns planning state, routing, checkpoints, and safet
 
 ## Key decisions
 
-- **Models:** Qwen3.5-9B on the Mac, Qwen3.5-4B on the Android demo phone. UI-TARS only as a fallback if it wins our own test.
+- **Models:** Qwen3.5-9B on the Mac. The Android phone has no model at first (p0) and delegates to the Mac; its own model comes later (p1). UI-TARS only as a fallback if it wins our own test.
 - **Voice:** Whisper for Taglish, native on-device recognizers for quick English commands, never cloud. Wake word "Hey Yumi" with openWakeWord, plus push-to-talk.
 - **Harness:** a fork of Pi's minimal agent loop in TypeScript, with a Swift app for native macOS work.
 - **Bridge:** our VPS relays end-to-end encrypted messages. NetBird is for team access only, not device traffic.

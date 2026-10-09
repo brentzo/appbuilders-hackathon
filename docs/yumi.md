@@ -26,7 +26,7 @@ The harness owns planning state, device and lane routing, locks, handoffs, check
 ## Decisions so far
 
 - **Mac model:** Qwen3.5-9B (4-bit, ~6 GB) as the single brain for planning, tool calls, and GUI control. A `gui_act` sub-agent uses the same model with a fresh context, so the planner never sees screenshots.
-- **Android model:** Qwen3.5-4B on the 12 GB demo phone. The 8 GB phone runs 4B or falls back to 2B. Runs locally and decides "phone or laptop".
+- **Android:** built in two parts ([SPEC-10](../specs/10-android-companion.md)). Part A (p0) has no model: a fixed rule runs alarm, timer, and open app through intents, and every other goal is delegated to the Mac. Part B (p1) adds one fixed model on the 12 GB demo phone (size under review, see the Android README). The 8 GB phone is Part A only.
 - **Why not UI-TARS:** the newest open weights are UI-TARS-1.5-7B (April 2025). UI-TARS-2 weights are not public. Qwen3.5-4B beats it on ScreenSpot-Pro (60.3 vs 49.6) and OSWorld (35.6 vs 27.5) at half the memory. Keep UI-TARS only as a fallback if it wins our own test.
 - **Voice:** Whisper for Taglish and long dictation. Native on-device STT for quick English commands, always forced on-device (Apple's new API has no Filipino).
 - **Harness:** Pi-style loop in TypeScript (fork the loop, replace the coding tools with desktop tools), plus a Swift helper for native macOS APIs (ScreenCaptureKit, Accessibility API, CGEvent, overlay cursors), talking over a local socket.

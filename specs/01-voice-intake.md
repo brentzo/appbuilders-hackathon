@@ -18,8 +18,8 @@ Yumi transcribes it on the device, repeats it back in its own words, and waits f
 
 1. All speech-to-text runs on the device. Audio never leaves the device it was recorded on.
 2. English commands may use the native on-device recognizer. It must be forced on-device, and must fail rather than fall back to a cloud service.
-3. Taglish and long dictation use Whisper on the device.
-4. Before any work starts, Yumi repeats the goal back by voice and on screen.
+3. Taglish and long dictation use Whisper on the Mac. On Android, Whisper comes with [SPEC-10](10-android-companion.md) Part B (p1). Until then the phone understands English only, and other languages get the "Language not supported on this phone" error from [SPEC-11](11-user-facing-errors.md).
+4. Before any work starts, Yumi repeats the goal back by voice and on screen. On Android in p0 there is no model to restate it, so the phone uses fixed templates ([SPEC-10](10-android-companion.md) requirement 8).
 5. The user can confirm, correct, or cancel by voice or with a button.
 6. A correction replaces the goal and is repeated back again.
 7. The confirmed goal is stored on the task record as `confirmedGoal`, separate from the raw transcript.
@@ -117,13 +117,24 @@ Feature: Voice intake on Android
   Scenario: Native recognizer has no on-device model for the language
     Given the native recognizer has no on-device model for the spoken language
     When the user speaks a goal
-    Then the phone transcribes it with Whisper instead
+    Then the phone shows the "Language not supported on this phone" error from SPEC-11
+    And no audio is sent to a cloud recognizer
+```
+
+```gherkin
+@p1 @voice @android
+Feature: Whisper on Android
+
+  Scenario: Taglish on the phone uses Whisper
+    Given the phone model and Whisper are loaded (SPEC-10 Part B)
+    When the user speaks a Taglish goal
+    Then the goal is transcribed with Whisper on the phone
     And no audio is sent to a cloud recognizer
 ```
 
 ## Whisper model options
 
-To be decided during development by testing real Taglish recordings on the Mac and the 12 GB demo phone.
+To be decided during development by testing real Taglish recordings on the Mac (p0) and the 12 GB demo phone (p1, for SPEC-10 Part B).
 
 | Option | Params | Size (full / quantized) | Notes |
 |---|---|---|---|
@@ -176,6 +187,11 @@ Work this needs:
 - **False triggers:** play an hour of everyday Taglish talk, TV, and music, and count wake-ups.
 - **Misses:** each teammate says "Hey Yumi" 20 times at different distances.
 - **Fallback:** push-to-talk works without the wake word. If the wake word is not reliable by demo day, demo with push-to-talk.
+
+## Decisions
+
+- **Android in p0 has no Whisper.** It uses Android's on-device recognizer, English only, and shows an error for other languages. Whisper on the phone is p1, with SPEC-10 Part B. This follows SPEC-10 where the two specs disagreed. Decided 2026-10-09.
+- **The phone's repeat-back in p0 uses fixed templates,** defined in SPEC-10 requirement 8. Decided 2026-10-09.
 
 ## Open questions
 

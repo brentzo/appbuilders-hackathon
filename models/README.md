@@ -17,8 +17,8 @@ Status: empty scaffold, nothing built yet.
 | Role | Model | Notes |
 |---|---|---|
 | Mac brain and GUI control | Qwen3.5-9B, 4-bit | ~6 GB. Beats UI-TARS-1.5-7B on public GUI benchmarks |
-| Android brain and app control | Qwen3.5-4B, 4-bit | ~2.7 GB on the 12 GB demo phone. 2B on the 8 GB phone if needed. 9B (~6 GB) is too tight for the phone |
-| Speech to text | Whisper, size to be decided | Taglish and long dictation |
+| Android brain and app control (p1 only) | Under review | SPEC-10 Part B says Qwen3.5-9B, fixed, but 9B (~6 GB plus context) is too tight on the 12 GB demo phone. Proposal: Qwen3.5-4B (~2.7 GB), fixed. Part A (p0) has no model |
+| Speech to text | Whisper, size to be decided | Taglish and long dictation on the Mac (p0) and the phone (p1). The phone's p0 recognizer is Android's on-device English recognizer |
 | Wake word | openWakeWord, custom "Hey Yumi" | Trained once, runs fully on device |
 
 Vendor benchmark scores are at full precision.

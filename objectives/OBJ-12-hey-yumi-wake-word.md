@@ -19,7 +19,8 @@ tags: [objective, p0, models, voice]
 > Yumi is a fully local, voice-driven AI companion for the Mac and Android phone, built for a local-AI hackathon.
 > You say "Hey Yumi" or use push-to-talk, Yumi repeats your goal back, and once you confirm, a cat-shaped cursor does the work across apps the way a person would.
 > It can split into parallel "ghost" cursors and invisible helpers, and the Mac and phone control each other through an end-to-end encrypted VPS bridge.
-> All AI runs on the devices: Qwen3.5-9B on the Mac (16 GB), Qwen3.5-4B on the Android demo phone (12 GB), Whisper and native on-device speech recognition for voice.
+> All AI runs on the devices: Qwen3.5-9B on the Mac (16 GB), plus Whisper and native on-device speech recognition for voice.
+> The Android phone (12 GB) starts as a tool host and voice remote with no model (p0) and gets its own model later (p1).
 > The harness, not the model, owns planning state, routing, checkpoints, and safety.
 > Repo map: [README.md](../README.md). Full overview: [docs/yumi.md](../docs/yumi.md).
 

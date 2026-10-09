@@ -19,7 +19,8 @@ tags: [objective, p0, protocol, bridge, safety]
 > Yumi is a fully local, voice-driven AI companion for the Mac and Android phone, built for a local-AI hackathon.
 > You say "Hey Yumi" or use push-to-talk, Yumi repeats your goal back, and once you confirm, a cat-shaped cursor does the work across apps the way a person would.
 > It can split into parallel "ghost" cursors and invisible helpers, and the Mac and phone control each other through an end-to-end encrypted VPS bridge.
-> All AI runs on the devices: Qwen3.5-9B on the Mac (16 GB), Qwen3.5-4B on the Android demo phone (12 GB), Whisper and native on-device speech recognition for voice.
+> All AI runs on the devices: Qwen3.5-9B on the Mac (16 GB), plus Whisper and native on-device speech recognition for voice.
+> The Android phone (12 GB) starts as a tool host and voice remote with no model (p0) and gets its own model later (p1).
 > The harness, not the model, owns planning state, routing, checkpoints, and safety.
 > Repo map: [README.md](../README.md). Full overview: [docs/yumi.md](../docs/yumi.md).
 
@@ -38,7 +39,7 @@ This objective defines the message envelope, the pairing flow, and the crypto ru
 
 - [ ] **OBJ-02.1** Write the `Envelope` JSON Schema: `id`, `from`, `to`, `type` (`command`, `result`, `event`), `replyTo`, `expiresAt`, `protocolVersion`, `signature`, `payload` (ciphertext). Only `id`, `from`, `to`, `expiresAt`, and `protocolVersion` are readable by the bridge.
 - [ ] **OBJ-02.2** Write the decrypted payload schemas: `Command` (tool name and arguments), `Result` (success or a structured failure kind, never raw error text), and `Event` (connection, expiry notice, tool list announcement).
-- [ ] **OBJ-02.3** Define expiry defaults as constants: 2 minutes for UI actions, 1 hour for data requests.
+- [ ] **OBJ-02.3** Define the expiry default as a constant: 2 minutes for every command. Add a `targetOffline` event type for the bridge to send back when a command's target is offline.
 - [ ] **OBJ-02.4** Write the pairing design in `protocol/docs/pairing.md`: the Mac shows a QR code with its device id, public keys, a one-time pairing code, and the bridge URL; the phone scans it and completes the exchange through the bridge; both register with the bridge. Cover unpairing and key revocation.
 - [ ] **OBJ-02.5** Choose and document the crypto: libsodium, X25519 for key exchange, XChaCha20-Poly1305 for payload encryption, Ed25519 for signatures over the envelope's routing fields plus ciphertext.
 - [ ] **OBJ-02.6** Write the reference TypeScript implementation with libsodium-wrappers: generate device keys, seal and open a payload, sign and verify an envelope.

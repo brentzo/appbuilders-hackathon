@@ -22,8 +22,8 @@ Design: [device-bridge](../docs/device-bridge.md).
 3. The VPS sees only routing fields (`id`, `from`, `to`, `expiresAt`) and ciphertext.
 4. Every message uses the envelope in the design doc: `id`, `from`, `to`, `type`, `replyTo`, `expiresAt`, `signature`, `payload`.
 5. Messages with a bad signature or from an unpaired device are dropped and logged on the receiving device.
-6. Expired commands are never executed. Default expiry is 2 minutes for UI actions and 1 hour for data requests, tuned during development.
-7. The VPS stores messages for an offline device and delivers them when it reconnects.
+6. Expired commands are never executed. Every single command (one tool call) expires after 2 minutes, as in [SPEC-09](09-cross-device-routing.md) requirement 16.
+7. The VPS never queues commands. If the target device is offline, the VPS at once tells the sender, and the sender's brain tells the user. Whole goals waiting for an offline device are held on the origin device, not on the VPS ([SPEC-09](09-cross-device-routing.md) requirement 15). Results and events for a device that drops off briefly are held on the VPS until they expire (2 minutes), so a short reconnect does not lose a result.
 8. Each message is executed at most once, even if delivered twice.
 9. The user can unpair a device from either side, which revokes its keys immediately.
 10. Both apps show a clear connection state: connected, reconnecting, or offline.
@@ -61,15 +61,20 @@ Feature: Message delivery
     Then it is not executed
     And it is recorded in the receiving device's log
 
-  Scenario: Offline device receives queued messages
+  Scenario: Command to an offline device fails at once
     Given the phone is offline
-    When the Mac sends a command to the phone that expires in 10 minutes
-    And the phone reconnects 2 minutes later
-    Then the phone receives and runs the command
+    When the Mac sends the command "set_alarm" to the phone
+    Then the VPS does not queue it
+    And the Mac is told at once that the phone is offline
+
+  Scenario: Result survives a short reconnect
+    Given the phone ran a command from the Mac
+    And the Mac dropped off the bridge before the result arrived
+    When the Mac reconnects within 2 minutes
+    Then the Mac receives the result
 
   Scenario: Expired command is not run
-    Given a command to the phone expired while the phone was offline
-    When the phone reconnects
+    Given a command reaches the phone after its expiry time, for example after a slow reconnect
     Then the command is not run
     And the sender is told it expired
 
@@ -83,8 +88,9 @@ Feature: Message delivery
 ## Decisions
 
 - **Transport:** the plain VPS bridge is the only path between devices for the hackathon. Security comes from end-to-end encryption, device signatures, and pairing, not from a private network. Decided 2026-10-09.
-- **NetBird is not used by Yumi.** It cannot replace the bridge, because offline queueing and phone wake-ups still need the VPS. Running it on the phone would take Android's only VPN slot and make Yumi depend on another app staying connected. NetBird stays on the VPS for the team's private access to the server, logs, and dev machines. Decided 2026-10-09.
-- **Command expiry:** 2 minutes for UI actions, 1 hour for data requests, tuned during development. Decided 2026-10-09.
+- **NetBird is not used by Yumi.** It cannot replace the bridge, because offline notices, short-reconnect delivery, and phone wake-ups still need the VPS. Running it on the phone would take Android's only VPN slot and make Yumi depend on another app staying connected. NetBird stays on the VPS for the team's private access to the server, logs, and dev machines. Decided 2026-10-09.
+- **Command expiry:** every command expires after 2 minutes. Decided 2026-10-09, replacing the earlier "2 minutes for UI actions, 1 hour for data requests".
+- **No command queue on the VPS.** Commands to an offline device fail at once. Queued goals live on the origin device ([SPEC-09](09-cross-device-routing.md)). The VPS only holds results and events through short reconnects, until they expire. This follows SPEC-09 where the two specs disagreed: it is simpler, and an old command never runs late and surprises the user. Decided 2026-10-09.
 
 ## Later (p1)
 

@@ -15,7 +15,7 @@ The user can speak on either device, and the task runs on whichever device can d
 
 ## Priority
 
-1. **Android first.** It can run a model, stay connected in the background, and control other apps.
+1. **Android first.** It can stay connected in the background, and later (p1) run a model and control other apps.
 2. **iPhone second.** Limited to its own app's tools, mostly while the app is open.
 
 ## Devices are tool providers
@@ -26,23 +26,24 @@ The brain sees one combined tool list and picks the device the same way the lane
 | Device | Brain | Example tools |
 |---|---|---|
 | Mac (16 GB) | Qwen3.5-9B, main brain | `gui_act`, `bash`, `read`, `write`, `open_app`, `look` |
-| Android (12 GB demo phone, 8 GB dev phone) | Qwen3.5-4B, 2B on the 8 GB phone if needed | `phone_gui_act`, `set_alarm`, `get_location`, `read_recent_photos`, `open_app` |
+| Android (12 GB demo phone, 8 GB dev phone) | p0: none, a fixed rule. p1: one fixed model on the demo phone | p0: `set_alarm`, `set_timer`, `open_app`. p1 adds `phone_gui_act`, `get_location`, `read_recent_photos` |
 | iPhone (later) | none at first | Tools exposed by our own app, plus Shortcuts |
 
 ## Who decides
 
 - **Voice on the Mac:** the Mac brain routes, and calls phone tools over the bridge when needed.
-- **Voice on Android:** the phone model first decides "phone or laptop".
+- **Voice on Android:** p0, a fixed rule decides "phone or laptop" (alarm, timer, and open app stay on the phone). p1, the phone model decides. See [SPEC-09](../specs/09-cross-device-routing.md), which is now the source of truth for routing.
   Phone tasks run locally.
   Laptop tasks are sent to the Mac brain as a goal.
 - **Mac asleep or offline:** the phone says the laptop is offline and queues the task until it reconnects.
 
 ## Android control
 
-Two Android phones are available.
+Superseded in detail by [SPEC-10](../specs/10-android-companion.md): Part A (p0) has no model, Part B (p1) adds one.
+The notes below describe Part B.
 
 - **12 GB phone (teammate's), main demo device.** Advertised as "12 GB + 6 GB", but the extra 6 GB is extended RAM (storage used as slow swap), so only 12 GB is real memory. Android and other apps use ~4-5 GB, leaving ~7-8 GB. Qwen3.5-4B (~2.7 GB) fits with room for screenshots and context. Qwen3.5-9B (~6 GB) is too tight to run reliably.
-- **8 GB phone (Brent's), development device.** Android and other apps use ~3-4 GB, so 4B is tight. Try 4B, and fall back to 2B (~1.3 GB) if the app is killed for memory, steps are too slow, or the phone overheats.
+- **8 GB phone (Brent's), development device.** Part A only.
 
 - **Read the screen:** Accessibility Service element tree first, screenshot (Android 11+) only when the tree is not enough.
 - **Act:** Accessibility Service taps, swipes, and text input.
@@ -76,7 +77,7 @@ type Envelope = {
 }
 ```
 
-3. **Store and forward.** The VPS holds encrypted messages for offline devices until they reconnect. For iPhone it also sends a push to wake the app.
+3. **No command queue.** Commands to an offline device fail at once, and goals waiting for an offline device are held on the origin device ([SPEC-09](../specs/09-cross-device-routing.md)). The VPS only holds results and events through short reconnects, until they expire. For iPhone (later) it also sends a push to wake the app.
 4. **Confirm on the device that acts.** Risky actions (bash, sending messages, deleting, buying) ask for confirmation on the device where they run.
 5. **Reply where the user spoke.** The result is spoken on the device the user talked to, even if the work happened on the other.
 6. **Show the work.** A phone request that runs on the Mac spawns the visible cursor on the Mac.

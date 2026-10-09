@@ -69,9 +69,9 @@ Update the tables in this file and in the product README in the same commit.
 | [OBJ-19](OBJ-19-rive-cat-cursor.md) | Rive cat cursor | mac | 04 | 10, 18 | todo |
 | [OBJ-20](OBJ-20-window-tiling.md) | Window tiling with consent | mac | 03 | 08, 18 | todo |
 | [OBJ-21](OBJ-21-mac-bridge-client-and-pairing.md) | Mac bridge client and pairing | harness | 08 | 02, 13, 14 | todo |
-| [OBJ-22](OBJ-22-android-app-shell.md) | Android app shell and foreground service | android | 08, 01 | 10 | todo |
+| [OBJ-22](OBJ-22-android-app-shell.md) | Android app shell and foreground service | android | 10, 08, 01 | 10 | todo |
 | [OBJ-23](OBJ-23-android-bridge-client.md) | Android bridge client and pairing | android | 08 | 02, 13, 22 | todo |
-| [OBJ-24](OBJ-24-android-voice-intake.md) | Android voice intake and wake word | android | 01 | 11, 12, 22 | todo |
+| [OBJ-24](OBJ-24-android-voice-intake.md) | Android voice intake and wake word | android | 01, 10 | 12, 22 | todo |
 
 ## Suggested order
 
@@ -88,14 +88,22 @@ Objectives in the same wave can run in parallel.
 
 ## Not covered yet
 
-Objectives exist only for specs whose decisions are final: SPEC-01, SPEC-02, SPEC-03, SPEC-04, and SPEC-08.
+Objectives exist for specs whose decisions are final: SPEC-01, SPEC-02, SPEC-03, SPEC-04, and SPEC-08, plus the Android app shell and voice parts of SPEC-10 Part A.
 
 | Spec | Why not yet |
 |---|---|
 | [SPEC-05 Mac GUI control](../specs/05-mac-gui-control.md) | Open question: the 3 demo tasks. Also holds the GUI model bake-off |
 | [SPEC-06 User control](../specs/06-user-control.md) | No open questions, but not reviewed yet |
 | [SPEC-07 Safety](../specs/07-safety.md) | Open question: "always allow" for risky actions |
-| [SPEC-09 Cross-device routing](../specs/09-cross-device-routing.md) | Open question: Mac busy when a phone goal arrives |
-| [SPEC-10 Yumi on Android](../specs/10-android-companion.md) | Open questions: phone model runtime, distribution |
-| [SPEC-11 User-facing errors](../specs/11-user-facing-errors.md) | No open questions, but not reviewed yet. Every objective already follows it |
+| [SPEC-09 Cross-device routing](../specs/09-cross-device-routing.md) | Defined by Jepoy (b824989). Not reviewed together yet. Its conflicts with SPEC-01, SPEC-08, and SPEC-10 are resolved (see below). Objectives for the p0 rule, phone tools, and delegation come after review |
+| [SPEC-10 Yumi on Android](../specs/10-android-companion.md) | Part A (p0): app shell and voice are covered by OBJ-22 and OBJ-24; phone-only goals and phone tools wait on SPEC-09. Part B (p1): the model size is under review (9B is too tight on 12 GB) |
+| [SPEC-11 User-facing errors](../specs/11-user-facing-errors.md) | Expanded by Jepoy. Every objective follows it |
 | [SPEC-12 Yumi on iPhone](../specs/12-iphone-companion.md) | p2, after Android |
+
+### Resolved conflicts between specs
+
+Decided 2026-10-09.
+
+- **SPEC-01 vs SPEC-10:** SPEC-10 wins. Android in p0 has no Whisper; it uses the on-device English recognizer and shows "Language not supported on this phone" for other languages. Whisper on the phone moved to p1 in SPEC-01. OBJ-24 already follows this.
+- **SPEC-08 vs SPEC-09:** SPEC-09 wins. The VPS never queues commands, every command expires after 2 minutes, and goals waiting for an offline device are held on the origin device. The VPS only holds results and events through short reconnects. SPEC-08, the bridge docs, OBJ-02, OBJ-13, OBJ-21, and OBJ-23 are updated.
+- **Phone confirmation without a model:** SPEC-10 requirement 8 adds fixed templates. Phone-only goals fill a sentence from the rule's fields; other goals echo the transcript and ask to send it to the Mac; replies are matched against fixed yes and no lists, and anything else is a correction. A phone-only goal the rule cannot parse is delegated to the Mac.
