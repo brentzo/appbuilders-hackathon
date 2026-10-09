@@ -40,7 +40,7 @@ Until OBJ-31 exists, build and test against the mock harness from [OBJ-01](OBJ-0
 - [SPEC-06](../specs/06-user-control.md) requirements 3 and 4: Yumi tags its own input, and types in short chunks so a pause lands between chunks. The pause itself is [OBJ-30](OBJ-30-mac-stop-and-take-over.md).
 - [SPEC-11](../specs/11-user-facing-errors.md), the "Accessibility permission missing (Mac)" row.
 - [docs/task-record-schema.md](../docs/task-record-schema.md), "What the model sees", "Actions", and "Typed tools".
-- [OBJ-01](OBJ-01-task-record-schemas.md): `Observation`, `TreeElement`, `ModelAction`, `ResolvedElement`, the typed tool schemas, and the RPC methods `observeWindow`, `executeAction`, `animateCursorTo`, and `readFieldValues`. Implement those; never hand-write a contract type (see the contracts-and-stand-ins skill).
+- [OBJ-01](OBJ-01-task-record-schemas.md): `Observation`, `TreeElement`, `ModelAction`, `ResolvedElement`, the typed tool schemas, and the RPC methods `observeWindow`, `executeAction` (which carries the `cursorId` to animate first; OBJ-01 folded `animateCursorTo` into it), and `readFieldValues`. Implement those; never hand-write a contract type (see the contracts-and-stand-ins skill).
 - [OBJ-26](OBJ-26-gui-smoke-test.md) Outcome and its throwaway trimming script in `models/gui/`, if done.
 - The Outcome of [OBJ-14](OBJ-14-mac-app-shell.md) (RPC client, error presenter), [OBJ-18](OBJ-18-cursor-overlay-and-motion.md) (click point), and [OBJ-27](OBJ-27-mac-native-services.md) (`probeAppCapability` and window services, which this objective reuses and does not rebuild).
 
