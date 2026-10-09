@@ -53,7 +53,8 @@ struct PausedView: View {
                 .font(YumiFont.body)
                 .foregroundStyle(YumiColor.ink)
                 .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: 280, alignment: .leading)
+                // A fixed width: with only a maximum, the panel's fitting size squeezes the text to nothing.
+                .frame(width: 280, alignment: .leading)
             HStack(spacing: YumiSpace.s) {
                 Button(PauseCopy.cancel, action: cancel)
                     .buttonStyle(YumiSecondaryButtonStyle())
