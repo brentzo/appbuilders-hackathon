@@ -92,7 +92,11 @@ Build against the mock Mac app from [OBJ-01](OBJ-01-task-record-schemas.md) unti
   - `finish` is checked against the step log: `done` after an attempt in which no action worked becomes `stuck`; `done` before any action stays `done`.
   - The model's finish note is never passed to the orchestrator. The note is built by the harness from the step log ("Done in 6 steps."), so screen text cannot reach the orchestrator through it.
   - An attempt resumed after a pause or restart gets a fresh 10-step budget; the 25 steps per subtask still count every step.
-  - Until [OBJ-38](OBJ-38-approvals-pause-and-action-log.md) lands, the approval stand-in declines every approval, so the Mail demo stops at Send.
+  - Approvals, blocked actions, and pausing use OBJ-38's `ApprovalGate` and `RunControl`; the stand-in that declined every approval is gone (orchestrator, 2026-10-10).
+    A declined approval does not end the attempt: the step is recorded as declined and the model reads that the user said no, as on the helper lane, so the user does not get "Couldn't finish a step" right after saying no.
+    A blocked action goes to the blocked-action card: "Keep going" carries on, and "Stop" (`cancelTask`, OBJ-45) ends the run. Without the approval flow, it ends the attempt with `blockedAction`.
   - When the target app has no window to read, the harness opens it with `open_app` as a step of its own.
+- **Known gap:** the harness names elements by number (`#3`), because the observation carries no paths. The Mac app resolves numbers itself for `executeAction`, but `readFieldValues` cannot, so the approval flow cannot read a Mail draft's recipients and a send is not run ("because Yumi couldn't read who it was going to").
+  Fix: OBJ-39's protocol ask, either `ExecuteActionResult` returning the resolved element or `readFieldValues` taking element numbers (Patrick for the Mac app, Jepoy for the protocol).
 - **For the real runs:** the Mac app's socket is fixed at `~/Library/Application Support/Yumi/harness.sock` (`mac/Yumi/Harness/HarnessSocket.swift`), and the app launches its own harness from the repo it was built from, which does not run tasks yet.
   So the runs use `npm run gui:run` holding that socket, with a signed build of the Mac app from this worktree; the app's own harness then exits because the socket is taken, and the app's supervisor keeps retrying it.
