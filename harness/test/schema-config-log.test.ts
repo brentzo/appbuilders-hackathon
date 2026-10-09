@@ -7,7 +7,6 @@ import { DEFAULT_SUPPORT_DIR, loadConfig } from "../src/config.ts";
 import { FileLogger } from "../src/log.ts";
 import { bundleType } from "../src/schema/bundle.ts";
 import { workerOutputSchemaFor } from "../src/worker/schema.ts";
-import { checkWorkerOutput } from "../src/worker/validate.ts";
 import { exampleWorkerInput, PROTOCOL_DIR, tempDir } from "./helpers.ts";
 
 function compile(schema: object) {
@@ -38,10 +37,24 @@ describe("the schema bundle", () => {
     expect(full).toContain('"if"');
     const forModel = JSON.stringify(bundleType("WorkerOutput", { forModel: true }));
     for (const keyword of ["if", "then", "else"]) expect(forModel).not.toContain(`"${keyword}":`);
-    // OpenAppCall takes a bundle id or a name, not both: the grammar no longer says so, the validation does.
-    const both = { action: { kind: "tool", call: { tool: "open_app", bundleId: "com.apple.Notes", name: "Notes" } } };
-    expect(compile(workerOutputSchemaFor(exampleWorkerInput(), "main"))(both)).toBe(true);
-    expect(checkWorkerOutput(JSON.stringify(both), exampleWorkerInput(), "main").ok).toBe(false);
+    // OpenAppCall takes exactly one of a bundle id or a name: the grammar says so with anyOf instead of if/then/else.
+    const modelCheck = compile(workerOutputSchemaFor(exampleWorkerInput(), "main"));
+    const openApp = (call: object) => ({ action: { kind: "tool", call: { tool: "open_app", ...call } } });
+    expect(modelCheck(openApp({ name: "Notes" }))).toBe(true);
+    expect(modelCheck(openApp({ bundleId: "com.apple.Notes" }))).toBe(true);
+    expect(modelCheck(openApp({ bundleId: "com.apple.Notes", name: "Notes" }))).toBe(false);
+    expect(modelCheck(openApp({}))).toBe(false);
+  });
+
+  it("makes the planner name an app with exactly one of a bundle id or a name", () => {
+    // An empty targetApp passed the grammar and failed the full schema, so every plan that named an app was rejected.
+    const forModel = bundleType("Plan", { forModel: true });
+    for (const keyword of ["if", "then", "else"]) expect(JSON.stringify(forModel)).not.toContain(`"${keyword}":`);
+    const check = compile({ ...forModel, $ref: "#/$defs/TargetApp" });
+    expect(check({ name: "Notes" })).toBe(true);
+    expect(check({ bundleId: "com.apple.Notes" })).toBe(true);
+    expect(check({})).toBe(false);
+    expect(check({ bundleId: "com.apple.Notes", name: "Notes" })).toBe(false);
   });
 
   it("narrows the model schema to the step but still accepts the step's valid actions", () => {

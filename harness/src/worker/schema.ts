@@ -34,14 +34,19 @@ export function workerOutputSchemaFor(input: WorkerInput, lane: Lane): JsonSchem
   const allowed = new Set<string>(input.allowedTools);
   toolCall["oneOf"] = (toolCall["oneOf"] as JsonSchema[]).filter((variant) => {
     const name = String(variant["$ref"]).replace("#/$defs/", "");
-    const tool = ((defs[name]?.["properties"] as Record<string, JsonSchema> | undefined)?.["tool"]?.["const"] ?? "") as string;
-    return allowed.has(tool);
+    return allowed.has(toolName(defs[name]));
   });
   if ((toolCall["oneOf"] as JsonSchema[]).length === 0) removeAction(ACTION_TYPE_NAME.tool);
 
   if (!input.observation.screenshotPath) removeAction(ACTION_TYPE_NAME.clickAt);
 
   return pruneUnreachable(schema);
+}
+
+/** The `tool` const of a tool call, which sits in each `anyOf` shape when the bundle split an exactly-one rule. */
+function toolName(call: JsonSchema | undefined): string {
+  const shape = (call?.["anyOf"] as JsonSchema[] | undefined)?.[0] ?? call;
+  return ((shape?.["properties"] as Record<string, JsonSchema> | undefined)?.["tool"]?.["const"] ?? "") as string;
 }
 
 /** Drops `$defs` no longer referenced after narrowing, so the grammar stays small. */
