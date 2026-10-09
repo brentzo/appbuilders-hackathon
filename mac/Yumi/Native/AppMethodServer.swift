@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import OSLog
 import YumiProtocol
@@ -86,6 +87,8 @@ final class AppMethodServer {
                 let p = try decode(SecretRef.self, params)
                 let value = try secrets.load(p.key)
                 return try encode(LoadSecretResult(value: value?.base64EncodedString()))
+            case .getScreenLock:
+                return try encode(ScreenLockState(locked: Self.screenIsLocked()))
             default:
                 return .notServed
             }
@@ -94,6 +97,12 @@ final class AppMethodServer {
         } catch {
             return Self.reply(for: error, method: name)
         }
+    }
+
+    /// Whether the lock screen shows, from the console session's lock flag (SPEC-09 r20, OBJ-80). The harness holds a
+    /// goal from the phone while it is set. Nothing here reads or types the password.
+    nonisolated static func screenIsLocked(_ session: [String: Any]? = CGSessionCopyCurrentDictionary() as? [String: Any]) -> Bool {
+        (session?["CGSSessionScreenIsLocked"] as? Bool) ?? false
     }
 
     /// Maps a native failure to the user-facing kind the harness passes on (SPEC-11).

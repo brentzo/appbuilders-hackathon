@@ -33,6 +33,21 @@ struct AppMethodServerTests {
         #expect(try JSONDecoder().decode(LoadSecretResult.self, from: data).value == nil)
     }
 
+    @Test func answersWhetherTheScreenIsLocked() async throws {
+        let server = AppMethodServer(secrets: secrets)
+        guard case .result(let data) = await server.serve("getScreenLock", params: Data("{}".utf8)) else {
+            Issue.record("getScreenLock failed"); return
+        }
+        // The test host runs in an unlocked session.
+        #expect(try JSONDecoder().decode(ScreenLockState.self, from: data).locked == false)
+    }
+
+    @Test func readsTheLockFlagOfTheConsoleSession() {
+        #expect(AppMethodServer.screenIsLocked(["CGSSessionScreenIsLocked": true]))
+        #expect(!AppMethodServer.screenIsLocked(["kCGSSessionOnConsoleKey": true]))
+        #expect(!AppMethodServer.screenIsLocked(nil))
+    }
+
     @Test func paramsThatBreakTheContractAreInvalid() async {
         let server = AppMethodServer(secrets: secrets)
         guard case .invalidParams = await server.serve("getWindowFrame", params: json(["window": 1])) else {
