@@ -578,13 +578,21 @@ data class PairAccept(
     val signature: String,
 )
 
-/** Mac to relay to phone. When the relay forwards it after a matching pairRequest, it records the two devices as paired. */
+/** Mac to relay to phone. It counts only while the matching pairRequest is open and the phone is connected: the relay then records the two devices as paired, forwards this frame, and sends the Mac paired. Otherwise the relay drops it and sends the Mac pairExpired. */
 @Serializable
 @SerialName("pairAccept")
 data class PairAcceptFrame(
     val from: String,
     val to: String,
     val accept: PairAccept,
+) : BridgeFrame
+
+/** Phone to relay: the phone no longer waits for an answer to its pairRequest to the Mac in to, for example because the user left the pairing screen. The relay closes the request and sends the Mac pairExpired. It cannot undo a pairAccept the relay already forwarded; the phone answers that pairAccept with an unpair. */
+@Serializable
+@SerialName("pairCancel")
+data class PairCancelFrame(
+    val from: String,
+    val to: String,
 ) : BridgeFrame
 
 @Serializable
@@ -598,6 +606,25 @@ data class PairedDevice(
 data class PairedDeviceList(
     val devices: List<PairedDevice>,
 )
+
+/** Relay to Mac: its pairAccept counted, the relay forwarded it to the phone in device, and the two are now paired. Only then does the Mac store the phone, use up the offer, and show "Paired with <device name>". */
+@Serializable
+@SerialName("paired")
+data class PairedFrame(
+    /** The phone that is now paired. */
+    val device: String,
+) : BridgeFrame
+
+/** Relay to phone or Mac: the pairing request between this device and the one in device closed without pairing, because the answer window ended, the phone cancelled, or the Mac answered too late or while the phone was offline. The phone shows "Mac didn't answer pairing" (SPEC-11); the Mac forgets the request. */
+@Serializable
+@SerialName("pairExpired")
+data class PairExpiredFrame(
+    /** The other device in the closed request. */
+    val device: String,
+) : BridgeFrame
+
+/** The relay keeps a pairRequest open for 30 seconds after it receives it, then closes it with pairExpired (SPEC-08 'Mac does not answer pairing'). The relay's clock alone decides, so a pairing never completes after the phone was told it failed. */
+const val PAIRING_ANSWER_SECONDS: Long = 30L
 
 /** What the Mac's pairing QR code holds, as JSON text (SPEC-08 r1). The secret is used once and never sent to the relay. See protocol/docs/pairing.md. */
 @Serializable
@@ -617,6 +644,9 @@ data class PairingOffer(
     val expiresAt: String,
 )
 
+/** A pairing QR code (PairingOffer) is valid for 5 minutes after the Mac shows it (SPEC-08 'Pairing code expired'). */
+const val PAIRING_OFFER_SECONDS: Long = 300L
+
 /** The phone's name and keys, sent to the Mac after scanning the QR code. Travels sealed with the pairing secret inside a pairRequest frame, so the relay can neither read nor replace it. */
 @Serializable
 data class PairRequest(
@@ -626,7 +656,7 @@ data class PairRequest(
     val kxPublicKey: String,
 )
 
-/** Phone to relay to Mac, after scanning the QR code. The relay checks that from is the authenticated sender and forwards the frame unchanged. */
+/** Phone to relay to Mac, after scanning the QR code. The relay checks that from is the authenticated sender, keeps the request open for PairingAnswerSeconds, and forwards the frame unchanged, now or when the Mac reconnects within that window. */
 @Serializable
 @SerialName("pairRequest")
 data class PairRequestFrame(

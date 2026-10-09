@@ -190,6 +190,9 @@ public enum BridgeFrame: Codable, Equatable, Sendable {
     case notPaired(NotPairedFrame)
     case pairRequest(PairRequestFrame)
     case pairAccept(PairAcceptFrame)
+    case pairCancel(PairCancelFrame)
+    case paired(PairedFrame)
+    case pairExpired(PairExpiredFrame)
     case unpair(UnpairFrame)
 
     private enum DiscriminatorKey: String, CodingKey {
@@ -211,6 +214,9 @@ public enum BridgeFrame: Codable, Equatable, Sendable {
         case "notPaired": self = .notPaired(try NotPairedFrame(from: decoder))
         case "pairRequest": self = .pairRequest(try PairRequestFrame(from: decoder))
         case "pairAccept": self = .pairAccept(try PairAcceptFrame(from: decoder))
+        case "pairCancel": self = .pairCancel(try PairCancelFrame(from: decoder))
+        case "paired": self = .paired(try PairedFrame(from: decoder))
+        case "pairExpired": self = .pairExpired(try PairExpiredFrame(from: decoder))
         case "unpair": self = .unpair(try UnpairFrame(from: decoder))
         default:
             throw DecodingError.dataCorruptedError(forKey: .discriminator, in: container, debugDescription: "Unknown BridgeFrame frame: \(value)")
@@ -252,6 +258,15 @@ public enum BridgeFrame: Codable, Equatable, Sendable {
             try value.encode(to: encoder)
         case .pairAccept(let value):
             try container.encode("pairAccept", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .pairCancel(let value):
+            try container.encode("pairCancel", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .paired(let value):
+            try container.encode("paired", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .pairExpired(let value):
+            try container.encode("pairExpired", forKey: .discriminator)
             try value.encode(to: encoder)
         case .unpair(let value):
             try container.encode("unpair", forKey: .discriminator)
@@ -986,7 +1001,7 @@ public struct PairAccept: Codable, Equatable, Sendable {
     }
 }
 
-/// Mac to relay to phone. When the relay forwards it after a matching pairRequest, it records the two devices as paired.
+/// Mac to relay to phone. It counts only while the matching pairRequest is open and the phone is connected: the relay then records the two devices as paired, forwards this frame, and sends the Mac paired. Otherwise the relay drops it and sends the Mac pairExpired.
 public struct PairAcceptFrame: Codable, Equatable, Sendable {
     public var from: String
     public var to: String
@@ -996,6 +1011,17 @@ public struct PairAcceptFrame: Codable, Equatable, Sendable {
         self.from = from
         self.to = to
         self.accept = accept
+    }
+}
+
+/// Phone to relay: the phone no longer waits for an answer to its pairRequest to the Mac in to, for example because the user left the pairing screen. The relay closes the request and sends the Mac pairExpired. It cannot undo a pairAccept the relay already forwarded; the phone answers that pairAccept with an unpair.
+public struct PairCancelFrame: Codable, Equatable, Sendable {
+    public var from: String
+    public var to: String
+
+    public init(from: String, to: String) {
+        self.from = from
+        self.to = to
     }
 }
 
@@ -1018,6 +1044,29 @@ public struct PairedDeviceList: Codable, Equatable, Sendable {
         self.devices = devices
     }
 }
+
+/// Relay to Mac: its pairAccept counted, the relay forwarded it to the phone in device, and the two are now paired. Only then does the Mac store the phone, use up the offer, and show "Paired with <device name>".
+public struct PairedFrame: Codable, Equatable, Sendable {
+    /// The phone that is now paired.
+    public var device: String
+
+    public init(device: String) {
+        self.device = device
+    }
+}
+
+/// Relay to phone or Mac: the pairing request between this device and the one in device closed without pairing, because the answer window ended, the phone cancelled, or the Mac answered too late or while the phone was offline. The phone shows "Mac didn't answer pairing" (SPEC-11); the Mac forgets the request.
+public struct PairExpiredFrame: Codable, Equatable, Sendable {
+    /// The other device in the closed request.
+    public var device: String
+
+    public init(device: String) {
+        self.device = device
+    }
+}
+
+/// The relay keeps a pairRequest open for 30 seconds after it receives it, then closes it with pairExpired (SPEC-08 'Mac does not answer pairing'). The relay's clock alone decides, so a pairing never completes after the phone was told it failed.
+public let PAIRING_ANSWER_SECONDS: Int = 30
 
 /// What the Mac's pairing QR code holds, as JSON text (SPEC-08 r1). The secret is used once and never sent to the relay. See protocol/docs/pairing.md.
 public struct PairingOffer: Codable, Equatable, Sendable {
@@ -1048,6 +1097,9 @@ public struct PairingOffer: Codable, Equatable, Sendable {
     }
 }
 
+/// A pairing QR code (PairingOffer) is valid for 5 minutes after the Mac shows it (SPEC-08 'Pairing code expired').
+public let PAIRING_OFFER_SECONDS: Int = 300
+
 /// The phone's name and keys, sent to the Mac after scanning the QR code. Travels sealed with the pairing secret inside a pairRequest frame, so the relay can neither read nor replace it.
 public struct PairRequest: Codable, Equatable, Sendable {
     public var deviceName: String
@@ -1063,7 +1115,7 @@ public struct PairRequest: Codable, Equatable, Sendable {
     }
 }
 
-/// Phone to relay to Mac, after scanning the QR code. The relay checks that from is the authenticated sender and forwards the frame unchanged.
+/// Phone to relay to Mac, after scanning the QR code. The relay checks that from is the authenticated sender, keeps the request open for PairingAnswerSeconds, and forwards the frame unchanged, now or when the Mac reconnects within that window.
 public struct PairRequestFrame: Codable, Equatable, Sendable {
     public var from: String
     public var to: String

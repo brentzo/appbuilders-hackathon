@@ -106,6 +106,9 @@
         { "$ref": "#/$defs/NotPairedFrame" },
         { "$ref": "#/$defs/PairRequestFrame" },
         { "$ref": "#/$defs/PairAcceptFrame" },
+        { "$ref": "#/$defs/PairCancelFrame" },
+        { "$ref": "#/$defs/PairedFrame" },
+        { "$ref": "#/$defs/PairExpiredFrame" },
         { "$ref": "#/$defs/UnpairFrame" }
       ]
     },
@@ -209,7 +212,7 @@
       }
     },
     "PairRequestFrame": {
-      "description": "Phone to relay to Mac, after scanning the QR code. The relay checks that from is the authenticated sender and forwards the frame unchanged.",
+      "description": "Phone to relay to Mac, after scanning the QR code. The relay checks that from is the authenticated sender, keeps the request open for PairingAnswerSeconds, and forwards the frame unchanged, now or when the Mac reconnects within that window.",
       "type": "object",
       "additionalProperties": false,
       "required": ["frame", "from", "to", "sealed"],
@@ -221,7 +224,7 @@
       }
     },
     "PairAcceptFrame": {
-      "description": "Mac to relay to phone. When the relay forwards it after a matching pairRequest, it records the two devices as paired.",
+      "description": "Mac to relay to phone. It counts only while the matching pairRequest is open and the phone is connected: the relay then records the two devices as paired, forwards this frame, and sends the Mac paired. Otherwise the relay drops it and sends the Mac pairExpired.",
       "type": "object",
       "additionalProperties": false,
       "required": ["frame", "from", "to", "accept"],
@@ -230,6 +233,37 @@
         "from": { "$ref": "common.json#/$defs/DeviceId" },
         "to": { "$ref": "common.json#/$defs/DeviceId" },
         "accept": { "$ref": "#/$defs/PairAccept" }
+      }
+    },
+    "PairCancelFrame": {
+      "description": "Phone to relay: the phone no longer waits for an answer to its pairRequest to the Mac in to, for example because the user left the pairing screen. The relay closes the request and sends the Mac pairExpired. It cannot undo a pairAccept the relay already forwarded; the phone answers that pairAccept with an unpair.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frame", "from", "to"],
+      "properties": {
+        "frame": { "const": "pairCancel" },
+        "from": { "$ref": "common.json#/$defs/DeviceId" },
+        "to": { "$ref": "common.json#/$defs/DeviceId" }
+      }
+    },
+    "PairedFrame": {
+      "description": "Relay to Mac: its pairAccept counted, the relay forwarded it to the phone in device, and the two are now paired. Only then does the Mac store the phone, use up the offer, and show \"Paired with <device name>\".",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frame", "device"],
+      "properties": {
+        "frame": { "const": "paired" },
+        "device": { "description": "The phone that is now paired.", "$ref": "common.json#/$defs/DeviceId" }
+      }
+    },
+    "PairExpiredFrame": {
+      "description": "Relay to phone or Mac: the pairing request between this device and the one in device closed without pairing, because the answer window ended, the phone cancelled, or the Mac answered too late or while the phone was offline. The phone shows \"Mac didn't answer pairing\" (SPEC-11); the Mac forgets the request.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frame", "device"],
+      "properties": {
+        "frame": { "const": "pairExpired" },
+        "device": { "description": "The other device in the closed request.", "$ref": "common.json#/$defs/DeviceId" }
       }
     },
     "UnpairFrame": {
@@ -245,6 +279,16 @@
         "at": { "description": "When the user unpaired. The other device ignores an unpair older than its pairing, so an old frame cannot be replayed.", "$ref": "common.json#/$defs/Timestamp" },
         "signature": { "description": "Ed25519 by the sending device, so the relay cannot unpair two devices on its own.", "$ref": "#/$defs/Signature" }
       }
+    },
+    "PairingOfferSeconds": {
+      "description": "A pairing QR code (PairingOffer) is valid for 5 minutes after the Mac shows it (SPEC-08 'Pairing code expired').",
+      "type": "integer",
+      "const": 300
+    },
+    "PairingAnswerSeconds": {
+      "description": "The relay keeps a pairRequest open for 30 seconds after it receives it, then closes it with pairExpired (SPEC-08 'Mac does not answer pairing'). The relay's clock alone decides, so a pairing never completes after the phone was told it failed.",
+      "type": "integer",
+      "const": 30
     },
     "CommandExpirySeconds": {
       "description": "Every command expires 2 minutes after it is sent (SPEC-08 r6, SPEC-09 r16), except an approval request.",

@@ -125,6 +125,25 @@ describe("Pairing", () => {
     expect(validate("BridgeFrame", { frame: "pairAccept", from: envelope.from, to: envelope.to, accept: { signature: envelope.signature } }).valid).toBe(true);
   });
 
+  it("lets the phone cancel a pairing request it no longer waits for (OBJ-33)", () => {
+    const cancel = { frame: "pairCancel", from: envelope.to, to: envelope.from };
+    expect(validate("BridgeFrame", cancel).errors).toEqual([]);
+    expect(validate("BridgeFrame", { ...cancel, to: undefined }).valid).toBe(false);
+  });
+
+  it("tells each device the relay's verdict on a pairing request, naming the other device (OBJ-33)", () => {
+    expect(validate("BridgeFrame", { frame: "paired", device: envelope.to }).errors).toEqual([]);
+    expect(validate("BridgeFrame", { frame: "pairExpired", device: envelope.from }).errors).toEqual([]);
+    expect(validate("BridgeFrame", { frame: "pairExpired" }).valid).toBe(false);
+    expect(validate("BridgeFrame", { frame: "paired", device: envelope.to, reason: "late" }).valid).toBe(false);
+  });
+
+  it("answers a pairing request within 30 seconds, while the QR code lasts 5 minutes (SPEC-08 'Mac does not answer pairing')", () => {
+    expect(validate("PairingAnswerSeconds", 30).valid).toBe(true);
+    expect(validate("PairingAnswerSeconds", 300).valid).toBe(false);
+    expect(validate("PairingOfferSeconds", 300).valid).toBe(true);
+  });
+
   it("signs an unpair with the device's own key, so the relay cannot unpair two devices on its own", () => {
     const unpair = { frame: "unpair", id: envelope.id, from: envelope.to, to: envelope.from, at: "2026-10-09T15:50:00+08:00", signature: envelope.signature };
     expect(validate("BridgeFrame", unpair).errors).toEqual([]);

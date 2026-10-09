@@ -14,7 +14,8 @@ Who builds what:
 
 - Each device's id and Ed25519 public key.
 - Which devices are paired with each other.
-- Results, events, and notices held for a device that dropped off, until they expire.
+- Results, events, notices, and pairing verdicts held for a device that dropped off, until they expire.
+- Each open pairing request, for its 30-second answer window.
 
 It never sees a pairing secret, an X25519 key, or a payload in plain text.
 It logs routing fields, connection events, and errors only (OBJ-13 task 8).
@@ -50,24 +51,74 @@ Both devices must be connected to the relay.
    - Its device id, name, platform, and both public keys.
    - A one-time pairing secret: 32 random bytes.
    - The bridge URL.
-   - An expiry 5 minutes ahead.
+   - An expiry `PairingOfferSeconds` (5 minutes) ahead.
 2. The phone scans it and checks that the protocol version matches and the offer has not expired.
    The QR code's `protocolVersion` is a `PeerProtocolVersion`, so an offer from another version still validates and the phone shows the "Pairing versions differ" error from SPEC-11 rather than "Not a pairing code".
+   An expired offer shows "Pairing code expired", and nothing is sent to the Mac (SPEC-08 scenario "Pairing code expired").
 3. The phone connects to the bridge URL from the offer and sends `pairRequest` to the Mac.
    The frame holds a `PairRequest` (the phone's name, platform, and public keys) sealed with the pairing secret ([crypto.md](crypto.md), "Pairing request").
    The relay can neither read the phone's name nor swap in its own keys, because it never sees the secret (SPEC-08 r3).
-4. The relay checks that `from` is the authenticated sender, remembers the request for 5 minutes, and forwards the frame unchanged.
+4. The relay checks that `from` is the authenticated sender and opens the request for `PairingAnswerSeconds` (30 seconds), by its own clock.
+   It forwards the frame unchanged, at once if the Mac is connected, or when the Mac reconnects within the window.
+   A new request between the same two devices replaces the old one and starts a new window.
 5. The Mac checks the request, and silently drops it if any check fails:
    - It has an unused, unexpired offer.
    - The request opens with that offer's secret, for this `from` and `to`.
    - `from` is derived from the request's Ed25519 public key.
-6. The Mac marks the secret as used, stores the phone's id, name, and public keys, and sends `pairAccept`.
+6. The Mac reserves the offer for this phone, keeps the phone's id, name, and public keys as pending, and sends `pairAccept`.
    It holds an Ed25519 signature over the canonical fields `yumi-pair-accept-v1`, `from` (the Mac), `to` (the phone), the phone's Ed25519 public key, and the phone's X25519 public key.
-7. The relay sees an accept from the Mac that matches a pending request from the phone, records the two as paired, and forwards the frame.
+7. The relay decides, as in "The answer window" below.
+   If the accept counts, the relay records the two as paired, forwards `pairAccept` to the phone, and sends the Mac `paired`.
 8. The phone verifies the signature with the Mac's key from the QR code and stores the Mac's id, name, and public keys.
-9. Both show "Paired with <device name>" (SPEC-08 scenario "Pair the phone with the Mac").
+9. On `paired`, the Mac marks the secret as used and stores the phone.
+10. Both show "Paired with <device name>" (SPEC-08 scenario "Pair the phone with the Mac").
 
 The relay pairs two devices only when both took part: the phone's request and the Mac's accept.
+
+### The answer window
+
+The QR code lasts 5 minutes, but the phone waits only 30 seconds for the Mac's answer (SPEC-08 scenario "Mac does not answer pairing").
+The relay's clock is the only one that decides whether an answer was in time, so a pairing never completes after the phone was told it failed.
+
+- **In time:** an accept counts only while its request is open and the phone is connected.
+  The relay then pairs the two, forwards `pairAccept`, and sends the Mac `paired`, all in one step.
+- **Too late:** an accept for a request that is closed, cancelled, or unknown is dropped, and the Mac gets `pairExpired`.
+- **Phone offline:** an accept that finds the phone disconnected closes the request.
+  The Mac gets `pairExpired`, and the phone gets it when it reconnects.
+- **No answer:** when the window ends, the relay closes the request and sends `pairExpired` to both devices.
+  That covers a Mac that is offline the whole time, and a Mac that silently dropped the request.
+- **Cancelled:** the phone sends `pairCancel` when it stops waiting early, for example when the user leaves the pairing screen.
+  The relay closes the request and sends the Mac `pairExpired`.
+  A cancel for a request that is not open is ignored.
+- **Unpaired:** an `unpair` between the two closes any request still open between them, and both get `pairExpired`.
+
+The relay checks the window on every `pairAccept`, so a late answer never counts.
+It sweeps closed windows once a second, so `pairExpired` for an unanswered request reaches the phone up to a second after the 30 seconds.
+
+One case is left to the phone: the relay pairs as soon as it hands `pairAccept` to the phone's connection, and a connection that dies at that moment loses it.
+The Mac then shows "Paired with <device name>" while the phone never hears back, gives up after 60 seconds, and sends the `unpair` below, which the Mac then follows to "Not paired".
+
+`paired` and `pairExpired` name the other device in `device`.
+A verdict for a device that is offline is held for 2 minutes, like a notice, and the newest verdict between two devices replaces the last.
+A new request between the same two devices forgets the held verdicts, so an old `pairExpired` never closes a new attempt.
+A held verdict can arrive more than once, so each device acts on one only while it waits for that device.
+
+The phone:
+
+- Shows "Paired with <device name>" on `pairAccept`, and "Mac didn't answer pairing" from SPEC-11 on `pairExpired`.
+  While it is connected it never decides on its own clock, because the relay always answers within the window.
+- Keeps waiting through a short reconnect, since the verdict is held for it.
+- Gives up on its own only when it gets no verdict within 60 seconds of sending the request, for example while it cannot reach the relay.
+  It then shows "Mac didn't answer pairing" and, on its next connection, sends `pairCancel` and a signed `unpair` for that Mac.
+  The relay ignores both if nothing is open or paired, and otherwise they undo a pairing whose `pairAccept` the phone never received.
+  A phone that was already paired with that Mac before this attempt sends only `pairCancel`.
+- Answers a `pairAccept` for a request it cancelled or gave up on with a signed `unpair`, and never stores that Mac.
+
+The Mac:
+
+- Acts on a verdict only for the phone it has pending.
+- On `pairExpired`, forgets the pending phone; the offer is usable again until it expires.
+- Keeps the pending phone through a short reconnect, since the verdict is held for it.
 A device can be paired with more than one device, for example a Mac with an Android phone and later an iPhone.
 Each pairing is between two devices.
 
@@ -142,4 +193,6 @@ A device that needs new keys creates them, which gives it a new device id, and p
 
 - Envelope payloads are at most 1 MiB of base64 text.
   Larger files wait for the direct path in SPEC-08 "Later (p1)".
-- A pairing offer and a pending pairing request last 5 minutes.
+- A pairing offer lasts 5 minutes (`PairingOfferSeconds`).
+- A pairing request stays open for 30 seconds at the relay (`PairingAnswerSeconds`).
+  A held pairing verdict lasts 2 minutes.
