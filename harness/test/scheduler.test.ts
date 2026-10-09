@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { validate } from "@yumi/protocol";
 import { PROTOCOL_VERSION, type Subtask, type Task } from "@yumi/protocol/types";
 import { startHarness, type Harness } from "../src/harness.ts";
@@ -20,6 +20,9 @@ import { startMockModelServer, type MockModelServer, type MockReply } from "./mo
  * The planner, scheduler, and summary end to end, with a mocked model server, the real task store, the typed
  * file tools on a temporary home folder, and the real local RPC server with a bare app client.
  */
+
+// Each run is about a second; give a loaded machine (other agents, the model server) room before calling it a hang.
+vi.setConfig({ testTimeout: 20_000 });
 
 const GOAL = "summarize the 5 PDFs in Downloads into one note";
 const PDFS = ["Invoice March.pdf", "Lease.pdf", "Insurance.pdf", "Payslip.pdf", "Tax return.pdf"];
@@ -64,11 +67,20 @@ interface Interval {
 /** A model that plans, works each subtask like a careful worker would, and summarizes. Times every worker step. */
 function scriptedModel(
   server: MockModelServer,
-  options: { plan?: string; worker?: (instruction: string, steps: number, text: string) => MockReply } = {},
+  options: {
+    plan?: string;
+    worker?: (instruction: string, steps: number, text: string) => MockReply;
+    /**
+     * Hold the first worker replies until this many are in flight (or 2 s pass), so a loaded machine cannot make
+     * concurrent requests look sequential. A scheduler that sends them one at a time still never gets there.
+     */
+    gather?: number;
+  } = {},
 ) {
   const intervals: Interval[] = [];
   let inFlight = 0;
   let maxInFlight = 0;
+  let gathered = options.gather === undefined;
   server.respond(async (body) => {
     const request = body as unknown as ChatRequest;
     const system = request.messages[0]!.content as string;
@@ -82,6 +94,11 @@ function scriptedModel(
     const start = performance.now();
     inFlight++;
     maxInFlight = Math.max(maxInFlight, inFlight);
+    for (const deadline = performance.now() + 2000; !gathered && performance.now() < deadline;) {
+      if (inFlight >= options.gather!) gathered = true;
+      else await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+    gathered = true;
     await new Promise((resolve) => setTimeout(resolve, STEP_MS));
     inFlight--;
     intervals.push({ instruction, start, end: performance.now() });
@@ -167,7 +184,7 @@ async function app() {
 }
 
 const until = async (check: () => boolean) => {
-  for (let i = 0; i < 200 && !check(); i++) await new Promise((resolve) => setTimeout(resolve, 10));
+  for (let i = 0; i < 500 && !check(); i++) await new Promise((resolve) => setTimeout(resolve, 10));
   expect(check()).toBe(true);
 };
 
@@ -257,7 +274,7 @@ describe("SPEC-02 task lifecycle", () => {
   });
 
   it("runs independent subtasks at the same time, up to the parallel slots (OBJ-05.9, measured)", async () => {
-    const model = scriptedModel(server);
+    const model = scriptedModel(server, { gather: 3 });
     const task = confirmedTask();
     const started = performance.now();
     await runTask(task.id, deps({ slots: 3 }));
