@@ -64,7 +64,14 @@ This is also the moment the cat cursor appears, so it is the start of every demo
 
 - Confirmation on Android: needs the phone model (SPEC-10, not finalized).
 - Kokoro voice: later, behind the same `speak` interface.
+- Follow-up before phone routing (SPEC-09): the Mac app must send its bridge device id as `originDeviceId` instead of `mac-local`, and the harness must use the same id for its task records and action log (Brent's decision, 2026-10-10).
 
 ## Outcome
 
-_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._
+Not finished yet: the live voice run on the Mac (OBJ-17.8) is next. What is known so far:
+
+- **Decisions and deviations:**
+  - Tasks the user cancelled before confirming them are kept, as every record is (SPEC-02 r10), but `listTasks` and `searchTasks` leave them out, so "no task is created" holds for history (Brent's decision, 2026-10-10).
+  - When a confirmation ends with an error (the model could not repeat the goal back or read the answer), the harness sends the `userError` before the `cancelled` status, and the Mac says only the error copy, not "Okay, I won't do anything." (Brent's decision, 2026-10-10).
+  - The Mac keeps sending `mac-local` as its `originDeviceId`, and the harness uses `mac-local` for this Mac's task records and action log. Moving to the bridge device id is a follow-up before phone routing (see "Out of scope") (Brent's decision, 2026-10-10).
+  - The Mac app spawns the cursor, shows the listening state, says the cancel line, and fades the cursor; the harness sends no listening state, cancel line, or fade, so nothing comes twice.
