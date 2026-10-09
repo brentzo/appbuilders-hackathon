@@ -85,8 +85,9 @@ final class ApprovalCards {
     private func decide(_ approvalId: String, approved: Bool, method: ApprovalMethod) {
         guard let entry = pending.removeValue(forKey: approvalId) else { return }
         let approval = entry.approval
-        // A delete is approved only by a tap, whatever called this (SPEC-07 r11).
-        let approved = approved && !(approval.kind == .delete && method != .tap)
+        // A delete or an unclassified action is approved only by a tap, whatever called this
+        // (SPEC-07 r6, r11).
+        let approved = approved && (approval.kind == .send || method == .tap)
         close(approval, cursorState: entry.cursorState)
         if approved, approval.kind == .delete, let files = approval.files {
             approvedTrashPaths.formUnion(files.allPaths.map(Trash.expand))

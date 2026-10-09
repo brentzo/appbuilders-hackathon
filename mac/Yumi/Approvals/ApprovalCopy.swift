@@ -9,6 +9,9 @@ enum ApprovalCopy {
     static let dontSend = "Don't send"
     static let delete = "Delete"
     static let dontDelete = "Don't delete"
+    /// An unclassified risky action's card asks "Should I allow it?" (OBJ-56, OBJ-40.10).
+    static let allow = "Allow"
+    static let dontAllow = "Don't allow"
 
     /// "and 7 more" under the first 5 names of a delete card (SPEC-07 r10).
     static func andMore(_ count: Int) -> String {
@@ -28,6 +31,8 @@ enum ApprovalCopy {
             approval.text.contains("this message")
                 ? "Okay, I didn't send it. The message is still there if you want to change anything."
                 : "Okay, I didn't send it. The draft is still there if you want to change anything."
+        case .action:
+            "Okay, I didn't do that. Want me to try something else?"
         }
     }
 

@@ -108,6 +108,38 @@ struct ApprovalCardsTests {
         #expect(ApprovalCopy.declined(one) == "Okay, I left the file alone. Want me to do anything else with it?")
     }
 
+    static let action = Approval(
+        id: "6f7a8b9c-0d1e-4f2a-9b3c-4d5e6f7a8b92", stepId: "3c4d5e6f-7a8b-4c9d-8e1f-2a3b4c5d6e7f", kind: .action,
+        text: "I'm about to click Save in Finder. Should I allow it?",
+        requestedAt: "2026-10-09T15:42:00+08:00", expiresAt: "2026-10-09T15:47:00+08:00"
+    )
+
+    @Test func anUnclassifiedActionIsAllowedOnlyByATap() async throws {
+        let heard = Heard(["allow", "yes"])
+        let cards = cards(hearing: heard)
+        let answer = Task { await cards.show(Self.action) }
+        try await settle()
+        #expect(heard.listens == 0, "an action card does not take a voice answer (SPEC-07 r6)")
+        #expect(card.shown == [Self.action], "the card shows the harness's summary as is")
+        #expect(ApprovalCardView.labels(for: .action) == (approve: "Allow", decline: "Don't allow"))
+        #expect(ApprovalCardView.symbol(for: .action) == "hand.raised.fill")
+
+        card.tap?(true)
+        let decision = await answer.value
+        #expect(decision.approved && decision.method == .tap)
+        #expect(cards.approvedTrashPaths.isEmpty)
+    }
+
+    @Test func userDeclinesAnUnclassifiedAction() async throws {
+        let cards = cards(hearing: Heard([]))
+        let answer = Task { await cards.show(Self.action) }
+        try await settle()
+        card.tap?(false)
+        #expect(!(await answer.value).approved)
+        try await settle()
+        #expect(speech.said.last == "Okay, I didn't do that. Want me to try something else?")
+    }
+
     @Test func aCancelledCardClosesAndIgnoresALateTap() async throws {
         let cards = cards(hearing: Heard([]))
         let answer = Task { await cards.show(Self.delete) }

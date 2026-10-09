@@ -48,7 +48,7 @@ struct ApprovalCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: YumiSpace.m) {
             HStack(alignment: .top, spacing: YumiSpace.m) {
-                YumiSymbolBadge(systemName: approval.kind == .send ? "paperplane.fill" : "trash.fill")
+                YumiSymbolBadge(systemName: Self.symbol(for: approval.kind))
                 Text(approval.text)
                     .font(YumiFont.body)
                     .foregroundStyle(YumiColor.ink)
@@ -61,21 +61,31 @@ struct ApprovalCardView: View {
             HStack(spacing: YumiSpace.s) {
                 Spacer()
                 // The approving tap is the panel's one ginger action, for a delete too: never red.
-                if approval.kind == .send {
-                    Button(ApprovalCopy.dontSend) { tap(false) }
-                        .buttonStyle(YumiSecondaryButtonStyle())
-                    Button(ApprovalCopy.send) { tap(true) }
-                        .buttonStyle(YumiPrimaryButtonStyle())
-                } else {
-                    Button(ApprovalCopy.dontDelete) { tap(false) }
-                        .buttonStyle(YumiSecondaryButtonStyle())
-                    Button(ApprovalCopy.delete) { tap(true) }
-                        .buttonStyle(YumiPrimaryButtonStyle())
-                }
+                let labels = Self.labels(for: approval.kind)
+                Button(labels.decline) { tap(false) }
+                    .buttonStyle(YumiSecondaryButtonStyle())
+                Button(labels.approve) { tap(true) }
+                    .buttonStyle(YumiPrimaryButtonStyle())
             }
         }
         .padding(YumiSpace.l)
         .yumiCard()
+    }
+
+    static func symbol(for kind: ApprovalKind) -> String {
+        switch kind {
+        case .send: "paperplane.fill"
+        case .delete: "trash.fill"
+        case .action: "hand.raised.fill"
+        }
+    }
+
+    static func labels(for kind: ApprovalKind) -> (approve: String, decline: String) {
+        switch kind {
+        case .send: (ApprovalCopy.send, ApprovalCopy.dontSend)
+        case .delete: (ApprovalCopy.delete, ApprovalCopy.dontDelete)
+        case .action: (ApprovalCopy.allow, ApprovalCopy.dontAllow)
+        }
     }
 }
 

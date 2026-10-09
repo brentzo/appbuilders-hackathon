@@ -55,7 +55,7 @@ Until OBJ-38 exists, drive the cards from the mock harness in [OBJ-01](OBJ-01-ta
 - [ ] **OBJ-40.7** `moveToTrash`: move each exact path with `FileManager.trashItem` and return a result per path. Refuse wildcard characters and relative paths as a second guard. Nothing is ever deleted permanently.
 - [ ] **OBJ-40.8** Check the cards in light and dark mode, on every display and scale, with long file names and long recipient lists. Test every card against the mock harness, then against the real harness when [OBJ-38](OBJ-38-approvals-pause-and-action-log.md) is done.
 - [ ] **OBJ-40.9** "Show what I did" on the "Unexpected" error opens a window with that task's action log, read from `getTask`'s `actionLog`, oldest first, times in am/pm (SPEC-11 Decisions, gap G13). Opening the log from the menu bar stays p1.
-- [ ] **OBJ-40.10** Show an `action` approval's harness-authored summary for an unclassified risky click or key press and return a tap-only decision; do not allow voice to approve it (SPEC-07 r6).
+- [x] **OBJ-40.10** Show an `action` approval's harness-authored summary for an unclassified risky click or key press and return a tap-only decision; do not allow voice to approve it (SPEC-07 r6).
 
 ## Expectations
 
