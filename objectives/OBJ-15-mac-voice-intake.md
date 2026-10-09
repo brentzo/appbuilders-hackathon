@@ -5,7 +5,7 @@ product: mac
 assignee: Patrick
 touches: []
 specs: [SPEC-01]
-status: in-progress
+status: done
 priority: p0
 depends-on: [OBJ-14]
 integrates-with: [OBJ-11]
@@ -44,14 +44,14 @@ Audio never leaves the Mac, and the native recognizer can never fall back to the
 - [x] **OBJ-15.2** Show the listening indicator whenever the microphone is on, and only then.
 - [x] **OBJ-15.3** Integrate Whisper, loading the model once and keeping it ready. Start with large-v3-turbo on WhisperKit, behind a setting, and switch to OBJ-11's choice when it lands.
 - [x] **OBJ-15.4** Integrate the native recognizer forced on-device: `SFSpeechRecognizer` with `requiresOnDeviceRecognition = true`, or SpeechAnalyzer on macOS 26. If on-device recognition is unavailable for the language, it must fail, never use the cloud.
-- [ ] **OBJ-15.5** Choose which recognizer runs: decide and document a rule (for example, a "I speak Taglish" setting that always uses Whisper, otherwise native first with Whisper as fallback). Record the decision in SPEC-01.
+- [x] **OBJ-15.5** Choose which recognizer runs: decide and document a rule (for example, a "I speak Taglish" setting that always uses Whisper, otherwise native first with Whisper as fallback). Record the decision in SPEC-01.
 - [x] **OBJ-15.6** Send the transcript to the harness over RPC as a new goal (`submitGoal`), tagged with the source device.
 - [x] **OBJ-15.7** Handle silence or unusable audio with the "Didn't catch speech" copy and its "Try again" and "Type instead" buttons, including a small text box for typing a goal.
 - [x] **OBJ-15.8** Verify no network traffic carries audio while speaking a goal (watch traffic during the test) and record how it was checked.
 
 ## Expectations
 
-- [ ] SPEC-01 scenarios pass: "Push-to-talk on the Mac", "Taglish goal is transcribed locally", "Audio stays on the device".
+- [x] SPEC-01 scenarios pass: "Push-to-talk on the Mac", "Taglish goal is transcribed locally", "Audio stays on the device". Checked against the mock with synthetic keys and recordings; the physical key, a real voice, and a real Taglish speaker are not verified, accepted by the lead: see Not verified in the Outcome.
 - [x] The native recognizer never sends audio to Apple's servers, verified by the forced on-device setting and the traffic check.
 - [x] Time from releasing the shortcut to the transcript is measured and written in the Outcome.
 
@@ -66,9 +66,7 @@ Audio never leaves the Mac, and the native recognizer can never fall back to the
 
 ## Outcome
 
-- **Result:** In progress. Push-to-talk works end to end with both recognizers, and spoken answers after the repeat-back work too. Left:
-  - OBJ-15.5 asks to record the recognizer rule in SPEC-01, which was outside this brief's scope (mac/ and this file only). The rule is below, under Decisions.
-  - The SPEC-01 scenarios expectation needs Patrick's hand check with a real voice and keyboard (below).
+- **Result:** Done for the demo. Push-to-talk works end to end with both recognizers, and spoken answers after the repeat-back work too. The recognizer rule is SPEC-01 requirement 13. The lead (Brent) accepted the items under Not verified.
 - **Delivered:**
   - `mac/Yumi/Voice/`:
     - `PushToTalkHotKey`: a Carbon hot key that follows the settings shortcut.
@@ -84,14 +82,15 @@ Audio never leaves the Mac, and the native recognizer can never fall back to the
   - Debug test aids: `-YumiVoiceFile` and `-YumiReplyFile` play a recording in place of the microphone. The distributed notification `ph.appbuilders.yumi.debug.pushToTalk` (`press` or `release`) holds push-to-talk.
   - Tests: `mac/YumiTests/VoiceIntakeTests.swift`.
 - **Commits:**
-  - `2845ce4 docs(objectives): start OBJ-15`
-  - `f513103 feat(mac): push-to-talk with the on-device recognizer, sending the goal to the harness`
-  - `ba2fa3d feat(mac): add Whisper large-v3-turbo through WhisperKit, and the recognizer rule with an "I speak Taglish" setting`
-  - `5674bde feat(mac): listen for the spoken answer after the repeat-back, with the main cursor as the listening indicator`
-  - `1965f9b docs(mac): document voice intake`
-  - `3d5b954 docs(objectives): record the OBJ-15 outcome so far`
-  - `d140940 fix(mac): let other hot keys through the push-to-talk handler`
-  - `docs(objectives): update the OBJ-15 outcome after the rebase` (this commit)
+  - `e8b044a docs(objectives): start OBJ-15`
+  - `ac91da8 feat(mac): push-to-talk with the on-device recognizer, sending the goal to the harness`
+  - `dedd43d feat(mac): add Whisper large-v3-turbo through WhisperKit, and the recognizer rule with an "I speak Taglish" setting`
+  - `3400ea3 feat(mac): listen for the spoken answer after the repeat-back, with the main cursor as the listening indicator`
+  - `990c950 docs(mac): document voice intake`
+  - `8995d16 docs(objectives): record the OBJ-15 outcome so far`
+  - `cbcc094 fix(mac): let other hot keys through the push-to-talk handler`
+  - `0ed965a docs(objectives): update the OBJ-15 outcome after the rebase`
+  - `docs(spec-01): record the Mac recognizer rule` and `docs(objectives): finish OBJ-15` (these commits)
 - **Expectations:**
   - "Push-to-talk on the Mac", live against the mock harness:
     - Holding ⌥Space (synthetic key events) turned the microphone on (the macOS microphone indicator showed), with the listening cursor next to the pointer.
@@ -114,7 +113,7 @@ Audio never leaves the Mac, and the native recognizer can never fall back to the
     - Whisper first load: 6 minutes (download and Core ML compile). After that, 15 to 17 s at each launch.
   - Mac tests: 102 tests in 19 suites pass, rebased on main with OBJ-17, OBJ-40, and OBJ-35. `verify.py` passes. `aSpokenAnswerReachesTheHarness` runs the real `GoalConfirmation` with `VoiceIntake` as its listener, and "Yes, go ahead." is transcribed and sent as the spoken answer.
 - **Not verified:**
-  - The hand check for Patrick, on a build where Yumi is allowed the microphone:
+  - A physical key press, a real voice, and a real Taglish speaker. The hand check for Patrick, on a build where Yumi is allowed the microphone:
     1. In another app, hold ⌥Space, say "export my Keynote deck as a PDF", and release.
        Expect the cursor next to the pointer in its listening state and "Yumi is listening" while held, then the repeat-back spoken.
     2. Say "yes" right after the repeat-back. Expect the harness to get the spoken answer.
@@ -129,7 +128,7 @@ Audio never leaves the Mac, and the native recognizer can never fall back to the
   - Pressing ⌥Space while a task runs may count as the user taking over (OBJ-35's take-over watcher) and pause the task. Not tried.
   - The stop shortcut (OBJ-35) and push-to-talk now each handle only their own hot key; pressing both was not tried live.
 - **Decisions and deviations:**
-  - The recognizer rule (OBJ-15.5), for SPEC-01:
+  - The recognizer rule (OBJ-15.5), now SPEC-01 requirement 13:
     - "I speak Taglish" (off by default) transcribes every goal with Whisper, with Apple's recognizer as the fallback.
     - Off: Apple's on-device recognizer first, with Whisper as the fallback if it is loaded.
     - Whisper loads when the setting is on and stays loaded.
