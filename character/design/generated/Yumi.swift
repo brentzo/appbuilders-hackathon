@@ -106,13 +106,10 @@ nonisolated public enum YumiMotion {
     public static let easing: (Double, Double, Double, Double) = (0.65, 0, 0.35, 1)
     /// A cat reacts when the pointer moves toward it and comes within avoidRadius points of its body (SPEC-04 r21).
     public static let avoidRadius: CGFloat = 24
-    /// How far an idle, thinking, or paused cat hops out of the pointer's way, and how fast: a startled hop.
-    public static let avoidHop: CGFloat = 64
-    public static let avoidHopDuration: Double = 0.2
-    /// How see-through a cat that cannot move gets, and how fast.
+    /// How see-through a cat gets while the pointer is near it, and how fast. Cats never move away.
     public static let avoidFadeOpacity: Double = 0.25
     public static let avoidFade: Double = 0.15
-    /// How long after the pointer leaves a cat drifts or fades back.
+    /// How long after the pointer leaves a cat fades back.
     public static let avoidReturn: Double = 1.0
     /// How long a move of `distance` points takes.
     public static func moveDuration(distance: CGFloat) -> Double {

@@ -51,9 +51,8 @@ These are also the values for the Rive file's ghost color input.
 - Radius by role: `control` 7 for Mac buttons, `field` 10, `panel` 16 for Mac panels, `card` 24 for Android cards, `pill` for chips.
 - The cursor moves on a symmetric ease-in-out curve with an arc, in 350 ms for a short hop up to 700 ms across the screen (`moveDuration(distance:)`), and cursors fade out within 1 second (SPEC-04).
 - With Reduce Motion on, leaps and pounces become simple glides.
-- Cats avoid the user's pointer (SPEC-04 r21): when it moves toward a cat and comes within `avoidRadiusPt` (24) of the cat's body, an idle, thinking, or paused cat hops `avoidHopPt` (64) away in `avoidHopMs` (200 ms) with its ears back, and any other cat fades to `avoidFadeOpacity` (0.25) in `avoidFadeMs` (150 ms). A cat that appears next to a still pointer stays put. The drift back uses the normal move curve and duration.
-  `avoidReturnMs` (1 second) after the pointer leaves, it drifts or fades back.
-  With Reduce Motion on, every cat fades.
+- Cats avoid the user's pointer (SPEC-04 r21): when it moves toward a cat and comes within `avoidRadiusPt` (24) of the cat's body, the cat fades in place to `avoidFadeOpacity` (0.25) in `avoidFadeMs` (150 ms) and never moves away; an idle, thinking, or paused cat also lays its ears back. A cat that appears next to a still pointer stays put.
+  `avoidReturnMs` (1 second) after the pointer leaves, it fades back.
 
 ## Logo and icons
 
