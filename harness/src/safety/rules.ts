@@ -34,7 +34,7 @@ export const RULE = {
   // Ask every time (SPEC-07 r1 and r6).
   send: "ask",
   delete: "ask",
-  /** A key press, or a click in a risky app, that no rule classifies (SPEC-07 r6). */
+  /** A click or key press in a risky app that no rule classifies (SPEC-07 r6). */
   unclassified: "ask",
 
   // Blocked (SPEC-07 r1, r2, r3, r8, r9).
@@ -45,6 +45,8 @@ export const RULE = {
   payment: "blocked",
   emptyTrash: "blocked",
   quitApp: "blocked",
+  /** Any action in System Settings: the table blocks changing system settings (SPEC-07 r6). */
+  changeSystemSettings: "blocked",
   /** Deleting without the Trash. SPEC-07 r7: nothing is ever deleted permanently. */
   deletePermanently: "blocked",
   runScript: "blocked",
@@ -85,7 +87,7 @@ export const SECRET_LOCATIONS = [
 /** SPEC-07 r9: never deleted or moved themselves. Relative to the home folder; "" is the home folder. */
 export const PROTECTED_FOLDERS = ["", "Desktop", "Documents", "Downloads", "Library"] as const;
 
-/** The Library folder in the home folder. Nothing in it is read, written, or deleted (SPEC-07 r1, OBJ-37.4). */
+/** The Library folder in the home folder. Nothing in it is read, written, or deleted (SPEC-07 r1). */
 export const LIBRARY_FOLDER = "Library";
 
 /**
@@ -139,8 +141,8 @@ export const SCRIPT_EXTENSIONS = [
 export const INSTALLER_EXTENSIONS = [".pkg", ".mpkg", ".dmg", APP_BUNDLE_EXTENSION] as const;
 
 /**
- * Apps that run shell commands or scripts, or install software. Yumi never opens them, opens files with them, or
- * acts in them, because that is a shell by another route (r1 and r3). Matched by name or bundle id.
+ * SPEC-07 r3: apps that run shell commands or scripts, or install software. Yumi never opens them, opens files with
+ * them, or acts in them, because that is a shell by another route. Matched by name or bundle id.
  */
 export const BLOCKED_APPS: readonly { names: readonly string[]; bundleIds: readonly string[]; rule: RuleId }[] = [
   { names: ["Terminal"], bundleIds: ["com.apple.Terminal"], rule: "shellCommand" },
@@ -169,7 +171,15 @@ export const LABEL_RULES: readonly { label: string; rule: RuleId }[] = [
 ];
 
 /**
- * SPEC-07 r6 and Decisions: apps where a click no rule classifies asks. Clicks in every other app are allowed.
+ * SPEC-07 r6: every action in System Settings is blocked, because the table blocks changing system settings. Yumi
+ * never needs it; the user grants permissions themselves. "System Preferences" is the same app before macOS 13.
+ * Opening it is not an action in it, so `open_app` is not affected.
+ */
+export const SYSTEM_SETTINGS_APPS = ["System Settings", "System Preferences"] as const;
+
+/**
+ * SPEC-07 r6 and Decisions: apps where a click or key press no rule classifies asks. In every other app, unlisted
+ * clicks and key presses are allowed.
  *
  * Each risky app has a short list of safe click labels, which are allowed. A label matches only as the whole label.
  * Brent chose this on 2026-10-09 (SPEC-07 Decisions) so demo task 2 asks only before Send. Add a label only with a
@@ -180,12 +190,11 @@ export const RISKY_APPS: readonly { name: string; safeLabels: readonly string[] 
   { name: "Messages", safeLabels: [] },
   { name: "WhatsApp", safeLabels: [] },
   { name: "Finder", safeLabels: [] },
-  { name: "System Settings", safeLabels: [] },
 ];
 
 /**
- * SPEC-07 r6, key presses, in the canonical form of `canonicalCombo`. `app` is absent for rules in every app. Every
- * key press no rule lists asks.
+ * SPEC-07 r6, key presses, in the canonical form of `canonicalCombo`. `app` is absent for rules in every app. A key
+ * press no rule lists asks in a risky app and is allowed elsewhere, like a click.
  */
 export const KEY_RULES: readonly { combo: string; app?: string; rule: RuleId }[] = [
   { combo: "cmd+q", rule: "quitApp" },

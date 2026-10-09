@@ -13,6 +13,7 @@ import {
   RISKY_APPS,
   RULE,
   SCRIPT_EXTENSIONS,
+  SYSTEM_SETTINGS_APPS,
   canonicalCombo,
   normalizeLabel,
   type RuleId,
@@ -103,6 +104,7 @@ function decide(unchecked: UncheckedAction, context: GateContext): Verdict {
   if (isGuiAction(action) && app !== undefined) {
     const blockedApp = BLOCKED_APPS.find((entry) => entry.names.some((name) => sameName(name, app)));
     if (blockedApp) return { rule: blockedApp.rule };
+    if (SYSTEM_SETTINGS_APPS.some((name) => sameName(name, app))) return { rule: "changeSystemSettings" };
   }
 
   switch (action.kind) {
@@ -155,15 +157,24 @@ function checkClick(label: string | undefined, app: string | undefined): Verdict
     const rule = strictest(matched);
     if (rule) return { rule };
   }
-  // Without the app, the gate cannot tell whether this is a risky app, so it cannot classify the click.
-  if (app === undefined) return { rule: "unclassified" };
-  const risky = RISKY_APPS.find((entry) => sameName(entry.name, app));
-  if (!risky) return { rule: "clickOrType" };
-  if (label !== undefined && risky.safeLabels.some((safe) => sameName(safe, label))) return { rule: "safeLabel" };
+  const risky = riskyApp(app);
+  if (risky === "notRisky") return { rule: "clickOrType" };
+  if (risky !== "unknown" && label !== undefined && risky.safeLabels.some((safe) => sameName(safe, label))) {
+    return { rule: "safeLabel" };
+  }
   return { rule: "unclassified" };
 }
 
-/** SPEC-07 r6: key presses from the per-app list. Every other key press asks. */
+/**
+ * The risky-app entry for an app, "notRisky", or "unknown" when the Mac app did not report the app: then the gate
+ * cannot tell whether it is a risky app, so it cannot classify the action.
+ */
+function riskyApp(app: string | undefined): (typeof RISKY_APPS)[number] | "notRisky" | "unknown" {
+  if (app === undefined) return "unknown";
+  return RISKY_APPS.find((entry) => sameName(entry.name, app)) ?? "notRisky";
+}
+
+/** SPEC-07 r6: key presses from the per-app list. Any other key press asks in a risky app and is allowed elsewhere. */
 function checkKey(combo: string, app: string | undefined): Verdict {
   const canonical = canonicalCombo(combo);
   if (canonical === undefined) return { rule: "unclassified" };
@@ -171,7 +182,9 @@ function checkKey(combo: string, app: string | undefined): Verdict {
     (rule) =>
       canonicalCombo(rule.combo) === canonical && (rule.app === undefined || (app !== undefined && sameName(rule.app, app))),
   ).map((rule) => rule.rule);
-  return { rule: strictest(matched) ?? "unclassified" };
+  const rule = strictest(matched);
+  if (rule) return { rule };
+  return { rule: riskyApp(app) === "notRisky" ? "clickOrType" : "unclassified" };
 }
 
 /** SPEC-07 r1, r3, and OBJ-37.4: the typed tools. */

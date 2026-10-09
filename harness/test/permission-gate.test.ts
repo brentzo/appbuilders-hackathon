@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { MemoryLogger } from "../src/log.ts";
 import { ModelClient } from "../src/model/client.ts";
 import { checkAction } from "../src/safety/gate.ts";
-import { KEY_RULES, LABEL_RULES, RISKY_APPS, RULE } from "../src/safety/rules.ts";
+import { KEY_RULES, LABEL_RULES, RISKY_APPS, RULE, SYSTEM_SETTINGS_APPS } from "../src/safety/rules.ts";
 import { ACTION } from "../src/worker/actions.ts";
 import { runWorkerStep } from "../src/worker/step.ts";
 import { modelConfig } from "./helpers.ts";
@@ -161,10 +161,19 @@ describe("SPEC-07 r1 permission table: Blocked", () => {
     expect(tool({ tool: "open_app", name: "Installer" }, home).level).toBe("blocked");
   });
 
-  it("changing system settings: no tool changes them, and a click in System Settings is never allowed", () => {
-    // SPEC-07 r6 puts System Settings on the risky-app list, so an unlisted click there asks rather than being blocked.
-    expect(click("Turn Off", "System Settings")).toMatchObject({ level: "ask", rule: "unclassified" });
-    expect(click("Wi-Fi", "System Settings", "checkbox").level).toBe("ask");
+  it("changing system settings: no tool changes them, and every action in System Settings is blocked", () => {
+    // SPEC-07 r6 and Decisions 2026-10-09: System Settings is not a risky app; nothing there runs at all.
+    expect(click("Turn Off", "System Settings")).toMatchObject({ level: "blocked", rule: "changeSystemSettings" });
+    expect(click("Wi-Fi", "System Settings", "checkbox").level).toBe("blocked");
+    expect(click("Back", "System Settings")).toMatchObject({ level: "blocked", rule: "changeSystemSettings" });
+    expect(gui({ kind: "clickAt", x: 10, y: 10 }, "System Settings").level).toBe("blocked");
+    for (const combo of ["tab", "escape", "space", "cmd+s", "return"]) {
+      expect(key(combo, "System Settings"), combo).toMatchObject({ level: "blocked", rule: "changeSystemSettings" });
+    }
+    expect(gui({ kind: "type", text: "Wi-Fi" }, "System Settings").level).toBe("blocked");
+    expect(key("tab", "system settings").level).toBe("blocked");
+    expect(click("Some Button", "System Preferences").level).toBe("blocked");
+    expect(SYSTEM_SETTINGS_APPS).toContain("System Settings");
   });
 
   it("payments and purchases", () => {
@@ -201,7 +210,28 @@ describe("SPEC-07 r1 permission table: Blocked", () => {
     });
   });
 
-  it("writing dotfiles or anything in ~/Library", () => {
+  it("reading or writing dotfiles or anything in ~/Library", () => {
+    // SPEC-07 Decisions 2026-10-09: reading is blocked too, not only writing.
+    file(".zshrc", "export TOKEN=x");
+    file(".config/gh/hosts.yml", "oauth_token: x");
+    file("Library/Preferences/com.apple.finder.plist", "x");
+    expect(tool({ tool: "read_file", path: "~/.zshrc" }, home)).toMatchObject({ level: "blocked", rule: "dotfile" });
+    expect(tool({ tool: "read_file", path: "~/.config/gh/hosts.yml" }, home)).toMatchObject({
+      level: "blocked",
+      rule: "dotfile",
+    });
+    expect(tool({ tool: "list_dir", path: "~/.config" }, home)).toMatchObject({ level: "blocked", rule: "dotfile" });
+    expect(tool({ tool: "read_file", path: "~/Library/Preferences/com.apple.finder.plist" }, home)).toMatchObject({
+      level: "blocked",
+      rule: "library",
+    });
+    expect(tool({ tool: "list_dir", path: "~/Library" }, home)).toMatchObject({ level: "blocked", rule: "library" });
+    expect(tool({ tool: "open_file", path: "~/.zshrc" }, home).rule).toBe("dotfile");
+    expect(tool({ tool: "copy", from: "~/.zshrc", to: "~/Documents/zshrc.txt" }, home).rule).toBe("dotfile");
+    expect(
+      tool({ tool: "copy", from: "~/Library/Preferences/com.apple.finder.plist", to: "~/Documents/a.plist" }, home).rule,
+    ).toBe("library");
+
     expect(tool({ tool: "write_new_file", path: "~/.zprofile", content: "x" }, home)).toMatchObject({
       level: "blocked",
       rule: "dotfile",
@@ -331,8 +361,8 @@ describe("SPEC-07 r6 key presses", () => {
 
   for (const combo of ["cmd+q", "cmd+opt+escape"]) {
     it(`${combo} is blocked in every app`, () => {
-      for (const app of ["Keynote", "Mail", "Messages", "Finder", "Safari", "System Settings"]) {
-        expect(key(combo, app).level, app).toBe("blocked");
+      for (const app of ["Keynote", "Mail", "Messages", "Finder", "Safari"]) {
+        expect(key(combo, app)).toMatchObject({ level: "blocked", rule: "quitApp" });
       }
       expect(key(combo, undefined).level).toBe("blocked");
     });
@@ -345,11 +375,27 @@ describe("SPEC-07 r6 key presses", () => {
     expect(key("Command+Q", "Keynote").level).toBe("blocked");
   });
 
-  it("an app-specific combo only applies in its app, and every unlisted key press asks", () => {
-    expect(key("return", "Keynote")).toMatchObject({ level: "ask", rule: "unclassified" });
-    expect(key("cmd+delete", "Keynote")).toMatchObject({ level: "ask", rule: "unclassified" });
-    expect(key("cmd+s", "Keynote")).toMatchObject({ level: "ask", rule: "unclassified" });
-    expect(key("tab", "Safari")).toMatchObject({ level: "ask", rule: "unclassified" });
+  it("an app-specific combo only applies in its app", () => {
+    expect(key("return", "Keynote")).toMatchObject({ level: "allowed", rule: "clickOrType" });
+    expect(key("cmd+delete", "Keynote")).toMatchObject({ level: "allowed", rule: "clickOrType" });
+    expect(key("return", "Mail")).toMatchObject({ level: "ask", rule: "unclassified" });
+  });
+
+  it("an unlisted key press outside the risky apps is allowed: Tab, Escape, and Command-S in Keynote", () => {
+    // SPEC-07 r6 and Decisions 2026-10-09, replacing "every unlisted key press asks".
+    for (const combo of ["tab", "escape", "cmd+s"]) {
+      expect(key(combo, "Keynote"), combo).toMatchObject({ level: "allowed", rule: "clickOrType" });
+    }
+    expect(key("tab", "Safari")).toMatchObject({ level: "allowed", rule: "clickOrType" });
+  });
+
+  it("an unlisted key press in a risky app asks", () => {
+    expect(key("cmd+b", "Mail")).toMatchObject({ level: "ask", rule: "unclassified" });
+    for (const app of RISKY_APPS) expect(key("tab", app.name), app.name).toMatchObject({ level: "ask", rule: "unclassified" });
+  });
+
+  it("a key press whose app the Mac app did not report cannot be classified, so it asks", () => {
+    expect(key("tab", undefined)).toMatchObject({ level: "ask", rule: "unclassified" });
   });
 
   it("Finder's ways to delete without the Trash are blocked (r7)", () => {
@@ -363,7 +409,7 @@ describe("SPEC-07 r6 key presses", () => {
 });
 
 describe("SPEC-07 r6 risky apps and their safe labels", () => {
-  const riskyApps = ["Mail", "Messages", "WhatsApp", "Finder", "System Settings"];
+  const riskyApps = ["Mail", "Messages", "WhatsApp", "Finder"];
 
   it("the risky-app list is exactly SPEC-07's", () => {
     expect(RISKY_APPS.map((app) => app.name)).toEqual(riskyApps);
