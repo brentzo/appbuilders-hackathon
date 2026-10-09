@@ -70,6 +70,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Task { await model.permissions.openSettings(for: permission) }
         case .cancelTask(let taskId):
             harness.cancelTask(taskId)
+        case .resumeTask(let taskId):
+            harness.resumeTask(taskId)
         case .pairPhone:
             PairingWindow.show()
         case .dismiss, .notAvailableYet:

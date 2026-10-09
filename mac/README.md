@@ -135,6 +135,20 @@ Before any work starts, Yumi repeats the goal back ([OBJ-17](../objectives/OBJ-1
 - While a goal waits for its answer and no task is confirmed, `executeAction` does nothing.
 - Everything Yumi says goes through `SpeechOutput` (`SystemSpeech`, the system voice), including the harness's `speak` events and the tiling question.
 
+### Approval cards and the Trash
+
+Sending and deleting ask every time ([OBJ-40](../objectives/OBJ-40-mac-approval-cards.md)).
+
+- `showApprovalCard` shows the harness's `Approval` text as is, with "Send" and "Don't send", or "Delete" and "Don't delete" plus the folder, the first 5 names, and "and N more".
+  Yumi says the first sentence and the card waits; the cursor shows "waiting for the user".
+- A send is approved by a tap or by saying "send it"; anything with a "don't" or "no" never approves.
+  A delete is approved only by a tap: voice does nothing on a delete card.
+- After a "Don't", Yumi says the matching line from `ApprovalCopy`, the one place for this draft copy.
+- `approvalCancelled` closes the card at once; a late tap does nothing.
+- `moveToTrash` moves only exact paths that a tapped delete approval listed, each approval once, with `FileManager.trashItem`.
+  A wildcard or relative path is refused before anything moves.
+- The blocked-action card is the error window: "Keep going" calls `resumeTask` and "Stop" calls `cancelTask`.
+
 ### Window tiling
 
 When the harness sends `tilingSuggested`, Yumi asks "Want me to arrange your windows so you can watch all of us work?" out loud and in a small panel at the top of the task's display, with "Arrange windows" and "Leave them" ([OBJ-20](../objectives/OBJ-20-window-tiling.md)).
@@ -198,6 +212,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 | `Yumi/Onboarding/` | The permission onboarding window |
 | `Yumi/Settings/` | Settings, their local storage, and the harness settings hand-off |
 | `Yumi/GUI/` | Controlling other apps: the trimmed tree reader, element actions, tagged keystrokes, the direct tools, and the GUI debug window |
+| `Yumi/Approvals/` | Send and delete approval cards, their copy, and `moveToTrash` |
 | `Yumi/Confirmation/` | Goal confirmation: the repeat-back panel, the `speak` interface, and listening for the answer |
 | `Yumi/Tiling/` | Window tiling: the consent panel, the grid, and saving and restoring window frames |
 | `Yumi/Overlay/` | The click-through cursor overlay: panels per display, the placeholder cursor drawing, motion, helper chips, and the cursor debug actions |

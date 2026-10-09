@@ -28,6 +28,8 @@ final class HarnessLink {
     let speech: SpeechOutput
     /// The repeat-back panel and the answers to it (OBJ-17).
     let confirmation: GoalConfirmation
+    /// The send and delete cards, and the Trash (OBJ-40).
+    let approvals: ApprovalCards
     /// Helper subtasks shown as chips, by subtask id.
     private var helperSubtasks: Set<String> = []
 
@@ -52,7 +54,11 @@ final class HarnessLink {
         ) { [client] taskId, reply in
             _ = try await client.call(.replyToConfirmation, ReplyToConfirmationParams(taskId: taskId, reply: reply), returning: Empty.self)
         }
-        client.appMethods = AppMethodServer(gui: gui)
+        let confirmation = self.confirmation
+        approvals = ApprovalCards(
+            speech: speech, listen: { await confirmation.listener.listenForReply() }, presenter: ApprovalPanel(), overlay: overlay
+        )
+        client.appMethods = AppMethodServer(gui: gui, approvals: approvals)
         usesMock = launcher.isMock
         model.mockHarnessName = launcher.isMock ? launcher.displayName : nil
     }
@@ -120,13 +126,14 @@ final class HarnessLink {
             Task { await confirmation.goalRestated(restated) }
         case .speak(let line):
             Task { await speech.speak(line.text) }
+        case .approvalCancelled(let cancelled):
+            approvals.cancel(approvalId: cancelled.approvalId)
         case .tilingSuggested(let suggestion):
             tiler.suggest(suggestion)
         case .bridgeStateChanged(let change):
             PhoneLink.shared.update(connection: PhoneLink.Connection(change.state))
         default:
-            // questionAsked, approvalCancelled, interruptedTaskFound and waitingForWindow are
-            // consumed in later objectives.
+            // questionAsked, interruptedTaskFound and waitingForWindow are consumed in later objectives.
             log.info("Not handled yet: \(event.name, privacy: .public)")
         }
     }
@@ -193,6 +200,17 @@ final class HarnessLink {
                 try? await Task.sleep(for: .milliseconds(200))
             }
             submitSampleGoal()
+        }
+    }
+
+    /// "Keep going" on the blocked-action card (OBJ-40.5) and other errors that wait on the user.
+    func resumeTask(_ taskId: String) {
+        Task {
+            do {
+                _ = try await client.call(.resumeTask, TaskRef(taskId: taskId), returning: Empty.self)
+            } catch {
+                report(error, from: "resumeTask")
+            }
         }
     }
 

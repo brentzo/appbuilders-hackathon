@@ -78,13 +78,15 @@ struct TilingQuestionView: View {
 /// The panel never becomes key, so AppKit would draw a prominent button in its inactive gray.
 /// This keeps the main choice in the accent color, like an active window's default button.
 struct AlwaysProminentButtonStyle: ButtonStyle {
+    var color: Color = .accentColor
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .padding(.horizontal, 10)
             .padding(.vertical, 3)
             .foregroundStyle(.white)
             .background(
-                Color.accentColor.opacity(configuration.isPressed ? 0.8 : 1),
+                color.opacity(configuration.isPressed ? 0.8 : 1),
                 in: RoundedRectangle(cornerRadius: 5, style: .continuous)
             )
     }

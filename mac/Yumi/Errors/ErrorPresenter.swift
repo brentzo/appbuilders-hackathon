@@ -21,6 +21,8 @@ enum ErrorButtonAction: Equatable, Sendable {
     /// Closes the error and changes nothing ("Not now", "Okay", "Wait").
     case dismiss
     case cancelTask(String)
+    /// "Keep going": the task continues (OBJ-40.5).
+    case resumeTask(String)
     /// Opens the pairing window ("Pair now").
     case pairPhone
     /// The feature behind this button is built in a later objective. Shown disabled.
@@ -90,6 +92,10 @@ enum ErrorPresenter {
             action = .pairPhone
         case "Cancel":
             action = error.taskId.map(ErrorButtonAction.cancelTask) ?? .dismiss
+        case "Stop":
+            action = error.taskId.map(ErrorButtonAction.cancelTask) ?? .notAvailableYet
+        case "Keep going":
+            action = error.taskId.map(ErrorButtonAction.resumeTask) ?? .notAvailableYet
         default:
             action = .notAvailableYet
         }

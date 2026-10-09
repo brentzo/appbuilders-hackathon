@@ -17,16 +17,18 @@ enum AppMethodReply: Sendable {
 /// Serves the harness-to-app methods (OBJ-27). Params and results are the generated protocol types.
 ///
 /// `executeAction`, `observeWindow` and `readFieldValues` go to the GUI executor (OBJ-39).
-/// `showApprovalCard` and `moveToTrash` (OBJ-40) are not served yet and answer -32601.
+/// `showApprovalCard` and `moveToTrash` go to the approval cards (OBJ-40).
 @MainActor
 final class AppMethodServer {
     private let secrets: SecretStore
     private let gui: GuiExecutor?
+    private let approvals: ApprovalCards?
     private let log = Logger(subsystem: "ph.appbuilders.yumi", category: "app-methods")
 
-    init(secrets: SecretStore = SecretStore(), gui: GuiExecutor? = nil) {
+    init(secrets: SecretStore = SecretStore(), gui: GuiExecutor? = nil, approvals: ApprovalCards? = nil) {
         self.secrets = secrets
         self.gui = gui
+        self.approvals = approvals
     }
 
     func serve(_ name: String, params: Data) async -> AppMethodReply {
@@ -42,6 +44,14 @@ final class AppMethodServer {
             case .readFieldValues:
                 guard let gui else { return .notServed }
                 return try encode(try gui.readFieldValues(try decode(ReadFieldValuesParams.self, params)))
+            case .showApprovalCard:
+                guard let approvals else { return .notServed }
+                let p = try decode(ShowApprovalCardParams.self, params)
+                return try encode(await approvals.show(p.approval))
+            case .moveToTrash:
+                guard let approvals else { return .notServed }
+                let p = try decode(MoveToTrashParams.self, params)
+                return try encode(MoveToTrashResult(trashed: try approvals.moveToTrash(p.paths)))
             case .listWindows:
                 let p = try decode(ListWindowsParams.self, params)
                 return try encode(WindowList(windows: WindowService.listWindows(bundleId: p.bundleId)))
@@ -81,6 +91,10 @@ final class AppMethodServer {
     /// Maps a native failure to the user-facing kind the harness passes on (SPEC-11).
     static func reply(for error: Error, method: String) -> AppMethodReply {
         switch error {
+        case Trash.Failure.notAnExactPath:
+            return .invalidParams("\(method): \(error)")
+        case Trash.Failure.notApproved:
+            return .failed(UserError(kind: .blockedAction), "\(method): \(error)")
         case let failure as GuiFailure:
             return .failed(failure.userError, "\(method): \(failure)")
         case WindowService.Failure.accessibilityMissing, AppCapabilityProbe.Failure.accessibilityMissing:
