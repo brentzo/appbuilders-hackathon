@@ -45,19 +45,19 @@ It also fixes a probe bug found while diagnosing the failures: the capability pr
 
 ## Tasks
 
-- [ ] **OBJ-75.1** Fix the probe: window chrome (subroles `AXCloseButton`, `AXMinimizeButton`, `AXZoomButton`, `AXFullScreenButton`) and menu bar items are not actionable content, so an app whose window content has no actionable role is not background-capable and is routed to the `main` lane instead of a ghost.
-- [ ] **OBJ-75.2** In `WindowReader`, note when a window's content has no actionable element (only chrome and the menu bar) and capture that window with ScreenCaptureKit, writing a PNG under the app's support folder and setting `Observation.screenshotPath`. If Screen Recording permission is missing, report the `screenPermissionMissing` error.
-- [ ] **OBJ-75.3** Add an optional `windowFrame` (global top-left points) to `Observation` as a non-breaking protocol change, with an example and a validation test, so the harness can check that the window has not moved before a vision click.
-- [ ] **OBJ-75.4** Execute `clickAt` in the Mac app: convert the model's image pixels to global screen points from the captured image size and window frame (Retina scale and displays with a negative origin included), activate the app, move the real mouse, and click. Refuse when the window moved or resized since the screenshot.
-- [ ] **OBJ-75.5** In `gui_act`, offer `clickAt` to the model only when the observation carries a screenshot, describe the attached image in the prompt, and before running a `clickAt` read the window again: if it moved, resized, or lost focus, skip the click and ask the model again from the fresh screen.
-- [ ] **OBJ-75.6** Tests: the Mac coordinate conversion (serialized against the `frame` plus a Retina scale and a display left of the main one), the probe fix, and the reachability check; the harness prompt showing `clickAt` only with a screenshot, and a moved-window `clickAt` being skipped and re-captured.
+- [x] **OBJ-75.1** Fix the probe: window chrome (subroles `AXCloseButton`, `AXMinimizeButton`, `AXZoomButton`, `AXFullScreenButton`) and menu bar items are not actionable content, so an app whose window content has no actionable role is not background-capable and is routed to the `main` lane instead of a ghost.
+- [x] **OBJ-75.2** In `WindowReader`, note when a window's content has no actionable element (only chrome and the menu bar) and capture that window with ScreenCaptureKit, writing a PNG under the app's support folder and setting `Observation.screenshotPath`. If Screen Recording permission is missing, report the `screenPermissionMissing` error.
+- [x] **OBJ-75.3** Add an optional `windowFrame` (global top-left points) to `Observation` as a non-breaking protocol change, with an example and a validation test, so the harness can check that the window has not moved before a vision click.
+- [x] **OBJ-75.4** Execute `clickAt` in the Mac app: convert the model's image pixels to global screen points from the captured image size and window frame (Retina scale and displays with a negative origin included), activate the app, move the real mouse, and click. Refuse when the window moved or resized since the screenshot.
+- [x] **OBJ-75.5** In `gui_act`, offer `clickAt` to the model only when the observation carries a screenshot, describe the attached image in the prompt, and before running a `clickAt` read the window again: if it moved, resized, or lost focus, skip the click and ask the model again from the fresh screen.
+- [x] **OBJ-75.6** Tests: the Mac coordinate conversion (serialized against the `frame` plus a Retina scale and a display left of the main one), the probe fix, and the reachability check; the harness prompt showing `clickAt` only with a screenshot, and a moved-window `clickAt` being skipped and re-captured.
 - [ ] **OBJ-75.7** Live check with Brent: build the app, clear the cached `com.spotify.client` capability, and say "open my Spotify and play <playlist>" and confirm the cat plays it from the screenshot.
 
 ## Expectations
 
-- [ ] SPEC-05 scenarios pass: "Vision fallback for an app without accessibility", "Retina scaling is handled", "Second display to the left", "Window moved before the click".
+- [x] SPEC-05 scenarios pass: "Vision fallback for an app without accessibility", "Retina scaling is handled", "Second display to the left", "Window moved before the click".
 - [ ] Spotify's window is captured and its `clickAt` clicks land on the element the model pointed at.
-- [ ] An app with real accessibility content is still driven by `click` with no screenshot (SPEC-05 "Accessibility is used before vision").
+- [x] An app with real accessibility content is still driven by `click` with no screenshot (SPEC-05 "Accessibility is used before vision").
 
 ## Expected outcomes
 
