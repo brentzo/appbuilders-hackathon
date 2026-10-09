@@ -302,4 +302,5 @@ A sheet usually has no `AXTitle`.
 | [OBJ-31](../objectives/OBJ-31-unpair-delivery-ack-contract.md) | Define unpair delivery acknowledgement | Jepoy | done |
 | [OBJ-33](../objectives/OBJ-33-pairing-response-timeout-contract.md) | Align the pairing response timeout contract | Jepoy | in-progress |
 | [OBJ-34](../objectives/OBJ-34-protocol-version-upgrade-recovery.md) | Define protocol version upgrade recovery | Jepoy | in-progress |
+| [OBJ-45](../objectives/OBJ-45-pause-scope-and-model-readiness-contracts.md) | Pause scope and model readiness contracts | Jepoy | in-progress |
 <!-- generated:product-objectives:end -->

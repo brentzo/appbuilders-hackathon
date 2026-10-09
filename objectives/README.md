@@ -102,6 +102,9 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-42](OBJ-42-version-mismatch-copy.md) | Add the protocol version mismatch copy | android | Brent | 08, 11 | 34 | 23, 43, 44 | todo |
 | [OBJ-43](OBJ-43-mac-bridge-client-version-refusal.md) | Mac bridge client recovers from a version refusal | harness | Brent | 08 | 21, 34 | 13, 42 | todo |
 | [OBJ-44](OBJ-44-mac-version-mismatch-copy.md) | Mac app shows the version mismatch copy | mac | Patrick | 08, 11 | 34 | 42, 43 | todo |
+| [OBJ-45](OBJ-45-pause-scope-and-model-readiness-contracts.md) | Pause scope and model readiness contracts | protocol | Jepoy | 06, 07, 11 | 01 | 35, 38, 46, 47 | in-progress |
+| [OBJ-46](OBJ-46-mac-model-readiness.md) | Mac app shows whether the model is ready | mac | Patrick | 11 | 14 | 45, 47 | todo |
+| [OBJ-47](OBJ-47-harness-model-readiness.md) | Harness reports whether the model is ready | harness | Brent | 11 | 03, 45 | 46 | todo |
 <!-- generated:objectives-index:end -->
 
 ## Priority and blocking
@@ -117,10 +120,10 @@ Ranked by how many objectives each one holds up through hard dependencies:
 <!-- generated:objectives-priority:start -->
 | Rank | Objective | Assignee | Holds up (hard) | Holds up another person |
 |---|---|---|---|---|
-| 1 | OBJ-01 Task record schemas and cross-team contracts | Jepoy | 24 | Brent, Patrick |
-| 2 | OBJ-02 Bridge envelope and end-to-end crypto | Jepoy | 12 | Brent, Patrick |
-| 3 | OBJ-03 Harness skeleton and local model client | Brent | 12 | Patrick |
-| 4 | OBJ-14 Mac app shell, permissions, and harness link | Patrick | 11 | Brent, Jepoy |
+| 1 | OBJ-01 Task record schemas and cross-team contracts | Jepoy | 27 | Brent, Patrick |
+| 2 | OBJ-03 Harness skeleton and local model client | Brent | 13 | Patrick |
+| 3 | OBJ-02 Bridge envelope and end-to-end crypto | Jepoy | 12 | Brent, Patrick |
+| 4 | OBJ-14 Mac app shell, permissions, and harness link | Patrick | 12 | Brent, Jepoy |
 | 5 | OBJ-04 Task store and history | Brent | 10 | Patrick |
 | 6 | OBJ-18 Cursor overlay and motion | Patrick | 6 | Brent |
 | 7 | OBJ-05 Planner, scheduler, and task summary | Brent | 4 | No |
@@ -140,6 +143,7 @@ Ranked by how many objectives each one holds up through hard dependencies:
 | 21 | OBJ-23 Android bridge client and pairing | Brent | 1 | Jepoy |
 | 22 | OBJ-33 Align the pairing response timeout contract | Jepoy | 1 | Brent |
 | 23 | OBJ-39 Mac GUI execution | Patrick | 1 | No |
+| 24 | OBJ-45 Pause scope and model readiness contracts | Jepoy | 1 | Brent |
 <!-- generated:objectives-priority:end -->
 Hard dependencies that cross between people (everything else is within one person's queue):
 
@@ -163,15 +167,16 @@ Hard dependencies that cross between people (everything else is within one perso
 - OBJ-21 (Jepoy) before OBJ-43 (Brent)
 - OBJ-34 (Jepoy) before OBJ-43 (Brent)
 - OBJ-34 (Jepoy) before OBJ-44 (Patrick)
+- OBJ-45 (Jepoy) before OBJ-47 (Brent)
 <!-- generated:objectives-cross:end -->
 Workload:
 
 <!-- generated:objectives-workload:start -->
 | Person | Objectives | Count |
 |---|---|---|
-| Brent | 03, 04, 05, 06, 07, 08, 09, 17, 22, 23, 24, 26, 29, 32, 36, 37, 38, 41, 42, 43 | 20 |
-| Jepoy | 01, 02, 11, 12, 13, 21, 25, 28, 30, 31, 33, 34 | 12 |
-| Patrick | 10, 14, 15, 16, 18, 19, 20, 27, 35, 39, 40, 44 | 12 |
+| Brent | 03, 04, 05, 06, 07, 08, 09, 17, 22, 23, 24, 26, 29, 32, 36, 37, 38, 41, 42, 43, 47 | 21 |
+| Jepoy | 01, 02, 11, 12, 13, 21, 25, 28, 30, 31, 33, 34, 45 | 13 |
+| Patrick | 10, 14, 15, 16, 18, 19, 20, 27, 35, 39, 40, 44, 46 | 13 |
 <!-- generated:objectives-workload:end -->
 ## Suggested order
 
@@ -181,8 +186,8 @@ Waves come from hard dependencies only. Each person works their column top to bo
 | Wave | Brent | Jepoy | Patrick |
 |---|---|---|---|
 | 1 | OBJ-22, OBJ-26, OBJ-32 | OBJ-01, OBJ-02, OBJ-11, OBJ-12, OBJ-28 | OBJ-10 |
-| 2 | OBJ-03, OBJ-24, OBJ-29 | OBJ-13, OBJ-21, OBJ-25, OBJ-31, OBJ-33 | OBJ-14 |
-| 3 | OBJ-04, OBJ-23, OBJ-37, OBJ-41 | OBJ-34 | OBJ-15, OBJ-18, OBJ-27 |
+| 2 | OBJ-03, OBJ-24, OBJ-29 | OBJ-13, OBJ-21, OBJ-25, OBJ-31, OBJ-33, OBJ-45 | OBJ-14 |
+| 3 | OBJ-04, OBJ-23, OBJ-37, OBJ-41, OBJ-47 | OBJ-34 | OBJ-15, OBJ-18, OBJ-27, OBJ-46 |
 | 4 | OBJ-05, OBJ-07, OBJ-17, OBJ-42, OBJ-43 | OBJ-30 | OBJ-16, OBJ-19, OBJ-20, OBJ-39, OBJ-44 |
 | 5 | OBJ-06, OBJ-08 | - | OBJ-35, OBJ-40 |
 | 6 | OBJ-09, OBJ-36, OBJ-38 | - | - |
