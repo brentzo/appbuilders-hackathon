@@ -113,6 +113,8 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-53](OBJ-53-mac-thoughts-panel.md) | Expand a cursor to see what it is thinking | mac | Brent | 07 | 52 | - | todo |
 | [OBJ-54](OBJ-54-mac-cats-avoid-pointer.md) | Cats avoid the user's pointer | mac | Brent | 04 | - | - | in-progress |
 | [OBJ-55](OBJ-55-voice-stop-keyword-models.md) | Voice stop keyword models | models | Jepoy | 06 | - | 35 | todo |
+| [OBJ-56](OBJ-56-unclassified-action-approval-contract.md) | Approval contract for unclassified risky actions | protocol | Jepoy | 07 | 01 | 36, 38, 40 | todo |
+| [OBJ-57](OBJ-57-route-classified-gui-deletes-through-strict-delete.md) | Route classified GUI delete asks through strict delete | harness | Brent | 07 | 37, 38 | 36, 40 | todo |
 <!-- generated:objectives-index:end -->
 
 ## Priority and blocking
@@ -128,36 +130,37 @@ Ranked by how many objectives each one holds up through hard dependencies:
 <!-- generated:objectives-priority:start -->
 | Rank | Objective | Assignee | Holds up (hard) | Holds up another person |
 |---|---|---|---|---|
-| 1 | OBJ-01 Task record schemas and cross-team contracts | Jepoy | 29 | Brent, Patrick |
-| 2 | OBJ-02 Bridge envelope and end-to-end crypto | Jepoy | 14 | Brent, Patrick |
-| 3 | OBJ-03 Harness skeleton and local model client | Brent | 14 | Patrick |
+| 1 | OBJ-01 Task record schemas and cross-team contracts | Jepoy | 31 | Brent, Patrick |
+| 2 | OBJ-03 Harness skeleton and local model client | Brent | 15 | Patrick |
+| 3 | OBJ-02 Bridge envelope and end-to-end crypto | Jepoy | 14 | Brent, Patrick |
 | 4 | OBJ-14 Mac app shell, permissions, and harness link | Patrick | 13 | Brent, Jepoy |
-| 5 | OBJ-04 Task store and history | Brent | 11 | Patrick |
+| 5 | OBJ-04 Task store and history | Brent | 12 | Patrick |
 | 6 | OBJ-18 Cursor overlay and motion | Patrick | 7 | Brent |
 | 7 | OBJ-31 Define unpair delivery acknowledgement | Jepoy | 6 | Brent, Patrick |
-| 8 | OBJ-15 Mac voice intake | Patrick | 5 | Brent |
-| 9 | OBJ-05 Planner, scheduler, and task summary | Brent | 4 | No |
-| 10 | OBJ-21 Mac bridge client and pairing | Jepoy | 4 | Brent |
-| 11 | OBJ-34 Define protocol version upgrade recovery | Jepoy | 4 | Brent, Patrick |
-| 12 | OBJ-06 Resume and limits | Brent | 3 | No |
+| 8 | OBJ-05 Planner, scheduler, and task summary | Brent | 5 | No |
+| 9 | OBJ-15 Mac voice intake | Patrick | 5 | Brent |
+| 10 | OBJ-06 Resume and limits | Brent | 4 | No |
+| 11 | OBJ-21 Mac bridge client and pairing | Jepoy | 4 | Brent |
+| 12 | OBJ-34 Define protocol version upgrade recovery | Jepoy | 4 | Brent, Patrick |
 | 13 | OBJ-07 Lane router core | Brent | 3 | No |
 | 14 | OBJ-17 Goal confirmation loop | Brent | 3 | Patrick |
 | 15 | OBJ-22 Android app shell and foreground service | Brent | 3 | Jepoy |
-| 16 | OBJ-13 Bridge relay server | Jepoy | 2 | Brent |
-| 17 | OBJ-25 Cross-device message kinds | Jepoy | 2 | Brent |
-| 18 | OBJ-27 Mac native services for the harness | Patrick | 2 | Jepoy |
-| 19 | OBJ-33 Align the pairing response timeout contract | Jepoy | 2 | Brent |
-| 20 | OBJ-37 Permission gate and typed file tools | Brent | 2 | No |
+| 16 | OBJ-37 Permission gate and typed file tools | Brent | 3 | No |
+| 17 | OBJ-13 Bridge relay server | Jepoy | 2 | Brent |
+| 18 | OBJ-25 Cross-device message kinds | Jepoy | 2 | Brent |
+| 19 | OBJ-27 Mac native services for the harness | Patrick | 2 | Jepoy |
+| 20 | OBJ-33 Align the pairing response timeout contract | Jepoy | 2 | Brent |
 | 21 | OBJ-08 Window locks, busy windows, and cursor cap | Brent | 1 | No |
 | 22 | OBJ-10 Yumi cat v0 in Rive | Patrick | 1 | No |
 | 23 | OBJ-23 Android bridge client and pairing | Brent | 1 | Jepoy |
-| 24 | OBJ-39 Mac GUI execution | Patrick | 1 | No |
-| 25 | OBJ-41 Mac pairing waits for the relay's verdict | Brent | 1 | Jepoy |
-| 26 | OBJ-42 Add the protocol version mismatch copy | Brent | 1 | Jepoy |
-| 27 | OBJ-43 Mac bridge client recovers from a version refusal | Brent | 1 | Jepoy |
-| 28 | OBJ-45 Pause scope and model readiness contracts | Jepoy | 1 | Brent |
-| 29 | OBJ-49 Mac answers ping and has bridge test hooks | Brent | 1 | Jepoy |
-| 30 | OBJ-52 Debug mode keeps full local logs | Brent | 1 | No |
+| 24 | OBJ-38 Approvals, pause, and action log in the harness | Brent | 1 | No |
+| 25 | OBJ-39 Mac GUI execution | Patrick | 1 | No |
+| 26 | OBJ-41 Mac pairing waits for the relay's verdict | Brent | 1 | Jepoy |
+| 27 | OBJ-42 Add the protocol version mismatch copy | Brent | 1 | Jepoy |
+| 28 | OBJ-43 Mac bridge client recovers from a version refusal | Brent | 1 | Jepoy |
+| 29 | OBJ-45 Pause scope and model readiness contracts | Jepoy | 1 | Brent |
+| 30 | OBJ-49 Mac answers ping and has bridge test hooks | Brent | 1 | Jepoy |
+| 31 | OBJ-52 Debug mode keeps full local logs | Brent | 1 | No |
 <!-- generated:objectives-priority:end -->
 Hard dependencies that cross between people (everything else is within one person's queue):
 
@@ -194,8 +197,8 @@ Workload:
 <!-- generated:objectives-workload:start -->
 | Person | Objectives | Count |
 |---|---|---|
-| Brent | 03, 04, 05, 06, 07, 08, 09, 17, 22, 23, 24, 26, 29, 32, 36, 37, 38, 41, 42, 43, 47, 49, 50, 51, 52, 53, 54 | 27 |
-| Jepoy | 01, 02, 11, 12, 13, 21, 25, 28, 30, 31, 33, 34, 45, 48, 55 | 15 |
+| Brent | 03, 04, 05, 06, 07, 08, 09, 17, 22, 23, 24, 26, 29, 32, 36, 37, 38, 41, 42, 43, 47, 49, 50, 51, 52, 53, 54, 57 | 28 |
+| Jepoy | 01, 02, 11, 12, 13, 21, 25, 28, 30, 31, 33, 34, 45, 48, 55, 56 | 16 |
 | Patrick | 10, 14, 15, 16, 18, 19, 20, 27, 35, 39, 40, 44, 46 | 13 |
 <!-- generated:objectives-workload:end -->
 ## Suggested order
@@ -206,11 +209,12 @@ Waves come from hard dependencies only. Each person works their column top to bo
 | Wave | Brent | Jepoy | Patrick |
 |---|---|---|---|
 | 1 | OBJ-22, OBJ-26, OBJ-32, OBJ-51, OBJ-52, OBJ-54 | OBJ-01, OBJ-02, OBJ-11, OBJ-12, OBJ-28, OBJ-55 | OBJ-10 |
-| 2 | OBJ-03, OBJ-24, OBJ-29, OBJ-53 | OBJ-13, OBJ-21, OBJ-25, OBJ-31, OBJ-33, OBJ-45 | OBJ-14 |
+| 2 | OBJ-03, OBJ-24, OBJ-29, OBJ-53 | OBJ-13, OBJ-21, OBJ-25, OBJ-31, OBJ-33, OBJ-45, OBJ-56 | OBJ-14 |
 | 3 | OBJ-04, OBJ-23, OBJ-37, OBJ-41, OBJ-47, OBJ-49 | OBJ-34, OBJ-48 | OBJ-15, OBJ-18, OBJ-27, OBJ-46 |
 | 4 | OBJ-05, OBJ-07, OBJ-17, OBJ-42, OBJ-43 | - | OBJ-16, OBJ-19, OBJ-20, OBJ-39, OBJ-44 |
 | 5 | OBJ-06, OBJ-08, OBJ-50 | OBJ-30 | OBJ-35, OBJ-40 |
 | 6 | OBJ-09, OBJ-36, OBJ-38 | - | - |
+| 7 | OBJ-57 | - | - |
 <!-- generated:objectives-waves:end -->
 ## Not covered yet
 

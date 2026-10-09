@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readdirSync, realpathSync, symlinkSync } from "n
 import { join } from "node:path";
 import { validate } from "@yumi/protocol";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { nameKey } from "../src/safety/paths.ts";
 import { checkTrash } from "../src/safety/trash.ts";
 import { tempHome, tool } from "./safety-helpers.ts";
 
@@ -71,8 +72,9 @@ describe("move_to_trash checks (SPEC-07 r7-r10)", () => {
   it("files in several folders name their shared folder, and a path listed twice counts once", () => {
     file("Downloads/a.pdf");
     file("Desktop/b.pdf");
-    const decision = trash("~/Downloads/a.pdf", "~/Desktop/b.pdf", "~/Downloads/A.pdf");
+    const decision = trash("~/Downloads/a.pdf", "~/Desktop/b.pdf", "~/Downloads/./a.pdf");
     expect(decision.files).toMatchObject({ folder: real, count: 2, firstNames: ["a.pdf", "b.pdf"] });
+    expect(nameKey(at("Downloads/a.pdf"))).toBe(nameKey(at("Downloads/A.pdf")));
   });
 
   it("a link is moved to the Trash itself, so only the link is listed, never what it points to", () => {
