@@ -94,7 +94,9 @@ def mac():
     if needs_install(os.path.join(ROOT, "protocol")) and not run("protocol install", ["npm", "ci"], os.path.join(ROOT, "protocol")):
         return False, None
     # Ad hoc signing (empty DEVELOPMENT_TEAM): the tests need no personal team, and it works for everyone.
-    cmd = ["xcodebuild", "-project", "Yumi.xcodeproj", "-scheme", "Yumi", "-derivedDataPath", "build", "-quiet", "DEVELOPMENT_TEAM=", "test"]
+    # Its own build folder: building ad hoc into mac/build would replace the signed app there, and macOS would then
+    # drop that app's Accessibility and Screen Recording grants.
+    cmd = ["xcodebuild", "-project", "Yumi.xcodeproj", "-scheme", "Yumi", "-derivedDataPath", "build/verify", "-quiet", "DEVELOPMENT_TEAM=", "test"]
     return run("mac build and tests", cmd, cwd), None
 
 
