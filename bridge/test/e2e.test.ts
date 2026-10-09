@@ -166,6 +166,38 @@ describe("bridge relay end to end", () => {
     }
   });
 
+  it("deletes every message it held between two devices when they unpair (OBJ-13.7)", async () => {
+    const fixture = await openRelayFixture();
+    const mac = await RelayDevice.connect(fixture.relay.url());
+    const phone = await RelayDevice.connect(fixture.relay.url());
+    try {
+      await pair(mac, phone);
+      await mac.close();
+      const held = makeEnvelope(phone, mac, "event", { title: "held-before-unpair" });
+      phone.send({ frame: "envelope", envelope: held });
+      expect(await phone.next("ack")).toEqual({ frame: "ack", messageId: held.id });
+      expect(fixture.relay.store.queuedCount()).toBe(1);
+
+      const unpair = makeUnpair(phone, mac, new Date().toISOString());
+      phone.send(unpair);
+      expect(await phone.next("ack")).toEqual({ frame: "ack", messageId: unpair.id });
+      expect(fixture.relay.store.queuedCount()).toBe(0);
+
+      const reconnected = await RelayDevice.connect(fixture.relay.url(), mac.keys);
+      try {
+        expect(await reconnected.next("unpair", "envelope")).toEqual(unpair);
+        await quiet();
+        expect(reconnected.frames.some((frame) => frame.frame === "envelope")).toBe(false);
+      } finally {
+        await reconnected.close();
+      }
+    } finally {
+      await mac.close();
+      await phone.close();
+      await fixture.close();
+    }
+  });
+
   it("deletes expired queued results and tells the sender", async () => {
     let now = new Date("2026-10-09T00:00:00.000Z");
     const fixture = await openRelayFixture(undefined, () => now);
