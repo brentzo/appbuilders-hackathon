@@ -25,7 +25,7 @@ Schema: [task-record-schema](../docs/task-record-schema.md).
 6. Workers return exactly one action, validated against a JSON schema.
 7. Subtasks with no unmet dependencies may run in parallel, subject to [SPEC-03](03-lane-routing.md).
 8. Limits are enforced: 25 steps per subtask, 3 attempts per subtask, subtask depth 1.
-9. When a task finishes, Yumi speaks a one or two sentence summary on the device the user spoke to.
+9. When a task finishes, Yumi speaks a one or two sentence summary on the device the user spoke to. If the summary cannot be written, Yumi says "Done. I finished everything you asked for."
 10. Task records (tasks, subtasks, steps, the action log, and step screenshots) are kept forever. Nothing is deleted automatically.
 11. The user can browse and search past tasks from the Mac menu bar and the phone app.
 
@@ -78,6 +78,10 @@ Feature: Task lifecycle
     When the user searches past tasks for "invoices"
     Then the task is found with its steps and action log
 ```
+
+## Decisions
+
+- If the task summary cannot be written, Yumi says "Done. I finished everything you asked for." instead of saying nothing (requirement 9). Decided 2026-10-09.
 
 ## Revisit after the hackathon
 
