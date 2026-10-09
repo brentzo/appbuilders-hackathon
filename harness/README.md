@@ -253,7 +253,7 @@ Only `allowed` may run without the user; asking and the Trash are [OBJ-38](../ob
 | [OBJ-04](../objectives/OBJ-04-task-store.md) | Task store and history | Brent | done |
 | [OBJ-05](../objectives/OBJ-05-planner-and-scheduler.md) | Planner, scheduler, and task summary | Brent | todo |
 | [OBJ-06](../objectives/OBJ-06-resume-and-limits.md) | Resume and limits | Brent | todo |
-| [OBJ-07](../objectives/OBJ-07-lane-router-core.md) | Lane router core | Brent | todo |
+| [OBJ-07](../objectives/OBJ-07-lane-router-core.md) | Lane router core | Brent | in-progress |
 | [OBJ-08](../objectives/OBJ-08-locks-busy-windows-cap.md) | Window locks, busy windows, and cursor cap | Brent | todo |
 | [OBJ-09](../objectives/OBJ-09-ghost-handoff.md) | Ghost handoff | Brent | todo |
 | [OBJ-21](../objectives/OBJ-21-mac-bridge-client-and-pairing.md) | Mac bridge client and pairing | Jepoy | done |
