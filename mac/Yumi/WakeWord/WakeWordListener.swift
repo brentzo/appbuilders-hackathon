@@ -2,18 +2,34 @@ import AppKit
 @preconcurrency import AVFoundation
 import OSLog
 
-/// Hands-free listening for the wake word (OBJ-16.3 to 16.5).
+/// Hands-free listening for the wake word (OBJ-16.3 to 16.5, OBJ-58).
 ///
 /// While the wake word setting is on, the microphone streams into the detector off the main
-/// thread. Audio lives only in the detector's rolling buffers in memory and is never transcribed
-/// or stored (SPEC-01 r10). On a detection Yumi plays a short sound and hands over to the same
-/// capture path as push-to-talk, which ends when the user stops speaking. With the setting off the
-/// microphone is not opened for the wake word at all (SPEC-01 r11).
+/// thread. "Hey Yumi" is spotted by Apple's on-device recognizer (`PhraseSpotter`), which checks
+/// what it hears for the phrase and drops it at once (SPEC-01 r10 and its Decisions). The
+/// openWakeWord detector from OBJ-16 is still here, with `-YumiWakeWordEngine openWakeWord`. On a
+/// detection Yumi plays a short sound and hands over to the same capture path as push-to-talk,
+/// which ends when the user stops speaking. With the setting off the microphone is not opened for
+/// the wake word at all (SPEC-01 r11). While Yumi speaks or listens, it pauses, so Yumi never
+/// wakes itself (OBJ-58.4).
 @MainActor
 final class WakeWordListener {
-    /// Starts listening for a goal, the way push-to-talk does. Returns when the goal was heard
-    /// (or nothing was), so wake word detection can start again.
-    private let listenForGoal: () async -> Void
+    enum Engine: Equatable {
+        /// "Hey Yumi" with the on-device speech recognizer (OBJ-58), the default.
+        case recognizer
+        /// openWakeWord through ONNX Runtime (OBJ-16), with its "Hey Jarvis" stand-in or a
+        /// `hey_yumi.onnx` model.
+        case openWakeWord
+
+        static var chosen: Engine {
+            LaunchArguments.string("YumiWakeWordEngine") == "openWakeWord" ? .openWakeWord : .recognizer
+        }
+    }
+
+    /// Starts listening for a goal, the way push-to-talk does, on the microphone that heard the
+    /// phrase when there is one. Returns when the goal was heard (or nothing was), so wake word
+    /// detection can start again.
+    private let listenForGoal: (WakeHandover?) async -> Void
     /// False while push-to-talk or a spoken answer has the microphone.
     private let isMicrophoneFree: () -> Bool
     private let model: AppModel
@@ -30,17 +46,24 @@ final class WakeWordListener {
         #endif
     }()
     private var scorer: WakeWordScorer?
+    private var spotter: PhraseSpotter?
+    let detector: Engine
     private(set) var phrase: String?
     private var handingOver = false
+    /// Set while Yumi speaks or listens, and for a moment after, so its own voice never wakes it.
+    private var pausedForYumi = false
+    private var resume: Task<Void, Never>?
     private let log = Logger(subsystem: "ph.appbuilders.yumi", category: "wakeword")
 
-    init(model: AppModel, isMicrophoneFree: @escaping () -> Bool, listenForGoal: @escaping () async -> Void) {
+    init(model: AppModel, detector: Engine = .chosen, isMicrophoneFree: @escaping () -> Bool,
+         listenForGoal: @escaping (WakeHandover?) async -> Void) {
         self.model = model
+        self.detector = detector
         self.isMicrophoneFree = isMicrophoneFree
         self.listenForGoal = listenForGoal
     }
 
-    var isListening: Bool { engine != nil || fileFeed != nil }
+    var isListening: Bool { engine != nil || fileFeed != nil || spotter != nil }
 
     func start() {
         followSetting()
@@ -58,10 +81,29 @@ final class WakeWordListener {
         }
     }
 
-    /// Opens or closes the microphone to match the setting.
+    /// Opens or closes the microphone to match the setting, and pauses it while Yumi speaks or
+    /// listens.
     func update() {
-        let wanted = model.settings.wakeWordEnabled && !handingOver
+        let busy = model.isListening || model.isSpeaking
+        let wanted = model.settings.wakeWordEnabled && !handingOver && !busy
+        if busy {
+            pausedForYumi = true
+            resume?.cancel()
+            resume = nil
+        }
         if wanted, !isListening {
+            if pausedForYumi {
+                // Not straight away: Yumi's last words may still be in the room.
+                guard resume == nil else { return }
+                resume = Task {
+                    try? await Task.sleep(for: .seconds(0.8))
+                    guard !Task.isCancelled else { return }
+                    resume = nil
+                    pausedForYumi = false
+                    update()
+                }
+                return
+            }
             open()
         } else if !wanted, isListening {
             close()
@@ -71,6 +113,10 @@ final class WakeWordListener {
     private func open() {
         guard testRecording != nil || model.permissions.check(.microphone) == .granted else {
             log.notice("Wake word waits for the microphone permission")
+            return
+        }
+        if detector == .recognizer {
+            openSpotter()
             return
         }
         do {
@@ -100,7 +146,52 @@ final class WakeWordListener {
         }
     }
 
+    /// "Hey Yumi" with the on-device recognizer (OBJ-58).
+    private func openSpotter() {
+        guard NativeRecognizer.authorized == true else {
+            log.notice("Wake word waits for the speech recognition permission")
+            return
+        }
+        let spotter = PhraseSpotter { [weak self] speaking in
+            DispatchQueue.main.async { MainActor.assumeIsolated { self?.spotted(speaking: speaking) } }
+        }
+        do {
+            try spotter.start(testRecording: testRecording)
+        } catch {
+            log.error("Could not listen for the wake word: \(String(describing: error), privacy: .public)")
+            return
+        }
+        self.spotter = spotter
+        phrase = "Hey Yumi"
+        log.notice("Listening for \"Hey Yumi\" with the on-device recognizer\(self.testRecording == nil ? "" : " (test aid)", privacy: .public)")
+    }
+
+    /// The recognizer heard "Hey Yumi": a short sound, then the push-to-talk capture path on the
+    /// same microphone, so the words said right after the phrase are kept.
+    private func spotted(speaking: Bool) {
+        guard let spotter, !handingOver else { return }
+        guard isMicrophoneFree() else {
+            spotter.rearm()
+            return
+        }
+        log.notice("Wake word heard")
+        handingOver = true
+        // The goal capture owns its microphone from here; `close` must not stop it.
+        self.spotter = nil
+        if testRecording?.loops == false { testRecording = nil }
+        let handover = spotter.handOver(speaking: speaking)
+        NSSound(named: "Tink")?.play()
+        Task {
+            await listenForGoal(handover)
+            handover.stop()
+            handingOver = false
+            update()
+        }
+    }
+
     private func close() {
+        spotter?.stop()
+        spotter = nil
         fileFeed?.cancel()
         fileFeed = nil
         engine?.inputNode.removeTap(onBus: 0)
@@ -122,7 +213,7 @@ final class WakeWordListener {
         if testRecording?.loops == false { testRecording = nil }
         NSSound(named: "Tink")?.play()
         Task {
-            await listenForGoal()
+            await listenForGoal(nil)
             handingOver = false
             update()
         }

@@ -48,7 +48,7 @@ final class HarnessLink {
         supervisor = HarnessSupervisor(launcher: launcher)
         client = HarnessClient(socketPath: socketPath)
         gui = GuiExecutor(overlay: overlay)
-        let speech = NeuralSpeech.yumi()
+        let speech = TrackedSpeech(NeuralSpeech.yumi(), model: model)
         self.speech = speech
         let tilingPanel = TilingPanel()
         tiler = WindowTiler(

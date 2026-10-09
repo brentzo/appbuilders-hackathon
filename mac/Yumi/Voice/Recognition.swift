@@ -30,16 +30,53 @@ nonisolated enum RecognitionFailure: Error, Equatable {
 /// microphone plugged in since the last one is picked up.
 nonisolated final class MicrophoneCapture: @unchecked Sendable {
     private var engine: AVAudioEngine?
+    private var player: DispatchSourceTimer?
+    /// Where the audio goes. Cleared on `stop`, so nothing arrives after it.
+    private let destination = Locked<(@Sendable (AVAudioPCMBuffer) -> Void)?>(nil)
 
     func start(feeding session: RecognitionSession) throws {
+        try start { session.append($0) }
+    }
+
+    func start(sending: @escaping @Sendable (AVAudioPCMBuffer) -> Void) throws {
+        destination.set(sending)
         let engine = AVAudioEngine()
         let input = engine.inputNode
-        input.installTap(onBus: 0, bufferSize: 1024, format: input.outputFormat(forBus: 0)) { buffer, _ in
-            session.append(buffer)
+        input.installTap(onBus: 0, bufferSize: 1024, format: input.outputFormat(forBus: 0)) { [destination] buffer, _ in
+            destination.get()?(buffer)
         }
         engine.prepare()
         try engine.start()
         self.engine = engine
+    }
+
+    /// Test aid for `-YumiWakeWordFile` (Debug builds): plays a recording at real-time pace, as the
+    /// microphone would hear it, then silence, or the recording again with `loops`.
+    func play(_ url: URL, loops: Bool, sending: @escaping @Sendable (AVAudioPCMBuffer) -> Void) throws {
+        destination.set(sending)
+        let file = try AVAudioFile(forReading: url)
+        let frames: AVAudioFrameCount = 1024
+        var buffers: [AVAudioPCMBuffer] = []
+        while file.framePosition < file.length {
+            guard let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: frames) else { break }
+            try file.read(into: buffer)
+            buffers.append(buffer)
+        }
+        guard let silence = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: frames) else { return }
+        silence.frameLength = frames
+        for channel in 0..<Int(silence.format.channelCount) {
+            silence.floatChannelData?[channel].update(repeating: 0, count: Int(frames))
+        }
+        nonisolated(unsafe) var position = 0
+        let timer = DispatchSource.makeTimerSource(queue: DispatchQueue(label: "ph.appbuilders.yumi.recording"))
+        timer.schedule(deadline: .now(), repeating: Double(frames) / file.processingFormat.sampleRate)
+        timer.setEventHandler { [destination] in
+            if position == buffers.count, loops { position = 0 }
+            destination.get()?(position < buffers.count ? buffers[position] : silence)
+            position = min(position + 1, buffers.count)
+        }
+        timer.resume()
+        player = timer
     }
 
     /// Test aid for `-YumiVoiceFile` and `-YumiReplyFile` (Debug builds): sends a whole recording,
@@ -63,6 +100,9 @@ nonisolated final class MicrophoneCapture: @unchecked Sendable {
     }
 
     func stop() {
+        destination.set(nil)
+        player?.cancel()
+        player = nil
         engine?.inputNode.removeTap(onBus: 0)
         engine?.stop()
         engine = nil
@@ -80,11 +120,13 @@ nonisolated final class NativeRecognitionSession: RecognitionSession, @unchecked
     private let outcome = Outcome<String>()
     private let partials = Locked<(@Sendable (String) -> Void)?>(nil)
 
-    init() throws {
+    /// `contextualStrings` are words to expect, such as "Yumi", which is not in the dictionary.
+    init(contextualStrings: [String] = []) throws {
         guard let recognizer = SFSpeechRecognizer(locale: Self.locale), recognizer.supportsOnDeviceRecognition else {
             throw RecognitionFailure.onDeviceUnavailable
         }
         request.requiresOnDeviceRecognition = true
+        request.contextualStrings = contextualStrings
         request.shouldReportPartialResults = true
         request.addsPunctuation = true
         task = recognizer.recognitionTask(with: request) { [outcome, partials] result, error in

@@ -58,6 +58,17 @@ nonisolated final class SpeechEndpoint: @unchecked Sendable {
         self.ended = ended
     }
 
+    /// After "Hey Yumi" (OBJ-58) the user is often already talking, so the room's level comes from
+    /// before the wake phrase instead of the first moments, and `speaking` says the goal has begun.
+    convenience init(timing: Timing = Timing(), floor: Float, speaking: Bool, ended: @escaping (Outcome) -> Void) {
+        var timing = timing
+        timing.floorLearning = 0
+        self.init(timing: timing, ended: ended)
+        floorSum = floor
+        floorCount = 1
+        heardSpeech = speaking
+    }
+
     func append(_ buffer: AVAudioPCMBuffer) {
         guard let channel = buffer.floatChannelData?[0], buffer.frameLength > 0 else { return }
         var sum: Float = 0

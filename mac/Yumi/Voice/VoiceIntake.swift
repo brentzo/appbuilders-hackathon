@@ -130,12 +130,22 @@ final class VoiceIntake: ReplyListening {
 
     // MARK: After the wake word
 
-    /// After the wake word (OBJ-16.4): the same microphone, recognizers, and indicator as
-    /// push-to-talk, ended by the user stopping speaking. Nothing heard is quietly dropped, since a
-    /// false wake-up should not show an error.
-    func listenForGoalAfterWakeWord() async {
+    /// After the wake word (OBJ-16.4): the same recognizers and indicator as push-to-talk, ended
+    /// by the user stopping speaking. Nothing heard is quietly dropped, since a false wake-up
+    /// should not show an error.
+    ///
+    /// With a `handover` from "Hey Yumi" (OBJ-58.2), the microphone that heard the phrase keeps
+    /// going, and the recording starts with the seconds before it, so a goal said in the same
+    /// breath is kept. Only the words after the phrase become the goal.
+    func listenForGoalAfterWakeWord(_ handover: WakeHandover? = nil) async {
         guard phase == .idle else { return }
-        guard let transcript = await listenForReply() else {
+        guard case .heard(var transcript) = await listenHandsFree(promptIfNeeded: false, handover: handover) else {
+            dropCursor()
+            return
+        }
+        if handover != nil { transcript = WakePhrase.goal(in: transcript) }
+        guard !transcript.isEmpty else {
+            log.notice("Nothing said after the wake word")
             dropCursor()
             return
         }
@@ -177,11 +187,12 @@ final class VoiceIntake: ReplyListening {
         case heard(String)
     }
 
-    private func listenHandsFree(promptIfNeeded: Bool) async -> HandsFree {
+    private func listenHandsFree(promptIfNeeded: Bool, handover: WakeHandover? = nil) async -> HandsFree {
         guard phase == .idle else { return .notStarted }
         let ended = Outcome<SpeechEndpoint.Outcome>()
-        let endpoint = SpeechEndpoint { ended.resolve(.success($0)) }
-        guard let session = openMicrophone(promptIfNeeded: promptIfNeeded, endpoint: endpoint) else { return .notStarted }
+        let endpoint = handover.map { SpeechEndpoint(floor: $0.floor, speaking: $0.speaking) { ended.resolve(.success($0)) } }
+            ?? SpeechEndpoint { ended.resolve(.success($0)) }
+        guard let session = openMicrophone(promptIfNeeded: promptIfNeeded, endpoint: endpoint, handover: handover) else { return .notStarted }
         self.session = session
         phase = .listening
         defer {
@@ -195,7 +206,9 @@ final class VoiceIntake: ReplyListening {
         }
         let outcome = (try? await ended.value()) ?? .silent
         closeMicrophone()
-        guard outcome != .silent else {
+        handover?.stop()
+        // After "Hey Yumi" the goal may have been said before this recording heard silence.
+        guard outcome != .silent || handover != nil else {
             session.cancel()
             log.notice("Nothing said")
             return .nothing
@@ -217,10 +230,11 @@ final class VoiceIntake: ReplyListening {
 
     /// Checks the permissions, starts the recognizers and the microphone, and shows the listening
     /// indicator (SPEC-01 requirement 8). Nil when listening cannot start; the reason is shown or logged.
-    private func openMicrophone(promptIfNeeded: Bool, endpoint: SpeechEndpoint?) -> RecognitionSession? {
+    private func openMicrophone(promptIfNeeded: Bool, endpoint: SpeechEndpoint?, handover: WakeHandover? = nil) -> RecognitionSession? {
         // Test aid: a recording played in place of the microphone, so no microphone permission.
-        let testRecording = endpoint == nil ? testRecordings.goal : testRecordings.reply
-        switch testRecording != nil ? .granted : model.permissions.check(.microphone) {
+        // After "Hey Yumi" the microphone that heard it (or its test recording) goes on instead.
+        let testRecording = handover != nil ? nil : endpoint == nil ? testRecordings.goal : testRecordings.reply
+        switch testRecording != nil || handover != nil ? .granted : model.permissions.check(.microphone) {
         case .granted:
             break
         case .notAsked:
@@ -254,13 +268,18 @@ final class VoiceIntake: ReplyListening {
             ))
             session = endpoint.map { EndpointedSession(recognizers, endpoint: $0) } ?? recognizers
             // The words so far, live in the main cat's bubble while the user speaks.
-            session.observePartials { [weak self] text in
+            // After "Hey Yumi", only the words after it: the recording starts before the phrase.
+            let afterPhrase = handover != nil
+            session.observePartials { [weak self] heard in
+                guard let text = afterPhrase ? WakePhrase.remainder(after: heard) : heard else { return }
                 Task { @MainActor in
                     guard let self, self.model.isListening else { return }
                     self.overlay.update(GoalConfirmation.mainCursorId) { $0.transcript = text }
                 }
             }
-            if let testRecording {
+            if let handover {
+                handover.attach(recognizer: recognizers, live: session)
+            } else if let testRecording {
                 try MicrophoneCapture.feed(URL(fileURLWithPath: testRecording), to: session)
             } else {
                 try microphone.start(feeding: session)

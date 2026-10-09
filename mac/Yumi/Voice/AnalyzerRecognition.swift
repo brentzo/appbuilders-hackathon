@@ -26,8 +26,8 @@ nonisolated final class AnalyzerRecognitionSession: RecognitionSession, @uncheck
         }
     }
 
-    private static func makeTranscriber() -> SpeechTranscriber {
-        SpeechTranscriber(locale: NativeRecognitionSession.locale, transcriptionOptions: [], reportingOptions: [.volatileResults], attributeOptions: [])
+    private static func makeTranscriber(reporting: Set<SpeechTranscriber.ReportingOption> = [.volatileResults]) -> SpeechTranscriber {
+        SpeechTranscriber(locale: NativeRecognitionSession.locale, transcriptionOptions: [], reportingOptions: reporting, attributeOptions: [])
     }
 
     private let analyzer: SpeechAnalyzer
@@ -38,16 +38,24 @@ nonisolated final class AnalyzerRecognitionSession: RecognitionSession, @uncheck
     private let collected: Task<String, Error>
     private let partials = Locked<(@Sendable (String) -> Void)?>(nil)
 
-    init() throws {
+    /// `contextualStrings` are words to expect, such as "Yumi", which is not in the dictionary.
+    init(reporting: Set<SpeechTranscriber.ReportingOption> = [.volatileResults], contextualStrings: [String] = []) throws {
         guard let format = Self.readyFormat.get() else { throw RecognitionFailure.modelNotReady }
-        let transcriber = Self.makeTranscriber()
+        let transcriber = Self.makeTranscriber(reporting: reporting)
         let analyzer = SpeechAnalyzer(modules: [transcriber])
         let (stream, input) = AsyncStream<AnalyzerInput>.makeStream()
         self.analyzer = analyzer
         self.format = format
         self.input = input
         // Audio appended before the analyzer starts waits in the stream.
-        started = Task { try await analyzer.start(inputSequence: stream) }
+        started = Task {
+            if !contextualStrings.isEmpty {
+                let context = AnalysisContext()
+                context.contextualStrings[.general] = contextualStrings
+                try? await analyzer.setContext(context)
+            }
+            try await analyzer.start(inputSequence: stream)
+        }
         collected = Task { [partials] in
             // Final results add up to the transcript; a volatile one is the guess for the words
             // after them, shown while the user speaks and replaced as it firms up.
@@ -126,6 +134,14 @@ nonisolated enum NativeRecognizer {
     static func makeSession() throws -> RecognitionSession {
         if #available(macOS 26, *) { return try AnalyzerRecognitionSession() }
         return try NativeRecognitionSession()
+    }
+
+    /// For spotting "Hey Yumi" (OBJ-58): the quickest guesses, expecting the word "Yumi".
+    static func makeSpotterSession() throws -> RecognitionSession {
+        if #available(macOS 26, *) {
+            return try AnalyzerRecognitionSession(reporting: [.volatileResults, .fastResults], contextualStrings: WakePhrase.contextualStrings)
+        }
+        return try NativeRecognitionSession(contextualStrings: WakePhrase.contextualStrings)
     }
 
     /// SpeechAnalyzer needs no permission. `SFSpeechRecognizer` (macOS 15) does.

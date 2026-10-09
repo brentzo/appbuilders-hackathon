@@ -69,7 +69,7 @@ struct WakeWordTests {
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let model = AppModel(settings: SettingsStore(defaults: defaults, sink: PendingHarnessSettingsSink()))
-        let listener = WakeWordListener(model: model, isMicrophoneFree: { true }, listenForGoal: {})
+        let listener = WakeWordListener(model: model, detector: .openWakeWord, isMicrophoneFree: { true }, listenForGoal: { _ in })
         listener.testRecording = (Self.fixtures.appendingPathComponent("hey-jarvis-clip.wav").path, false)
 
         model.settings.wakeWordEnabled = false

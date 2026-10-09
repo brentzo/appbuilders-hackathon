@@ -32,11 +32,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         submit: { [weak self] speech in self?.harness.submitSpeech(speech) },
         showError: { [weak self] error in self?.showError(error) }
     )
-    /// "Hey Yumi" hands-free (OBJ-16), handing over to the same capture path as push-to-talk.
+    /// "Hey Yumi" hands-free (OBJ-16, OBJ-58), handing over to the same capture path as push-to-talk.
     private(set) lazy var wakeWord = WakeWordListener(
         model: model,
         isMicrophoneFree: { [weak self] in self?.voice.phase == .idle },
-        listenForGoal: { [weak self] in await self?.voice.listenForGoalAfterWakeWord() }
+        listenForGoal: { [weak self] handover in await self?.voice.listenForGoalAfterWakeWord(handover) }
     )
     private var terminationSignal: DispatchSourceSignal?
     /// False when this launch gave way to a Yumi that was already running, so quitting leaves its
@@ -102,7 +102,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case .typeGoal:
             showTypeGoal()
         case .reloadVoice:
-            (harness.speech as? NeuralSpeech)?.reload()
+            ((harness.speech as? TrackedSpeech)?.inner as? NeuralSpeech)?.reload()
         case .dismiss, .notAvailableYet:
             break
         }

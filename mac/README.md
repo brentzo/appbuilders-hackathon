@@ -183,12 +183,24 @@ Push-to-talk turns speech into a goal on the Mac ([OBJ-15](../objectives/OBJ-15-
 
 ### Wake word
 
-With the wake word on in Settings (on by default), Yumi listens for it hands-free ([OBJ-16](../objectives/OBJ-16-mac-wake-word.md)).
+With the wake word on in Settings (on by default), Yumi listens for "Hey Yumi" hands-free ([OBJ-16](../objectives/OBJ-16-mac-wake-word.md), [OBJ-58](../objectives/OBJ-58-mac-hey-yumi-recognizer.md)).
+
+- For the demo, Apple's on-device speech recognizer spots the phrase (`PhraseSpotter`), as SPEC-01's Decisions allow: SpeechAnalyzer on macOS 26, `SFSpeechRecognizer` forced on-device on macOS 15.
+  It accepts sound-alikes on purpose ("hey you me", "hey yummy", "hey umi", "a yumi"); the list is `WakePhrase`.
+- Each guess is checked for the phrase and dropped at once; nothing heard before it is logged or stored.
+  The recognizer session is replaced every 8 seconds, and the last 2 seconds of audio stay in memory.
+- On the phrase, the same microphone goes on into the push-to-talk capture path, starting with those 2 seconds, so "Hey Yumi, open Notes" in one breath keeps "open Notes".
+  Only the words after the phrase become the goal.
+- The wake word pauses while Yumi speaks (`TrackedSpeech` sets `AppModel.isSpeaking`) or listens, and for 0.8 seconds after, so Yumi never wakes itself.
+- It costs about 2 to 5% of one core in Yumi plus about 5% in macOS's `localspeechrecognition`, measured with `PhraseSpotterTests.cpuWhileSpotting`.
+- `-YumiWakeWordEngine openWakeWord` uses the openWakeWord detector below instead.
+
+The openWakeWord detector:
 
 - Detection is openWakeWord through ONNX Runtime: `WakeWordFeatures` is a Swift port of openWakeWord 0.6.0's feature step and matches the Python output on a fixed clip.
 - The models are not in git. Fetch them once with `scripts/fetch-wake-word-models.sh`, which checks their checksums and puts them in `~/Library/Application Support/Yumi/Models/WakeWord`.
   Without them the wake word is off, and push-to-talk still works.
-- The wake word model is a stand-in: openWakeWord's pre-trained "hey jarvis", so say "Hey Jarvis" for now.
+- The wake word model is a stand-in: openWakeWord's pre-trained "hey jarvis", so say "Hey Jarvis" with this detector.
   Dropping OBJ-12's `hey_yumi.onnx` into the same folder switches to "Hey Yumi" with no code change.
 - On a detection Yumi plays a short sound and listens for the goal on the push-to-talk path, until the user stops speaking.
 - Audio lives only in the detector's rolling buffers in memory; nothing is transcribed or stored before the wake word.
@@ -284,6 +296,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 - `-YumiVoiceFile <path>` makes push-to-talk transcribe that recording instead of the microphone (Debug builds).
 - `-YumiReplyFile <path>` makes the spoken answer after a repeat-back, or the goal after the wake word, transcribe that recording (Debug builds).
 - `-YumiWakeWordFile <path>` feeds that recording to the wake word detector at real-time pace instead of the microphone, and `-YumiWakeWordLoop YES` repeats it (Debug builds).
+  With the recognizer, the goal after "Hey Yumi" comes from the rest of the same recording.
   An error window uses the sample last action "Clicked Export in Keynote".
 - `-YumiPermissions mixed|granted` pretends permissions are in that state, without asking macOS.
 - `-YumiStatus startingUp|ready|listening|working|paused` sets the menu's status line.
@@ -313,7 +326,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 | `Yumi/GUI/` | Controlling other apps: the trimmed tree reader, element actions, tagged keystrokes, the direct tools, and the GUI debug window |
 | `Yumi/Approvals/` | Send and delete approval cards, their copy, and `moveToTrash` |
 | `Yumi/Control/` | The stop shortcut, the take-over watcher, the local stop, and the paused panel |
-| `Yumi/WakeWord/` | The wake word: ONNX Runtime models, the openWakeWord feature port, and the listener |
+| `Yumi/WakeWord/` | The wake word: the "Hey Yumi" phrase spotter, ONNX Runtime models, the openWakeWord feature port, and the listener |
 | `Yumi/Speech/` | Yumi's voice: `NeuralSpeech` (order, meow, failed load), `KokoroVoice` (the model on its own queue), `SpeechPlayback` (the audio engine), and the voice warning panel |
 | `Packages/KokoroSwift/` | Kokoro for MLX Swift, copied from kokoro-ios with Yumi's changes (MIT) |
 | `Yumi/Voice/` | Voice intake: the push-to-talk hot key, the microphone, the recognizers and their rule, the silence endpoint, and the typed-goal box |
@@ -332,7 +345,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 - Model readiness is a placeholder that is always unknown (`ModelReadiness`).
   The protocol cannot report it yet; this is open with the protocol and harness owners.
 - Error buttons whose feature comes in a later objective are shown disabled: for example "Try again" outside "Didn't catch speech", and "Stop" or "Keep going" when the error names no task.
-- The wake word model is openWakeWord's "hey jarvis" until "Hey Yumi" from [OBJ-12](../objectives/OBJ-12-hey-yumi-wake-word.md), with openWakeWord's default threshold, 0.5.
+- "Hey Yumi" is spotted by the speech recognizer for the demo ([OBJ-58](../objectives/OBJ-58-mac-hey-yumi-recognizer.md)) until a trained model is good enough. With `-YumiWakeWordEngine openWakeWord`, the model is openWakeWord's "hey jarvis" until "Hey Yumi" from [OBJ-12](../objectives/OBJ-12-hey-yumi-wake-word.md), with openWakeWord's default threshold, 0.5.
 - Cursors are the cat as static poses, one per state, with small Core Animation motion: ginger for the main cursor, mint, sky, and slate for ghosts. The Rive cat ([OBJ-19](../objectives/OBJ-19-rive-cat-cursor.md)) replaces them.
 - A cursor moving to an element whose path does not resolve goes to the center of the target window, or the app's frontmost window.
 - Vision clicks (`clickAt`) are refused until the p1 vision fallback.
@@ -373,7 +386,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 | [OBJ-51](../objectives/OBJ-51-mac-neural-voice.md) | Yumi's neural voice on the Mac | Brent | in-progress |
 | [OBJ-53](../objectives/OBJ-53-mac-thoughts-panel.md) | Expand a cursor to see what it is thinking | Brent | in-progress |
 | [OBJ-54](../objectives/OBJ-54-mac-cats-avoid-pointer.md) | Cats avoid the user's pointer | Brent | in-progress |
-| [OBJ-58](../objectives/OBJ-58-mac-hey-yumi-recognizer.md) | "Hey Yumi" on the Mac with the on-device recognizer | Brent | todo |
+| [OBJ-58](../objectives/OBJ-58-mac-hey-yumi-recognizer.md) | "Hey Yumi" on the Mac with the on-device recognizer | Brent | in-progress |
 <!-- generated:product-objectives:end -->
 
 Related: [OBJ-21](../objectives/OBJ-21-mac-bridge-client-and-pairing.md) (Jepoy's bridge client; its pairing screen and connection state are built here in OBJ-27).

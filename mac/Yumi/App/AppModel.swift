@@ -12,6 +12,8 @@ final class AppModel {
     var modelReadiness: ModelReadiness = .unknown
     /// True while push-to-talk has the microphone on (OBJ-15).
     var isListening = false
+    /// True while Yumi says something out loud, so the wake word pauses (OBJ-58.4).
+    var isSpeaking = false
     /// Debug builds can force the status line for screenshots.
     var statusOverride: AppStatus?
 
