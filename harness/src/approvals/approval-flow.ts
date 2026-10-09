@@ -6,9 +6,12 @@ import type {
   ApprovalDecision,
   FileSummary,
   Lane,
+  LayerKind,
   MoveToTrashResult,
+  Observation,
   Path,
   ReadFieldValuesResult,
+  RecordedAction,
   Step,
   Subtask,
   Target,
@@ -22,7 +25,7 @@ import { realHome } from "../safety/paths.ts";
 import { checkTrash } from "../safety/trash.ts";
 import { describeSkipped } from "../scheduler/describe.ts";
 import type { TaskStore } from "../store/task-store.ts";
-import { deleteText, sendText, type SendKind } from "./copy.ts";
+import { actionText, deleteText, sendText, type SendKind } from "./copy.ts";
 import { parseRecipients, sendApp } from "./recipients.ts";
 
 /**
@@ -39,9 +42,11 @@ import { parseRecipients, sendApp } from "./recipients.ts";
  * 2. writes the `Approval`, sets the subtask to `needsApproval` and the task to `waitingForUser`, and shows the card
  *    on the Mac with `showApprovalCard`.
  * 3. accepts a delete only by a tap (r11): a voice "yes" shows the same card again. A send may be approved by a tap
- *    or by saying "send it" (r15), which the Mac app reports as `method: voice`.
- * 4. right before the action runs, reads the recipients or lists the files again; if anything changed, it drops the
- *    approval and asks again with the new data (r12, r14).
+ *    or by saying "send it" (r15), which the Mac app reports as `method: voice`. An unclassified risky click or key
+ *    press (r6) gets an `action` card, worded from the resolved action, and is tap-only like a delete (OBJ-38.11).
+ * 4. right before the action runs, reads the recipients, lists the files, or looks at the window again; if anything
+ *    changed, it drops the approval and asks again with the new data (r12, r14). For an action, the element it acts
+ *    on must still be there with the same role and label.
  * 5. closes the approval as used: it covers exactly this one action, once.
  *
  * A pause or cancel cancels every open approval (`cancelAll`) and tells the apps with `approvalCancelled`, so the
@@ -75,6 +80,10 @@ export interface ApprovalContext {
   send?: SendFields;
   /** The app the action was in, as the Mac app reported it, to name a blocked action (SPEC-07 r5). */
   app?: string | undefined;
+  /** The window a GUI action happens in. Required for an `action` card, which looks at it again before the action. */
+  target?: Target;
+  /** What was in front in the window when the model chose the action, to name it. */
+  layer?: LayerKind | undefined;
 }
 
 /** Why there is nothing the user can approve, so the action is not run. */
@@ -86,7 +95,9 @@ export type Unavailable =
   /** The files to delete are no longer there to list. */
   | "filesGone"
   /** The Mac app could not show the card. */
-  | "couldNotAsk";
+  | "couldNotAsk"
+  /** The element an unclassified action acts on is gone or is a different one now. */
+  | "actionChanged";
 
 export type ApprovalAnswer =
   /** Approved, checked again, and closed as used: the action may run now, once. */
@@ -129,11 +140,15 @@ export interface ApprovalFlowDeps {
   now?: () => Date;
 }
 
-type Subject = { kind: "send"; send: SendFields; sendKind: SendKind; cc: boolean } | { kind: "delete"; paths: string[] };
+type Subject =
+  | { kind: "send"; send: SendFields; sendKind: SendKind; cc: boolean }
+  | { kind: "delete"; paths: string[] }
+  | { kind: "action"; recorded: RecordedAction; target: Target; app: string | undefined; text: string };
 
 type Content =
   | { kind: "send"; to: string[]; cc: string[]; text: string }
-  | { kind: "delete"; files: FileSummary; fingerprints: string[]; text: string };
+  | { kind: "delete"; files: FileSummary; fingerprints: string[]; text: string }
+  | { kind: "action"; app: string | undefined; element: string; text: string };
 
 type Built = { ok: true; content: Content } | { ok: false; reason: Unavailable };
 
@@ -289,11 +304,23 @@ export class ApprovalFlow implements ApprovalGate {
       if (app && context.send.to.length > 0) return { kind: "send", send: context.send, sendKind: app.kind, cc: app.cc };
       return { reason: "noRecipients" };
     }
+    const gui = ["click", "clickAt", "key"].includes(action.kind);
+    if (decision.rule === "unclassified" && gui && context.target) {
+      const what = describeSkipped(decision.recorded, context.app, context.layer);
+      return {
+        kind: "action",
+        recorded: decision.recorded,
+        target: context.target,
+        app: context.app,
+        text: actionText(what, context.app),
+      };
+    }
     return { reason: "noApprovalCard" };
   }
 
-  /** Reads the real recipients, or lists the real files. */
+  /** Reads the real recipients, lists the real files, or looks at the real window. */
   private async build(target: Subject): Promise<Built> {
+    if (target.kind === "action") return this.buildAction(target);
     if (target.kind === "delete") {
       // The same check the gate made, on the real home folder, so the list is the one it would build now.
       const check = checkTrash(target.paths, realHome(this.deps.home));
@@ -329,6 +356,31 @@ export class ApprovalFlow implements ApprovalGate {
     return { ok: true, content: { kind: "send", to, cc: ccNames, text: sendText(target.sendKind, to, ccNames) } };
   }
 
+  /**
+   * Looks at the window the action happens in: the app must be the same, and an element action's element must still
+   * be there with the role and label the gate checked. The text is the summary built from the resolved action.
+   */
+  private async buildAction(target: Extract<Subject, { kind: "action" }>): Promise<Built> {
+    let observation: Observation;
+    try {
+      observation = (await this.deps.mac.request("observeWindow", { target: target.target })) as Observation;
+    } catch (error) {
+      this.deps.logger.error("approval.observeFailed", describeError(error));
+      return { ok: false, reason: "actionChanged" };
+    }
+    if (target.app !== undefined && observation.app !== target.app) return { ok: false, reason: "actionChanged" };
+    const { action, element } = target.recorded;
+    let signature = "";
+    if (action.kind === "click") {
+      const now = observation.elements.find((candidate) => candidate.n === action.element);
+      if (!now || !element || now.role !== element.role || now.label !== element.label) {
+        return { ok: false, reason: "actionChanged" };
+      }
+      signature = `${now.role}:${now.label}`;
+    }
+    return { ok: true, content: { kind: "action", app: observation.app, element: signature, text: target.text } };
+  }
+
   private newApproval(stepId: Uuid, content: Content): Approval {
     const requested = this.now();
     const common = {
@@ -338,9 +390,14 @@ export class ApprovalFlow implements ApprovalGate {
       requestedAt: requested.toISOString(),
       expiresAt: new Date(requested.getTime() + APPROVAL_LIFETIME_MS).toISOString(),
     };
-    return content.kind === "send"
-      ? { ...common, kind: "send", recipients: [...content.to, ...content.cc] }
-      : { ...common, kind: "delete", files: content.files };
+    switch (content.kind) {
+      case "send":
+        return { ...common, kind: "send", recipients: [...content.to, ...content.cc] };
+      case "delete":
+        return { ...common, kind: "delete", files: content.files };
+      case "action":
+        return { ...common, kind: "action" };
+    }
   }
 
   /** Shows the card until the user answers in a way that counts, or a pause or cancel drops the approval. */
@@ -350,9 +407,10 @@ export class ApprovalFlow implements ApprovalGate {
       for (;;) {
         const answer = await this.showCard(approval, context.subtask.taskId, signal);
         if (typeof answer === "string") return answer;
-        if (approval.kind === "delete" && answer.approved && answer.method !== "tap") {
-          // Saying "yes" is not enough to delete (r11): the card stays until the user taps a button.
-          this.deps.logger.warn("approval.deleteNeedsTap", { approvalId: approval.id, method: answer.method });
+        if (approval.kind !== "send" && answer.approved && answer.method !== "tap") {
+          // Saying "yes" is not enough to delete (r11) or to allow an unclassified action (r6): the card stays until
+          // the user taps a button.
+          this.deps.logger.warn("approval.needsTap", { approvalId: approval.id, kind: approval.kind, method: answer.method });
           continue;
         }
         return answer;
@@ -456,6 +514,7 @@ function sameContent(a: Content, b: Content): boolean {
   if (a.kind === "delete" && b.kind === "delete") {
     return sameList(a.files.allPaths, b.files.allPaths) && sameList(a.fingerprints, b.fingerprints);
   }
+  if (a.kind === "action" && b.kind === "action") return a.app === b.app && a.element === b.element;
   return false;
 }
 
@@ -464,5 +523,12 @@ function sameList(a: readonly string[], b: readonly string[]): boolean {
 }
 
 function countOf(content: Content): { count: number } {
-  return { count: content.kind === "delete" ? content.files.count : content.to.length + content.cc.length };
+  switch (content.kind) {
+    case "delete":
+      return { count: content.files.count };
+    case "send":
+      return { count: content.to.length + content.cc.length };
+    case "action":
+      return { count: 1 };
+  }
 }

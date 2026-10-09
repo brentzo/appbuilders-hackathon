@@ -104,7 +104,9 @@ export type NotDone =
   /** The recipients could not be read. */
   | "noRecipients"
   /** The approval card could not be shown. */
-  | "couldNotAsk";
+  | "couldNotAsk"
+  /** The screen changed while the user was asked, so the approval no longer fits the action. */
+  | "actionChanged";
 
 const BECAUSE: Record<NotDone, string> = {
   needsApproval: "because it needs your approval first",
@@ -114,6 +116,7 @@ const BECAUSE: Record<NotDone, string> = {
   filesChanged: "because the files changed",
   noRecipients: "because Yumi couldn't read who it was going to",
   couldNotAsk: "because Yumi couldn't show you the approval",
+  actionChanged: "because the screen changed",
 };
 
 /** An action the gate or the user did not let run: "Did not move 12 items to the Trash, because you said no". */

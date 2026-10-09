@@ -91,6 +91,7 @@ const NOT_DONE: Record<NotDone, string> = {
   filesChanged: "Not done: the files changed or are gone.",
   noRecipients: "Not done: the recipients could not be read, so nothing was sent.",
   couldNotAsk: "Not done: the approval could not be shown.",
+  actionChanged: "Not done: the screen changed while the user was asked. Look again before trying it.",
 };
 
 const UNAVAILABLE: Record<Extract<ApprovalAnswer, { outcome: "unavailable" }>["reason"], NotDone> = {
@@ -98,6 +99,7 @@ const UNAVAILABLE: Record<Extract<ApprovalAnswer, { outcome: "unavailable" }>["r
   noRecipients: "noRecipients",
   filesGone: "filesChanged",
   couldNotAsk: "couldNotAsk",
+  actionChanged: "actionChanged",
 };
 
 /** What the loop needs besides the model, the store, and the approvals: the Mac app and questions to the user. */
@@ -473,6 +475,9 @@ class Attempt {
               step,
               lane: this.lane,
               control: this.options.control,
+              app,
+              target: this.target,
+              layer,
               ...(before ? sendFields(before, this.target) : {}),
             },
             this.options.signal,

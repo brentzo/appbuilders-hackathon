@@ -214,6 +214,7 @@ const NOT_DONE_OBSERVATION: Record<NotDone, (tool: string) => string> = {
   filesChanged: () => "Not done: the files changed or are gone, so nothing was moved to the Trash.",
   noRecipients: () => "Not done: the recipients could not be read, so nothing was sent.",
   couldNotAsk: (tool) => `Not done: the approval for this ${tool} could not be shown.`,
+  actionChanged: (tool) => `Not done: the screen changed while the user was asked about this ${tool}.`,
 };
 
 const UNAVAILABLE: Record<Extract<ApprovalAnswer, { outcome: "unavailable" }>["reason"], NotDone> = {
@@ -221,6 +222,7 @@ const UNAVAILABLE: Record<Extract<ApprovalAnswer, { outcome: "unavailable" }>["r
   noRecipients: "noRecipients",
   filesGone: "filesChanged",
   couldNotAsk: "couldNotAsk",
+  actionChanged: "actionChanged",
 };
 
 /**

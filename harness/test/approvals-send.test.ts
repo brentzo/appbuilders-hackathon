@@ -255,7 +255,7 @@ describe("SPEC-07 Sending", () => {
     expect(store.getSubtask(subtask.id)!.status).toBe("running");
   });
 
-  it("has no card for an ask that is not a send or a Trash delete, so the action is not run", async () => {
+  it("has no card for an unclassified ask without its window, so the action is not run", async () => {
     await connect({ to: "Ana" }, []);
     const decision = checkAction(
       { action: { kind: "click", element: 1 }, element: { path: "AXWindow/AXButton[0]", role: "button", label: "Share" } },

@@ -54,7 +54,7 @@ Build against the mock Mac app from [OBJ-01](OBJ-01-task-record-schemas.md) unti
 - [x] **OBJ-38.8** (p1) Add a test that text typed into a password field never reaches the action log (SPEC-07 r20).
 - [x] **OBJ-38.9** Run the mock Mac app tests for send and delete re-checks, a voice "yes" on a delete, a blocked action after a yes, pausing with an open approval, cancel with a queued helper, and the log lines.
 - [ ] **OBJ-38.10** Run the approval, stop, take-over, resume, cancel, and action-log scenarios with the real Mac app after [OBJ-40](OBJ-40-mac-approval-cards.md) and [OBJ-35](OBJ-35-mac-stop-and-take-over.md) are done.
-- [ ] **OBJ-38.11** For an unclassified risky click or key press (SPEC-07 r6), build an `action` approval from the resolved action, never model text; accept only a tap, and recheck the same resolved action immediately before running it.
+- [x] **OBJ-38.11** For an unclassified risky click or key press (SPEC-07 r6), build an `action` approval from the resolved action, never model text; accept only a tap, and recheck the same resolved action immediately before running it.
 
 ## Expectations
 
@@ -66,7 +66,7 @@ Build against the mock Mac app from [OBJ-01](OBJ-01-task-record-schemas.md) unti
 - [x] SPEC-06 scenarios pass at the harness level: "Pause cancels a pending approval", "User resumes", "User cancels a paused task".
 - [x] No approval text, file name, or recipient comes from model output.
 - [x] No action runs after a pause is set.
-- [ ] At the harness level, an unclassified risky click or key press uses the `action` approval, carries only a harness-authored summary, and does not run after voice approval.
+- [x] At the harness level, an unclassified risky click or key press uses the `action` approval, carries only a harness-authored summary, and does not run after voice approval.
 
 ## Expected outcomes
 
@@ -86,6 +86,7 @@ Build against the mock Mac app from [OBJ-01](OBJ-01-task-record-schemas.md) unti
   OBJ-38.1 to OBJ-38.8 are built and tested in the harness against the protocol's mock Mac app.
   OBJ-38.9's mock-app test matrix passes in the full Harness suite.
   OBJ-38.10, which runs the scenarios with the real Mac UI, waits for [OBJ-40](OBJ-40-mac-approval-cards.md) and [OBJ-35](OBJ-35-mac-stop-and-take-over.md), which are not started.
+  OBJ-38.11 is built: `action` approvals in `src/approvals/approval-flow.ts`, tested in `test/action-approval.test.ts` (card text from the resolved action, a voice yes does not count, nothing runs when the element changed). The Mac card is OBJ-40.10.
 - **Delivered:**
   - `harness/src/approvals/`: `ApprovalFlow`, which implements the `ApprovalGate` seam (`request` for an ask, `blocked` for a blocked action, `moveToTrash`), the card text in `copy.ts`, and `findRecipientFields` and `parseRecipients` in `recipients.ts`.
   - `harness/src/control/run-control.ts`: `RunControl`, one run's pause state; `mayAct(lane)` is the check before every action.

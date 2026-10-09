@@ -59,6 +59,15 @@ export function deleteText(files: FileSummary): string {
   return `I'm about to move ${files.count} files from ${folders.size} folders to the Trash, starting with ${basename(first)} in ${folderName(dirname(first))}. Should I delete them?`;
 }
 
+/**
+ * The card's text for an unclassified risky click or key press (SPEC-07 r6, Decisions 2026-10-10), from the resolved
+ * action as its action log line names it: "I'm about to click Archive in Mail. Should I allow it?". Never model text.
+ */
+export function actionText(what: string | undefined, app: string | undefined): string {
+  const action = what ?? (app ? `do something in ${app}` : "do something on the screen");
+  return `I'm about to ${action}. Should I allow it?`;
+}
+
 function folderName(folder: string): string {
   return basename(folder) || folder;
 }
