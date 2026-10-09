@@ -70,7 +70,7 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-10](OBJ-10-yumi-cat-v0.md) | Yumi cat v0 in Rive | character | Patrick | 04 | - | - | todo |
 | [OBJ-11](OBJ-11-whisper-bake-off.md) | Whisper bake-off | models | Jepoy | 01 | - | - | in-progress |
 | [OBJ-12](OBJ-12-hey-yumi-wake-word.md) | "Hey Yumi" wake word model | models | Jepoy | 01 | - | - | todo |
-| [OBJ-13](OBJ-13-bridge-relay-server.md) | Bridge relay server | bridge | Jepoy | 08 | 02 | 31, 33 | in-progress |
+| [OBJ-13](OBJ-13-bridge-relay-server.md) | Bridge relay server | bridge | Jepoy | 08 | 02 | 31, 33 | done |
 | [OBJ-14](OBJ-14-mac-app-shell.md) | Mac app shell, permissions, and harness link | mac | Patrick | 01, 04 | 01 | 03 | done |
 | [OBJ-15](OBJ-15-mac-voice-intake.md) | Mac voice intake | mac | Patrick | 01 | 14 | 11 | done |
 | [OBJ-16](OBJ-16-mac-wake-word.md) | Mac wake word | mac | Patrick | 01 | 15 | 12 | in-progress |

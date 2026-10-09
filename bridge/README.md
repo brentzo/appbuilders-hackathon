@@ -87,7 +87,7 @@ Status: relay implementation in progress (OBJ-13). Live VPS rollout is tracked b
 <!-- generated:product-objectives:start -->
 | ID | Objective | Assignee | Status |
 |---|---|---|---|
-| [OBJ-13](../objectives/OBJ-13-bridge-relay-server.md) | Bridge relay server | Jepoy | in-progress |
+| [OBJ-13](../objectives/OBJ-13-bridge-relay-server.md) | Bridge relay server | Jepoy | done |
 | [OBJ-30](../objectives/OBJ-30-live-cross-device-bridge-acceptance.md) | Live cross-device bridge acceptance | Jepoy | todo |
 | [OBJ-32](../objectives/OBJ-32-production-bridge-deployment.md) | Deploy the bridge relay to the VPS | Brent | done |
 <!-- generated:product-objectives:end -->
