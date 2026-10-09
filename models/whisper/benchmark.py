@@ -15,6 +15,8 @@ from collections import defaultdict
 from pathlib import Path
 from urllib.parse import urlsplit
 
+LOCAL_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
 
 def words(text):
     normalized = []
@@ -123,7 +125,7 @@ def transcribe(endpoint, runtime, model, language, audio_path, timeout):
     )
     started = time.perf_counter()
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        with LOCAL_OPENER.open(request, timeout=timeout) as response:
             payload = json.loads(response.read())
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
         raise RuntimeError(f"transcription request failed: {exc}") from exc
