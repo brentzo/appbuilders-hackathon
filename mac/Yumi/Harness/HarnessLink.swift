@@ -18,8 +18,14 @@ final class HarnessLink {
     var onUserError: ((UserError) -> Void)?
     private let log = Logger(subsystem: "ph.appbuilders.yumi", category: "harness")
 
-    init(model: AppModel, launcher: HarnessLauncher, socketPath: String) {
+    /// The cursors the harness drives (OBJ-18).
+    let overlay: CursorOverlay
+    /// Helper subtasks shown as chips, by subtask id.
+    private var helperSubtasks: Set<String> = []
+
+    init(model: AppModel, launcher: HarnessLauncher, socketPath: String, overlay: CursorOverlay = CursorOverlay()) {
         self.model = model
+        self.overlay = overlay
         supervisor = HarnessSupervisor(launcher: launcher)
         client = HarnessClient(socketPath: socketPath)
         usesMock = launcher.isMock
@@ -27,9 +33,12 @@ final class HarnessLink {
     }
 
     func start() {
+        overlay.start()
         client.onLinkStateChange = { [weak self] state in
             guard let self else { return }
             model.harnessReady = state == .connected
+            // Without a harness no task is running, so no cursor may stay (SPEC-04 r9).
+            if state != .connected { overlay.fadeAll() }
             log.notice("Status line: \(self.model.status.menuTitle, privacy: .public)")
         }
         eventsTask = Task { [weak self, client] in
@@ -52,6 +61,22 @@ final class HarnessLink {
         case .taskStatusChanged(let change):
             taskStatuses[change.taskId] = change.status
             model.taskStatus = Self.appStatus(for: Array(taskStatuses.values))
+            if let subtaskId = change.subtaskId, let status = change.subtaskStatus,
+               Self.finishedSubtask.contains(status), helperSubtasks.remove(subtaskId) != nil {
+                overlay.removeHelperChip(id: subtaskId)
+            }
+            // Cursors carry no task id, so when no task is active every cursor leaves (SPEC-04 r9).
+            if model.taskStatus == .ready {
+                overlay.fadeAll()
+                helperSubtasks.removeAll()
+            }
+        case .cursorCommand(let command):
+            overlay.apply(command)
+        case .routeDecided(let route):
+            if route.lane == .helper, helperSubtasks.insert(route.subtaskId).inserted {
+                // The protocol gives no subtask title here, so the chip says what it is.
+                overlay.showHelperChip(id: route.subtaskId, text: "Helper working")
+            }
         case .userError(let error):
             log.notice("The harness reported \(error.kind.rawValue, privacy: .public)")
             onUserError?(error)
@@ -60,6 +85,8 @@ final class HarnessLink {
             log.info("Not handled yet: \(event.name, privacy: .public)")
         }
     }
+
+    static let finishedSubtask: Set<SubtaskStatus> = [.done, .failed]
 
     /// The status line for all tasks together: working beats paused beats ready.
     static func appStatus(for statuses: [TaskStatus]) -> AppStatus {
