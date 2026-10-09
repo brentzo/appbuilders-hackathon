@@ -29,6 +29,7 @@ Safety rules the runner keeps:
 
 ```bash
 python3 scripts/sweep/sweep.py list
+python3 scripts/sweep/sweep.py run --live --short              # the first live run: 5 demo goals once each
 python3 scripts/sweep/sweep.py run --live                      # every scenario, 3 runs each
 python3 scripts/sweep/sweep.py run --live spotify-play --runs 1
 python3 scripts/sweep/sweep.py report models/sweep-results/sweep-20261010-0600.jsonl
@@ -62,6 +63,10 @@ Do not use Notes or Reminders while a sweep runs: a note or reminder made during
 Cursors and panels appear on screen as for any goal, and the user's own mouse or keyboard pauses a task (SPEC-06), which then fails or times out.
 
 ## How long it takes
+
+The short sweep (`--short`, Brent's plan of 2026-10-10) runs spotify-play, keynote-export, notes-summary, downloads-list-note, and parallel once each.
+Each run is cancelled after 140 seconds, so even if every run reaches that limit it ends in about 14 minutes, counting the cancel and the cleanup.
+From the task times below it should usually take 5 to 10 minutes.
 
 Recent tasks in the harness log took a median of 25 s when done, 31 s when failed (up to 4 minutes), and 2 minutes when cancelled.
 So a full sweep (11 scenarios, 3 runs each) should take about 45 to 90 minutes, and at most about 2.5 hours if every run reaches the 4-minute limit.

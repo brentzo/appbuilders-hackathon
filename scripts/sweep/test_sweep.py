@@ -3,6 +3,7 @@
 Nothing here touches the real Mac or the live harness socket.
 Run: python3 -m unittest discover -s scripts/sweep -p "test_*.py"
 """
+import argparse
 import contextlib
 import io
 import json
@@ -86,7 +87,7 @@ class FakeHarness:
         state = plan[min(task["polls"], len(plan) - 1)]
         task["polls"] += 1
         status, subtasks, steps, observation = state
-        if task["cancelled"]:
+        if task["cancelled"] and not getattr(self, "never_cancels", False):
             status, subtasks = "cancelled", [(t, "cancelled") for t, _ in subtasks]
         if status == "done" and not task.get("finished"):
             task["finished"] = True
@@ -388,6 +389,27 @@ class SweepTests(unittest.TestCase):
         self.assertEqual(len(ids), len(set(ids)))
         self.assertEqual(len(ids), 11)
         self.assertTrue(all(s.goal for s in catalog.all_scenarios()))
+
+    def test_the_short_sweep_is_the_five_demo_goals_once_each_under_15_minutes(self):
+        args = argparse.Namespace(scenarios=[], short=True, runs=None, timeout=None)
+        chosen, runs, timeout, idle_wait = sweep.plan(args)
+        self.assertEqual([s.id for s in chosen], ["spotify-play", "keynote-export", "notes-summary", "downloads-list-note", "parallel"])
+        self.assertEqual(runs, 1)
+        self.assertLess(sweep.worst_case_minutes(len(chosen) * runs, timeout), 15)
+        self.assertLessEqual(idle_wait, 30)
+        full = sweep.plan(argparse.Namespace(scenarios=[], short=False, runs=None, timeout=None))
+        self.assertEqual((len(full[0]), full[1], full[2]), (11, 3, 240.0))
+        with self.assertRaises(ValueError):
+            sweep.plan(argparse.Namespace(scenarios=["new-note"], short=True, runs=None, timeout=None))
+
+    def test_a_cancelled_run_ends_within_its_limit_and_the_grace(self):
+        s = self.scenario("reminder")
+        self.runner.timeout = sweep.SHORT_TIMEOUT
+        self.harness.plans[s.goal] = [("running", [("Make the reminder", "running")], 1, None)]
+        self.harness.never_cancels = True
+        record = self.runner.run(s, 1)
+        self.assertTrue(record["timedOut"])
+        self.assertLessEqual(record["seconds"], sweep.SHORT_TIMEOUT + sweep.CANCEL_GRACE + 1)
 
     def test_the_real_socket_needs_live(self):
         with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):

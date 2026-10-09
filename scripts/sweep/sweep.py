@@ -7,6 +7,7 @@ undoes what the run made. Results go to a JSONL file and a table in wiki/model-c
 
     python3 scripts/sweep/sweep.py list
     python3 scripts/sweep/sweep.py run --live [SCENARIO ...] [--runs 3] [--timeout 240]
+    python3 scripts/sweep/sweep.py run --live --short      # 5 scenarios once each, under 15 minutes
     python3 scripts/sweep/sweep.py report results.jsonl
 
 It needs the Yumi app and the harness running, because the Mac app carries out the actions. It
@@ -35,6 +36,15 @@ DEFAULT_SOCKET = SUPPORT / "harness.sock"
 DEFAULT_LOG = SUPPORT / "harness.log"
 DEFAULT_OUT = ROOT / "models/sweep-results"
 WIKI = ROOT / "wiki/model-capability.md"
+
+# The short sweep (Brent, 2026-10-10): the demo's own goals, once each, under 15 minutes.
+SHORT = ["spotify-play", "keynote-export", "notes-summary", "downloads-list-note", "parallel"]
+SHORT_TIMEOUT = 140.0
+SHORT_IDLE_WAIT = 30.0
+# How long the runner waits for a task it cancelled to say so.
+CANCEL_GRACE = 15.0
+# Setup, cleanup, and the checks, per run, as an upper estimate.
+OVERHEAD = 15.0
 
 ACTIVE = {"awaitingConfirmation", "queued", "planning", "running", "waitingForUser", "paused"}
 ENDED = {"done", "failed", "cancelled"}
@@ -114,7 +124,7 @@ class Runner:
             elif self.mac.now() - started > self.timeout and not result["timedOut"]:
                 result["timedOut"] = True
                 self.cancel(task_id, result)
-            elif result["cancelledBySweep"] and self.mac.now() - started > self.timeout + 30:
+            elif result["cancelledBySweep"] and self.mac.now() - started > self.timeout + CANCEL_GRACE:
                 break
             self.mac.sleep(POLL_SECONDS)
         result["seconds"] = round(self.mac.now() - started, 1)
@@ -289,6 +299,27 @@ To be written after the first full sweep.
 # CLI
 
 
+def plan(args):
+    """The scenarios, runs per scenario, time limit per run, and idle wait a `run` asks for."""
+    known = catalog.by_id()
+    unknown = [s for s in args.scenarios if s not in known]
+    if unknown:
+        raise ValueError(f"unknown scenario(s): {', '.join(unknown)}")
+    if args.short and args.scenarios:
+        raise ValueError("--short picks its own scenarios; leave the ids out")
+    ids = SHORT if args.short else args.scenarios
+    chosen = [known[s] for s in ids] or catalog.all_scenarios()
+    runs = args.runs or (1 if args.short else 3)
+    timeout = args.timeout or (SHORT_TIMEOUT if args.short else 240.0)
+    idle_wait = SHORT_IDLE_WAIT if args.short else 120.0
+    return chosen, runs, timeout, idle_wait
+
+
+def worst_case_minutes(runs, timeout):
+    """Every run reaching its time limit, then the cancel and the cleanup."""
+    return runs * (timeout + CANCEL_GRACE + OVERHEAD) / 60
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -298,8 +329,9 @@ def main(argv=None):
     run.add_argument("--live", action="store_true", help="use the real harness socket (required unless --socket is given)")
     run.add_argument("--socket", help="harness socket (default: the live one, with --live)")
     run.add_argument("--log", default=str(DEFAULT_LOG), help="harness log, for model calls and error kinds")
-    run.add_argument("--runs", type=int, default=3)
-    run.add_argument("--timeout", type=float, default=240.0, help="seconds per run before the sweep cancels it")
+    run.add_argument("--short", action="store_true", help=f"one run each of {', '.join(SHORT)}, at most {SHORT_TIMEOUT:g} s each")
+    run.add_argument("--runs", type=int, help="runs per scenario (default 3, or 1 with --short)")
+    run.add_argument("--timeout", type=float, help="seconds per run before the sweep cancels it (default 240, or 150 with --short)")
     run.add_argument("--out", help="JSONL file (default: models/sweep-results/sweep-<time>.jsonl)")
     run.add_argument("--no-wiki", action="store_true", help="do not write wiki/model-capability.md")
     report = sub.add_parser("report", help="write the wiki table from a JSONL file")
@@ -318,18 +350,19 @@ def main(argv=None):
 
     if not args.socket and not args.live:
         parser.error("say --live to use the real harness socket, or --socket for another one")
-    known = catalog.by_id()
-    unknown = [s for s in args.scenarios if s not in known]
-    if unknown:
-        parser.error(f"unknown scenario(s): {', '.join(unknown)}")
-    chosen = [known[s] for s in args.scenarios] or catalog.all_scenarios()
+    try:
+        chosen, runs, timeout, idle_wait = plan(args)
+    except ValueError as error:
+        parser.error(str(error))
+    print(f"{len(chosen)} scenario(s) x {runs} run(s), at most {timeout:g} s each: "
+          f"at most about {worst_case_minutes(len(chosen) * runs, timeout):.0f} minutes", flush=True)
     out = Path(args.out) if args.out else DEFAULT_OUT / f"sweep-{datetime.datetime.now():%Y%m%d-%H%M}.jsonl"
     out.parent.mkdir(parents=True, exist_ok=True)
     records = []
     with HarnessClient(args.socket or str(DEFAULT_SOCKET)) as client:
-        runner = Runner(client, Mac(), args.log, timeout=args.timeout)
+        runner = Runner(client, Mac(), args.log, timeout=timeout, idle_wait=idle_wait)
         for scenario in chosen:
-            for number in range(1, args.runs + 1):
+            for number in range(1, runs + 1):
                 record = runner.run(scenario, number)
                 records.append(record)
                 with open(out, "a") as f:
