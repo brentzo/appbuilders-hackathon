@@ -16,7 +16,7 @@ final class PushToTalkHotKey {
 
     /// Carbon calls back through a C function, which cannot capture; it finds the hot key here.
     private static weak var active: PushToTalkHotKey?
-    private static let id = EventHotKeyID(signature: 0x59_55_4D_49 /* "YUMI" */, id: 1)
+    fileprivate static let id = EventHotKeyID(signature: 0x59_55_4D_49 /* "YUMI" */, id: 1)
 
     /// Registers the shortcut, replacing the one registered before.
     func register(_ shortcut: KeyShortcut) {
@@ -47,6 +47,12 @@ final class PushToTalkHotKey {
             EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyReleased)),
         ]
         InstallEventHandler(GetApplicationEventTarget(), { _, event, _ in
+            var id = EventHotKeyID()
+            GetEventParameter(event, EventParamName(kEventParamDirectObject), EventParamType(typeEventHotKeyID), nil, MemoryLayout<EventHotKeyID>.size, nil, &id)
+            // Other hot keys (the stop shortcut) have their own handlers.
+            guard id.signature == PushToTalkHotKey.id.signature, id.id == PushToTalkHotKey.id.id else {
+                return OSStatus(eventNotHandledErr)
+            }
             let kind = GetEventKind(event)
             // Carbon delivers hot key events on the main thread.
             MainActor.assumeIsolated {
