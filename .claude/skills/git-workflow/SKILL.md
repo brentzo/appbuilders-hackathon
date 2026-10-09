@@ -7,7 +7,9 @@ description: Yumi's git rules for every agent and person - branches, worktrees, 
 
 ## Who does what
 
-- **Brent (the lead) is the only one who pushes to `origin/main`.** Agents never push, never force-push, and never change remotes.
+- **Each person pushes their own work to `origin/main`.** Before pushing, run `git pull --rebase`, the product's build and tests, and `python3 scripts/objectives.py check`.
+- Nobody force-pushes or changes remotes.
+- An agent pushes only when its person asks in that session. Worker agents never push; their branch is merged first.
 - **The orchestrator** (the lead's main agent session) owns local `main`: it rebases finished branches onto it and resolves conflicts there.
 - **Worker agents** work and commit only on their own branch, in their own worktree.
 
@@ -44,7 +46,7 @@ description: Yumi's git rules for every agent and person - branches, worktrees, 
    - If both sides made real, incompatible decisions, stop and ask the lead.
 4. Run `check` (and the product's build and tests) after resolving.
 5. Remove the worktree (`git worktree remove <path>`) and delete the merged branch only after its commits are on `main`. Look at what a branch contains before deleting it.
-6. Tell the lead it is ready to push. Do not push.
+6. Tell the person who owns the work that it is ready to push. Push only if they ask.
 
 ## Pulling
 

@@ -36,13 +36,15 @@ Use the skill that matches what you are doing:
 
 ## Team
 
-- **Brent** is the lead. He decides, delegates, and is the only one who pushes.
+- **Brent** is the lead. He decides and delegates.
+- Everyone pushes their own work to `origin/main`.
 - Owners are per product. See the owners table in [objectives/README.md](objectives/README.md).
 - Each person writes code only in the products they own. Products meet at contracts in `protocol/`.
 
 ## Rules
 
-- **Never push.** Commit on your branch; the lead pushes.
+- **Push only your own work, after checks pass.** First run `git pull --rebase`, the product's build and tests, and `python3 scripts/objectives.py check`.
+- **Never force-push.** An agent pushes only when its person asks in that session.
 - **Never add `Co-Authored-By` or any agent attribution** to commits.
 - **Specs win.** If a spec, objective, or doc disagree, or a spec is unclear, stop and raise it. Do not quietly change behavior or make product decisions.
 - **Verify before claiming.** Read the file before citing it, run the build or test before saying it works, and check vendor sources for model, library, and device facts.
