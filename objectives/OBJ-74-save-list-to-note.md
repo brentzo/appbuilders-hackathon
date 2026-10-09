@@ -41,11 +41,11 @@ It also shows the cats working in Notes during the demo.
 
 ## Tasks
 
-- [ ] **OBJ-74.1** In the repeat-back, when the goal asks for a list, add the offer "Want me to put the list in a new note too?" and read "yes, in a note" (or similar) as yes with the note, and a plain yes as without.
-- [ ] **OBJ-74.2** With the note, plan a second subtask after the listing that opens Notes, makes a new note titled after the goal, and types the full list from the steps' real tool output, not from the model's memory.
-- [ ] **OBJ-74.3** Send the full list with the summary (a non-breaking protocol addition) so the Mac card shows all of it, scrollable, with the spoken sentence unchanged.
-- [ ] **OBJ-74.4** Mac: a "Save to Notes" button on the summary card when the task produced a list, and the spoken "save it" while the card is up; either starts a short follow-up task that writes the note.
-- [ ] **OBJ-74.5** In Auto mode, skip the offer; the card's button is the way to save.
+- [x] **OBJ-74.1** In the repeat-back, when the goal asks for a list, add the offer "Want me to put the list in a new note too?" and read "yes, in a note" (or similar) as yes with the note, and a plain yes as without.
+- [x] **OBJ-74.2** With the note, plan a second subtask after the listing that opens Notes, makes a new note titled after the goal, and types the full list from the steps' real tool output, not from the model's memory.
+- [x] **OBJ-74.3** Send the full list with the summary (a non-breaking protocol addition) so the Mac card shows all of it, scrollable, with the spoken sentence unchanged.
+- [x] **OBJ-74.4** Mac: a "Save to Notes" button on the summary card when the task produced a list, and the spoken "save it" while the card is up; either starts a short follow-up task that writes the note.
+- [x] **OBJ-74.5** In Auto mode, skip the offer; the card's button is the way to save.
 - [ ] **OBJ-74.6** Tests across the harness and the Mac, then a live check: "list the files in my Downloads folder", say "yes, in a note", and see the note in Notes.
 
 ## Expectations
@@ -64,4 +64,20 @@ It also shows the cats working in Notes during the demo.
 
 ## Outcome
 
-_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._
+- **Result:** Built and tested; waiting for the live check (OBJ-74.6), so the objective stays in progress.
+- **Delivered:**
+  - Protocol (still version 4): `Speak.list` (`FoundList`: title, items, optional `more`, `inNote`) and the app-to-harness method `saveListToNote` (`TaskRef` to `SubmitGoalResult`), in `protocol/schemas/rpc.json`, with examples and a test.
+  - Harness: `harness/src/planner/list-note.ts` (the offer, list goals, the title, the list, the note subtask, the `NOTE_TEXT` placeholder); the offer and `confirmWithNote` in `harness/src/confirm/`; the `list_to_note` task column (migration 10); the note phase and the list on the summary in `harness/src/scheduler/run-task.ts`; `TaskControl.saveListToNote` and its RPC handler; one line in `gui-act.ts` that types the list in place of the placeholder.
+  - Mac: the list, "Save to Notes", and "save it" in `mac/Yumi/Summary/TaskSummary.swift` and `SummaryPanel.swift`, wired in `mac/Yumi/Harness/HarnessLink.swift`.
+- **Commits:** `a7fd1c4 feat(protocol): send a task's found list with its summary and add saveListToNote`, `fece5ff feat(harness): offer to put a list in a new note and send the full list with the summary`, `5a57424 feat(mac): show a task's full list on the summary card with save to notes`.
+- **Expectations:** not checked yet. Covered by tests so far: `harness/test/list-note.test.ts` (the offer, "yes, in a note" adds the note subtask with list_dir's real output and says the note in the summary, a plain yes sends the list with no note, a model-read answer, Auto mode with no offer and `saveListToNote`, refusals), `harness/test/gui-act.test.ts` "OBJ-74 the note subtask" (the Mac app receives cmd+n, then the full list typed), and `mac/YumiTests/TaskSummaryTests.swift` (the full list, Save to Notes, "save it", no button once in a note, snapshots in light and dark). `python3 scripts/verify.py` passes everything except `harness/test/goal-revision.e2e.test.ts`, which also fails on `origin/main` and is being fixed by OBJ-36's agent.
+- **Not verified:** the live run in Notes. Steps for Brent: (1) with Auto mode off, say "list the files in my Downloads folder"; Yumi should end with "Want me to put the list in a new note too?" (2) Say "yes, in a note". (3) Watch the cat open Notes, make a new note, and type the list; the card shows the full list with "Saved in a new note". (4) Turn Auto mode on, ask again, and press "Save to Notes" on the card (or say "save it"); a second note appears.
+- **Decisions and deviations:**
+  - The worker types the placeholder `NOTE_TEXT` and `gui_act` types the real list in its place, so the note can never be the model's version of the list, and a long list does not take the model a long time to write out.
+  - "Save to Notes" shows on any card with a list that is not in a note yet, not only in Auto mode.
+  - A card with a list does not close on its own.
+  - With the offer, a bare "no" is still unclear (SPEC-01's rule); "no note" or "just list them" goes ahead without the note.
+  - The summary with a note is the answer's first sentence plus "I put the full list in a new note called {title}.", so it stays two sentences.
+  - In Auto mode the title comes from what the user said ("Files in my Downloads folder").
+  - A note that fails fails the task with "Couldn't finish a step", naming "Put the list in a new note".
+- **For the next objectives:** `foundListOf(store, task)` in `run-task.ts` rebuilds a finished task's list from the store. Note subtasks are recognized with `isNoteSubtask`. Only `list_dir` output becomes a list; a task that also changed something sends no list.
