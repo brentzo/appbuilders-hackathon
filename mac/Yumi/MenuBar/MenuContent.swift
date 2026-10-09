@@ -4,6 +4,7 @@ import SwiftUI
 struct MenuContent: View {
     let model: AppModel
     let windows: WindowCoordinator
+    let harness: HarnessLink
 
     var body: some View {
         // A plain Text is shown as a disabled menu item: information, not an action.
@@ -19,6 +20,14 @@ struct MenuContent: View {
             Button("Set up permissions…") {
                 windows.showOnboarding()
             }
+        }
+
+        if model.mockHarnessName != nil {
+            // Debug aid: plays scripts that start on submitGoal, until voice intake exists (OBJ-15).
+            Button("Send sample goal to the mock") {
+                harness.submitSampleGoal()
+            }
+            .disabled(!model.harnessReady)
         }
 
         Button("Settings…") {

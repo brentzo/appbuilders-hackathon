@@ -4,7 +4,17 @@ import OSLog
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let model = AppModel(permissions: DebugLaunchOptions.permissionCenter())
     private(set) lazy var windows = WindowCoordinator(model: model)
-    private var harness: HarnessSupervisor?
+    /// Until OBJ-14.8 the harness is always the mock. `-YumiMockScript <name>` picks its event
+    /// script (default `keynote-export`) and `-YumiMockFail method=kind,...` makes methods fail.
+    private(set) lazy var harness = HarnessLink(
+        model: model,
+        launcher: MockHarnessLauncher(
+            script: UserDefaults.standard.string(forKey: "YumiMockScript") ?? "keynote-export",
+            failures: UserDefaults.standard.string(forKey: "YumiMockFail"),
+            socketPath: HarnessSocket.defaultPath
+        ),
+        socketPath: HarnessSocket.defaultPath
+    )
     private var terminationSignal: DispatchSourceSignal?
     private let log = Logger(subsystem: "ph.appbuilders.yumi", category: "app")
 
@@ -19,7 +29,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         model.permissions.observeActivation()
         quitCleanlyOnSIGTERM()
-        startHarness()
+        harness.start()
         if DebugLaunchOptions.apply(to: self) { return }
         if !model.permissions.allGranted {
             windows.showOnboarding()
@@ -27,7 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        harness?.stop()
+        harness.stop()
     }
 
     /// `kill` and logout send SIGTERM, which would end Yumi without `applicationWillTerminate`
@@ -40,24 +50,5 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         source.resume()
         terminationSignal = source
-    }
-
-    /// Until OBJ-14.8 the harness is always the mock. `-YumiMockScript <name>` picks its event
-    /// script (default `keynote-export`) and `-YumiMockFail method=kind,...` makes methods fail.
-    private func startHarness() {
-        let defaults = UserDefaults.standard
-        let launcher = MockHarnessLauncher(
-            script: defaults.string(forKey: "YumiMockScript") ?? "keynote-export",
-            failures: defaults.string(forKey: "YumiMockFail"),
-            socketPath: HarnessSocket.defaultPath
-        )
-        model.mockHarnessName = launcher.isMock ? launcher.displayName : nil
-        let supervisor = HarnessSupervisor(launcher: launcher)
-        supervisor.onStateChange = { [weak self] state in
-            guard let self else { return }
-            if case .running = state { model.harnessReady = true } else { model.harnessReady = false }
-        }
-        harness = supervisor
-        supervisor.start()
     }
 }
