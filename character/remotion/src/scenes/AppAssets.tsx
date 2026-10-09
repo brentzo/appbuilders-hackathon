@@ -3,10 +3,10 @@ import {AbsoluteFill, useCurrentFrame, useVideoConfig} from 'remotion';
 import {YumiCat} from '../cat/YumiCat';
 import {CatState, poseFor} from '../cat/poses';
 import {Question, SoundArcs, Sparkles, ThinkDots, Zzz, LandRing} from './Extras';
+import {LOOP, LOOP_CAT, STILL_PAD} from './loopSpec';
+import {IconArt, IconKind} from '../icons/IconArt';
 
 export type MoodProps = {state: CatState};
-
-import {LOOP, LOOP_CAT, STILL_PAD} from './loopSpec';
 
 export {LOOP};
 
@@ -38,6 +38,16 @@ export const PoseStill: React.FC<MoodProps> = ({state}) => {
   return (
     <AbsoluteFill style={{background: 'transparent'}}>
       <YumiCat size={width} pad={STILL_PAD} {...poseFor(state, f, fps, LOOP)} />
+    </AbsoluteFill>
+  );
+};
+
+/** One logo or app-icon variant, background-free outside its own shape. The composition size sets the output size. */
+export const IconStill: React.FC<{kind: IconKind}> = ({kind}) => {
+  const {width} = useVideoConfig();
+  return (
+    <AbsoluteFill style={{background: 'transparent'}}>
+      <IconArt kind={kind} size={width} />
     </AbsoluteFill>
   );
 };

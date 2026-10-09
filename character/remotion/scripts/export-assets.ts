@@ -1,6 +1,7 @@
 /**
- * Writes the background-free app assets to ../assets:
- * one SVG, a PNG set (@1x/@2x/@3x), and a seamless WebM loop with alpha per cursor state, plus manifest.json.
+ * Writes the background-free app assets to ../assets: the logo and its color variants, the macOS and
+ * Android app icons, and the menu bar glyph, each as SVG and PNG, plus manifest.json.
+ * The cat's states live in the Rive file, so there are no per-state images here.
  * Run with `npm run export:assets`.
  */
 import fs from 'node:fs';
@@ -8,72 +9,88 @@ import path from 'node:path';
 import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {bundle} from '@remotion/bundler';
-import {renderMedia, renderStill, selectComposition} from '@remotion/renderer';
-import {YumiCat} from '../src/cat/YumiCat';
-import {CatState, poseFor} from '../src/cat/poses';
-import {CAT} from '../src/cat/catParts';
-import {LOOP, LOOP_CAT, STILL_PAD} from '../src/scenes/loopSpec';
+import {renderStill, selectComposition} from '@remotion/renderer';
+import {IconArt, IconKind} from '../src/icons/IconArt';
+import {LittermateName, littermatePalettes} from '../src/cat/palettes';
 
 const ROOT = path.resolve(__dirname, '..');
 const OUT = path.resolve(ROOT, '..', 'assets');
-const FPS = 30;
 
-/** Each state's key frame for the stills: a moment that reads clearly on its own. */
-const STATES: {state: CatState; frame: number}[] = [
-  {state: 'idle', frame: 0},
-  {state: 'listening', frame: 0},
-  {state: 'thinking', frame: 10},
-  {state: 'moving', frame: 3},
-  {state: 'acting', frame: 5},
-  {state: 'waitingForUser', frame: 0},
-  {state: 'paused', frame: 0},
-  {state: 'done', frame: 0},
-  {state: 'stuck', frame: 8},
+const LITTERMATE_NAMES = Object.keys(littermatePalettes()) as LittermateName[];
+const ANDROID_DENSITIES = {mdpi: 48, hdpi: 72, xhdpi: 96, xxhdpi: 144, xxxhdpi: 192};
+const mipmaps = (name: string): [string, number][] =>
+  Object.entries(ANDROID_DENSITIES).map(([d, s]) => [`icons/android/mipmap-${d}/${name}.png`, s]);
+const MAC_SIZES = [16, 32, 64, 128, 256, 512, 1024];
+const LOGO_SIZES = [256, 512, 1024];
+
+/** Every icon file: its art, its SVG path, and the PNGs to render as [path, size]. */
+const ICONS: {kind: IconKind; svg: string; png: [string, number][]}[] = [
+  {kind: 'mark', svg: 'logo/yumi-mark.svg', png: LOGO_SIZES.map((s) => [`logo/yumi-mark-${s}.png`, s])},
+  {kind: 'markMono', svg: 'logo/yumi-mark-mono.svg', png: [['logo/yumi-mark-mono-512.png', 512]]},
+  {kind: 'markWhite', svg: 'logo/yumi-mark-white.svg', png: [['logo/yumi-mark-white-512.png', 512]]},
+  ...LITTERMATE_NAMES.map((n): {kind: IconKind; svg: string; png: [string, number][]} => (
+    {kind: `mark-${n}`, svg: `logo/littermates/yumi-${n}.svg`, png: [[`logo/littermates/yumi-${n}-512.png`, 512]]})),
+  {kind: 'macos', svg: 'icons/macos/yumi-appicon.svg', png: MAC_SIZES.map((s) => [`icons/macos/appicon-${s}.png`, s])},
+  {kind: 'menubar', svg: 'icons/macos/yumi-menubar.svg', png: [['icons/macos/menubar-18.png', 18], ['icons/macos/menubar-36.png', 36]]},
+  {kind: 'androidForeground', svg: 'icons/android/ic_launcher_foreground.svg', png: [['icons/android/ic_launcher_foreground-432.png', 432]]},
+  {kind: 'androidBackground', svg: 'icons/android/ic_launcher_background.svg', png: [['icons/android/ic_launcher_background-432.png', 432]]},
+  {kind: 'androidLegacy', svg: 'icons/android/ic_launcher.svg', png: mipmaps('ic_launcher')},
+  {kind: 'androidRound', svg: 'icons/android/ic_launcher_round.svg', png: mipmaps('ic_launcher_round')},
+  {kind: 'playStore', svg: 'icons/android/playstore.svg', png: [['icons/android/playstore-512.png', 512]]},
 ];
 
-const [vx, vy, vw] = CAT.viewBox.split(' ').map(Number);
-/** The paws, where a pounce lands, as a fraction of the cat's square, without and with the still padding. */
-const PAWS = {x: (CAT.centerX - vx) / vw, y: (CAT.groundY - vy) / vw};
-const m = vw * STILL_PAD;
-const PAWS_PADDED = {x: (CAT.centerX - vx + m) / (vw + 2 * m), y: (CAT.groundY - vy + m) / (vw + 2 * m)};
-const round = (n: number) => Math.round(n * 10) / 10;
+/** A standalone SVG file: namespaced, without the inline style React adds for the live preview. */
+const svgFile = (el: React.ReactElement) => {
+  let s = renderToStaticMarkup(el);
+  if (!s.startsWith('<svg xmlns')) s = s.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ');
+  return s.replace(/^(<svg[^>]*?) style="[^"]*"/, '$1');
+};
+
+const write = (rel: string, data: string) => {
+  const file = path.join(OUT, rel);
+  fs.mkdirSync(path.dirname(file), {recursive: true});
+  fs.writeFileSync(file, data);
+};
+
 
 const main = async () => {
-  for (const dir of ['svg', 'png', 'video']) fs.mkdirSync(path.join(OUT, dir), {recursive: true});
+  for (const dir of ['logo', 'icons', 'poses', 'svg', 'png', 'video']) fs.rmSync(path.join(OUT, dir), {recursive: true, force: true});
 
-  for (const {state, frame} of STATES) {
-    const svg = renderToStaticMarkup(React.createElement(YumiCat, {size: 512, pad: STILL_PAD, ...poseFor(state, frame, FPS, LOOP)}))
-      .replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')
-      .replace(/ style="[^"]*"/, '');
-    fs.writeFileSync(path.join(OUT, 'svg', `yumi-${state}.svg`), svg);
-  }
+  for (const {kind, svg} of ICONS) write(svg, svgFile(React.createElement(IconArt, {kind, size: 1024})));
   console.log('svg done');
 
   const serveUrl = await bundle({entryPoint: path.join(ROOT, 'src', 'index.ts')});
-  for (const {state, frame} of STATES) {
-    const inputProps = {state};
-    const still = await selectComposition({serveUrl, id: 'YumiPose', inputProps});
-    for (const scale of [1, 2, 3]) {
-      await renderStill({composition: still, serveUrl, inputProps, frame, scale, imageFormat: 'png',
-        output: path.join(OUT, 'png', `yumi-${state}@${scale}x.png`)});
+  for (const {kind, png} of ICONS) {
+    const inputProps = {kind};
+    const comp = await selectComposition({serveUrl, id: 'YumiIcon', inputProps});
+    for (const [rel, size] of png) {
+      fs.mkdirSync(path.dirname(path.join(OUT, rel)), {recursive: true});
+      await renderStill({composition: {...comp, width: size, height: size}, serveUrl, inputProps, imageFormat: 'png', output: path.join(OUT, rel)});
     }
-    const loop = await selectComposition({serveUrl, id: 'YumiMoodLoop', inputProps});
-    await renderMedia({composition: loop, serveUrl, inputProps, codec: 'vp9', imageFormat: 'png', pixelFormat: 'yuva420p',
-      outputLocation: path.join(OUT, 'video', `yumi-${state}.webm`)});
-    console.log(state, 'done');
+    console.log(kind, 'done');
   }
 
   const manifest = {
-    note: 'Stand-in assets until yumi-cat.riv exists (OBJ-10). Generated by character/remotion/scripts/export-assets.ts; do not edit by hand.',
-    states: STATES.map(({state}) => state),
-    svg: {size: 512, file: 'svg/yumi-{state}.svg', hotspot: {x: round(512 * PAWS_PADDED.x), y: round(512 * PAWS_PADDED.y)}},
-    png: {size: 256, scales: [1, 2, 3], file: 'png/yumi-{state}@{scale}x.png', hotspot1x: {x: round(256 * PAWS_PADDED.x), y: round(256 * PAWS_PADDED.y)}},
-    video: {
-      size: 512, fps: FPS, frames: LOOP, codec: 'vp9', alpha: true, file: 'video/yumi-{state}.webm',
-      hotspot: {x: round(LOOP_CAT.left + LOOP_CAT.size * PAWS.x), y: round(LOOP_CAT.top + LOOP_CAT.size * PAWS.y)},
+    note: 'Generated by character/remotion/scripts/export-assets.ts; do not edit by hand.',
+    logo: {svg: 'logo/yumi-mark.svg', png: 'logo/yumi-mark-{size}.png', sizes: LOGO_SIZES},
+    macos: {
+      appIcon: {svg: 'icons/macos/yumi-appicon.svg', png: 'icons/macos/appicon-{size}.png', sizes: MAC_SIZES},
+      menuBar: {svg: 'icons/macos/yumi-menubar.svg', png: ['icons/macos/menubar-18.png', 'icons/macos/menubar-36.png'], template: true},
+    },
+    android: {
+      adaptive: {foreground: 'icons/android/ic_launcher_foreground.svg', background: 'icons/android/ic_launcher_background.svg'},
+      legacy: 'icons/android/mipmap-{density}/ic_launcher.png',
+      round: 'icons/android/mipmap-{density}/ic_launcher_round.png',
+      densities: ANDROID_DENSITIES,
+      playStore: 'icons/android/playstore-512.png',
+    },
+    logoVariants: {
+      mono: 'logo/yumi-mark-mono.svg',
+      white: 'logo/yumi-mark-white.svg',
+      littermates: Object.fromEntries(LITTERMATE_NAMES.map((n) => [n, `logo/littermates/yumi-${n}.svg`])),
     },
   };
-  fs.writeFileSync(path.join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
+  write('manifest.json', JSON.stringify(manifest, null, 2) + '\n');
   console.log('manifest done');
 };
 

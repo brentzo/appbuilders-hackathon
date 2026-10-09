@@ -25,7 +25,8 @@ npm run render:all    # writes every video to out/
 
 ## App assets
 
-`npm run export:assets` writes the background-free stand-ins for the apps to [../assets](../assets/README.md): an SVG, a PNG set, and a WebM loop with alpha for every cursor state, plus `manifest.json` with the hotspot.
+`npm run export:assets` writes the logo, its color variants, and the macOS and Android app icons to [../assets](../assets/README.md) as SVG and PNG, plus `manifest.json`.
+The cat's states are not exported as images: the apps play them from the Rive file.
 
 ## Using the cat in a new scene
 
@@ -40,7 +41,7 @@ const f = useCurrentFrame();
 - `poseFor(state, frame, fps, loop?)` gives the motion for any SPEC-04 cursor state; pass `loop` to snap every rhythm into a seamless loop of that many frames. States: `idle`, `listening`, `thinking`, `moving`, `acting`, `waitingForUser`, `paused`, `done`, `stuck`.
 - `mixPose(a, b, t)` blends between two poses for a smooth handover.
 - Every pose value is a plain prop, so you can also drive the cat by hand: `earLeft`, `earRight`, `tail`, `blink`, `eyes`, `lookX`, `lookY`, `mouthOpen`, `blush`, `squashX`, `squashY`, `x`, `y`, `tilt`, `whiskers`.
-- `palette` recolors the cat, for example for ghost littermates (`LITTERMATES` in `src/theme.ts`).
+- `palette` recolors the cat, for example for ghost littermates (`LITTERMATES` in `src/theme.ts`, read from [../design/tokens.json](../design/tokens.json)).
 
 ## Where the art comes from
 

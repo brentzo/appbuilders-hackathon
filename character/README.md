@@ -42,7 +42,8 @@ First draft from [SPEC-04](../specs/04-cursor-presence.md), to be replaced by th
 | Path | What |
 |---|---|
 | [art/yumi-cat.svg](art/yumi-cat.svg) | Layered master art, about 8 KB, every part named. The source for everything else |
-| [assets/](assets/README.md) | Background-free stand-ins for the apps: one SVG, PNG set, and looping WebM per cursor state |
+| [design/](design/README.md) | The base design both apps share: color, type, spacing, radius, motion, and cat palettes, with generated Swift, Kotlin, and CSS |
+| [assets/](assets/README.md) | The logo, its color variants, and every macOS and Android app icon, as SVG and PNG |
 | [remotion/](remotion/README.md) | Remotion project for the demo and pitch video |
 
 ## Workflow

@@ -4,7 +4,7 @@ import {Intro} from './scenes/Intro';
 import {Moods} from './scenes/Moods';
 import {IdleLoop} from './scenes/IdleLoop';
 import {Littermates} from './scenes/Littermates';
-import {LOOP, MoodLoop, PoseStill} from './scenes/AppAssets';
+import {IconStill, LOOP, MoodLoop, PoseStill} from './scenes/AppAssets';
 
 export const RemotionRoot: React.FC = () => (
   <>
@@ -30,6 +30,7 @@ export const RemotionRoot: React.FC = () => (
       defaultProps={{transparent: true}}
     />
     <Composition id="YumiMoodLoop" component={MoodLoop} durationInFrames={LOOP} fps={30} width={512} height={512} defaultProps={{state: 'idle' as const}} />
-    <Composition id="YumiPose" component={PoseStill} durationInFrames={LOOP} fps={30} width={256} height={256} defaultProps={{state: 'idle' as const}} />
+    <Composition id="YumiIcon" component={IconStill} durationInFrames={1} fps={30} width={1024} height={1024} defaultProps={{kind: 'mark' as const}} />
+    <Composition id="YumiPose"component={PoseStill} durationInFrames={LOOP} fps={30} width={256} height={256} defaultProps={{state: 'idle' as const}} />
   </>
 );
