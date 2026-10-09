@@ -132,7 +132,7 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-72](OBJ-72-mac-cross-device-routing.md) | Mac app side of cross-device routing | mac | Patrick | 09 | 14 | 64, 68, 70 | todo |
 | [OBJ-73](OBJ-73-live-cross-device-routing-acceptance.md) | Live cross-device routing acceptance | bridge | Jepoy | 09 | 30, 65, 66, 67, 68, 69, 70, 71, 72 | - | todo |
 | [OBJ-74](OBJ-74-save-list-to-note.md) | Save a list into a new note | harness | Brent | 02, 01 | - | 17, 36, 50 | todo |
-| [OBJ-75](OBJ-75-vision-fallback.md) | Vision fallback for apps without accessibility content | mac | Patrick | 05 | - | 36, 39 | todo |
+| [OBJ-75](OBJ-75-vision-fallback.md) | Vision fallback for apps without accessibility content | mac | Patrick | 05 | - | 36, 39 | in-progress |
 <!-- generated:objectives-index:end -->
 
 ## Priority and blocking
