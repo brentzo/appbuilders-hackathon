@@ -217,6 +217,7 @@ Search matches tasks whose goal, confirmed goal, summary, or subtask titles cont
 The router picks each subtask's lane ([SPEC-03](../specs/03-lane-routing.md)): `route(subtask, proposed)` in `src/router/router.ts`.
 The planner's proposal is only logged; the router picks the cheapest lane that passes every check.
 
+- The app is the subtask's `target`, or the planner's `targetApp`; a name is resolved to a bundle id with the Mac app's `resolveApp` (Launch Services, as `open_app` does) and stored as `target`. A name no installed app has fails routing with `unsupportedRequest`.
 - No target app: `helper`, reason `noUI`.
 - A subtask the planner marked `needsKeyboard`: `main`, reason `needsKeyboard`, without probing the app (SPEC-03 r17).
 - A target app with an actionable accessibility tree or the DevTools protocol: `ghost`, reason `backgroundCapable`.
@@ -267,7 +268,7 @@ Only `allowed` may run without the user; asking and the Trash are [OBJ-38](../ob
    The task is set to `done` with the summary, and the summary is sent as a `speak` event.
 
 Only the helper lane has a runner so far: ghost and main come with [OBJ-36](../objectives/OBJ-36-gui-act-sub-agent.md), and a subtask routed there fails until then.
-Plans carry no target app yet, so the router sends every planned subtask to `helper`.
+The planner names the app a UI subtask works in (`targetApp`); file work names none and runs as a helper.
 Nothing calls `runTask` in the running harness yet: the confirmation flow that moves a task to `planning` will.
 
 ## Errors and the log

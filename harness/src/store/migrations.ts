@@ -109,6 +109,10 @@ export const MIGRATIONS: readonly string[] = [
   `
   ALTER TABLE steps ADD COLUMN tool_output TEXT;
   `,
+  // 4: the app the planner said a subtask works in (Subtask.targetApp), as JSON. NULL for work with no app window.
+  `
+  ALTER TABLE subtasks ADD COLUMN target_app TEXT;
+  `,
 ];
 
 /** Thrown when the database was written by a newer harness, whose schema this one does not know. */

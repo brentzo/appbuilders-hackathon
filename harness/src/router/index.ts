@@ -1,10 +1,10 @@
 import type { Logger } from "../log.ts";
 import type { TaskStore } from "../store/task-store.ts";
-import { AppCapabilities, macAppProbe, macAppVersion, type MacAppCaller } from "./capability.ts";
+import { AppCapabilities, macAppProbe, macAppResolve, macAppVersion, type MacAppCaller } from "./capability.ts";
 import { LaneRouter } from "./router.ts";
 
-export { AppCapabilities, isBackgroundCapable, macAppProbe, macAppVersion, ProbeFailure } from "./capability.ts";
-export type { CapabilityProbe, InstalledVersion, MacAppCaller } from "./capability.ts";
+export { AppCapabilities, isBackgroundCapable, macAppProbe, macAppResolve, macAppVersion, ProbeFailure } from "./capability.ts";
+export type { AppResolver, CapabilityProbe, InstalledVersion, MacAppCaller } from "./capability.ts";
 export { KEYSTROKE_ACTIONS, LANE_ACTIONS, LANE_COST, laneAllows } from "./lanes.ts";
 export { LaneRouter, type RouteDecision } from "./router.ts";
 
@@ -25,5 +25,11 @@ export function createLaneRouter(deps: {
     installedVersion: macAppVersion(server, logger),
     logger,
   });
-  return new LaneRouter({ store, capabilities, logger, emit: (event, payload) => server.emit(event, payload) });
+  return new LaneRouter({
+    store,
+    capabilities,
+    resolveApp: macAppResolve(server, logger),
+    logger,
+    emit: (event, payload) => server.emit(event, payload),
+  });
 }

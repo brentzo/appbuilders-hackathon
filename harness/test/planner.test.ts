@@ -94,6 +94,7 @@ describe("the planner (OBJ-05.1)", () => {
     expect(user).toContain("Goal: tidy my notes");
     expect(user).toContain("- read_file: Read a text file in the home folder.");
     expect(user).toContain("- write_new_file:");
+    expect(request.messages[0]!.content as string).toContain("- targetApp: the app whose window the subtask works in");
     expect(request.messages[0]!.content as string).toContain(
       "- needsKeyboard: true when the subtask types text or uses keyboard shortcuts",
     );

@@ -4,6 +4,8 @@ import type {
   AppVersionResult,
   GetAppVersionParams,
   ProbeAppCapabilityParams,
+  ResolveAppParams,
+  ResolveAppResult,
   UserError,
 } from "@yumi/protocol/types";
 import { describeError, type Logger } from "../log.ts";
@@ -34,6 +36,9 @@ export class ProbeFailure extends Error {
   }
 }
 
+/** Finds the bundle id of the installed app with a name (`TargetApp.name`). Undefined when none is installed. */
+export type AppResolver = (name: string) => Promise<string | undefined>;
+
 /** Something that can call a method on the Mac app, such as `HarnessRpcServer`. */
 export interface MacAppCaller {
   request(method: string, params: unknown): Promise<unknown>;
@@ -61,6 +66,24 @@ export function macAppProbe(app: MacAppCaller, logger: Logger): CapabilityProbe 
       throw new ProbeFailure(bundleId, { kind: "unexpected" });
     }
     return capability;
+  };
+}
+
+/**
+ * Name resolution through the Mac app's `resolveApp`, which looks the name up with Launch Services without launching
+ * the app, as `open_app` does. A failure (including a Mac app from before `resolveApp`, which answers "method not
+ * found") rejects with `ProbeFailure`, because the router cannot check an app it cannot find.
+ */
+export function macAppResolve(app: MacAppCaller, logger: Logger): AppResolver {
+  return async (name) => {
+    const params: ResolveAppParams = { name };
+    try {
+      return ((await app.request("resolveApp", params)) as ResolveAppResult).bundleId;
+    } catch (error) {
+      const reported = reportedUserError(error);
+      logger.warn("router.resolveFailed", { ...(reported ? { kind: reported.kind } : {}), ...describeError(error) });
+      throw new ProbeFailure(name, reported ?? { kind: "unexpected" });
+    }
   };
 }
 

@@ -74,7 +74,7 @@ export function planSchemaForModel(): JsonSchema {
 /**
  * A checked plan as subtask records: each planned id becomes a Uuid, dependencies point at those Uuids, and a
  * subtask with no dependencies starts ready, the others pending (OBJ-05.3, OBJ-05.4).
- * `needsKeyboard` is carried over, so the router can send the subtask to main (SPEC-03 r17).
+ * `needsKeyboard` and `targetApp` are carried over for the router (SPEC-03 r2, r3, r17).
  */
 export function subtasksFromPlan(plan: Plan): Omit<NewSubtask, "taskId">[] {
   const ids = new Map(plan.subtasks.map((s) => [s.id, randomUUID()]));
@@ -85,6 +85,7 @@ export function subtasksFromPlan(plan: Plan): Omit<NewSubtask, "taskId">[] {
     dependsOn: s.dependsOn.map((dependency) => ids.get(dependency)!),
     proposedLane: s.proposedLane,
     ...(s.needsKeyboard !== undefined ? { needsKeyboard: s.needsKeyboard } : {}),
+    ...(s.targetApp !== undefined ? { targetApp: s.targetApp } : {}),
     status: s.dependsOn.length === 0 ? "ready" : "pending",
   }));
 }

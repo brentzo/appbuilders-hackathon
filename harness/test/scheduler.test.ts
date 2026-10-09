@@ -1,3 +1,4 @@
+import { spawn, type ChildProcess } from "node:child_process";
 import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -13,7 +14,7 @@ import { SUMMARY_SYSTEM_PROMPT } from "../src/planner/summary.ts";
 import { fileHelperLane, helperLane, routeWith, type LaneTools, type RouteSubtask } from "../src/scheduler/lanes.ts";
 import { localVoice, runTask, type RunTaskDeps } from "../src/scheduler/run-task.ts";
 import { workerSystemPrompt } from "../src/worker/prompt.ts";
-import { modelConfig, rawClient, tempDir } from "./helpers.ts";
+import { modelConfig, PROTOCOL_DIR, rawClient, tempDir } from "./helpers.ts";
 import { startMockModelServer, type MockModelServer, type MockReply } from "./mock-model-server.ts";
 
 /**
@@ -358,6 +359,86 @@ describe("routing through the lane router (OBJ-07.8)", () => {
       taskId: task.id,
     });
     client.close();
+  });
+});
+
+describe.skipIf(process.platform === "win32")("routing planned UI subtasks with the protocol's mock Mac app", () => {
+  let mock: ChildProcess | undefined;
+  let output = "";
+
+  afterEach(() => {
+    mock?.kill();
+    mock = undefined;
+    output = "";
+  });
+
+  /** Starts `npm run mock:mac` on the harness's socket, which knows Chrome (DevTools), Keynote, and WezTerm. */
+  async function connectMockMac(): Promise<void> {
+    mock = spawn("npm", ["run", "mock:mac", "--", "--socket", harness.server.socketPath], {
+      cwd: PROTOCOL_DIR,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    mock.stdout!.setEncoding("utf8").on("data", (chunk: string) => (output += chunk));
+    mock.stderr!.setEncoding("utf8").on("data", (chunk: string) => (output += chunk));
+    const deadline = Date.now() + 15_000;
+    while (harness.server.readyConnections < 1) {
+      if (Date.now() > deadline) throw new Error(`The mock Mac app did not connect. Output:\n${output}`);
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+  }
+
+  const planned = (id: string, instruction: string, extra: Record<string, unknown>) => ({
+    id,
+    title: id,
+    instruction,
+    dependsOn: [],
+    proposedLane: "main",
+    ...extra,
+  });
+
+  it("resolves the app the planner named and routes it: Chrome to ghost, a keyboard subtask in Keynote to main", async () => {
+    await connectMockMac();
+    const plan = JSON.stringify({
+      subtasks: [
+        planned("fill-form", "Fill the expense form in Chrome.", { targetApp: { name: "Google Chrome" } }),
+        planned("paste-chart", "Paste the chart into the deck in Keynote.", {
+          targetApp: { name: "Keynote" },
+          needsKeyboard: true,
+        }),
+      ],
+    });
+    scriptedModel(server, { plan });
+    const task = confirmedTask("fill the expense form and paste the chart into my deck");
+    await runTask(task.id, deps());
+
+    const [form, chart] = harness.store.listSubtasks(task.id);
+    expect(form).toMatchObject({
+      targetApp: { name: "Google Chrome" },
+      target: { bundleId: "com.google.Chrome" },
+      lane: "ghost",
+      routeReason: "backgroundCapable",
+    });
+    expect(chart).toMatchObject({
+      targetApp: { name: "Keynote" },
+      target: { bundleId: "com.apple.Keynote" },
+      lane: "main",
+      routeReason: "needsKeyboard",
+    });
+    for (const s of [form, chart]) expect(validate("Subtask", s).errors).toEqual([]);
+    expect(output).toContain('resolveApp {"name":"Google Chrome"}');
+    // Only the helper lane has workers until OBJ-36, so these subtasks are routed but cannot run yet.
+  });
+
+  it("fails the subtask with unsupportedRequest when no installed app has the name", async () => {
+    await connectMockMac();
+    const plan = JSON.stringify({
+      subtasks: [planned("cut", "Cut the video in Final Cut Pro.", { targetApp: { name: "Final Cut Pro" } })],
+    });
+    scriptedModel(server, { plan });
+    const task = confirmedTask("cut my video");
+    const outcome = await runTask(task.id, deps());
+    expect(outcome).toEqual({ outcome: "failed", userError: { kind: "unsupportedRequest", taskId: task.id } });
+    expect(harness.store.listSubtasks(task.id)[0]).toMatchObject({ status: "failed" });
   });
 });
 

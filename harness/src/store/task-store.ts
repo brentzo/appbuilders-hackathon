@@ -17,6 +17,7 @@ import type {
   SubtaskResult,
   SubtaskStatus,
   Target,
+  TargetApp,
   Task,
   TaskDetail,
   TaskStatus,
@@ -85,6 +86,8 @@ export interface NewSubtask {
   proposedLane: Lane;
   /** From the planner: the subtask needs keystrokes, so it runs on main (SPEC-03 r17). */
   needsKeyboard?: boolean;
+  /** From the planner: the app the subtask works in. The router resolves it to `target`. */
+  targetApp?: TargetApp;
   /** Defaults to pending. */
   status?: SubtaskStatus;
   target?: Target;
@@ -695,6 +698,7 @@ export class TaskStore {
       dependsOn: input.dependsOn ?? [],
       proposedLane: input.proposedLane,
       ...optional("needsKeyboard", input.needsKeyboard),
+      ...optional("targetApp", input.targetApp),
       ...optional("target", input.target),
       status,
       attempts: 0,
@@ -708,9 +712,10 @@ export class TaskStore {
     const plan = [...task.plan];
     for (const subtask of subtasks) {
       this.stmt(
-        `INSERT INTO subtasks (id, task_id, position, title, instruction, depends_on, proposed_lane, needs_keyboard, target, status,
-           attempts)
-         VALUES ($id, $taskId, $position, $title, $instruction, $dependsOn, $proposedLane, $needsKeyboard, $target, $status, 0)`,
+        `INSERT INTO subtasks (id, task_id, position, title, instruction, depends_on, proposed_lane, needs_keyboard, target_app,
+           target, status, attempts)
+         VALUES ($id, $taskId, $position, $title, $instruction, $dependsOn, $proposedLane, $needsKeyboard, $targetApp, $target,
+           $status, 0)`,
       ).run({
         id: subtask.id,
         taskId: subtask.taskId,
@@ -720,6 +725,7 @@ export class TaskStore {
         dependsOn: JSON.stringify(subtask.dependsOn),
         proposedLane: subtask.proposedLane,
         needsKeyboard: subtask.needsKeyboard === undefined ? null : Number(subtask.needsKeyboard),
+        targetApp: json(subtask.targetApp),
         target: json(subtask.target),
         status: subtask.status,
       });
@@ -796,6 +802,7 @@ interface SubtaskRow {
   needs_keyboard: number | null;
   lane: Lane | null;
   route_reason: RouteReason | null;
+  target_app: string | null;
   target: string | null;
   status: SubtaskStatus;
   worker_id: string | null;
@@ -870,6 +877,7 @@ function subtaskFromRow(row: SubtaskRow): Subtask {
     ...optional("needsKeyboard", row.needs_keyboard === null ? undefined : row.needs_keyboard === 1),
     ...optional("lane", row.lane),
     ...optional("routeReason", row.route_reason),
+    ...optional("targetApp", parseJson<TargetApp>(row.target_app)),
     ...optional("target", parseJson<Target>(row.target)),
     status: row.status,
     ...optional("workerId", row.worker_id),
