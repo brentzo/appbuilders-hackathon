@@ -5,7 +5,7 @@ product: models
 assignee: Jepoy
 touches: []
 specs: [SPEC-01]
-status: todo
+status: in-progress
 priority: p0
 depends-on: []
 integrates-with: []

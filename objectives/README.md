@@ -117,7 +117,7 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-57](OBJ-57-route-classified-gui-deletes-through-strict-delete.md) | Route classified GUI delete asks through strict delete | harness | Brent | 07 | 37, 38 | 36, 40 | todo |
 | [OBJ-58](OBJ-58-mac-hey-yumi-recognizer.md) | "Hey Yumi" on the Mac with the on-device recognizer | mac | Brent | 01 | - | 16 | in-progress |
 | [OBJ-59](OBJ-59-quick-hey-yumi-model.md) | Quick "Hey Yumi" wake word model for the demo | models | Brent | 01 | - | 16, 24, 58 | todo |
-| [OBJ-60](OBJ-60-filipino-wake-word-training.md) | Filipino-accented wake-word training workflow | models | Jepoy | 01 | - | - | todo |
+| [OBJ-60](OBJ-60-filipino-wake-word-training.md) | Filipino-accented wake-word training workflow | models | Jepoy | 01 | - | - | in-progress |
 <!-- generated:objectives-index:end -->
 
 ## Priority and blocking

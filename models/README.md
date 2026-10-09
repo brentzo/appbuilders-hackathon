@@ -60,7 +60,7 @@ The public GUI scores (ScreenSpot-Pro, OSWorld) measure vision, which p0 does no
 | [OBJ-28](../objectives/OBJ-28-android-whisper-bake-off.md) | Android Whisper bake-off | Jepoy | todo |
 | [OBJ-55](../objectives/OBJ-55-voice-stop-keyword-models.md) | Voice stop keyword models | Jepoy | todo |
 | [OBJ-59](../objectives/OBJ-59-quick-hey-yumi-model.md) | Quick "Hey Yumi" wake word model for the demo | Brent | todo |
-| [OBJ-60](../objectives/OBJ-60-filipino-wake-word-training.md) | Filipino-accented wake-word training workflow | Jepoy | todo |
+| [OBJ-60](../objectives/OBJ-60-filipino-wake-word-training.md) | Filipino-accented wake-word training workflow | Jepoy | in-progress |
 <!-- generated:product-objectives:end -->
 
 Not written yet: the p1 GUI model bake-off.
