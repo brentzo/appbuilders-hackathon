@@ -1,5 +1,5 @@
 ---
-id: OBJ-28
+id: OBJ-34
 title: Mac GUI execution
 product: mac
 assignee: Patrick
@@ -12,7 +12,7 @@ integrates-with: [OBJ-26, OBJ-31]
 tags: [objective, p0, mac, gui]
 ---
 
-# OBJ-28 Mac GUI execution
+# OBJ-34 Mac GUI execution
 
 **Product:** [Yumi for Mac](../mac/README.md) · **Specs:** [SPEC-05](../specs/05-mac-gui-control.md), [SPEC-11](../specs/11-user-facing-errors.md) · **Assignee:** Patrick
 
@@ -46,16 +46,16 @@ Until OBJ-31 exists, build and test against the mock harness from [OBJ-01](OBJ-0
 
 ## Tasks
 
-- [ ] **OBJ-28.1** Tree reader: walk the target window's `AXUIElement` tree and keep only visible elements with an actionable role (button, menu item, text field, link, checkbox, pop-up button). Skip empty layout groups, number the kept elements, and stop at 200 (SPEC-05 r2). Keep each element's full accessibility path on the Mac side only, so a later action can resolve its number. Include an open menu's items, so "Export To" then "PDF..." in Keynote works, and record how menus are walked in the Outcome.
-- [ ] **OBJ-28.2** `observeWindow`: return an `Observation` with the window title and the trimmed elements. An `AXSecureTextField` appears with no `value`, ever (SPEC-05 r7). Never read its contents, not even into a log.
-- [ ] **OBJ-28.3** `executeAction` for element actions, resolving the number from the last observation of that window: `axPress` performs `AXPress`, `setValue` sets `AXValue`, and `scroll` scrolls through the accessibility API. Refuse `setValue` on a secure text field with a structured error kind. Return the `ResolvedElement` (path, role, label) so the harness can check its risk and log it.
-- [ ] **OBJ-28.4** Before every element action, animate the cursor to the element's center and act only after it arrives. The real mouse pointer never moves for accessibility actions (SPEC-05 r3).
-- [ ] **OBJ-28.5** Keystrokes for the `main` lane only: `type` sends text with `CGEvent` in short chunks, and `key` sends one combo. Reject both for any other lane. Tag every event Yumi sends (for example with `kCGEventSourceUserData`), and check a cancel flag between chunks so typing stops before the next chunk. [OBJ-30](OBJ-30-mac-stop-and-take-over.md) sets the flag.
-- [ ] **OBJ-28.6** Typed direct tools: `open_app` (bundle id), `open_file`, `open_url`, and `reveal_in_finder`, with `NSWorkspace`. Each takes only its schema arguments. There is no shell, AppleScript, or `Process` call anywhere in this code.
-- [ ] **OBJ-28.7** `readFieldValues`: read the current To and Cc values of a Mail draft through the accessibility API. The harness builds the send approval from these, never from model text (SPEC-07 r13).
-- [ ] **OBJ-28.8** Missing Accessibility permission: every method that needs it returns a structured error kind, and the app shows the SPEC-11 "Accessibility permission missing (Mac)" copy through the [OBJ-14](OBJ-14-mac-app-shell.md) error presenter, with "Open settings" opening the Accessibility pane.
-- [ ] **OBJ-28.9** A debug window that shows the trimmed tree of the frontmost window with its numbers and presses an element by number. Use it to check Keynote, Mail, and Notes by hand.
-- [ ] **OBJ-28.10** Tests: trimming against a recorded tree fixture with more than 1,500 elements, secure field handling, the lane check for keystrokes, event tagging, and typing stopping on the cancel flag. Run every method against the mock harness, then against the real harness when [OBJ-31](OBJ-31-gui-act-sub-agent.md) is done.
+- [ ] **OBJ-34.1** Tree reader: walk the target window's `AXUIElement` tree and keep only visible elements with an actionable role (button, menu item, text field, link, checkbox, pop-up button). Skip empty layout groups, number the kept elements, and stop at 200 (SPEC-05 r2). Keep each element's full accessibility path on the Mac side only, so a later action can resolve its number. Include an open menu's items, so "Export To" then "PDF..." in Keynote works, and record how menus are walked in the Outcome.
+- [ ] **OBJ-34.2** `observeWindow`: return an `Observation` with the window title and the trimmed elements. An `AXSecureTextField` appears with no `value`, ever (SPEC-05 r7). Never read its contents, not even into a log.
+- [ ] **OBJ-34.3** `executeAction` for element actions, resolving the number from the last observation of that window: `axPress` performs `AXPress`, `setValue` sets `AXValue`, and `scroll` scrolls through the accessibility API. Refuse `setValue` on a secure text field with a structured error kind. Return the `ResolvedElement` (path, role, label) so the harness can check its risk and log it.
+- [ ] **OBJ-34.4** Before every element action, animate the cursor to the element's center and act only after it arrives. The real mouse pointer never moves for accessibility actions (SPEC-05 r3).
+- [ ] **OBJ-34.5** Keystrokes for the `main` lane only: `type` sends text with `CGEvent` in short chunks, and `key` sends one combo. Reject both for any other lane. Tag every event Yumi sends (for example with `kCGEventSourceUserData`), and check a cancel flag between chunks so typing stops before the next chunk. [OBJ-30](OBJ-30-mac-stop-and-take-over.md) sets the flag.
+- [ ] **OBJ-34.6** Typed direct tools: `open_app` (bundle id), `open_file`, `open_url`, and `reveal_in_finder`, with `NSWorkspace`. Each takes only its schema arguments. There is no shell, AppleScript, or `Process` call anywhere in this code.
+- [ ] **OBJ-34.7** `readFieldValues`: read the current To and Cc values of a Mail draft through the accessibility API. The harness builds the send approval from these, never from model text (SPEC-07 r13).
+- [ ] **OBJ-34.8** Missing Accessibility permission: every method that needs it returns a structured error kind, and the app shows the SPEC-11 "Accessibility permission missing (Mac)" copy through the [OBJ-14](OBJ-14-mac-app-shell.md) error presenter, with "Open settings" opening the Accessibility pane.
+- [ ] **OBJ-34.9** A debug window that shows the trimmed tree of the frontmost window with its numbers and presses an element by number. Use it to check Keynote, Mail, and Notes by hand.
+- [ ] **OBJ-34.10** Tests: trimming against a recorded tree fixture with more than 1,500 elements, secure field handling, the lane check for keystrokes, event tagging, and typing stopping on the cancel flag. Run every method against the mock harness, then against the real harness when [OBJ-31](OBJ-31-gui-act-sub-agent.md) is done.
 
 ## Expectations
 

@@ -85,12 +85,13 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-25](OBJ-25-cross-device-messages.md) | Cross-device message kinds | protocol | Jepoy | 09, 06, 07, 08, 10 | 01, 02 | - | todo |
 | [OBJ-26](OBJ-26-gui-smoke-test.md) | Qwen3.5-9B smoke test on the demo tasks | models | Brent | 05 | - | - | in-progress |
 | [OBJ-27](OBJ-27-mac-native-services.md) | Mac native services for the harness | mac | Patrick | 03, 08 | 14 | 07, 08, 21 | todo |
-| [OBJ-28](OBJ-28-mac-gui-execution.md) | Mac GUI execution | mac | Patrick | 05, 11 | 14, 18 | 26, 31 | todo |
+| [OBJ-28](OBJ-28-android-whisper-bake-off.md) | Android Whisper bake-off | models | Jepoy | 01, 10 | - | 11, 24 | todo |
 | [OBJ-29](OBJ-29-protocol-mac-fixes.md) | Protocol v3, fit the contracts to real macOS | protocol | Brent | 05, 07 | 01 | 03, 26 | done |
-| [OBJ-30](OBJ-30-mac-stop-and-take-over.md) | Stop and take over on the Mac | mac | Patrick | 06 | 17, 28 | 33 | todo |
+| [OBJ-30](OBJ-30-mac-stop-and-take-over.md) | Stop and take over on the Mac | mac | Patrick | 06 | 17, 34 | 33 | todo |
 | [OBJ-31](OBJ-31-unpair-delivery-ack-contract.md) | Define unpair delivery acknowledgement | protocol | Jepoy | 08 | 02 | 13, 21, 23 | todo |
 | [OBJ-32](OBJ-32-permission-gate-and-file-tools.md) | Permission gate and typed file tools | harness | Brent | 07 | 03 | - | todo |
-| [OBJ-33](OBJ-33-approvals-pause-and-action-log.md) | Approvals, pause, and action log in the harness | harness | Brent | 07, 06 | 06, 32 | 28, 29, 30 | todo |
+| [OBJ-33](OBJ-33-approvals-pause-and-action-log.md) | Approvals, pause, and action log in the harness | harness | Brent | 07, 06 | 06, 32 | 29, 30, 34 | todo |
+| [OBJ-34](OBJ-34-mac-gui-execution.md) | Mac GUI execution | mac | Patrick | 05, 11 | 14, 18 | 26, 31 | todo |
 <!-- generated:objectives-index:end -->
 
 ## Priority and blocking
@@ -122,8 +123,8 @@ Ranked by how many objectives each one holds up through hard dependencies:
 | 14 | OBJ-13 Bridge relay server | Jepoy | 1 | Brent |
 | 15 | OBJ-17 Goal confirmation loop | Patrick | 1 | No |
 | 16 | OBJ-27 Mac native services for the harness | Patrick | 1 | No |
-| 17 | OBJ-28 Mac GUI execution | Patrick | 1 | No |
-| 18 | OBJ-32 Permission gate and typed file tools | Brent | 1 | No |
+| 17 | OBJ-32 Permission gate and typed file tools | Brent | 1 | No |
+| 18 | OBJ-34 Mac GUI execution | Patrick | 1 | No |
 <!-- generated:objectives-priority:end -->
 Hard dependencies that cross between people (everything else is within one person's queue):
 
@@ -143,8 +144,8 @@ Workload:
 | Person | Objectives | Count |
 |---|---|---|
 | Brent | 03, 04, 05, 06, 07, 08, 09, 22, 23, 24, 26, 29, 32, 33 | 14 |
-| Jepoy | 01, 02, 11, 12, 13, 21, 25, 31 | 8 |
-| Patrick | 10, 14, 15, 16, 17, 18, 19, 20, 27, 28, 30 | 11 |
+| Jepoy | 01, 02, 11, 12, 13, 21, 25, 28, 31 | 9 |
+| Patrick | 10, 14, 15, 16, 17, 18, 19, 20, 27, 30, 34 | 11 |
 <!-- generated:objectives-workload:end -->
 ## Suggested order
 
@@ -153,17 +154,17 @@ Waves come from hard dependencies only. Each person works their column top to bo
 <!-- generated:objectives-waves:start -->
 | Wave | Brent | Jepoy | Patrick |
 |---|---|---|---|
-| 1 | OBJ-22, OBJ-26 | OBJ-01, OBJ-02, OBJ-11, OBJ-12 | OBJ-10 |
+| 1 | OBJ-22, OBJ-26 | OBJ-01, OBJ-02, OBJ-11, OBJ-12, OBJ-28 | OBJ-10 |
 | 2 | OBJ-03, OBJ-24, OBJ-29 | OBJ-13, OBJ-21, OBJ-25, OBJ-31 | OBJ-14 |
 | 3 | OBJ-04, OBJ-23, OBJ-32 | - | OBJ-15, OBJ-18, OBJ-27 |
-| 4 | OBJ-05, OBJ-07 | - | OBJ-16, OBJ-17, OBJ-19, OBJ-20, OBJ-28 |
+| 4 | OBJ-05, OBJ-07 | - | OBJ-16, OBJ-17, OBJ-19, OBJ-20, OBJ-34 |
 | 5 | OBJ-06, OBJ-08 | - | OBJ-30 |
 | 6 | OBJ-09, OBJ-33 | - | - |
 <!-- generated:objectives-waves:end -->
 ## Not covered yet
 
 Objectives exist for specs whose decisions are final: SPEC-01 to SPEC-08, plus the Android app shell and voice parts of SPEC-10 Part A.
-SPEC-05 is covered by OBJ-28 (Mac) and OBJ-31 (harness), with schemas in OBJ-01 and the p0 model check in OBJ-26.
+SPEC-05 is covered by OBJ-34 (Mac) and OBJ-31 (harness), with schemas in OBJ-01 and the p0 model check in OBJ-26.
 SPEC-06 is covered by OBJ-30 (Mac) and OBJ-33 (harness).
 SPEC-07 is covered by OBJ-29 (Mac), OBJ-32, and OBJ-33 (harness).
 Their p1 requirements (vision fallback, the model bake-off, voice stop, phone control, the injection warning, and crash approvals) are listed under each objective's Out of scope, except the password-logging test, which is p1 task OBJ-33.8.
@@ -176,7 +177,7 @@ Some of their tasks wait on the open questions below.
 | [SPEC-11 User-facing errors](../specs/11-user-facing-errors.md) | Expanded by Jepoy. Every objective follows it |
 | [SPEC-12 Yumi on iPhone](../specs/12-iphone-companion.md) | p2, after Android |
 
-### Open questions for OBJ-28 to OBJ-33
+### Open questions for OBJ-29 to OBJ-34
 
 Raised 2026-10-09 while writing these objectives.
 Each needs a decision in the spec (spec-lifecycle skill), not in code.
@@ -197,7 +198,7 @@ Open items name their owner; resolved items stay listed so the history is easy t
 - **G13 "Show what I did" (SPEC-11):** The button is p0 and opens the action log, but opening the log from the menu bar is p1 (SPEC-07 r19). Owner: Jepoy.
 - **G14 Orchestrator tools (SPEC-05 r9):** The limit is 8, but the spec does not name them. OBJ-31.2 proposes a list. Owner: Brent.
 - **G15 Screenshot retention (SPEC-07 r20 vs SPEC-02 r10):** SPEC-07 (p1) deletes screenshots after 7 days; SPEC-02 keeps them forever. Owner: Brent.
-- **G16 Stale pointers:** OBJ-01 (Jepoy), OBJ-03, OBJ-06, OBJ-07, and OBJ-09 (Brent), and OBJ-14 and OBJ-18 (Patrick) still say SPEC-05, SPEC-06, or SPEC-07 is "not finalized" or "not written yet" in Out of scope. Point them at OBJ-28 to OBJ-33. Owner: each objective's owner.
+- **G16 Stale pointers:** OBJ-01 (Jepoy), OBJ-03, OBJ-06, OBJ-07, and OBJ-09 (Brent), and OBJ-14 and OBJ-18 (Patrick) still say SPEC-05, SPEC-06, or SPEC-07 is "not finalized" or "not written yet" in Out of scope. Point them at OBJ-29 to OBJ-34. Owner: each objective's owner.
 
 ### Resolved conflicts between specs
 

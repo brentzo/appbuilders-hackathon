@@ -39,7 +39,7 @@ The approval flow that runs when the gate says "ask" is [OBJ-33](OBJ-33-approval
 - [docs/task-record-schema.md](../docs/task-record-schema.md), "Actions" and "Typed tools".
 - [OBJ-01](OBJ-01-task-record-schemas.md): `RecordedAction`, `ResolvedElement`, `PermissionLevel`, the typed tool schemas, and `FileSummary`.
 - The Outcome of [OBJ-03](OBJ-03-harness-skeleton.md) (tool registry) and [OBJ-05](OBJ-05-planner-and-scheduler.md) (test-only file tools), when done.
-- The open questions for OBJ-28 to OBJ-33 in the [objectives README](README.md).
+- The open questions for OBJ-29 to OBJ-34 in the [objectives README](README.md).
 
 ## Tasks
 

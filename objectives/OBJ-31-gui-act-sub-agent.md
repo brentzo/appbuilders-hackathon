@@ -8,7 +8,7 @@ specs: [SPEC-05, SPEC-02, SPEC-11]
 status: todo
 priority: p0
 depends-on: [OBJ-06, OBJ-07, OBJ-32]
-integrates-with: [OBJ-26, OBJ-28]
+integrates-with: [OBJ-26, OBJ-34]
 tags: [objective, p0, harness, gui]
 ---
 
@@ -31,7 +31,7 @@ tags: [objective, p0, harness, gui]
 The orchestrator never looks at the screen.
 It hands a sub-goal to the `gui_act` tool, which runs a short step loop on the same model with a fresh context: observe the window, pick one action, check it, run it, and see whether anything changed.
 The orchestrator gets back a small structured result, never a transcript, so its context stays small and screen text cannot steer it.
-Build against the mock Mac app from [OBJ-01](OBJ-01-task-record-schemas.md) until [OBJ-28](OBJ-28-mac-gui-execution.md) is done, and start from the prompt in [OBJ-26](OBJ-26-gui-smoke-test.md) when it is done.
+Build against the mock Mac app from [OBJ-01](OBJ-01-task-record-schemas.md) until [OBJ-34](OBJ-34-mac-gui-execution.md) is done, and start from the prompt in [OBJ-26](OBJ-26-gui-smoke-test.md) when it is done.
 
 ## Read first
 
@@ -42,7 +42,7 @@ Build against the mock Mac app from [OBJ-01](OBJ-01-task-record-schemas.md) unti
 - [docs/task-record-schema.md](../docs/task-record-schema.md), "What the model sees", "Actions", "Step", "Limits", and "Checkpointing".
 - [OBJ-01](OBJ-01-task-record-schemas.md): `WorkerInput`, `WorkerOutput`, `ModelAction`, `RecordedAction`, `SubtaskResult`, and the Mac RPC methods.
 - The Outcome of [OBJ-03](OBJ-03-harness-skeleton.md) (validation and retry), [OBJ-05](OBJ-05-planner-and-scheduler.md) (worker input builder), [OBJ-06](OBJ-06-resume-and-limits.md) (limits), [OBJ-07](OBJ-07-lane-router-core.md) (lane tool sets), [OBJ-32](OBJ-32-permission-gate-and-file-tools.md) (the gate), and [OBJ-26](OBJ-26-gui-smoke-test.md) (prompt, failure patterns, constrained decoding), when done.
-- The open questions for OBJ-28 to OBJ-33 in the [objectives README](README.md).
+- The open questions for OBJ-29 to OBJ-34 in the [objectives README](README.md).
 
 ## Tasks
 
@@ -73,7 +73,7 @@ Build against the mock Mac app from [OBJ-01](OBJ-01-task-record-schemas.md) unti
 
 ## Out of scope
 
-- Reading and acting on windows on the Mac: [OBJ-28](OBJ-28-mac-gui-execution.md) (Patrick).
+- Reading and acting on windows on the Mac: [OBJ-34](OBJ-34-mac-gui-execution.md) (Patrick).
 - Permission levels: [OBJ-32](OBJ-32-permission-gate-and-file-tools.md). Approvals and pausing: [OBJ-33](OBJ-33-approvals-pause-and-action-log.md).
 - Ghost handoff: [OBJ-09](OBJ-09-ghost-handoff.md).
 - The smoke test: [OBJ-26](OBJ-26-gui-smoke-test.md). The model bake-off and vision fallback (SPEC-05 r12-14, p1).

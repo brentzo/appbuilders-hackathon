@@ -42,7 +42,7 @@ Until OBJ-33 exists, drive the cards from the mock harness in [OBJ-01](OBJ-01-ta
 - [docs/task-record-schema.md](../docs/task-record-schema.md), "Approvals".
 - [OBJ-01](OBJ-01-task-record-schemas.md): `Approval`, `FileSummary`, `ApprovalDecision`, `ApprovalMethod`, `ErrorKind.blockedAction`, the RPC methods `showApprovalCard` and `moveToTrash`, and the `approvalCancelled` and `userError` events.
 - The Outcome of [OBJ-17](OBJ-17-goal-confirmation.md) (`speak` and listening for a reply) and [OBJ-18](OBJ-18-cursor-overlay-and-motion.md) (cursor states).
-- The open questions for OBJ-28 to OBJ-33 in the [objectives README](README.md).
+- The open questions for OBJ-29 to OBJ-34 in the [objectives README](README.md).
 
 ## Tasks
 

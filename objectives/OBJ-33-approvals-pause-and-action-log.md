@@ -8,7 +8,7 @@ specs: [SPEC-07, SPEC-06]
 status: todo
 priority: p0
 depends-on: [OBJ-06, OBJ-32]
-integrates-with: [OBJ-28, OBJ-29, OBJ-30]
+integrates-with: [OBJ-29, OBJ-30, OBJ-34]
 tags: [objective, p0, harness, safety, ux]
 ---
 
@@ -31,7 +31,7 @@ tags: [objective, p0, harness, safety, ux]
 When the gate from [OBJ-32](OBJ-32-permission-gate-and-file-tools.md) says "ask", the harness must stop, build the approval from real data, wait for the user, and check again right before acting.
 When the user stops Yumi or takes the mouse, the harness must pause before the next action, cancel every pending approval, and on cancel drop everything still queued.
 Every action, including blocked and declined ones, goes into a plain-language action log.
-Build against the mock Mac app from [OBJ-01](OBJ-01-task-record-schemas.md) until [OBJ-28](OBJ-28-mac-gui-execution.md), [OBJ-29](OBJ-29-mac-approval-cards.md), and [OBJ-30](OBJ-30-mac-stop-and-take-over.md) are done.
+Build against the mock Mac app from [OBJ-01](OBJ-01-task-record-schemas.md) until [OBJ-34](OBJ-34-mac-gui-execution.md), [OBJ-29](OBJ-29-mac-approval-cards.md), and [OBJ-30](OBJ-30-mac-stop-and-take-over.md) are done.
 
 ## Read first
 
@@ -40,7 +40,7 @@ Build against the mock Mac app from [OBJ-01](OBJ-01-task-record-schemas.md) unti
 - [docs/task-record-schema.md](../docs/task-record-schema.md), "Approvals", "Action log", and "Checkpointing".
 - [OBJ-01](OBJ-01-task-record-schemas.md): `Approval`, `ApprovalDecision`, `ActionLogEntry`, `ErrorKind.blockedAction`, the RPC methods `showApprovalCard`, `readFieldValues`, `moveToTrash`, `pause`, `resumeTask`, and `cancelTask`, and the `approvalCancelled` and `userError` events.
 - The Outcome of [OBJ-04](OBJ-04-task-store.md) (store), [OBJ-06](OBJ-06-resume-and-limits.md) (resume and cancel), and [OBJ-32](OBJ-32-permission-gate-and-file-tools.md) (gate), when done.
-- The open questions for OBJ-28 to OBJ-33 in the [objectives README](README.md).
+- The open questions for OBJ-29 to OBJ-34 in the [objectives README](README.md).
 
 ## Tasks
 
