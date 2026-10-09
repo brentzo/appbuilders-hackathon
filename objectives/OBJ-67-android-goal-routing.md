@@ -5,7 +5,7 @@ product: android
 assignee: Brent
 touches: []
 specs: [SPEC-09, SPEC-10]
-status: todo
+status: blocked
 priority: p0
 depends-on: [OBJ-24, OBJ-66]
 integrates-with: [OBJ-68]
@@ -42,16 +42,16 @@ Until the harness side ([OBJ-68](OBJ-68-harness-delegated-goals.md)) lands, test
 ## Tasks
 
 - [ ] **OBJ-67.1** The p0 rule: parse alarm, timer, and open app from English transcripts; anything else, or details that do not parse, is a delegated goal.
-- [ ] **OBJ-67.2** Repeat back with the fixed templates from SPEC-10 r8, spoken and on screen, with the transcript editable for delegated goals.
-- [ ] **OBJ-67.3** Match replies against the fixed confirm and cancel lists; anything else is a correction, repeated back again. The buttons always work.
-- [ ] **OBJ-67.4** On confirm, run a phone-only goal through the [OBJ-66](OBJ-66-android-phone-tool-host.md) runners and say the result, or send a delegated goal as `delegateGoal` and open the delegated-goal screen ([OBJ-69](OBJ-69-android-delegated-goal-screen.md)).
-- [ ] **OBJ-67.5** Replace `LastGoal` as the `GoalSink`, add unit tests for the rule, templates, and reply lists, and update [android/README.md](../android/README.md).
+- [x] **OBJ-67.2** Repeat back with the fixed templates from SPEC-10 r8, spoken and on screen, with the transcript editable for delegated goals.
+- [x] **OBJ-67.3** Match replies against the fixed confirm and cancel lists; anything else is a correction, repeated back again. The buttons always work.
+- [x] **OBJ-67.4** On confirm, run a phone-only goal through the [OBJ-66](OBJ-66-android-phone-tool-host.md) runners and say the result, or send a delegated goal as `delegateGoal` and open the delegated-goal screen ([OBJ-69](OBJ-69-android-delegated-goal-screen.md)).
+- [x] **OBJ-67.5** Replace `LastGoal` as the `GoalSink`, add unit tests for the rule, templates, and reply lists, and update [android/README.md](../android/README.md).
 
 ## Expectations
 
 - [ ] SPEC-10 scenarios pass: "Phone-only goal is repeated back with a template", "Delegated goal echoes the transcript".
 - [ ] SPEC-09 scenario passes: "Phone-only goal runs on the phone".
-- [ ] Nothing runs and nothing is sent to the Mac before the user confirms.
+- [x] Nothing runs and nothing is sent to the Mac before the user confirms.
 
 ## Expected outcomes
 
@@ -64,4 +64,11 @@ Until the harness side ([OBJ-68](OBJ-68-harness-delegated-goals.md)) lands, test
 
 ## Outcome
 
-_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._
+- **Result:** Demo slice delivered; the objective is not done. It is blocked on [OBJ-66](OBJ-66-android-phone-tool-host.md) for the p0 phone-only rule (OBJ-67.1) and the phone-only scenarios, which Brent cut for the demo so every goal is delegated.
+- **Blocked on:** [OBJ-66](OBJ-66-android-phone-tool-host.md) (the phone-run tools) for OBJ-67.1, and OBJ-67.1 for the two phone-only expectation halves. Unblock by finishing OBJ-66 and OBJ-67.1, or by Brent accepting a delegated-only objective and dropping the phone-only scenarios.
+- **Delivered:** `android/app/src/main/java/ai/yumi/android/routing/GoalRouter.kt` (the repeat-back, confirm/cancel, and `delegateGoal` send), `routing/RepeatBack.kt` (the SPEC-10 r8 templates and reply lists), and `voice/Speaker.kt` (Android TTS behind a `speak` interface). `AppGraph` now wires `GoalRouter` where `LastGoal` was, and the deleted `LastGoal` is gone. Tests in `app/src/test/java/ai/yumi/android/routing/`.
+- **Commits:** `9b36c6c feat(android): delegate a confirmed goal and show it working on the Mac`.
+- **Expectations:** "Nothing runs and nothing is sent to the Mac before the user confirms" passes in `GoalRouterTest.a delegated goal is repeated back and sent only after confirm` (the transcript is asserted, the ledger is empty before confirm, then the `delegateGoal` payload is decrypted). The delegated half of "Delegated goal echoes the transcript" passes in the same test and in `RepeatBackTest`.
+- **Not verified:** The phone-only halves of the SPEC-10 and SPEC-09 scenarios need OBJ-67.1, which is cut, so their boxes stay unchecked. The live-relay run (a real Mac over the deployed VPS) was not done; a person can do it with the demo phone (serial MVW4QOY5IFLJEM6P): pair on the Mac, broadcast a goal with `adb shell am broadcast -a ai.yumi.android.debug.GOAL -p ai.yumi.android --es text "export my Keynote deck as a PDF"`, then again with `--es text yes`, and watch the Mac start the goal.
+- **Decisions and deviations:** The demo delegates every goal, so the three phone-only templates are present and tested but not reached at runtime; they are ready for OBJ-67.1. A confirm while the Mac is not paired shows the "Unpaired device" error and stays on the repeat-back rather than pretending the goal went out.
+- **For the next objectives:** [OBJ-69](OBJ-69-android-delegated-goal-screen.md) consumes `GoalRouter.state` and its `confirm`, `stop`, `resume`, and `cancel` methods. When OBJ-66 lands, add the p0 rule ahead of `GoalRouter.repeatBack` and route a matched phone-only goal to the runners instead of confirming a delegate.

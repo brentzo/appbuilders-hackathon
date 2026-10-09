@@ -5,7 +5,7 @@ product: android
 assignee: Brent
 touches: []
 specs: [SPEC-09, SPEC-10, SPEC-06]
-status: todo
+status: blocked
 priority: p0
 depends-on: [OBJ-67]
 integrates-with: [OBJ-68, OBJ-70]
@@ -40,16 +40,16 @@ Until the harness sides ([OBJ-68](OBJ-68-harness-delegated-goals.md), [OBJ-70](O
 
 ## Tasks
 
-- [ ] **OBJ-69.1** A "Working on your Mac" state on the home screen and in the service notification, with the current subtask title from `progress` and a **Stop** button.
-- [ ] **OBJ-69.2** On `goalFinished`, speak and show the summary on the phone and clear the working state.
-- [ ] **OBJ-69.3** Stop sends `pause` and keeps the working state until `pauseConfirmed`, then shows "Paused" with "Resume" and "Cancel".
-- [ ] **OBJ-69.4** Keep the working state when the app goes to the background.
-- [ ] **OBJ-69.5** Tests with a scripted Mac for each path.
+- [x] **OBJ-69.1** A "Working on your Mac" state on the home screen and in the service notification, with the current subtask title from `progress` and a **Stop** button.
+- [x] **OBJ-69.2** On `goalFinished`, speak and show the summary on the phone and clear the working state.
+- [x] **OBJ-69.3** Stop sends `pause` and keeps the working state until `pauseConfirmed`, then shows "Paused" with "Resume" and "Cancel".
+- [x] **OBJ-69.4** Keep the working state when the app goes to the background.
+- [x] **OBJ-69.5** Tests with a scripted Mac for each path.
 
 ## Expectations
 
-- [ ] SPEC-09 scenarios pass from the phone side with a scripted Mac: "Phone goal is delegated to the Mac", "Stop from the phone pauses the Mac".
-- [ ] The phone never shows "Paused" before `pauseConfirmed`.
+- [x] SPEC-09 scenarios pass from the phone side with a scripted Mac: "Phone goal is delegated to the Mac", "Stop from the phone pauses the Mac".
+- [x] The phone never shows "Paused" before `pauseConfirmed`.
 
 ## Expected outcomes
 
@@ -62,4 +62,11 @@ Until the harness sides ([OBJ-68](OBJ-68-harness-delegated-goals.md), [OBJ-70](O
 
 ## Outcome
 
-_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._
+- **Result:** Demo slice delivered; every task and expectation in this objective is done, but the objective is not marked done because its hard dependency [OBJ-67](OBJ-67-android-goal-routing.md) is blocked, not done.
+- **Blocked on:** [OBJ-67](OBJ-67-android-goal-routing.md), which is itself blocked on [OBJ-66](OBJ-66-android-phone-tool-host.md) for the cut phone-only rule. Unblock by clearing OBJ-67, or by Brent accepting it and flipping this objective to done.
+- **Delivered:** `ui/home/GoalCard.kt` (the working, pausing, paused, and finished cards, and the repeat-back card), `notifications/YumiNotifications.kt` (the "Working on your Mac" title, subtask text, and Stop action), `service/YumiService.kt` (the notification Stop sends `pause`), and `service/YumiStatus.kt` (the goal fields). The state machine is `routing/GoalRouter.kt`; the summary is spoken through `voice/Speaker.kt` (Android TTS). Tests in `app/src/test/java/ai/yumi/android/routing/GoalRouterTest.kt`.
+- **Commits:** `9b36c6c feat(android): delegate a confirmed goal and show it working on the Mac`.
+- **Expectations:** "Phone goal is delegated to the Mac" and "Stop from the phone pauses the Mac" pass from the phone side in `GoalRouterTest` (`...sent only after confirm`, `progress updates the subtask and goalFinished speaks the summary`, `stop shows paused only after the Mac confirms`, `resume restarts and cancel waits for the Mac`). "The phone never shows Paused before pauseConfirmed" passes in `stop shows paused only after the Mac confirms`, which sends a `progress` with status `paused` and asserts the state is still Pausing.
+- **Not verified:** The live-relay run (a real Mac over the deployed VPS) was not done, and the scripted-Mac tests do not run the real harness ([OBJ-68](OBJ-68-harness-delegated-goals.md), [OBJ-70](OBJ-70-harness-phone-approvals-and-stop.md) are not landed). A person can run it on the demo phone (serial MVW4QOY5IFLJEM6P) with a paired Mac: confirm a delegated goal, watch the subtask update, tap Stop, and check the phone shows "Paused" only after the Mac's `pauseConfirmed`. Keeping the working state while backgrounded (OBJ-69.4) is by design, not by test: the state lives in the application-scoped `GoalRouter` and its bridge subscription, not in a composable; a manual check is to confirm a goal, open another app, and reopen Yumi.
+- **Decisions and deviations:** The delegated-goal screen is the home screen's working state, not a separate route, so the repeat-back, working, paused, and finished cards replace the old last-goal row in place. The service notification's one Stop action pauses a running goal and stops Yumi otherwise, so SPEC-09 r9 and SPEC-10 r4 both hold with a single Stop. While a goal is paused the notification shows the service Stop. Cancel leaves the state Paused until the Mac confirms (`cancelConfirmed` or `goalFinished`), so the phone never claims a goal stopped early.
+- **For the next objectives:** [OBJ-71](OBJ-71-android-approvals.md) can reuse `GoalRouter`'s active-goal id and the same incoming subscription. The paused, resumed, and cancelled paths expect the harness side ([OBJ-70](OBJ-70-harness-phone-approvals-and-stop.md)) to send `pauseConfirmed` and `cancelConfirmed`.

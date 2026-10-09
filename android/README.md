@@ -180,8 +180,8 @@ The UI reads the phrase from there.
 | [OBJ-42](../objectives/OBJ-42-version-mismatch-copy.md) | Add the protocol version mismatch copy | Brent | todo |
 | [OBJ-59](../objectives/OBJ-59-android-hey-yumi-vosk.md) | "Hey Yumi" on Android with Vosk | Brent | done |
 | [OBJ-66](../objectives/OBJ-66-android-phone-tool-host.md) | Phone runs the Mac's tool calls | Brent | todo |
-| [OBJ-67](../objectives/OBJ-67-android-goal-routing.md) | Phone repeats back a goal and runs it or sends it to the Mac | Brent | todo |
-| [OBJ-69](../objectives/OBJ-69-android-delegated-goal-screen.md) | Phone shows a goal working on the Mac, with Stop | Brent | todo |
+| [OBJ-67](../objectives/OBJ-67-android-goal-routing.md) | Phone repeats back a goal and runs it or sends it to the Mac | Brent | blocked |
+| [OBJ-69](../objectives/OBJ-69-android-delegated-goal-screen.md) | Phone shows a goal working on the Mac, with Stop | Brent | blocked |
 | [OBJ-71](../objectives/OBJ-71-android-approvals.md) | Approvals on the phone for goals running on the Mac | Brent | todo |
 <!-- generated:product-objectives:end -->
 
