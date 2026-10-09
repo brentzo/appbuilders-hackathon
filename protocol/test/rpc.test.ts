@@ -35,6 +35,14 @@ describe("local RPC", () => {
     expect(referenced.filter((name) => !typeNames.includes(name))).toEqual([]);
   });
 
+  it("pauses every lane, or only the UI lanes when the user takes over (SPEC-06 r1, r2)", () => {
+    const taskId = "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8";
+    expect(validate("PauseParams", {}).errors).toEqual([]);
+    expect(validate("PauseParams", { taskId, scope: "everyLane" }).errors).toEqual([]);
+    expect(validate("PauseParams", { scope: "uiLanes" }).errors).toEqual([]);
+    expect(validate("PauseParams", { scope: "helpers" }).valid).toBe(false);
+  });
+
   it("moves a cursor to an element or a point, and nothing else", () => {
     const move = (to: unknown) => ({ command: "move", cursorId: "main", to });
     expect(validate("CursorCommand", move({ kind: "point", x: 512, y: 300 })).valid).toBe(true);

@@ -646,15 +646,21 @@ export interface PauseConfirmedPayload {
   goalId: Uuid;
 }
 
-/** Pause one task, or every task when taskId is absent (SPEC-06 r1). */
+/** Pause one task, or every task when taskId is absent (SPEC-06 r1). A blocked-action card needs no method of its own: "Keep going" calls resumeTask and "Stop" calls cancelTask (SPEC-07 r5). */
 export interface PauseParams {
   taskId?: Uuid;
+  /** Which lanes stop. Absent means everyLane. */
+  scope?: PauseScope;
 }
 
 export interface PausePayload {
   kind: "pause";
   goalId: Uuid;
 }
+
+/** everyLane: the stop shortcut or the menu bar "Stop" pauses every lane, helpers included (SPEC-06 r1). uiLanes: the user took over the mouse or keyboard, so the main and ghost lanes pause and helpers keep running (SPEC-06 r2). */
+export type PauseScope = "everyLane" | "uiLanes";
+export const pauseScopeValues: readonly PauseScope[] = ["everyLane", "uiLanes"];
 
 /** A closed union of encrypted cross-device message payloads. */
 export type Payload =

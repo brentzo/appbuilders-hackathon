@@ -138,10 +138,18 @@
       "enum": ["goAhead", "changeIt", "cancel"]
     },
     "PauseParams": {
-      "description": "Pause one task, or every task when taskId is absent (SPEC-06 r1).",
+      "description": "Pause one task, or every task when taskId is absent (SPEC-06 r1). A blocked-action card needs no method of its own: \"Keep going\" calls resumeTask and \"Stop\" calls cancelTask (SPEC-07 r5).",
       "type": "object",
       "additionalProperties": false,
-      "properties": { "taskId": { "$ref": "common.json#/$defs/Uuid" } }
+      "properties": {
+        "taskId": { "$ref": "common.json#/$defs/Uuid" },
+        "scope": { "description": "Which lanes stop. Absent means everyLane.", "$ref": "#/$defs/PauseScope" }
+      }
+    },
+    "PauseScope": {
+      "description": "everyLane: the stop shortcut or the menu bar \"Stop\" pauses every lane, helpers included (SPEC-06 r1). uiLanes: the user took over the mouse or keyboard, so the main and ghost lanes pause and helpers keep running (SPEC-06 r2).",
+      "type": "string",
+      "enum": ["everyLane", "uiLanes"]
     },
     "ListTasksParams": {
       "type": "object",
