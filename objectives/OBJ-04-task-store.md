@@ -3,9 +3,9 @@ id: OBJ-04
 title: Task store and history
 product: harness
 assignee: Brent
-touches: []
+touches: [protocol]
 specs: [SPEC-02]
-status: blocked
+status: done
 priority: p0
 depends-on: [OBJ-01, OBJ-03]
 integrates-with: []
@@ -52,7 +52,7 @@ Everything is kept forever, including screenshots, as a demo-phase decision.
 
 ## Expectations
 
-- [ ] SPEC-02 scenario "Finished tasks are kept" passes: a task finished long ago is found by searching "invoices", with its steps and action log.
+- [x] SPEC-02 scenario "Finished tasks are kept" passes: a task finished long ago is found by searching "invoices", with its steps and action log.
 - [x] Killing the process between the step insert and the outcome update leaves a step with no outcome, which [OBJ-06](OBJ-06-resume-and-limits.md) relies on.
 - [x] Every status change produces exactly one event.
 - [x] No code path deletes tasks, steps, logs, or screenshots.
@@ -70,36 +70,36 @@ Everything is kept forever, including screenshots, as a demo-phase decision.
 
 ## Outcome
 
-- **Result:** Blocked on one protocol change. Every task is done; one expectation cannot pass over RPC until the protocol has it.
-- **Blocked by:** `TaskDetail` in `protocol/schemas/rpc.json` (the `getTask` result) has `task`, `subtasks`, and `steps`, but no action log, and no other RPC method returns it.
-  So the Mac app cannot show a past task "with its steps and action log", as SPEC-02 "Finished tasks are kept" says.
-  The store already keeps and returns the action log (`TaskStore.getTaskHistory`), and the scenario passes against the store.
-  **Who can unblock:** Jepoy (protocol owner), or Brent deciding otherwise.
-  **Proposed change (not breaking):** add an optional `actionLog` property to `TaskDetail`, an array of `ActionLogEntry`, oldest first, update `TaskDetail.keynote.json`, and regenerate.
-  The harness then returns `history.actionLog` from `getTask` (one line in `src/rpc/history.ts`) and a test asserts it, and this objective can be finished.
+- **Result:** Done.
 - **Delivered:**
   - `harness/src/store/task-store.ts`: the task store (`TaskStore`), the only module with SQL. Tasks, subtasks, steps, step screenshots, the action log, history queries, window locks, and app capabilities, using the protocol types.
   - `harness/src/store/migrations.ts`: the schema as ordered migrations tracked in `PRAGMA user_version`, with triggers that refuse deleting tasks, subtasks, steps, and action log lines, and changing a log line.
   - `harness/src/store/transitions.ts`: the allowed task and subtask status changes.
-  - `harness/src/rpc/history.ts`: `listTasks`, `searchTasks`, and `getTask`.
+  - `harness/src/rpc/history.ts`: `listTasks`, `searchTasks`, and `getTask`, which returns the task with its subtasks, steps, and action log.
+  - `protocol/schemas/rpc.json`: an optional `actionLog` array of `ActionLogEntry` on `TaskDetail`, with the example `TaskDetail.keynote.json`, regenerated types, and validation tests in `protocol/test/validation.test.ts`.
   - `harness/src/harness.ts`: opens the store, starts the RPC server with the history methods, and sends every status change as `taskStatusChanged`. `src/main.ts` uses it.
   - `harness/README.md`: the task store, its on-disk layout, its tables, the rules it enforces, and the history behavior.
   - Tests: `harness/test/task-store.test.ts`, `harness/test/history-rpc.test.ts`, and the crash fixture `harness/test/fixtures/crash-mid-step.ts`.
 - **Commits:**
   - `c96d0b8 docs(objectives): start OBJ-04`
   - `4fc4ee7 feat(harness): add the task store, history RPC methods, and status events`
-  - `docs(objectives): block OBJ-04 on the action log in TaskDetail` (this Outcome)
+  - `a4de8c7 docs(objectives): block OBJ-04 on the action log in TaskDetail`
+  - `9d8ccaf feat(protocol): add the action log to TaskDetail`
+  - `9327d17 feat(harness): return the action log from getTask`
+  - `docs(objectives): finish OBJ-04` (this Outcome)
 - **Expectations:**
-  - "Finished tasks are kept" (not checked): `test/task-store.test.ts`, "Scenario: Finished tasks are kept", passes against the store: a task created 6 months earlier is found by searching "invoices" after closing and reopening the database, with its step and its action log line. Over RPC, `test/history-rpc.test.ts` finds it with `searchTasks` and gets its steps from `getTask`, but `getTask` cannot return the action log. See "Blocked by".
+  - "Finished tasks are kept": `test/task-store.test.ts`, "Scenario: Finished tasks are kept": a task created 6 months earlier is found by searching "invoices" after closing and reopening the database, with its step and its action log line. Over the local RPC, `test/history-rpc.test.ts`, "searchTasks finds a task by text, and getTask returns it with its subtasks, steps, and action log", finds it with `searchTasks`, and `getTask` returns its steps and action log, validated as `TaskDetail`.
   - Killed between the insert and the update: `test/task-store.test.ts`, "leaves a step with no outcome when the process is killed between the insert and the outcome update". A separate Node process begins a step and kills itself with SIGKILL; reopening the database shows that step in `listUnfinishedSteps()` with no outcome and no duration, and no action log line.
   - One event per status change: `test/task-store.test.ts`, "emits exactly one event per status change, in order, each valid against the contract", plus tests that refused changes and non-status writes emit nothing. `test/history-rpc.test.ts` checks the events reach a bare client and the protocol's mock Mac app (`npm run mock:mac`), one per change.
   - Nothing deleted: `test/task-store.test.ts`, "nothing is deleted": the database refuses deletes from the four history tables, and a source scan finds no `DELETE` other than releasing a window lock, and no file removal other than the RPC server's own socket.
-  - `python3 scripts/verify.py` passes (docs, harness typecheck, lint, format, and 101 tests; android and whisper unaffected). The harness suite passed five repeated runs.
+  - `python3 scripts/verify.py` passes: docs, protocol typecheck and 253 tests, harness typecheck, lint, format, and 101 tests, android, and whisper. The harness suite passed five repeated runs.
+  - Generated Swift and Kotlin: Docker was not running, so `npm run compile:swift` and `npm run compile:kotlin` did not run. Instead, the generated Swift type-checks with the local `swiftc` (Swift 6.4, `-swift-version 6 -warnings-as-errors`), and the generated Kotlin compiles with the local `kotlinc` 2.4.21, the kotlinx.serialization plugin, and `-Werror`.
   - End to end: `npm start` with `YUMI_SUPPORT_DIR` set to a temporary folder, a task seeded by a separate process, then a bare socket client: `hello`, `searchTasks` for "invoices" and `listTasks` returned the task, and `getTask` for an unknown id returned `-32000` with `{"kind":"unexpected"}`. SIGINT closed the socket and the database cleanly.
-- **Not verified:** The real Mac app does not exist yet, so the history methods and events were tested with a bare client and the protocol's mock Mac app. Screenshots were tested with generated PNGs; nothing captures real screenshots yet.
+- **Not verified:** The Docker compile checks, which also round-trip every example through the generated Swift and Kotlin types. CI runs them on push; locally, start Docker and run `npm run compile:swift` and `npm run compile:kotlin` in `protocol/`. The real Mac app does not exist yet, so the history methods and events were tested with a bare client and the protocol's mock Mac app. Screenshots were tested with generated PNGs; nothing captures real screenshots yet.
 - **Decisions and deviations:**
+  - `TaskDetail` had no action log, so `getTask` could not return it. Brent leads protocol changes for now, and the orchestrator widened this objective to `protocol/` for this one change: `actionLog` is optional, so it is not breaking and the protocol stays at version 3. The harness always sends it.
   - `node:sqlite`, not a native package: it is stability 1.2 (release candidate) in Node.js 26.7.0, needs no native build, and prints no experimental warning. It became a release candidate in v25.7.0 (Node's own sqlite docs, history table), so on Node.js 24, which the harness still allows, it is experimental; the harness is developed and tested on 26.7.0.
-  - The transition table in `src/store/transitions.ts` is the harness's reading of the status descriptions in `docs/task-record-schema.md`, SPEC-03, SPEC-06, and SPEC-09. No spec lists allowed transitions, so Brent should review it. Main choices: done, failed, and cancelled are final; paused resumes to planning or running; a running subtask can go back to ready or queued (paused, or lost its lock); a needsApproval subtask goes back to ready when a pause cancels the approval.
+  - The transition table in `src/store/transitions.ts` is the harness's reading of the status descriptions in `docs/task-record-schema.md`, SPEC-03, SPEC-06, and SPEC-09. No spec lists allowed transitions; the orchestrator approved the table as written. Main choices: done, failed, and cancelled are final; paused resumes to planning or running; a running subtask can go back to ready or queued (paused, or lost its lock); a needsApproval subtask goes back to ready when a pause cancels the approval.
   - A change to the status a record already has is refused like any illegal change, so every accepted change is a real one and emits exactly one event.
   - A new task's or subtask's first status counts as a status change and emits one event, so the dashboard learns about it. A task starts as awaitingConfirmation, queued, or planning; a subtask as pending or ready.
   - Every record is validated against its protocol schema before it is written, so the store never holds a record the apps would reject.
@@ -110,9 +110,10 @@ Everything is kept forever, including screenshots, as a demo-phase decision.
   - `getTask` for an unknown task answers the `unexpected` UserError and logs `history.taskNotFound`, since no SPEC-11 row fits and the app only asks for tasks it was given.
   - `tasks.db` and its WAL files are created readable only by this user, like the log and the socket.
   - Window locks and app capabilities are working state, not history: they can be replaced and released.
-  - Screenshots are kept forever, following SPEC-02 r10. `docs/task-record-schema.md` still lists the open question against SPEC-07 r20 (p1, 7 days); this objective did not settle it.
+  - Screenshots are kept forever: Brent decided that for the demo (SPEC-02 r10). SPEC-07 r20 (p1, 7 days) is revisited after the hackathon, so `docs/task-record-schema.md` still lists it as an open question.
 - **For the next objectives:**
   - Open the store with `TaskStore.open({ dir, logger })`; the running harness has it as `startHarness(...).store`. Listen with `store.onStatusChanged`.
+  - OBJ-05: the planner may need running -> planning (replan after a subtask fails) and planning -> waitingForUser (a clarifying question). They are not in the table; add them in `src/store/transitions.ts` with a spec reference if needed.
   - OBJ-05: `createTask`, `setTaskStatus(id, status, { confirmedGoal, summary })`, `addSubtask` (appends to the plan), `setSubtaskStatus(id, status, fields)`, and `updateSubtask` for router and worker fields.
   - Steps: `beginStep({ subtaskId, lane, action })` before the action runs, then `finishStep(id, { outcome, observation, log: { deviceId, description, paths } })`. `durationMs` defaults to the time since the step began. `saveStepScreenshot(id, bytes)` stores the image.
   - OBJ-06: `listUnfinishedSteps()` returns the steps a crash interrupted. Mark one with `finishStep(id, { outcome: "noEffect", log: ... })`; the log line is required, so describe the interrupted action.

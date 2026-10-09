@@ -233,7 +233,7 @@ Search matches tasks whose goal, confirmed goal, summary, or subtask titles cont
 | ID | Objective | Assignee | Status |
 |---|---|---|---|
 | [OBJ-03](../objectives/OBJ-03-harness-skeleton.md) | Harness skeleton and local model client | Brent | done |
-| [OBJ-04](../objectives/OBJ-04-task-store.md) | Task store and history | Brent | blocked |
+| [OBJ-04](../objectives/OBJ-04-task-store.md) | Task store and history | Brent | done |
 | [OBJ-05](../objectives/OBJ-05-planner-and-scheduler.md) | Planner, scheduler, and task summary | Brent | todo |
 | [OBJ-06](../objectives/OBJ-06-resume-and-limits.md) | Resume and limits | Brent | todo |
 | [OBJ-07](../objectives/OBJ-07-lane-router-core.md) | Lane router core | Brent | todo |
