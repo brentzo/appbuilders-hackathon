@@ -138,7 +138,7 @@ describe("mock Mac app capability answers", () => {
   it("probes the app that was asked, for every AppCapability example", async () => {
     const harness = await harnessWithMockMac();
     const apps = examplesOf("AppCapability") as { bundleId: string; appVersion: string }[];
-    expect(apps.map((a) => a.bundleId)).toEqual(["com.google.Chrome", "com.apple.iWork.Keynote", "com.github.wez.wezterm"]);
+    expect(apps.map((a) => a.bundleId)).toEqual(["com.google.Chrome", "com.apple.Keynote", "com.github.wez.wezterm"]);
     for (const app of apps) {
       expect(await harness.request("probeAppCapability", { bundleId: app.bundleId })).toEqual(app);
       // The version lookup returns exactly the probe's appVersion, so the harness can find the cached result.

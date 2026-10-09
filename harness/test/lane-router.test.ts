@@ -22,7 +22,7 @@ import { PROTOCOL_DIR, tempDir } from "./helpers.ts";
 import { openStore, TestClock } from "./store-helpers.ts";
 
 const CHROME = "com.google.Chrome";
-const KEYNOTE = "com.apple.iWork.Keynote";
+const KEYNOTE = "com.apple.Keynote";
 /** A canvas app: no actionable accessibility tree and no DevTools. */
 const CANVAS = "com.example.CanvasPaint";
 /** Draws its window itself, so it has no actionable accessibility tree (OBJ-27). One of the mock Mac app's apps. */

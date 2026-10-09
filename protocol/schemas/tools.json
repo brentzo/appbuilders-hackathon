@@ -46,7 +46,7 @@
       "required": ["tool"],
       "properties": {
         "tool": { "const": "open_app" },
-        "bundleId": { "description": "For example com.apple.iWork.Keynote.", "type": "string", "minLength": 1 },
+        "bundleId": { "description": "For example com.apple.Keynote. Use the bundle id the Mac app reports (WindowInfo.bundleId from listWindows), never one from memory: the same app can change id between versions, for example com.apple.Keynote for current Keynote and com.apple.iWork.Keynote for older ones.", "type": "string", "minLength": 1 },
         "name": { "description": "The app's name as the user sees it, for example Keynote. The Mac app resolves it through Launch Services.", "type": "string", "minLength": 1 }
       },
       "allOf": [

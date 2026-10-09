@@ -16,7 +16,7 @@
         "cursorId": "main",
         "to": {
           "kind": "element",
-          "target": { "bundleId": "com.apple.iWork.Keynote", "windowId": 4182 },
+          "target": { "bundleId": "com.apple.Keynote", "windowId": 4182 },
           "elementPath": "AXApplication/AXMenuBar/AXMenuBarItem[File]/AXMenu/AXMenuItem[Export To]"
         }
       }

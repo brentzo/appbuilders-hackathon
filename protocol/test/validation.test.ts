@@ -346,7 +346,7 @@ describe("Subtask and routing (SPEC-03 r17)", () => {
     instruction: "In Keynote, paste the expense chart on slide 3.",
     dependsOn: [],
     proposedLane: "main",
-    target: { bundleId: "com.apple.iWork.Keynote" },
+    target: { bundleId: "com.apple.Keynote" },
     status: "ready",
     attempts: 0,
   };

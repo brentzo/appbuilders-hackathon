@@ -442,7 +442,7 @@ export interface ObserveWindowParams {
 /** Open or bring forward an app, by exactly one of bundleId or name. Allowed. Apple's bundle ids are inconsistent (com.apple.mail, com.apple.Notes), so the model should usually give the name. */
 export interface OpenAppCall {
   tool: "open_app";
-  /** For example com.apple.iWork.Keynote. */
+  /** For example com.apple.Keynote. Use the bundle id the Mac app reports (WindowInfo.bundleId from listWindows), never one from memory: the same app can change id between versions, for example com.apple.Keynote for current Keynote and com.apple.iWork.Keynote for older ones. */
   bundleId?: string;
   /** The app's name as the user sees it, for example Keynote. The Mac app resolves it through Launch Services. */
   name?: string;
@@ -594,6 +594,7 @@ export type PhoneToolCall =
   | PhoneOpenAppCall;
 
 export interface ProbeAppCapabilityParams {
+  /** Use the bundle id the Mac app reports (WindowInfo.bundleId from listWindows), never one from memory: the same app can change id between versions, for example com.apple.Keynote for current Keynote and com.apple.iWork.Keynote for older ones. */
   bundleId: string;
 }
 
@@ -890,7 +891,7 @@ export const subtaskStatusValues: readonly SubtaskStatus[] = ["pending", "ready"
 
 /** The app and window a UI subtask works in. */
 export interface Target {
-  /** For example com.apple.mail. */
+  /** For example com.apple.mail. Use the bundle id the Mac app reports (WindowInfo.bundleId from listWindows), never one from memory: the same app can change id between versions, for example com.apple.Keynote for current Keynote and com.apple.iWork.Keynote for older ones. */
   bundleId: string;
   /** CGWindowID on the Mac. */
   windowId?: number;

@@ -9,7 +9,7 @@
   "lane": "main",
   "routeReason": "needsKeyboard",
   "target": {
-    "bundleId": "com.apple.iWork.Keynote"
+    "bundleId": "com.apple.Keynote"
   },
   "status": "ready",
   "attempts": 0

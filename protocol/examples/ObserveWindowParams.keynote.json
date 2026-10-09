@@ -1,6 +1,6 @@
 {
   "target": {
-    "bundleId": "com.apple.iWork.Keynote",
+    "bundleId": "com.apple.Keynote",
     "windowId": 4182
   }
 }

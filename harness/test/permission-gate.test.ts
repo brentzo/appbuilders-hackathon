@@ -63,7 +63,7 @@ describe("SPEC-07 r1 permission table: Allowed", () => {
 
   it("open apps", () => {
     expect(tool({ tool: "open_app", name: "Keynote" }, home)).toMatchObject({ level: "allowed", rule: "openApp" });
-    expect(tool({ tool: "open_app", bundleId: "com.apple.iWork.Keynote" }, home).level).toBe("allowed");
+    expect(tool({ tool: "open_app", bundleId: "com.apple.Keynote" }, home).level).toBe("allowed");
   });
 
   it("open files, including a document package", () => {

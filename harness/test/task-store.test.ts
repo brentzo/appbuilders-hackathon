@@ -98,7 +98,7 @@ describe("the database", () => {
       expiresAt: "2026-10-09T15:45:00+08:00",
     });
     store.putAppCapability({
-      bundleId: "com.apple.iWork.Keynote",
+      bundleId: "com.apple.Keynote",
       appVersion: "14.4",
       accessibility: true,
       devtools: false,
@@ -109,7 +109,7 @@ describe("the database", () => {
     reopen();
     expect(store.getTaskHistory(task.id)).toEqual(before);
     expect(store.getWindowLock(4182)).toMatchObject({ subtaskId: subtask.id });
-    expect(store.getAppCapability("com.apple.iWork.Keynote", "14.4")).toMatchObject({ accessibility: true, devtools: false });
+    expect(store.getAppCapability("com.apple.Keynote", "14.4")).toMatchObject({ accessibility: true, devtools: false });
   });
 });
 

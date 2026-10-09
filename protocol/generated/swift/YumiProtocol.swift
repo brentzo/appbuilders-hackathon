@@ -960,7 +960,7 @@ public struct ObserveWindowParams: Codable, Equatable, Sendable {
 
 /// Open or bring forward an app, by exactly one of bundleId or name. Allowed. Apple's bundle ids are inconsistent (com.apple.mail, com.apple.Notes), so the model should usually give the name.
 public struct OpenAppCall: Codable, Equatable, Sendable {
-    /// For example com.apple.iWork.Keynote.
+    /// For example com.apple.Keynote. Use the bundle id the Mac app reports (WindowInfo.bundleId from listWindows), never one from memory: the same app can change id between versions, for example com.apple.Keynote for current Keynote and com.apple.iWork.Keynote for older ones.
     public var bundleId: String?
     /// The app's name as the user sees it, for example Keynote. The Mac app resolves it through Launch Services.
     public var name: String?
@@ -1223,6 +1223,7 @@ public enum PhoneToolCall: Codable, Equatable, Sendable {
 }
 
 public struct ProbeAppCapabilityParams: Codable, Equatable, Sendable {
+    /// Use the bundle id the Mac app reports (WindowInfo.bundleId from listWindows), never one from memory: the same app can change id between versions, for example com.apple.Keynote for current Keynote and com.apple.iWork.Keynote for older ones.
     public var bundleId: String
 
     public init(bundleId: String) {
@@ -1726,7 +1727,7 @@ public enum SubtaskStatus: String, Codable, Equatable, Sendable, CaseIterable {
 
 /// The app and window a UI subtask works in.
 public struct Target: Codable, Equatable, Sendable {
-    /// For example com.apple.mail.
+    /// For example com.apple.mail. Use the bundle id the Mac app reports (WindowInfo.bundleId from listWindows), never one from memory: the same app can change id between versions, for example com.apple.Keynote for current Keynote and com.apple.iWork.Keynote for older ones.
     public var bundleId: String
     /// CGWindowID on the Mac.
     public var windowId: Int?

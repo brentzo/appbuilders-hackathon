@@ -66,7 +66,7 @@
       "additionalProperties": false,
       "required": ["bundleId"],
       "properties": {
-        "bundleId": { "description": "For example com.apple.mail.", "type": "string", "minLength": 1 },
+        "bundleId": { "description": "For example com.apple.mail. Use the bundle id the Mac app reports (WindowInfo.bundleId from listWindows), never one from memory: the same app can change id between versions, for example com.apple.Keynote for current Keynote and com.apple.iWork.Keynote for older ones.", "type": "string", "minLength": 1 },
         "windowId": { "description": "CGWindowID on the Mac.", "type": "integer", "minimum": 0 }
       }
     },

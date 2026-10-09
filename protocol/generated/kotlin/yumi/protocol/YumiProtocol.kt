@@ -551,7 +551,7 @@ data class ObserveWindowParams(
 @Serializable
 @SerialName("open_app")
 data class OpenAppCall(
-    /** For example com.apple.iWork.Keynote. */
+    /** For example com.apple.Keynote. Use the bundle id the Mac app reports (WindowInfo.bundleId from listWindows), never one from memory: the same app can change id between versions, for example com.apple.Keynote for current Keynote and com.apple.iWork.Keynote for older ones. */
     val bundleId: String? = null,
     /** The app's name as the user sees it, for example Keynote. The Mac app resolves it through Launch Services. */
     val name: String? = null,
@@ -716,6 +716,7 @@ sealed interface PhoneToolCall
 
 @Serializable
 data class ProbeAppCapabilityParams(
+    /** Use the bundle id the Mac app reports (WindowInfo.bundleId from listWindows), never one from memory: the same app can change id between versions, for example com.apple.Keynote for current Keynote and com.apple.iWork.Keynote for older ones. */
     val bundleId: String,
 )
 
@@ -1075,7 +1076,7 @@ enum class SubtaskStatus {
 /** The app and window a UI subtask works in. */
 @Serializable
 data class AppTarget(
-    /** For example com.apple.mail. */
+    /** For example com.apple.mail. Use the bundle id the Mac app reports (WindowInfo.bundleId from listWindows), never one from memory: the same app can change id between versions, for example com.apple.Keynote for current Keynote and com.apple.iWork.Keynote for older ones. */
     val bundleId: String,
     /** CGWindowID on the Mac. */
     val windowId: Long? = null,

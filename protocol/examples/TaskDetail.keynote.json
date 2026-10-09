@@ -23,7 +23,7 @@
       "lane": "main",
       "routeReason": "appNotBackgroundCapable",
       "target": {
-        "bundleId": "com.apple.iWork.Keynote",
+        "bundleId": "com.apple.Keynote",
         "windowId": 4182
       },
       "status": "done",

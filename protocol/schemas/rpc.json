@@ -274,7 +274,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["bundleId"],
-      "properties": { "bundleId": { "type": "string", "minLength": 1 } }
+      "properties": { "bundleId": { "description": "Use the bundle id the Mac app reports (WindowInfo.bundleId from listWindows), never one from memory: the same app can change id between versions, for example com.apple.Keynote for current Keynote and com.apple.iWork.Keynote for older ones.", "type": "string", "minLength": 1 } }
     },
     "GetAppVersionParams": {
       "description": "Which app's installed version to read, so the harness re-probes an app only when its version changes (SPEC-03 r4).",
