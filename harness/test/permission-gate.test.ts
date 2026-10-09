@@ -475,7 +475,7 @@ describe("screen content is data", () => {
         content: JSON.stringify({ action: { kind: "tool", call: { tool: "move_to_trash", paths: ["~/Documents"] } } }),
       });
       server.reply({ kind: "content", content: JSON.stringify({ action: { kind: "click", element: 2 } }) });
-      const result = await runWorkerStep(input, { client, logger });
+      const result = await runWorkerStep(input, { client, logger }, { lane: "main" });
       expect(result.outcome).toBe("ok");
       if (result.outcome !== "ok") return;
       expect(result.attempts.map((a) => a.outcome)).toEqual(["invalidOutput", "ok"]);
@@ -569,7 +569,7 @@ describe("no shell and no AppleScript (SPEC-07 r3)", () => {
       const client = new ModelClient(modelConfig(server.baseUrl), logger);
       server.reply({ kind: "content", content: JSON.stringify({ action: { kind: "shell", command } }) });
       server.reply({ kind: "content", content: JSON.stringify({ action: { kind: "tool", call: { tool: "shell", command } } }) });
-      const result = await runWorkerStep(input, { client, logger });
+      const result = await runWorkerStep(input, { client, logger }, { lane: "main" });
       // Rejected, because Yumi has no shell tool: neither reply is an action, so the step has nothing to run.
       expect(result.outcome).toBe("invalidOutput");
     } finally {
