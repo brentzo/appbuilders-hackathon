@@ -197,14 +197,18 @@ final class GuiExecutor {
     }
 
     /// Moves the real mouse to a global top-left point and clicks the left button there. A vision
-    /// click moves the real mouse, which is why only the main lane is offered it (SPEC-03 r7).
+    /// click moves the real mouse, which is why only the main lane is offered it (SPEC-03 r7). Every
+    /// event carries Yumi's tag, so the take-over watcher never reads Yumi's own click as the user
+    /// taking over and pausing the task (SPEC-06 r3; Brent's run, 2026-10-10).
     private static func clickMouse(at point: CGPoint) {
         CGWarpMouseCursorPosition(point)
         let source = CGEventSource(stateID: .hidSystemState)
-        CGEvent(mouseEventSource: source, mouseType: .leftMouseDown, mouseCursorPosition: point, mouseButton: .left)?
-            .post(tap: .cghidEventTap)
-        CGEvent(mouseEventSource: source, mouseType: .leftMouseUp, mouseCursorPosition: point, mouseButton: .left)?
-            .post(tap: .cghidEventTap)
+        source?.userData = KeystrokeSender.eventTag
+        for type in [CGEventType.leftMouseDown, CGEventType.leftMouseUp] {
+            let event = CGEvent(mouseEventSource: source, mouseType: type, mouseCursorPosition: point, mouseButton: .left)
+            event?.setIntegerValueField(.eventSourceUserData, value: KeystrokeSender.eventTag)
+            event?.post(tap: .cghidEventTap)
+        }
     }
 
     /// Whether two window frames are the same, within half a point: an accessibility frame can shift
