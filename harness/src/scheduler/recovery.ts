@@ -13,10 +13,12 @@ import { describeInterrupted } from "./describe.ts";
  *   "I was interrupted while working on your task. Want me to pick up where I left off?" (the `interruptedTaskFound`
  *   event). It never resumes on its own.
  * - A task the user paused stays paused, and is not marked: the app lists it with a Resume button.
- * - The subtasks of every paused task that were working go back to ready, and their window locks are released, so
- *   a resume routes them again and continues the attempt that was cut off.
+ * - The subtasks of every paused task that were working go back to ready, so a resume routes them again and
+ *   continues the attempt that was cut off.
  * - An approval still open was never used, and its card is gone with the app: it is closed as cancelled, so a
  *   resume asks again (OBJ-38).
+ * - Every window lock is released: no cursor survives a restart, so a lock left in the store belongs to a worker
+ *   that is gone (SPEC-03 r5). Without this, it would block its window until it expired.
  *
  * Every change goes through the store's status rules. Recovery is safe to run again after a crash halfway through:
  * each part only changes records that still need it.
@@ -74,24 +76,23 @@ export function recoverAfterRestart(store: TaskStore, logger: Logger): Recovery 
   for (const task of store.listTasksByStatus(["paused"])) {
     if (!interrupted.includes(task.id)) resetSubtasks(store, logger, task.id);
   }
+  for (const lock of store.listWindowLocks()) {
+    store.releaseWindowLock(lock.windowId);
+    logger.info("recovery.lockReleased", { windowId: lock.windowId, subtaskId: lock.subtaskId });
+  }
   return { interrupted, steps };
 }
 
 /**
- * Sends a paused task's working subtasks back to ready and releases their window locks, so a resume routes them
- * again and continues the attempt that was cut off. Also used by a pause (OBJ-38.5).
+ * Sends a paused task's working subtasks back to ready, so a resume routes them again and continues the attempt that
+ * was cut off. The store releases their window locks with the status change. Also used by a pause (OBJ-38.5).
  */
 export function resetSubtasks(store: TaskStore, logger: Logger, taskId: Uuid): void {
-  const reset = new Set<Uuid>();
   for (const subtask of store.listSubtasks(taskId)) {
     const next = CUT_OFF[subtask.status];
     if (!next) continue;
     store.setSubtaskStatus(subtask.id, next);
-    reset.add(subtask.id);
     logger.info("recovery.subtaskReset", { taskId, subtaskId: subtask.id, was: subtask.status, attempts: subtask.attempts });
-  }
-  for (const lock of store.listWindowLocks()) {
-    if (reset.has(lock.subtaskId)) store.releaseWindowLock(lock.windowId);
   }
 }
 

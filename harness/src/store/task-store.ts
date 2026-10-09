@@ -63,6 +63,12 @@ const DEFAULT_PAGE_SIZE = 50;
  */
 const LISTED = "NOT (status = 'cancelled' AND confirmed_goal IS NULL)";
 
+/**
+ * The subtask statuses in which a worker has the subtask, and so may hold a window. The lane router takes the lock
+ * while the subtask is ready or queued, just before it starts running; any other change releases it.
+ */
+export const HOLDS_WINDOW: readonly SubtaskStatus[] = ["running", "needsApproval"];
+
 export interface TaskStoreOptions {
   /** The folder for the database and the screenshots. Created if missing. */
   dir: string;
@@ -427,6 +433,9 @@ export class TaskStore {
         throw this.illegal(new IllegalTransitionError("subtask", id, current.status, status));
       }
       const next = this.writeSubtask({ ...current, ...definedFields(fields), status });
+      // A subtask holds its window only while a worker has it (SPEC-03 r5): ending, failing, handing off, or going
+      // back to wait releases it in the same transaction, so no path can leave a window locked.
+      if (!HOLDS_WINDOW.includes(status)) this.releaseWindowLocksOf(id);
       return { subtask: next, task: this.requireTask(next.taskId) };
     });
     this.emit({ taskId: task.id, status: task.status, subtaskId: subtask.id, subtaskStatus: subtask.status });
@@ -711,14 +720,43 @@ export class TaskStore {
 
   // Window locks and app capabilities: working state for the lane router (OBJ-07, OBJ-08), not history.
 
-  /** Records a window lock, replacing any lock on the same window. */
+  /**
+   * Records a window lock, replacing any lock on the same window. For setting up state; the lane router takes locks
+   * with `acquireWindowLock`, which never takes a window another subtask holds.
+   */
   putWindowLock(lock: WindowLock): WindowLock {
     this.check("WindowLock", lock);
     this.stmt(
-      `INSERT OR REPLACE INTO window_locks (window_id, subtask_id, lane, acquired_at, expires_at)
-       VALUES ($windowId, $subtaskId, $lane, $acquiredAt, $expiresAt)`,
-    ).run({ ...lock });
+      `INSERT OR REPLACE INTO window_locks (window_id, subtask_id, lane, acquired_at, expires_at, expires_ms)
+       VALUES ($windowId, $subtaskId, $lane, $acquiredAt, $expiresAt, $expiresMs)`,
+    ).run({ ...lock, expiresMs: Date.parse(lock.expiresAt) });
     return lock;
+  }
+
+  /**
+   * Takes a window for one subtask (SPEC-03 r5), in one transaction, so two cursors can never hold the same window,
+   * even from two processes on the same database. A lock that has expired does not count: it is replaced, so a
+   * crashed worker cannot block a window. The same subtask taking its own window again renews its lock. Returns the
+   * lock that holds the window afterward: the new one, or the other subtask's when the window is taken.
+   */
+  acquireWindowLock(lock: WindowLock): { acquired: true; lock: WindowLock } | { acquired: false; heldBy: WindowLock } {
+    this.check("WindowLock", lock);
+    return this.transaction(() => {
+      const row = this.stmt("SELECT * FROM window_locks WHERE window_id = ?").get(lock.windowId) as WindowLockRow | undefined;
+      if (row && row.subtask_id !== lock.subtaskId && row.expires_ms > this.now().getTime()) {
+        return { acquired: false as const, heldBy: windowLockFromRow(row) };
+      }
+      this.putWindowLock(lock);
+      return { acquired: true as const, lock };
+    });
+  }
+
+  /** Moves a lock's expiry, if the subtask still holds the window. Returns false if it does not. */
+  renewWindowLock(windowId: number, subtaskId: Uuid, expiresAt: string): boolean {
+    const changed = this.stmt(
+      "UPDATE window_locks SET expires_at = ?, expires_ms = ? WHERE window_id = ? AND subtask_id = ?",
+    ).run(expiresAt, Date.parse(expiresAt), windowId, subtaskId).changes;
+    return Number(changed) > 0;
   }
 
   getWindowLock(windowId: number): WindowLock | undefined {
@@ -726,14 +764,39 @@ export class TaskStore {
     return row && windowLockFromRow(row);
   }
 
+  /** Every recorded lock, expired or not. */
   listWindowLocks(): WindowLock[] {
     const rows = this.stmt("SELECT * FROM window_locks ORDER BY window_id").all() as unknown as WindowLockRow[];
+    return rows.map(windowLockFromRow);
+  }
+
+  /** The locks that still hold their windows: not expired. */
+  listLiveWindowLocks(): WindowLock[] {
+    const rows = this.stmt("SELECT * FROM window_locks WHERE expires_ms > ? ORDER BY window_id").all(
+      this.now().getTime(),
+    ) as unknown as WindowLockRow[];
     return rows.map(windowLockFromRow);
   }
 
   /** Releases a window lock. Returns false if the window was not locked. */
   releaseWindowLock(windowId: number): boolean {
     return Number(this.stmt("DELETE FROM window_locks WHERE window_id = ?").run(windowId).changes) > 0;
+  }
+
+  /** Releases every lock a subtask holds, and returns them. */
+  releaseWindowLocksOf(subtaskId: Uuid): WindowLock[] {
+    const rows = this.stmt("DELETE FROM window_locks WHERE subtask_id = ? RETURNING *").all(
+      subtaskId,
+    ) as unknown as WindowLockRow[];
+    return rows.map(windowLockFromRow);
+  }
+
+  /** Releases the locks that have expired, and returns them. */
+  releaseExpiredWindowLocks(): WindowLock[] {
+    const rows = this.stmt("DELETE FROM window_locks WHERE expires_ms <= ? RETURNING *").all(
+      this.now().getTime(),
+    ) as unknown as WindowLockRow[];
+    return rows.map(windowLockFromRow);
   }
 
   /** Records an app's probe result, replacing the earlier one for the same app version. */
@@ -1055,6 +1118,7 @@ interface WindowLockRow {
   lane: Lane;
   acquired_at: string;
   expires_at: string;
+  expires_ms: number;
 }
 
 interface AppCapabilityRow {

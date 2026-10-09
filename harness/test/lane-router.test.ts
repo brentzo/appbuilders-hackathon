@@ -458,7 +458,12 @@ describe.skipIf(process.platform === "win32")("over the local RPC with the proto
     const chart = subtask("paste the chart in Keynote", "main", { bundleId: KEYNOTE }, true);
 
     const decisions = [];
-    for (const s of [form, title, shell, chart]) decisions.push(await live.route(s, s.proposedLane));
+    for (const s of [form, title, shell, chart]) {
+      const decision = await live.route(s, s.proposedLane);
+      // Each is routed on its own: nothing runs, so its cursor and window are given back (OBJ-08).
+      decision.release?.();
+      decisions.push({ lane: decision.lane, reason: decision.reason });
+    }
 
     expect(decisions).toEqual([
       { lane: "ghost", reason: "backgroundCapable" },
@@ -476,7 +481,7 @@ describe.skipIf(process.platform === "win32")("over the local RPC with the proto
     // A restart: a new router over the same database reads each version and probes nothing.
     const restarted = createLaneRouter({ store, server: rpc, logger });
     for (const app of [CHROME, KEYNOTE, WEZTERM])
-      await restarted.route(subtask(`again in ${app}`, "ghost", { bundleId: app }), "ghost");
+      (await restarted.route(subtask(`again in ${app}`, "ghost", { bundleId: app }), "ghost")).release?.();
     expect(output.match(/getAppVersion/g)!.length).toBeGreaterThanOrEqual(6);
     expect(output.match(/probeAppCapability/g)).toHaveLength(3);
   }, 30_000);

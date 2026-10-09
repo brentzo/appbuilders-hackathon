@@ -59,7 +59,7 @@ export interface HarnessOptions {
  * in the support folder (OBJ-38.7).
  */
 export async function startHarness(
-  config: Pick<HarnessConfig, "supportDir" | "socketPath"> & Partial<Pick<HarnessConfig, "limits">>,
+  config: Pick<HarnessConfig, "supportDir" | "socketPath"> & Partial<Pick<HarnessConfig, "limits" | "cursorCap">>,
   logger: Logger,
   options: HarnessOptions = {},
 ): Promise<Harness> {
@@ -108,7 +108,12 @@ export async function startHarness(
       },
     });
     store.onStatusChanged((event) => server.emit("taskStatusChanged", event));
-    const router = createLaneRouter({ store, server, logger });
+    const router = createLaneRouter({
+      store,
+      server,
+      logger,
+      ...(config.cursorCap !== undefined ? { cursorCap: config.cursorCap } : {}),
+    });
     const work = options.work;
     const voice = work && (work.voice ?? localVoice(server, logger, work.deviceId));
     approvals =
@@ -151,6 +156,7 @@ export async function startHarness(
       close: async () => {
         await confirming.close();
         await control.close();
+        router.close();
         await server.close();
         actionLog.stop();
         store.close();

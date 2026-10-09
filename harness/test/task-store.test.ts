@@ -518,7 +518,7 @@ describe("nothing is deleted", () => {
     const sources = readdirSync(srcDir, { recursive: true, encoding: "utf8" })
       .filter((file) => file.endsWith(".ts"))
       .map((file) => ({ file, text: readFileSync(join(srcDir, file), "utf8") }));
-    // History lives in these task store tables. The only DELETE on them is releasing a window lock, which is
+    // History lives in these task store tables. The only DELETEs on them release window locks, which are
     // working state, not history. Other modules keep their own databases (the bridge client's delivery queue in
     // bridge.sqlite), and deleting from those is not task history.
     const storeTables = ["tasks", "subtasks", "steps", "window_locks", "app_capabilities", "action_log"];
@@ -527,7 +527,7 @@ describe("nothing is deleted", () => {
         .filter((m) => storeTables.includes(m[1]!.toLowerCase()))
         .map((m) => `${file.replaceAll("\\", "/")}: ${m[1]}`),
     );
-    expect(deletes).toEqual(["store/task-store.ts: window_locks"]);
+    expect(new Set(deletes)).toEqual(new Set(["store/task-store.ts: window_locks"]));
     // No file removal in the store; the RPC server removes only its own socket file, and the move tool removes a
     // file's old name only after the same file has its new one (OBJ-37).
     const removals = sources

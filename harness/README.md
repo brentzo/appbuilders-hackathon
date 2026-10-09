@@ -55,7 +55,7 @@ Approvals, pause, and the action log are built ([OBJ-38](../objectives/OBJ-38-ap
 | `src/control/run-control.ts` | One run's pause state, which every step loop checks before it acts. |
 | `src/action-log/text-log.ts` | The action log file, written from the task store. |
 | `src/worker/` | One step: the prompt, the action names (`actions.ts`), the narrowed output schema, validation, and the one retry. |
-| `src/router/` | The lane router (`router.ts`), the app capability probe and cache (`capability.ts`), and each lane's actions (`lanes.ts`). |
+| `src/router/` | The lane router (`router.ts`), the app capability probe and cache (`capability.ts`), each lane's actions (`lanes.ts`), and cursors and window locks (`windows.ts`). |
 | `src/schema/bundle.ts` | Turns a protocol type into one self-contained JSON Schema. |
 | `src/harness.ts` | Opens the task store, starts the RPC server with the history methods, and sends status changes as events. |
 | `src/planner/` | The planner prompt (`prompt.ts`), the plan checks (`check.ts`), `makePlan` with its one retry (`planner.ts`), and the spoken summary (`summary.ts`). |
@@ -104,6 +104,7 @@ Environment variables, all optional:
 | `YUMI_STEPS_PER_SUBTASK` | `25` | Steps per subtask, across attempts and restarts, before it fails with `taskTookTooLong` (SPEC-02 r8). |
 | `YUMI_ATTEMPTS_PER_SUBTASK` | `3` | Attempts per subtask, from 1 to 3 (`Subtask.attempts` allows at most 3). |
 | `YUMI_SUBTASK_DEPTH` | `1` | How deep subtasks may nest. 1: only the planner makes subtasks. |
+| `YUMI_CURSOR_CAP` | `3` | Visible cursors at once, including `main` (SPEC-03 r6). More ghost and main subtasks queue. |
 
 Sampling uses the Qwen3.5 model card's instruct settings (temperature 0.7, top_p 0.8, top_k 20), with thinking off.
 
@@ -201,7 +202,7 @@ Everything is in the support folder (`YUMI_SUPPORT_DIR`), readable only by this 
 | `steps` | One row per `Step`, with `outcome` and `duration_ms` NULL until the action finished. |
 | `action_log` | One row per `ActionLogEntry`, with the step it came from. Append-only. |
 | `approvals` | One row per `Approval`, as JSON with its decision, and `closed` once it can never be used again: used, declined, changed, or cancelled. |
-| `window_locks` | One row per locked window. Working state: replaced and released. |
+| `window_locks` | One row per locked window, with its expiry. Working state: replaced and released. |
 | `app_capabilities` | One row per app and version probed. Working state: replaced. |
 
 `PRAGMA user_version` is the number of migrations applied.
@@ -247,6 +248,26 @@ A failed probe is not cached: `route` rejects with `ProbeFailure`, which carries
 
 Only `main` gets keystrokes (`type`, `key`); a ghost sets text with `setValue`, and a helper gets no UI actions (`src/router/lanes.ts`).
 `runWorkerStep` takes the subtask's lane, and the schema, the prompt, and the validation offer and accept only that lane's actions.
+
+### Window locks, busy windows, and the cursor cap
+
+After the lane, a ghost or main subtask claims a cursor and a window from the `WindowCoordinator` (`src/router/windows.ts`, SPEC-03 r5, r6, r11 to r13).
+Claims run one at a time.
+
+1. **Cursor cap:** every ghost is a cursor, and `main` is one more, of which there is only one. With `YUMI_CURSOR_CAP` cursors visible (3), or `main` busy, the subtask is queued with reason `atCapacity`.
+2. **Window:** the window the subtask worked in before, else the app's first window from `listWindows`, else a window another subtask of the task worked in. The first one no other cursor holds is locked, and stored on the subtask as `target.windowId`.
+3. **Busy window:** if every one is held, the Mac app's `openNewWindow` opens a new window and the subtask works there, reason `openedSecondWindow`. If the app cannot, the subtask is queued with reason `windowLocked`, and `openNewWindow` is not asked again while it waits.
+4. **Waiting notice:** after 2 minutes waiting for a window, the apps get `waitingForWindow` with the task, the subtask, and the app name, once per wait. The Mac app says the sentence.
+5. **Tiling:** when a task holds more windows at once than before, and at least 2, the apps get `tilingSuggested` with those windows. The Mac app asks before it arranges them (OBJ-20).
+
+A queued decision is stored and sent as `routeDecided` like any other.
+The scheduler sets the subtask to `queued`, gives its model slot back while it waits, and routes it again whenever a cursor finishes or a lock is released or expires.
+A pause puts a waiting subtask back to `ready`; another subtask's failure fails it.
+
+Locks live in the task store with an expiry (60 seconds), and the coordinator renews the locks of working cursors every 20 seconds.
+`acquireWindowLock` takes a window in one transaction and refuses one another subtask holds, unless that lock expired, so even two connections to the database never share a window.
+A lock is released in the same transaction as any status change that ends the subtask's work (anything but `running` and `needsApproval`), when its run ends, or when it expires, and startup recovery releases every lock left in the store.
+An app with no window that cannot open one gets the cursor without a lock (`windows.noWindow` in the log); the lane opens the app itself.
 
 ## Safety
 
@@ -348,7 +369,7 @@ Resume never starts on its own: the user is always asked first ([SPEC-02](../spe
   A step with no outcome is finished as `noEffect`, with an action log line such as "Started to create Note 4.md, but was interrupted before it finished".
   A task that was planning, running, or waiting for the user is paused and marked interrupted.
   An approval still open is closed as cancelled, so a resume asks again.
-  The subtasks of every paused task that were running, waiting for approval, or queued go back to `ready`, keeping their attempts, and their window locks are released.
+  The subtasks of every paused task that were running, waiting for approval, or queued go back to `ready`, keeping their attempts, and every window lock left in the store is released.
 - **Asking:** each time an app says hello, the harness sends one `interruptedTaskFound` per interrupted task, so the app asks "I was interrupted while working on your task. Want me to pick up where I left off?"
   A task the user paused is not announced: `listTasks` returns it as `paused`, and the app shows Resume.
 - **`resumeTask`** sets a paused task back to `running` (or `planning` when it had no plan yet) and carries on in the background.

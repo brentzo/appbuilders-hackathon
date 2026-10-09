@@ -88,7 +88,7 @@ export function macAppResolve(app: MacAppCaller, logger: Logger): AppResolver {
 }
 
 /** The UserError in a `-32000` reply, the only error reply whose data is meant for the user. */
-function reportedUserError(error: unknown): UserError | undefined {
+export function reportedUserError(error: unknown): UserError | undefined {
   if (!(error instanceof RpcRemoteError) || error.error.code !== RpcErrorCode.failed) return undefined;
   return validate("UserError", error.error.data).valid ? (error.error.data as UserError) : undefined;
 }

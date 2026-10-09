@@ -2,7 +2,7 @@ import type { Subtask, UserError, Uuid } from "@yumi/protocol/types";
 import { DEFAULT_LIMITS } from "../config.ts";
 import { isUiLane, RunControl } from "../control/run-control.ts";
 import { describeError } from "../log.ts";
-import { ProbeFailure } from "../router/index.ts";
+import { ProbeFailure, type RouteDecision } from "../router/index.ts";
 import type { LaneRunners, RouteSubtask } from "./lanes.ts";
 import { runSubtask, type SubtaskRun, type SubtaskRunDeps } from "./subtask-runner.ts";
 
@@ -10,6 +10,10 @@ import { runSubtask, type SubtaskRun, type SubtaskRunDeps } from "./subtask-runn
  * Runs a saved plan (OBJ-05.4): a subtask becomes ready when every subtask it depends on is done, and ready
  * subtasks run at the same time, up to the model server's parallel slots, each as its own request to the one model
  * (SPEC-02 r7). Each subtask is routed through `route` first: the lane router (OBJ-07) in the running harness. If a subtask fails, the others are stopped and the task fails: replanning is not part of OBJ-05.
+ *
+ * A ghost or main subtask with no free cursor or window is queued by the router (OBJ-08): it waits in `queued`
+ * without taking a slot, since it uses no model, and is routed again when there may be room. Its cursor and window
+ * lock are given back when its run ends.
  *
  * Starting a subtask starts an attempt, up to the attempt limit (SPEC-02 r8). A subtask a resume continues
  * (`ScheduleOptions.continuing`) carries on with the attempt a pause or restart cut off, so it is not counted again.
@@ -60,6 +64,25 @@ export async function runSchedule(
   const held = new Set<Uuid>();
   /** Subtasks whose attempt goes on when they start again: a resume's, and those a take-over stopped. */
   const continuing = new Set(options.continuing ?? []);
+  // The model's slots. A subtask queued for a cursor or a window gives its slot back while it waits, since it uses
+  // no model, and takes one again before it runs; those waiting for a slot go before subtasks not started yet.
+  let busy = 0;
+  const slotWaiters: (() => void)[] = [];
+  let nudge = () => {};
+  const nudged = () => new Promise<void>((resolve) => (nudge = resolve));
+  const giveSlot = () => {
+    const next = slotWaiters.shift();
+    if (next) return next();
+    busy--;
+    nudge();
+  };
+  const takeSlot = (): Promise<void> => {
+    if (busy < deps.slots) {
+      busy++;
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => slotWaiters.push(resolve));
+  };
   let failure: Extract<ScheduleOutcome, { outcome: "failed" }> | undefined;
   let workers = 0;
 
@@ -69,23 +92,26 @@ export async function runSchedule(
   };
 
   const start = (subtask: Subtask) => {
+    busy++;
+    const slot = { held: true };
     const work = (async () => {
       // Yield first, so the work is in `active` before any of it runs, even if routing throws right away.
       await Promise.resolve();
       try {
-        await runOne(subtask);
+        await runOne(subtask, slot);
       } catch (error) {
         // A bug, such as a refused status change. Stop everything rather than run on a record that may be wrong.
         logger.error("schedule.crashed", { taskId, subtaskId: subtask.id, ...describeError(error) });
         fail(subtask.id);
       } finally {
         active.delete(subtask.id);
+        if (slot.held) giveSlot();
       }
     })();
     active.set(subtask.id, work);
   };
 
-  const runOne = async (subtask: Subtask) => {
+  const runOne = async (subtask: Subtask, slot: { held: boolean }) => {
     const continues = continuing.has(subtask.id) && subtask.attempts > 0;
     if (!continues && subtask.attempts >= limits.attemptsPerSubtask) {
       // Its attempts are used up (SPEC-02 r8): fail it before routing, so nothing runs and no app is probed.
@@ -97,7 +123,7 @@ export async function runSchedule(
     }
     let decision;
     try {
-      decision = await deps.route(subtask);
+      decision = await routeWhenThereIsRoom(subtask, slot);
     } catch (error) {
       if (!(error instanceof ProbeFailure)) throw error;
       // The router could not learn what the target app supports, so no lane can work in it (OBJ-07 Outcome).
@@ -107,6 +133,53 @@ export async function runSchedule(
       });
       return fail(subtask.id, error.userError);
     }
+    if (!decision) return;
+    try {
+      await runRouted(subtask, decision, continues);
+    } finally {
+      decision.release?.();
+    }
+  };
+
+  /**
+   * Routes the subtask, and while the router queues it, waits in `queued` and routes it again. Undefined when the
+   * task was stopped while it waited.
+   */
+  const routeWhenThereIsRoom = async (subtask: Subtask, slot: { held: boolean }): Promise<RouteDecision | undefined> => {
+    let current = subtask;
+    for (;;) {
+      const decision = await deps.route(current);
+      if (!decision.queued) {
+        if (!slot.held) {
+          await takeSlot();
+          slot.held = true;
+        }
+        return decision;
+      }
+      if (current.status !== "queued") current = store.setSubtaskStatus(current.id, "queued");
+      if (slot.held) {
+        slot.held = false;
+        giveSlot();
+      }
+      await decision.queued.wait(stopSignal);
+      current = store.getSubtask(current.id)!;
+      if (stopSignal.aborted) {
+        // Paused or cancelled: back to ready, so a resume routes it again, unless the pause flow already moved it.
+        // Stopped by another subtask's failure: failed, like the other subtasks that were stopped.
+        if (current.status === "queued") {
+          if (signal.aborted) store.setSubtaskStatus(current.id, "ready");
+          else {
+            store.setSubtaskStatus(current.id, "failed", {
+              result: { status: "partial", files: [], note: "Stopped before it started." },
+            });
+          }
+        }
+        return undefined;
+      }
+    }
+  };
+
+  const runRouted = async (subtask: Subtask, decision: RouteDecision, continues: boolean) => {
     if (isUiLane(decision.lane) && control.uiLanesPaused) {
       // The user has the mouse and keyboard: a UI subtask waits, still ready, for the resume (SPEC-06 r2).
       logger.info("schedule.held", { taskId, subtaskId: subtask.id, lane: decision.lane });
@@ -189,11 +262,12 @@ export async function runSchedule(
     if (!control.uiLanesPaused) held.clear();
     if (!failure && !stopSignal.aborted) {
       const ready = store.listSubtasks(taskId).filter((s) => s.status === "ready" && !active.has(s.id) && !held.has(s.id));
-      for (const subtask of ready.slice(0, Math.max(0, deps.slots - active.size))) start(subtask);
+      for (const subtask of ready.slice(0, Math.max(0, deps.slots - busy - slotWaiters.length))) start(subtask);
     }
     if (active.size === 0 && (held.size === 0 || failure || stopSignal.aborted)) break;
-    // Wait for a subtask to end, or for a pause, resume, or stop that changes what may start.
-    await Promise.race([...active.values(), control.changed()]);
+    // Wait for a subtask to end, for one to give its slot back while it waits for a cursor or a window, or for a
+    // pause, resume, or stop that changes what may start.
+    await Promise.race([...active.values(), nudged(), control.changed()]);
   }
 
   if (failure) return failure;

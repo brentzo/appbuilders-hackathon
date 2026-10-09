@@ -138,6 +138,13 @@ export const MIGRATIONS: readonly string[] = [
   CREATE TRIGGER approvals_kept_forever BEFORE DELETE ON approvals
     BEGIN SELECT RAISE(ABORT, 'task records are kept forever'); END;
   `,
+  // 7: window lock expiry (OBJ-08). expires_ms is expires_at in milliseconds since the epoch, so expiry compares
+  // numbers rather than timestamps written in different time zones. A lock from before it gets 0: already expired,
+  // which is right, since no cursor survives the restart that applies the migration.
+  `
+  ALTER TABLE window_locks ADD COLUMN expires_ms INTEGER NOT NULL DEFAULT 0;
+  CREATE INDEX window_locks_by_subtask ON window_locks (subtask_id);
+  `,
 ];
 
 /** Thrown when the database was written by a newer harness, whose schema this one does not know. */

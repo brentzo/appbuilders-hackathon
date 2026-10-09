@@ -1,7 +1,8 @@
-import type { Lane, RouteDecided, RouteReason, Subtask, WindowLock } from "@yumi/protocol/types";
+import type { Lane, RouteDecided, RouteReason, Subtask, Target, WindowLock } from "@yumi/protocol/types";
 import type { Logger } from "../log.ts";
 import type { TaskStore } from "../store/task-store.ts";
 import { isBackgroundCapable, ProbeFailure, type AppCapabilities, type AppResolver } from "./capability.ts";
+import type { WindowCoordinator } from "./windows.ts";
 
 /**
  * The lane router (SPEC-03, docs/lane-router.md). The planner only proposes a lane; the router checks what the target
@@ -16,16 +17,29 @@ import { isBackgroundCapable, ProbeFailure, type AppCapabilities, type AppResolv
  * 3. The target app is background-capable (an actionable accessibility tree or the DevTools protocol): `ghost`,
  *    reason `backgroundCapable`. Otherwise `main`, reason `appNotBackgroundCapable`, which always accepts work
  *    (SPEC-03 r1 and r3).
+ * 4. A ghost or main subtask claims a cursor and a window (`WindowCoordinator`, OBJ-08): it gets a locked window,
+ *    or a new window of the app with reason `openedSecondWindow`, or it is queued with reason `atCapacity` (the
+ *    cursor cap) or `windowLocked` (a busy window the app cannot open a second one of). A queued decision is stored
+ *    and sent like any other, and the caller routes again once `queued.wait` resolves.
  *
- * Window locks, busy windows, and the cursor cap come in OBJ-08; ghost handoff in OBJ-09.
+ * Ghost handoff comes in OBJ-09.
  */
 
 export interface RouteDecision {
   lane: Lane;
   /** Why this lane, for the dashboard and the log. */
   reason: RouteReason;
-  /** The window lock held for a ghost or main subtask. Set once locks exist (OBJ-08). */
+  /** The window lock held for a ghost or main subtask. */
   lock?: WindowLock;
+  /** The app and window a ghost or main subtask works in, also stored on the subtask. */
+  target?: Target;
+  /**
+   * Set when the subtask cannot start yet (reason `atCapacity` or `windowLocked`). Nothing is held. `wait` resolves
+   * when there may be room, or when `signal` aborts; then route again.
+   */
+  queued?: { wait(signal?: AbortSignal): Promise<void> };
+  /** Gives back the cursor and window lock a started subtask holds. Call it when its run ends; safe to call twice. */
+  release?: () => void;
 }
 
 export interface LaneRouterOptions {
@@ -33,6 +47,8 @@ export interface LaneRouterOptions {
   capabilities: AppCapabilities;
   /** Resolves a planned subtask's app name to a bundle id (`TargetApp.name`). Without it, names cannot be routed. */
   resolveApp?: AppResolver;
+  /** Cursors and window locks. Without it, ghost and main subtasks are routed without a window or a lock. */
+  windows?: WindowCoordinator;
   /** Sends the decision to the apps, for example `server.emit("routeDecided", decided)`. */
   emit: (event: "routeDecided", payload: RouteDecided) => void;
   logger: Logger;
@@ -40,6 +56,11 @@ export interface LaneRouterOptions {
 
 export class LaneRouter {
   constructor(private readonly options: LaneRouterOptions) {}
+
+  /** Stops the window coordinator's timers. */
+  close(): void {
+    this.options.windows?.close();
+  }
 
   /**
    * Picks the lane for a subtask, stores the lane and its reason on the subtask, and emits `routeDecided`.
@@ -49,13 +70,10 @@ export class LaneRouter {
   async route(subtask: Subtask, proposed: Lane): Promise<RouteDecision> {
     const { store, emit, logger } = this.options;
     const bundleId = await this.bundleIdOf(subtask);
-    const decision = await this.decide(subtask, bundleId);
-    store.updateSubtask(subtask.id, {
-      lane: decision.lane,
-      routeReason: decision.reason,
-      // The app the planner named, resolved, so the lane knows which app to work in.
-      ...(bundleId !== undefined && !subtask.target ? { target: { bundleId } } : {}),
-    });
+    const decision = await this.claim(subtask, bundleId, await this.decide(subtask, bundleId));
+    // The app the planner named, resolved, and the window the subtask got, so the lane knows where to work.
+    const target = decision.target ?? (bundleId !== undefined && !subtask.target ? { bundleId } : undefined);
+    store.updateSubtask(subtask.id, { lane: decision.lane, routeReason: decision.reason, ...(target ? { target } : {}) });
     logger.info("router.decided", {
       taskId: subtask.taskId,
       subtaskId: subtask.id,
@@ -63,6 +81,8 @@ export class LaneRouter {
       proposed,
       lane: decision.lane,
       reason: decision.reason,
+      ...(decision.target?.windowId !== undefined ? { windowId: decision.target.windowId } : {}),
+      ...(decision.queued ? { queued: true } : {}),
     });
     emit("routeDecided", { taskId: subtask.taskId, subtaskId: subtask.id, lane: decision.lane, reason: decision.reason });
     return decision;
@@ -86,6 +106,21 @@ export class LaneRouter {
       throw new ProbeFailure(name, { kind: "unsupportedRequest" });
     }
     return bundleId;
+  }
+
+  /** A ghost or main subtask's cursor and window (check 4). */
+  private async claim(subtask: Subtask, bundleId: string | undefined, decision: RouteDecision): Promise<RouteDecision> {
+    const windows = this.options.windows;
+    if (!windows || bundleId === undefined || decision.lane === "helper") return decision;
+    const claim = await windows.claim(subtask, decision.lane, bundleId);
+    if (!claim.granted) return { lane: decision.lane, reason: claim.reason, queued: { wait: claim.wait } };
+    return {
+      lane: decision.lane,
+      reason: claim.reason ?? decision.reason,
+      target: claim.target,
+      ...(claim.lock ? { lock: claim.lock } : {}),
+      release: () => claim.hold.release(),
+    };
   }
 
   private async decide(subtask: Subtask, bundleId: string | undefined): Promise<RouteDecision> {
