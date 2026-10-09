@@ -2,17 +2,19 @@
 id: OBJ-14
 title: Mac app shell, permissions, and harness link
 product: mac
+assignee: Patrick
 touches: [harness]
 specs: [SPEC-01, SPEC-04]
 status: todo
 priority: p0
-depends-on: [OBJ-03]
+depends-on: [OBJ-01]
+integrates-with: [OBJ-03]
 tags: [objective, p0, mac]
 ---
 
 # OBJ-14 Mac app shell, permissions, and harness link
 
-**Product:** [Yumi for Mac](../mac/README.md) · **Also touches:** [harness](../harness/README.md) · **Specs:** [SPEC-01](../specs/01-voice-intake.md), [SPEC-04](../specs/04-cursor-presence.md)
+**Product:** [Yumi for Mac](../mac/README.md) · **Also touches:** [harness](../harness/README.md) · **Specs:** [SPEC-01](../specs/01-voice-intake.md), [SPEC-04](../specs/04-cursor-presence.md) · **Assignee:** Patrick
 
 ## Project context
 
@@ -33,18 +35,19 @@ Permission onboarding is the first thing users see, so it must be clear and frie
 
 - [mac/README.md](../mac/README.md) and [harness/README.md](../harness/README.md).
 - [SPEC-11](../specs/11-user-facing-errors.md), "Screen permission missing (Mac)", "Accessibility permission missing (Mac)", "Microphone permission missing", and "Unexpected".
-- [OBJ-03](OBJ-03-harness-skeleton.md) completion notes (socket path, RPC methods).
+- [OBJ-01](OBJ-01-task-record-schemas.md): the RPC contracts and the mock harness. Build against the mock; [OBJ-03](OBJ-03-harness-skeleton.md) (Brent) provides the real harness later.
 
 ## Tasks
 
 - [ ] **OBJ-14.1** Create the Xcode project in `mac/`: a Swift, SwiftUI and AppKit menu bar app, minimum macOS 15, using the generated Swift types from `protocol/`.
 - [ ] **OBJ-14.2** Menu bar item with Yumi's icon, a status line (ready, listening, working, paused), and menu entries for settings and quitting.
 - [ ] **OBJ-14.3** Permission onboarding for Microphone, Accessibility, and Screen Recording: explain in one plain sentence why each is needed, then show an "Open settings" button that opens the right System Settings pane. Detect when each is granted without restarting the app where macOS allows it.
-- [ ] **OBJ-14.4** Start the harness process and the local model server (or check it is running), restart the harness if it exits, and show a friendly state if the model is still loading.
+- [ ] **OBJ-14.4** Start the harness process (the mock harness from OBJ-01 until OBJ-03 is done) and the local model server (or check it is running), restart the harness if it exits, and show a friendly state if the model is still loading.
 - [ ] **OBJ-14.5** Connect to the harness's JSON-RPC socket, with reconnect. Subscribe to its event stream.
 - [ ] **OBJ-14.6** Map structured error kinds from the harness to the SPEC-11 copy and buttons in one place (an error presenter). Unknown kinds use the "Unexpected" copy.
 - [ ] **OBJ-14.7** Settings window: wake word on or off, push-to-talk shortcut, demo mode, and the visible cursor cap. Store them and send relevant ones to the harness.
-- [ ] **OBJ-14.8** Check light mode, dark mode, and every display scale for the menu, onboarding, and settings, and fix anything that looks off.
+- [ ] **OBJ-14.8** When [OBJ-03](OBJ-03-harness-skeleton.md) is done, switch from the mock harness to the real one and re-check the expectations.
+- [ ] **OBJ-14.9** Check light mode, dark mode, and every display scale for the menu, onboarding, and settings, and fix anything that looks off.
 
 ## Expectations
 

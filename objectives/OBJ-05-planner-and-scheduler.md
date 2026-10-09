@@ -2,17 +2,19 @@
 id: OBJ-05
 title: Planner, scheduler, and task summary
 product: harness
+assignee: Brent
 touches: []
 specs: [SPEC-02]
 status: todo
 priority: p0
 depends-on: [OBJ-03, OBJ-04]
+integrates-with: []
 tags: [objective, p0, harness]
 ---
 
 # OBJ-05 Planner, scheduler, and task summary
 
-**Product:** [Yumi Harness](../harness/README.md) · **Specs:** [SPEC-02](../specs/02-task-lifecycle.md)
+**Product:** [Yumi Harness](../harness/README.md) · **Specs:** [SPEC-02](../specs/02-task-lifecycle.md) · **Assignee:** Brent
 
 ## Project context
 

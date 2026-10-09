@@ -4,6 +4,8 @@ The brain-side runtime on the Mac.
 It runs the agent loop, owns all task state, plans goals into subtasks, routes subtasks to lanes, and talks to the local model, the Mac app, and the bridge.
 The model is stateless; everything that makes Yumi feel long-running and reliable lives here.
 
+Owner: Brent.
+
 Status: empty scaffold, nothing built yet.
 
 ## Responsibilities
@@ -57,4 +59,4 @@ Status: empty scaffold, nothing built yet.
 | [OBJ-07](../objectives/OBJ-07-lane-router-core.md) | Lane router core | todo |
 | [OBJ-08](../objectives/OBJ-08-locks-busy-windows-cap.md) | Window locks, busy windows, and cursor cap | todo |
 | [OBJ-09](../objectives/OBJ-09-ghost-handoff.md) | Ghost handoff | todo |
-| [OBJ-21](../objectives/OBJ-21-mac-bridge-client-and-pairing.md) | Mac bridge client and pairing | todo |
+| [OBJ-21](../objectives/OBJ-21-mac-bridge-client-and-pairing.md) | Mac bridge client and pairing (assigned to Jepoy) | todo |

@@ -3,6 +3,8 @@
 Yumi is a cat: playful, creative, and always moving around the screen the way a cat would.
 This product is the animated cat itself, a Rive file that both the Mac cursor and the Android app play.
 
+Owner: Patrick.
+
 Status: empty scaffold, nothing built yet.
 
 ## Responsibilities

@@ -2,17 +2,19 @@
 id: OBJ-20
 title: Window tiling with consent
 product: mac
-touches: [harness]
+assignee: Patrick
+touches: []
 specs: [SPEC-03]
 status: todo
 priority: p0
-depends-on: [OBJ-08, OBJ-18]
+depends-on: [OBJ-18, OBJ-27]
+integrates-with: [OBJ-08]
 tags: [objective, p0, mac, harness, ux]
 ---
 
 # OBJ-20 Window tiling with consent
 
-**Product:** [Yumi for Mac](../mac/README.md) · **Also touches:** [harness](../harness/README.md) · **Specs:** [SPEC-03](../specs/03-lane-routing.md)
+**Product:** [Yumi for Mac](../mac/README.md) · **Specs:** [SPEC-03](../specs/03-lane-routing.md) · **Assignee:** Patrick
 
 ## Project context
 
@@ -33,16 +35,17 @@ Yumi asks first, puts every window back afterward, and has a demo mode that tile
 ## Read first
 
 - [SPEC-03](../specs/03-lane-routing.md), requirements 14-16, the "Window tiling" scenarios, and Decisions.
-- [OBJ-08](OBJ-08-locks-busy-windows-cap.md) completion notes (which windows a task holds).
+- The `tilingSuggested` event and window service contracts from [OBJ-01](OBJ-01-task-record-schemas.md). Brent's [OBJ-08](OBJ-08-locks-busy-windows-cap.md) emits the event; use the mock harness to script it until then.
+- [OBJ-27](OBJ-27-mac-native-services.md) completion notes (window frames).
 
 ## Tasks
 
-- [ ] **OBJ-20.1** Harness: when a task is about to use more than one window at once, emit a `tilingSuggested` event listing the windows.
-- [ ] **OBJ-20.2** Mac: unless demo mode is on, ask "Want me to arrange your windows so you can watch all of us work?" by voice and in a panel with "Arrange windows" and "Leave them" buttons.
-- [ ] **OBJ-20.3** Mac: before moving anything, save each window's original position, size, and display.
-- [ ] **OBJ-20.4** Mac: tile with the Accessibility API (window position and size), in a grid on the display where the task started, so every task window is fully visible.
-- [ ] **OBJ-20.5** Mac: on "Leave them", move nothing. Ghosts keep working in covered windows.
-- [ ] **OBJ-20.6** Mac: restore every moved window when the task ends or is cancelled, including after a harness restart (keep the saved layout in the task store).
+- [ ] **OBJ-20.1** Handle the `tilingSuggested` event from the harness (scripted with the mock harness until OBJ-08 is done).
+- [ ] **OBJ-20.2** Unless demo mode is on, ask "Want me to arrange your windows so you can watch all of us work?" by voice and in a panel with "Arrange windows" and "Leave them" buttons.
+- [ ] **OBJ-20.3** Before moving anything, save each window's original position, size, and display.
+- [ ] **OBJ-20.4** Tile with the window services from OBJ-27 (window position and size through the Accessibility API), in a grid on the display where the task started, so every task window is fully visible.
+- [ ] **OBJ-20.5** On "Leave them", move nothing. Ghosts keep working in covered windows.
+- [ ] **OBJ-20.6** Restore every moved window when the task ends or is cancelled, including after an app or harness restart (keep the saved layout in the Mac app's own storage).
 - [ ] **OBJ-20.7** Demo mode setting (from [OBJ-14](OBJ-14-mac-app-shell.md)), off by default: tile without asking.
 - [ ] **OBJ-20.8** Check the layout looks clean with 2, 3, and 4 windows, on a laptop display and an external display, and fix gaps or overlaps.
 
@@ -54,7 +57,7 @@ Yumi asks first, puts every window back afterward, and has a demo mode that tile
 
 ## Outcomes
 
-- The tiling suggestion event, the consent panel, tiling and restore on the Mac, and demo mode behavior.
+- The consent panel, tiling and restore on the Mac, and demo mode behavior.
 
 ## Out of scope
 

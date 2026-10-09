@@ -2,17 +2,19 @@
 id: OBJ-19
 title: Rive cat cursor
 product: mac
+assignee: Patrick
 touches: [character]
 specs: [SPEC-04]
 status: todo
 priority: p0
 depends-on: [OBJ-10, OBJ-18]
+integrates-with: []
 tags: [objective, p0, mac, ux, character]
 ---
 
 # OBJ-19 Rive cat cursor
 
-**Product:** [Yumi for Mac](../mac/README.md) · **Also touches:** [character](../character/README.md) · **Specs:** [SPEC-04](../specs/04-cursor-presence.md)
+**Product:** [Yumi for Mac](../mac/README.md) · **Also touches:** [character](../character/README.md) · **Specs:** [SPEC-04](../specs/04-cursor-presence.md) · **Assignee:** Patrick
 
 ## Project context
 

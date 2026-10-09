@@ -2,17 +2,19 @@
 id: OBJ-09
 title: Ghost handoff
 product: harness
+assignee: Brent
 touches: [mac]
 specs: [SPEC-03]
 status: todo
 priority: p0
 depends-on: [OBJ-06, OBJ-08]
+integrates-with: []
 tags: [objective, p0, harness, gui]
 ---
 
 # OBJ-09 Ghost handoff
 
-**Product:** [Yumi Harness](../harness/README.md) · **Also touches:** [mac](../mac/README.md) · **Specs:** [SPEC-03](../specs/03-lane-routing.md)
+**Product:** [Yumi Harness](../harness/README.md) · **Also touches:** [mac](../mac/README.md) · **Specs:** [SPEC-03](../specs/03-lane-routing.md) · **Assignee:** Brent
 
 ## Project context
 

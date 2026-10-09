@@ -2,17 +2,19 @@
 id: OBJ-15
 title: Mac voice intake
 product: mac
+assignee: Patrick
 touches: []
 specs: [SPEC-01]
 status: todo
 priority: p0
-depends-on: [OBJ-11, OBJ-14]
+depends-on: [OBJ-14]
+integrates-with: [OBJ-11]
 tags: [objective, p0, mac, voice]
 ---
 
 # OBJ-15 Mac voice intake
 
-**Product:** [Yumi for Mac](../mac/README.md) · **Specs:** [SPEC-01](../specs/01-voice-intake.md)
+**Product:** [Yumi for Mac](../mac/README.md) · **Specs:** [SPEC-01](../specs/01-voice-intake.md) · **Assignee:** Patrick
 
 ## Project context
 
@@ -33,14 +35,14 @@ Audio never leaves the Mac, and the native recognizer can never fall back to the
 ## Read first
 
 - [SPEC-01](../specs/01-voice-intake.md), requirements 1-3, 8, 9, and the "Push-to-talk on the Mac", "Taglish goal is transcribed locally", and "Audio stays on the device" scenarios.
-- [OBJ-11](OBJ-11-whisper-bake-off.md) results: which Whisper option and runtime to use on the Mac.
+- [OBJ-11](OBJ-11-whisper-bake-off.md) results (Jepoy), when available: which Whisper option and runtime to use on the Mac. Do not wait for them; start with the default below.
 - [SPEC-11](../specs/11-user-facing-errors.md), "Didn't catch speech".
 
 ## Tasks
 
 - [ ] **OBJ-15.1** Global push-to-talk: hold the shortcut from settings to record, release to stop. Works from any app.
 - [ ] **OBJ-15.2** Show the listening indicator whenever the microphone is on, and only then.
-- [ ] **OBJ-15.3** Integrate Whisper with the option and runtime chosen in OBJ-11 (WhisperKit or whisper.cpp), loading the model once and keeping it ready.
+- [ ] **OBJ-15.3** Integrate Whisper, loading the model once and keeping it ready. Start with large-v3-turbo on WhisperKit, behind a setting, and switch to OBJ-11's choice when it lands.
 - [ ] **OBJ-15.4** Integrate the native recognizer forced on-device: `SFSpeechRecognizer` with `requiresOnDeviceRecognition = true`, or SpeechAnalyzer on macOS 26. If on-device recognition is unavailable for the language, it must fail, never use the cloud.
 - [ ] **OBJ-15.5** Choose which recognizer runs: decide and document a rule (for example, a "I speak Taglish" setting that always uses Whisper, otherwise native first with Whisper as fallback). Record the decision in SPEC-01.
 - [ ] **OBJ-15.6** Send the transcript to the harness over RPC as a new goal (`submitGoal`), tagged with the source device.

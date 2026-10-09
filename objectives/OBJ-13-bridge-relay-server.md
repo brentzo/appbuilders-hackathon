@@ -2,17 +2,19 @@
 id: OBJ-13
 title: Bridge relay server
 product: bridge
+assignee: Jepoy
 touches: []
 specs: [SPEC-08]
 status: todo
 priority: p0
 depends-on: [OBJ-02]
+integrates-with: []
 tags: [objective, p0, bridge]
 ---
 
 # OBJ-13 Bridge relay server
 
-**Product:** [Yumi Bridge](../bridge/README.md) · **Specs:** [SPEC-08](../specs/08-device-bridge.md)
+**Product:** [Yumi Bridge](../bridge/README.md) · **Specs:** [SPEC-08](../specs/08-device-bridge.md) · **Assignee:** Jepoy
 
 ## Project context
 

@@ -3,6 +3,8 @@
 The native macOS app.
 It is everything the user sees and hears on the Mac, and every native capability the harness needs: microphone, speech, wake word, screen capture, accessibility, mouse and keyboard, and the cat cursors drawn over the screen.
 
+Owner: Patrick.
+
 Status: empty scaffold, nothing built yet.
 
 ## Responsibilities
@@ -51,5 +53,6 @@ Status: empty scaffold, nothing built yet.
 | [OBJ-18](../objectives/OBJ-18-cursor-overlay-and-motion.md) | Cursor overlay and motion | todo |
 | [OBJ-19](../objectives/OBJ-19-rive-cat-cursor.md) | Rive cat cursor | todo |
 | [OBJ-20](../objectives/OBJ-20-window-tiling.md) | Window tiling with consent | todo |
+| [OBJ-27](../objectives/OBJ-27-mac-native-services.md) | Mac native services for the harness | todo |
 
-Related: [OBJ-21](../objectives/OBJ-21-mac-bridge-client-and-pairing.md) (harness objective that includes the Mac pairing screen).
+Related: [OBJ-21](../objectives/OBJ-21-mac-bridge-client-and-pairing.md) (Jepoy's bridge client; its pairing screen and connection state are built here in OBJ-27).

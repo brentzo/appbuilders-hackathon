@@ -2,17 +2,19 @@
 id: OBJ-22
 title: Android app shell and foreground service
 product: android
+assignee: Brent
 touches: [character]
 specs: [SPEC-10, SPEC-08, SPEC-01]
 status: todo
 priority: p0
-depends-on: [OBJ-10]
+depends-on: []
+integrates-with: [OBJ-10]
 tags: [objective, p0, android]
 ---
 
 # OBJ-22 Android app shell and foreground service
 
-**Product:** [Yumi for Android](../android/README.md) · **Also touches:** [character](../character/README.md) · **Specs:** [SPEC-10](../specs/10-android-companion.md), [SPEC-08](../specs/08-device-bridge.md), [SPEC-01](../specs/01-voice-intake.md)
+**Product:** [Yumi for Android](../android/README.md) · **Also touches:** [character](../character/README.md) · **Specs:** [SPEC-10](../specs/10-android-companion.md), [SPEC-08](../specs/08-device-bridge.md), [SPEC-01](../specs/01-voice-intake.md) · **Assignee:** Brent
 
 ## Project context
 
@@ -41,7 +43,7 @@ Android only lets a background app stay alive this way, with a visible notificat
 ## Tasks
 
 - [ ] **OBJ-22.1** Create the Android project in `android/`: Kotlin, Jetpack Compose, minimum Android 12 (API 31), using the generated Kotlin types from `protocol/`.
-- [ ] **OBJ-22.2** Home screen with the Rive cat (Rive Android runtime, `character/yumi-cat.riv`) showing idle and listening states, a mic button, and a connection state line.
+- [ ] **OBJ-22.2** Home screen with the Rive cat (Rive Android runtime, `character/yumi-cat.riv`) showing idle and listening states, a mic button, and a connection state line. Until Patrick's [OBJ-10](OBJ-10-yumi-cat-v0.md) ships the file, use a static placeholder image and swap it in later.
 - [ ] **OBJ-22.3** Foreground service with a persistent notification that shows Yumi's state and has a "Stop" action. Use type `specialUse` or `connectedDevice` for the bridge connection, never `dataSync` (it has a daily time limit on Android 15), plus `microphone` for the wake word. Verify against the current docs.
 - [ ] **OBJ-22.4** Permission onboarding for microphone and notifications: one plain sentence on why, then "Allow" and "Not now". Other permissions are asked only when a tool first needs them. If the app is in the background at that moment, post a notification explaining why, which opens the app to show the Android permission dialog.
 - [ ] **OBJ-22.5** Map structured error kinds to the SPEC-11 copy and buttons in one error presenter. Unknown kinds use the "Unexpected" copy.

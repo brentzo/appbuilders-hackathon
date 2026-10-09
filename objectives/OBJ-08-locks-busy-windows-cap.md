@@ -2,17 +2,19 @@
 id: OBJ-08
 title: Window locks, busy windows, and cursor cap
 product: harness
-touches: [mac]
+assignee: Brent
+touches: []
 specs: [SPEC-03]
 status: todo
 priority: p0
 depends-on: [OBJ-07]
+integrates-with: [OBJ-27]
 tags: [objective, p0, harness, gui]
 ---
 
 # OBJ-08 Window locks, busy windows, and cursor cap
 
-**Product:** [Yumi Harness](../harness/README.md) · **Also touches:** [mac](../mac/README.md) · **Specs:** [SPEC-03](../specs/03-lane-routing.md)
+**Product:** [Yumi Harness](../harness/README.md) · **Specs:** [SPEC-03](../specs/03-lane-routing.md) · **Assignee:** Brent
 
 ## Project context
 
@@ -40,11 +42,12 @@ At most 3 cursors are visible at once.
 
 - [ ] **OBJ-08.1** Store window locks in the task store with `windowId`, `subtaskId`, `lane`, `acquiredAt`, and `expiresAt`. Expired locks are released automatically so a crashed worker cannot block a window.
 - [ ] **OBJ-08.2** Acquire the lock as part of routing a `ghost` or `main` subtask, and release it when the subtask ends, fails, or hands off.
-- [ ] **OBJ-08.3** Add an RPC request to the Mac app, `openNewWindow(bundleId)`, which opens a new window of the app when the app supports it (for example a new Chrome window, Finder window, or email draft) and returns its window id, or says it cannot.
+- [ ] **OBJ-08.3** Call the Mac app's `openNewWindow(bundleId)`, which opens a new window of the app when the app supports it (for example a new Chrome window, Finder window, or email draft) and returns its window id, or says it cannot. Develop against the mock Mac app; Patrick implements it in [OBJ-27](OBJ-27-mac-native-services.md).
 - [ ] **OBJ-08.4** Busy window rule: if the target window is locked, try `openNewWindow` and route to the new window. If the app cannot, queue the subtask until the lock is released.
 - [ ] **OBJ-08.5** After a subtask has waited 2 minutes, emit a `waitingForWindow` event with the app name and the subtask, so the Mac app can say "I'm waiting for Keynote to be free before I add the chart. It should be quick."
 - [ ] **OBJ-08.6** Cursor cap: count visible cursors (main plus ghosts). If 3 are visible, queue new ghost-capable subtasks until one finishes. The cap comes from config.
-- [ ] **OBJ-08.7** Tests: lock acquire and release, lock expiry, second window path, waiting path, 2-minute notice, cap queueing.
+- [ ] **OBJ-08.7** When a task is about to use more than one window at once, emit a `tilingSuggested` event listing the windows. Patrick's [OBJ-20](OBJ-20-window-tiling.md) handles it in the Mac app.
+- [ ] **OBJ-08.8** Tests: lock acquire and release, lock expiry, second window path, waiting path, 2-minute notice, cap queueing.
 
 ## Expectations
 
@@ -54,7 +57,7 @@ At most 3 cursors are visible at once.
 
 ## Outcomes
 
-- Lock management, the `openNewWindow` RPC with a Mac implementation, the waiting notice event, and the cursor cap.
+- Lock management, the `openNewWindow` call, the waiting notice and tiling suggestion events, and the cursor cap.
 
 ## Out of scope
 

@@ -2,17 +2,19 @@
 id: OBJ-06
 title: Resume and limits
 product: harness
+assignee: Brent
 touches: []
 specs: [SPEC-02]
 status: todo
 priority: p0
 depends-on: [OBJ-04, OBJ-05]
+integrates-with: []
 tags: [objective, p0, harness]
 ---
 
 # OBJ-06 Resume and limits
 
-**Product:** [Yumi Harness](../harness/README.md) · **Specs:** [SPEC-02](../specs/02-task-lifecycle.md)
+**Product:** [Yumi Harness](../harness/README.md) · **Specs:** [SPEC-02](../specs/02-task-lifecycle.md) · **Assignee:** Brent
 
 ## Project context
 

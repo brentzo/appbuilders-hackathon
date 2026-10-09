@@ -3,6 +3,8 @@
 Shared contracts that every other product depends on.
 If two products exchange data, the shape of that data is defined here, once.
 
+Owner: Jepoy.
+
 Status: empty scaffold, nothing built yet.
 
 ## Responsibilities
@@ -13,6 +15,7 @@ Status: empty scaffold, nothing built yet.
 - **Local RPC schemas:** every method and event between the harness and the native apps.
 - **Bridge schemas:** the message envelope, and every message kind sent between devices: tool calls, delegated goals, progress, approvals, pause and cancel ([device-bridge](../docs/device-bridge.md)).
 - **Crypto rules:** pairing, key types, encryption, and signatures for bridge messages, plus a reference TypeScript implementation.
+- **Mock stand-ins:** a mock harness and a mock Mac app that answer every contract with example data, so each person can build without waiting for the others.
 - **Generated types:** TypeScript, Swift, and Kotlin types generated from the schemas, so no product hand-writes them.
 
 ## Not responsible for
@@ -44,6 +47,6 @@ Status: empty scaffold, nothing built yet.
 
 | ID | Objective | Status |
 |---|---|---|
-| [OBJ-01](../objectives/OBJ-01-task-record-schemas.md) | Task record and action schemas | in-progress |
+| [OBJ-01](../objectives/OBJ-01-task-record-schemas.md) | Task record schemas and cross-team contracts (assigned to Brent) | in-progress |
 | [OBJ-02](../objectives/OBJ-02-bridge-envelope-and-crypto.md) | Bridge envelope and end-to-end crypto | todo |
 | [OBJ-25](../objectives/OBJ-25-cross-device-messages.md) | Cross-device message kinds | todo |

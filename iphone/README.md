@@ -2,6 +2,8 @@
 
 The iPhone app, planned for after Android works end to end (priority p2).
 
+Owner: Brent.
+
 Status: empty scaffold, not started. No objectives yet.
 
 ## What it will be

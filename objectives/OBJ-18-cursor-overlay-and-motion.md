@@ -2,17 +2,19 @@
 id: OBJ-18
 title: Cursor overlay and motion
 product: mac
+assignee: Patrick
 touches: []
 specs: [SPEC-04]
 status: todo
 priority: p0
 depends-on: [OBJ-14]
+integrates-with: []
 tags: [objective, p0, mac, ux]
 ---
 
 # OBJ-18 Cursor overlay and motion
 
-**Product:** [Yumi for Mac](../mac/README.md) · **Specs:** [SPEC-04](../specs/04-cursor-presence.md)
+**Product:** [Yumi for Mac](../mac/README.md) · **Specs:** [SPEC-04](../specs/04-cursor-presence.md) · **Assignee:** Patrick
 
 ## Project context
 

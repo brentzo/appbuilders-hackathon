@@ -3,6 +3,8 @@
 Everything about choosing, testing, and producing the models Yumi runs on the devices.
 The apps load models; this product decides which ones, proves they are good enough, and produces custom ones such as the wake word.
 
+Owner: Jepoy.
+
 Status: empty scaffold, nothing built yet.
 
 ## Responsibilities

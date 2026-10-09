@@ -2,17 +2,19 @@
 id: OBJ-12
 title: "\"Hey Yumi\" wake word model"
 product: models
+assignee: Jepoy
 touches: [mac, android]
 specs: [SPEC-01]
 status: todo
 priority: p0
 depends-on: []
+integrates-with: []
 tags: [objective, p0, models, voice]
 ---
 
 # OBJ-12 "Hey Yumi" wake word model
 
-**Product:** [Yumi Models](../models/README.md) · **Also touches:** [mac](../mac/README.md), [android](../android/README.md) · **Specs:** [SPEC-01](../specs/01-voice-intake.md)
+**Product:** [Yumi Models](../models/README.md) · **Also touches:** [mac](../mac/README.md), [android](../android/README.md) · **Specs:** [SPEC-01](../specs/01-voice-intake.md) · **Assignee:** Jepoy
 
 ## Project context
 

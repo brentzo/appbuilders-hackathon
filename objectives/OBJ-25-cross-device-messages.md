@@ -2,17 +2,19 @@
 id: OBJ-25
 title: Cross-device message kinds
 product: protocol
+assignee: Jepoy
 touches: []
 specs: [SPEC-09, SPEC-06, SPEC-07, SPEC-08, SPEC-10]
 status: todo
 priority: p0
 depends-on: [OBJ-01, OBJ-02]
+integrates-with: []
 tags: [objective, p0, protocol, bridge]
 ---
 
 # OBJ-25 Cross-device message kinds
 
-**Product:** [Yumi Protocol](../protocol/README.md) · **Specs:** [SPEC-09](../specs/09-cross-device-routing.md), [SPEC-06](../specs/06-user-control.md), [SPEC-07](../specs/07-safety.md), [SPEC-08](../specs/08-device-bridge.md), [SPEC-10](../specs/10-android-companion.md)
+**Product:** [Yumi Protocol](../protocol/README.md) · **Specs:** [SPEC-09](../specs/09-cross-device-routing.md), [SPEC-06](../specs/06-user-control.md), [SPEC-07](../specs/07-safety.md), [SPEC-08](../specs/08-device-bridge.md), [SPEC-10](../specs/10-android-companion.md) · **Assignee:** Jepoy
 
 ## Project context
 

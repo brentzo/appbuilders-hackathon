@@ -2,17 +2,19 @@
 id: OBJ-10
 title: Yumi cat v0 in Rive
 product: character
+assignee: Patrick
 touches: [mac, android]
 specs: [SPEC-04]
 status: todo
 priority: p0
 depends-on: []
+integrates-with: []
 tags: [objective, p0, character, ux]
 ---
 
 # OBJ-10 Yumi cat v0 in Rive
 
-**Product:** [Yumi Character](../character/README.md) · **Also touches:** [mac](../mac/README.md), [android](../android/README.md) · **Specs:** [SPEC-04](../specs/04-cursor-presence.md)
+**Product:** [Yumi Character](../character/README.md) · **Also touches:** [mac](../mac/README.md), [android](../android/README.md) · **Specs:** [SPEC-04](../specs/04-cursor-presence.md) · **Assignee:** Patrick
 
 ## Project context
 

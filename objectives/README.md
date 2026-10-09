@@ -12,7 +12,7 @@ Every objective file has the same sections.
 
 | Section | Meaning |
 |---|---|
-| Frontmatter | `id`, `title`, `product`, `touches` (other products it changes), `specs`, `status`, `priority`, `depends-on`, `tags` |
+| Frontmatter | `id`, `title`, `product`, `assignee`, `touches` (other products it changes), `specs`, `status`, `priority`, `depends-on` (must be done first), `integrates-with` (connect to later; build against a stand-in until then), `tags` |
 | Project context | The same short brief about Yumi in every objective |
 | Why this objective | Where it fits and what it unlocks |
 | Read first | The specs, docs, and READMEs to read before starting |
@@ -21,6 +21,16 @@ Every objective file has the same sections.
 | Outcomes | The concrete things that exist when done: code, files, interfaces |
 | Out of scope | What not to do here, and where it belongs |
 | Completion notes | Filled in when done: what was built, where, decisions, and anything the next objective needs to know |
+
+## Owners
+
+Owners are assigned per product.
+
+| Owner | Products |
+|---|---|
+| Jepoy | bridge, models, protocol |
+| Patrick | character, mac |
+| Brent | android, iphone, harness |
 
 ## Status
 
@@ -36,7 +46,7 @@ Update the tables in this file and in the product README in the same commit.
 
 ## How to work an objective
 
-1. Pick a `todo` objective whose `depends-on` objectives are all `done`.
+1. Pick a `todo` objective assigned to you whose `depends-on` objectives are all `done`. Do not wait for `integrates-with` objectives; use the stand-in the objective names. Reassigning is fine; update `assignee` and the tables in the same commit.
 2. Read everything under "Read first".
 3. Set `status: in-progress` and commit.
 4. Work through the tasks in order and check each one off as it is done.
@@ -46,47 +56,92 @@ Update the tables in this file and in the product README in the same commit.
 
 ## Index
 
-| ID | Objective | Product | Specs | Depends on | Status |
-|---|---|---|---|---|---|
-| [OBJ-01](OBJ-01-task-record-schemas.md) | Task record and action schemas | protocol | 02, 03, 05, 07, 11 | - | in-progress |
-| [OBJ-02](OBJ-02-bridge-envelope-and-crypto.md) | Bridge envelope and end-to-end crypto | protocol | 08 | - | todo |
-| [OBJ-03](OBJ-03-harness-skeleton.md) | Harness skeleton and local model client | harness | 02 | 01 | todo |
-| [OBJ-04](OBJ-04-task-store.md) | Task store and history | harness | 02 | 01, 03 | todo |
-| [OBJ-05](OBJ-05-planner-and-scheduler.md) | Planner, scheduler, and task summary | harness | 02 | 03, 04 | todo |
-| [OBJ-06](OBJ-06-resume-and-limits.md) | Resume and limits | harness | 02 | 04, 05 | todo |
-| [OBJ-07](OBJ-07-lane-router-core.md) | Lane router core | harness | 03 | 01, 04 | todo |
-| [OBJ-08](OBJ-08-locks-busy-windows-cap.md) | Window locks, busy windows, and cursor cap | harness | 03 | 07 | todo |
-| [OBJ-09](OBJ-09-ghost-handoff.md) | Ghost handoff | harness | 03 | 06, 08 | todo |
-| [OBJ-10](OBJ-10-yumi-cat-v0.md) | Yumi cat v0 in Rive | character | 04 | - | todo |
-| [OBJ-11](OBJ-11-whisper-bake-off.md) | Whisper bake-off | models | 01 | - | todo |
-| [OBJ-12](OBJ-12-hey-yumi-wake-word.md) | "Hey Yumi" wake word model | models | 01 | - | todo |
-| [OBJ-13](OBJ-13-bridge-relay-server.md) | Bridge relay server | bridge | 08 | 02 | todo |
-| [OBJ-14](OBJ-14-mac-app-shell.md) | Mac app shell, permissions, and harness link | mac | 01, 04 | 03 | todo |
-| [OBJ-15](OBJ-15-mac-voice-intake.md) | Mac voice intake | mac | 01 | 11, 14 | todo |
-| [OBJ-16](OBJ-16-mac-wake-word.md) | Mac wake word | mac | 01 | 12, 15 | todo |
-| [OBJ-17](OBJ-17-goal-confirmation.md) | Goal confirmation loop | mac | 01 | 04, 15, 18 | todo |
-| [OBJ-18](OBJ-18-cursor-overlay-and-motion.md) | Cursor overlay and motion | mac | 04 | 14 | todo |
-| [OBJ-19](OBJ-19-rive-cat-cursor.md) | Rive cat cursor | mac | 04 | 10, 18 | todo |
-| [OBJ-20](OBJ-20-window-tiling.md) | Window tiling with consent | mac | 03 | 08, 18 | todo |
-| [OBJ-21](OBJ-21-mac-bridge-client-and-pairing.md) | Mac bridge client and pairing | harness | 08 | 02, 13, 14 | todo |
-| [OBJ-22](OBJ-22-android-app-shell.md) | Android app shell and foreground service | android | 10, 08, 01 | 10 | todo |
-| [OBJ-23](OBJ-23-android-bridge-client.md) | Android bridge client and pairing | android | 08 | 02, 13, 22 | todo |
-| [OBJ-24](OBJ-24-android-voice-intake.md) | Android voice intake and wake word | android | 01, 10 | 12, 22 | todo |
-| [OBJ-25](OBJ-25-cross-device-messages.md) | Cross-device message kinds | protocol | 09, 06, 07, 08, 10 | 01, 02 | todo |
-| [OBJ-26](OBJ-26-gui-smoke-test.md) | Qwen3.5-9B smoke test on the demo tasks | models | 05 | - | todo |
+| ID | Objective | Product | Assignee | Specs | Depends on | Integrates with | Status |
+|---|---|---|---|---|---|---|---|
+| [OBJ-01](OBJ-01-task-record-schemas.md) | Task record schemas and cross-team contracts | protocol | Brent | 02, 03, 05, 07, 11 | - | - | in-progress |
+| [OBJ-02](OBJ-02-bridge-envelope-and-crypto.md) | Bridge envelope and end-to-end crypto | protocol | Jepoy | 08 | - | - | todo |
+| [OBJ-03](OBJ-03-harness-skeleton.md) | Harness skeleton and local model client | harness | Brent | 02 | 01 | - | todo |
+| [OBJ-04](OBJ-04-task-store.md) | Task store and history | harness | Brent | 02 | 01, 03 | - | todo |
+| [OBJ-05](OBJ-05-planner-and-scheduler.md) | Planner, scheduler, and task summary | harness | Brent | 02 | 03, 04 | - | todo |
+| [OBJ-06](OBJ-06-resume-and-limits.md) | Resume and limits | harness | Brent | 02 | 04, 05 | - | todo |
+| [OBJ-07](OBJ-07-lane-router-core.md) | Lane router core | harness | Brent | 03 | 01, 04 | 27 | todo |
+| [OBJ-08](OBJ-08-locks-busy-windows-cap.md) | Window locks, busy windows, and cursor cap | harness | Brent | 03 | 07 | 27 | todo |
+| [OBJ-09](OBJ-09-ghost-handoff.md) | Ghost handoff | harness | Brent | 03 | 06, 08 | - | todo |
+| [OBJ-10](OBJ-10-yumi-cat-v0.md) | Yumi cat v0 in Rive | character | Patrick | 04 | - | - | todo |
+| [OBJ-11](OBJ-11-whisper-bake-off.md) | Whisper bake-off | models | Jepoy | 01 | - | - | todo |
+| [OBJ-12](OBJ-12-hey-yumi-wake-word.md) | "Hey Yumi" wake word model | models | Jepoy | 01 | - | - | todo |
+| [OBJ-13](OBJ-13-bridge-relay-server.md) | Bridge relay server | bridge | Jepoy | 08 | 02 | - | todo |
+| [OBJ-14](OBJ-14-mac-app-shell.md) | Mac app shell, permissions, and harness link | mac | Patrick | 01, 04 | 01 | 03 | todo |
+| [OBJ-15](OBJ-15-mac-voice-intake.md) | Mac voice intake | mac | Patrick | 01 | 14 | 11 | todo |
+| [OBJ-16](OBJ-16-mac-wake-word.md) | Mac wake word | mac | Patrick | 01 | 15 | 12 | todo |
+| [OBJ-17](OBJ-17-goal-confirmation.md) | Goal confirmation loop | mac | Patrick | 01 | 04, 15, 18 | - | todo |
+| [OBJ-18](OBJ-18-cursor-overlay-and-motion.md) | Cursor overlay and motion | mac | Patrick | 04 | 14 | - | todo |
+| [OBJ-19](OBJ-19-rive-cat-cursor.md) | Rive cat cursor | mac | Patrick | 04 | 10, 18 | - | todo |
+| [OBJ-20](OBJ-20-window-tiling.md) | Window tiling with consent | mac | Patrick | 03 | 18, 27 | 08 | todo |
+| [OBJ-21](OBJ-21-mac-bridge-client-and-pairing.md) | Mac bridge client and pairing | harness | Jepoy | 08 | 02, 13 | 03, 27 | todo |
+| [OBJ-22](OBJ-22-android-app-shell.md) | Android app shell and foreground service | android | Brent | 10, 08, 01 | - | 10 | todo |
+| [OBJ-23](OBJ-23-android-bridge-client.md) | Android bridge client and pairing | android | Brent | 08 | 02, 13, 22 | - | todo |
+| [OBJ-24](OBJ-24-android-voice-intake.md) | Android voice intake and wake word | android | Brent | 01, 10 | 22 | 12 | todo |
+| [OBJ-25](OBJ-25-cross-device-messages.md) | Cross-device message kinds | protocol | Jepoy | 09, 06, 07, 08, 10 | 01, 02 | - | todo |
+| [OBJ-26](OBJ-26-gui-smoke-test.md) | Qwen3.5-9B smoke test on the demo tasks | models | Jepoy | 05 | - | - | todo |
+| [OBJ-27](OBJ-27-mac-native-services.md) | Mac native services for the harness | mac | Patrick | 03, 08 | 14 | 07, 08, 21 | todo |
+
+## Priority and blocking
+
+How the work is split so nobody waits on someone else:
+
+- **Contracts first.** [OBJ-01](OBJ-01-task-record-schemas.md) defines every interface between people's work and ships a mock harness and a mock Mac app. It is the top priority, and Brent does it first.
+- **Build against stand-ins.** `integrates-with` lists work you connect to later, not work you wait for. Until it is done, use the stand-in named in the objective: the mock harness or mock Mac app, Whisper large-v3-turbo, an openWakeWord pre-trained model, or a placeholder cat.
+- **Each person writes code only in their own product.** Native Mac services for the harness and the bridge client live in Patrick's [OBJ-27](OBJ-27-mac-native-services.md).
+
+Ranked by how many objectives each one holds up through hard dependencies:
+
+| Rank | Objective | Assignee | Holds up (hard) | Holds up another person |
+|---|---|---|---|---|
+| 1 | OBJ-01 Task record schemas and cross-team contracts | Brent | 16 | Jepoy, Patrick |
+| 2 | OBJ-03 Harness skeleton and local model client | Brent | 7 | Patrick |
+| 3 | OBJ-14 Mac app shell, permissions, and harness link | Patrick | 7 | No |
+| 4 | OBJ-04 Task store and history | Brent | 6 | Patrick |
+| 5 | OBJ-02 Bridge envelope and end-to-end crypto | Jepoy | 4 | Brent |
+| 6 | OBJ-18 Cursor overlay and motion | Patrick | 3 | No |
+| 7 | OBJ-05 Planner, scheduler, and task summary | Brent | 2 | No |
+| 8 | OBJ-07 Lane router core | Brent | 2 | No |
+| 9 | OBJ-13 Bridge relay server | Jepoy | 2 | Brent |
+| 10 | OBJ-15 Mac voice intake | Patrick | 2 | No |
+| 11 | OBJ-22 Android app shell and foreground service | Brent | 2 | No |
+| 12 | OBJ-06 Resume and limits | Brent | 1 | No |
+| 13 | OBJ-08 Window locks, busy windows, and cursor cap | Brent | 1 | No |
+| 14 | OBJ-10 Yumi cat v0 in Rive | Patrick | 1 | No |
+| 15 | OBJ-27 Mac native services for the harness | Patrick | 1 | No |
+
+Hard dependencies that cross between people (everything else is within one person's queue):
+
+- OBJ-01 (Brent) before OBJ-14 (Patrick)
+- OBJ-04 (Brent) before OBJ-17 (Patrick)
+- OBJ-02 (Jepoy) before OBJ-23 (Brent)
+- OBJ-13 (Jepoy) before OBJ-23 (Brent)
+- OBJ-01 (Brent) before OBJ-25 (Jepoy)
+
+Workload:
+
+| Person | Objectives | Count |
+|---|---|---|
+| Brent | 01, 03, 04, 05, 06, 07, 08, 09, 22, 23, 24 | 11 |
+| Patrick | 10, 14, 15, 16, 17, 18, 19, 20, 27 | 9 |
+| Jepoy | 02, 11, 12, 13, 21, 25, 26 | 7 |
 
 ## Suggested order
 
-Objectives in the same wave can run in parallel.
+Waves come from hard dependencies only. Each person works their column top to bottom; objectives in the same row can run in parallel.
 
-| Wave | Objectives |
-|---|---|
-| 1 | OBJ-01, OBJ-02, OBJ-10, OBJ-11, OBJ-12, OBJ-26 |
-| 2 | OBJ-03, OBJ-13, OBJ-22, OBJ-25 |
-| 3 | OBJ-04, OBJ-14, OBJ-23, OBJ-24 |
-| 4 | OBJ-05, OBJ-07, OBJ-15, OBJ-18, OBJ-21 |
-| 5 | OBJ-06, OBJ-08, OBJ-16, OBJ-17, OBJ-19 |
-| 6 | OBJ-09, OBJ-20 |
+| Wave | Brent | Patrick | Jepoy |
+|---|---|---|---|
+| 1 | OBJ-01, OBJ-22 | OBJ-10 | OBJ-02, OBJ-11, OBJ-12, OBJ-26 |
+| 2 | OBJ-03, OBJ-24 | OBJ-14 | OBJ-13, OBJ-25 |
+| 3 | OBJ-04, OBJ-23 | OBJ-15, OBJ-18, OBJ-27 | OBJ-21 |
+| 4 | OBJ-05, OBJ-07 | OBJ-16, OBJ-17, OBJ-19, OBJ-20 | - |
+| 5 | OBJ-06, OBJ-08 | - | - |
+| 6 | OBJ-09 | - | - |
 
 ## Not covered yet
 

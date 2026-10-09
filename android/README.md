@@ -6,6 +6,8 @@ It is built in two parts ([SPEC-10](../specs/10-android-companion.md)):
 - **Part A (p0), tool host and voice remote.** No model. The phone listens, runs a few phone-only jobs through Android intents, offers phone tools to the Mac, and delegates every other goal to the Mac ([SPEC-09](../specs/09-cross-device-routing.md)).
 - **Part B (p1), phone brain.** A local model on the phone decides phone or Mac, controls other apps through accessibility, and is the brain when the Mac is unreachable.
 
+Owner: Brent.
+
 Status: empty scaffold, nothing built yet.
 
 ## Devices

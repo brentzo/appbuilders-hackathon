@@ -2,17 +2,19 @@
 id: OBJ-17
 title: Goal confirmation loop
 product: mac
+assignee: Patrick
 touches: [harness]
 specs: [SPEC-01]
 status: todo
 priority: p0
 depends-on: [OBJ-04, OBJ-15, OBJ-18]
+integrates-with: []
 tags: [objective, p0, mac, harness, voice, ux]
 ---
 
 # OBJ-17 Goal confirmation loop
 
-**Product:** [Yumi for Mac](../mac/README.md) · **Also touches:** [harness](../harness/README.md) · **Specs:** [SPEC-01](../specs/01-voice-intake.md)
+**Product:** [Yumi for Mac](../mac/README.md) · **Also touches:** [harness](../harness/README.md) · **Specs:** [SPEC-01](../specs/01-voice-intake.md) · **Assignee:** Patrick
 
 ## Project context
 

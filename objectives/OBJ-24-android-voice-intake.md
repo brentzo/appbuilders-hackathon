@@ -2,17 +2,19 @@
 id: OBJ-24
 title: Android voice intake and wake word
 product: android
+assignee: Brent
 touches: []
 specs: [SPEC-01, SPEC-10]
 status: todo
 priority: p0
-depends-on: [OBJ-12, OBJ-22]
+depends-on: [OBJ-22]
+integrates-with: [OBJ-12]
 tags: [objective, p0, android, voice]
 ---
 
 # OBJ-24 Android voice intake and wake word
 
-**Product:** [Yumi for Android](../android/README.md) · **Specs:** [SPEC-01](../specs/01-voice-intake.md), [SPEC-10](../specs/10-android-companion.md)
+**Product:** [Yumi for Android](../android/README.md) · **Specs:** [SPEC-01](../specs/01-voice-intake.md), [SPEC-10](../specs/10-android-companion.md) · **Assignee:** Brent
 
 ## Project context
 
@@ -36,7 +38,7 @@ The transcript goes to a single entry point that the Part A routing objective wi
 
 - [SPEC-01](../specs/01-voice-intake.md), requirements 1, 2, 8-12, the "Listening modes" and "Voice intake on Android" scenarios, and "Wake word detector".
 - [SPEC-10](../specs/10-android-companion.md), Part A requirement 1 and the "English speech is transcribed on the phone" and "No on-device model for the language" scenarios.
-- [OBJ-12](OBJ-12-hey-yumi-wake-word.md) results (wake word files and threshold).
+- [OBJ-12](OBJ-12-hey-yumi-wake-word.md) results (Jepoy), when available. Do not wait for them; build with a stand-in model.
 - [OBJ-22](OBJ-22-android-app-shell.md) completion notes.
 
 ## Tasks
@@ -44,13 +46,13 @@ The transcript goes to a single entry point that the Part A routing objective wi
 - [ ] **OBJ-24.1** Mic button: tap to start, stop when the user stops speaking. Show the listening indicator only while the microphone is on.
 - [ ] **OBJ-24.2** Native recognizer with `SpeechRecognizer.createOnDeviceSpeechRecognizer`, English. Never use the default recognizer, which may use the cloud.
 - [ ] **OBJ-24.3** If the on-device recognizer has no model for the spoken language, show the SPEC-11 "Language not supported on this phone" copy with "Try again" and "Type instead". Never fall back to a cloud recognizer.
-- [ ] **OBJ-24.4** Wake word in the foreground service: ONNX Runtime for Android, `hey_yumi.onnx`, the feature models, and a Kotlin port of the audio feature step that matches the Python reference.
+- [ ] **OBJ-24.4** Wake word in the foreground service: ONNX Runtime for Android, the feature models, a wake word model, and a Kotlin port of the audio feature step that matches the Python reference. Until `hey_yumi.onnx` from OBJ-12 lands, use one of openWakeWord's pre-trained models (for example "hey jarvis") as a stand-in, then swap the file.
 - [ ] **OBJ-24.5** Keep audio before the wake word only in a short in-memory buffer, and discard it.
 - [ ] **OBJ-24.6** Respect the wake word setting: when off, do not open the microphone for detection.
 - [ ] **OBJ-24.7** Handle silence or unusable audio with the SPEC-11 "Didn't catch speech" copy and its "Try again" and "Type instead" buttons. "Type instead" opens a text box that accepts a goal the same way as speech.
-- [ ] **OBJ-24.10** Handle a missing microphone permission with the SPEC-11 "Microphone permission missing" copy.
 - [ ] **OBJ-24.8** Hand the transcript to a single `onGoal(text)` entry point that the Part A routing objective will connect (phone-only rule or delegate to the Mac). For now, show the transcript on screen.
 - [ ] **OBJ-24.9** Measure battery and CPU while idle-listening for an hour on the demo phone, and the miss and false-trigger rates in the app.
+- [ ] **OBJ-24.10** Handle a missing microphone permission with the SPEC-11 "Microphone permission missing" copy.
 
 ## Expectations
 

@@ -2,17 +2,19 @@
 id: OBJ-04
 title: Task store and history
 product: harness
+assignee: Brent
 touches: []
 specs: [SPEC-02]
 status: todo
 priority: p0
 depends-on: [OBJ-01, OBJ-03]
+integrates-with: []
 tags: [objective, p0, harness]
 ---
 
 # OBJ-04 Task store and history
 
-**Product:** [Yumi Harness](../harness/README.md) · **Specs:** [SPEC-02](../specs/02-task-lifecycle.md)
+**Product:** [Yumi Harness](../harness/README.md) · **Specs:** [SPEC-02](../specs/02-task-lifecycle.md) · **Assignee:** Brent
 
 ## Project context
 

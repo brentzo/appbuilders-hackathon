@@ -2,17 +2,19 @@
 id: OBJ-16
 title: Mac wake word
 product: mac
+assignee: Patrick
 touches: []
 specs: [SPEC-01]
 status: todo
 priority: p0
-depends-on: [OBJ-12, OBJ-15]
+depends-on: [OBJ-15]
+integrates-with: [OBJ-12]
 tags: [objective, p0, mac, voice]
 ---
 
 # OBJ-16 Mac wake word
 
-**Product:** [Yumi for Mac](../mac/README.md) · **Specs:** [SPEC-01](../specs/01-voice-intake.md)
+**Product:** [Yumi for Mac](../mac/README.md) · **Specs:** [SPEC-01](../specs/01-voice-intake.md) · **Assignee:** Patrick
 
 ## Project context
 
@@ -33,12 +35,12 @@ Audio before the wake word is never transcribed, stored, or sent anywhere.
 ## Read first
 
 - [SPEC-01](../specs/01-voice-intake.md), requirements 9-11, the "Listening modes" scenarios, and "Wake word detector".
-- [OBJ-12](OBJ-12-hey-yumi-wake-word.md) results: model files, feature models, threshold.
+- [OBJ-12](OBJ-12-hey-yumi-wake-word.md) results (Jepoy), when available: model files, feature models, threshold. Do not wait for them; build with a stand-in model.
 - The openWakeWord source for its audio feature pipeline. A community C++ port exists and may help.
 
 ## Tasks
 
-- [ ] **OBJ-16.1** Add ONNX Runtime to the Mac app and load `hey_yumi.onnx` plus openWakeWord's feature models.
+- [ ] **OBJ-16.1** Add ONNX Runtime to the Mac app and load openWakeWord's feature models plus a wake word model. Until `hey_yumi.onnx` from OBJ-12 lands, use one of openWakeWord's pre-trained models (for example "hey jarvis") as a stand-in, then swap the file.
 - [ ] **OBJ-16.2** Port the audio feature step (audio frames to features to embeddings) to Swift, matching the Python output on the same audio within a small tolerance.
 - [ ] **OBJ-16.3** Run detection on a continuous microphone stream with the threshold from OBJ-12. Keep audio only in a short rolling buffer in memory, and discard it.
 - [ ] **OBJ-16.4** On detection: play a short listening sound, turn on the listening indicator, and start the same capture path as push-to-talk, ending when the user stops speaking.

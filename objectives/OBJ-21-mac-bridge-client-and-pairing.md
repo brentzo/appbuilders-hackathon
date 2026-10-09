@@ -2,17 +2,19 @@
 id: OBJ-21
 title: Mac bridge client and pairing
 product: harness
-touches: [mac]
+assignee: Jepoy
+touches: []
 specs: [SPEC-08]
 status: todo
 priority: p0
-depends-on: [OBJ-02, OBJ-13, OBJ-14]
+depends-on: [OBJ-02, OBJ-13]
+integrates-with: [OBJ-03, OBJ-27]
 tags: [objective, p0, harness, mac, bridge]
 ---
 
 # OBJ-21 Mac bridge client and pairing
 
-**Product:** [Yumi Harness](../harness/README.md) · **Also touches:** [mac](../mac/README.md) · **Specs:** [SPEC-08](../specs/08-device-bridge.md)
+**Product:** [Yumi Harness](../harness/README.md) · **Specs:** [SPEC-08](../specs/08-device-bridge.md) · **Assignee:** Jepoy
 
 ## Project context
 
@@ -27,7 +29,8 @@ tags: [objective, p0, harness, mac, bridge]
 ## Why this objective
 
 The Mac's side of the bridge lives in the harness, because the harness shares the TypeScript crypto and types with the bridge.
-The Mac app only shows the pairing QR code and the connection state.
+The Mac app only shows the pairing QR code and the connection state; Patrick builds those screens in [OBJ-27](OBJ-27-mac-native-services.md).
+This objective is built as a self-contained module so it does not wait on the harness skeleton, then wired in.
 After this objective, the Mac can pair with a phone and exchange encrypted, signed messages with it.
 
 ## Read first
@@ -38,15 +41,16 @@ After this objective, the Mac can pair with a phone and exchange encrypted, sign
 
 ## Tasks
 
-- [ ] **OBJ-21.1** Harness: generate and store the Mac's device keys in the macOS Keychain (through the Mac app over RPC, or a Keychain library), never in plain files.
-- [ ] **OBJ-21.2** Harness: implement the Mac side of pairing from `pairing.md` and expose `startPairing`, `listPairedDevices`, and `unpair` over RPC.
-- [ ] **OBJ-21.3** Mac: pairing screen that shows the QR code from `startPairing`, then "Paired with <device name>" when done. Add "Unpair" in settings.
-- [ ] **OBJ-21.4** Harness: connect to the bridge over WebSocket, authenticate, and reconnect with backoff.
-- [ ] **OBJ-21.5** Harness: send and receive envelopes. Verify signatures and drop messages from unpaired or revoked devices, recording them in the local log.
-- [ ] **OBJ-21.6** Harness: at-most-once execution. Remember processed message ids and their results; on a duplicate, resend the stored result instead of running again.
-- [ ] **OBJ-21.7** Harness: never run an expired command. Surface `expired` and `targetOffline` events from the bridge to the task that sent the command, as structured errors.
-- [ ] **OBJ-21.8** Mac: show connection state (connected, reconnecting, offline) in the menu bar. Bridge failures use the SPEC-11 "Bridge down" and "Unpaired device" copy.
-- [ ] **OBJ-21.9** Tests against the deployed bridge with a test phone client: pairing, round trip, unknown device dropped, duplicate delivery, expiry, unpair.
+- [ ] **OBJ-21.1** Build the client as a self-contained module in `harness/src/bridge-client/` with its own tests, using the protocol types and reference crypto.
+- [ ] **OBJ-21.2** Generate the Mac's device keys and store them in the macOS Keychain through the Mac app's `storeSecret` and `loadSecret` (mock Mac app until OBJ-27 is done), never in plain files.
+- [ ] **OBJ-21.3** Implement the Mac side of pairing from `pairing.md` and expose `startPairing`, `listPairedDevices`, and `unpair` over RPC.
+- [ ] **OBJ-21.4** Connect to the bridge over WebSocket, authenticate, and reconnect with backoff.
+- [ ] **OBJ-21.5** Send and receive envelopes. Verify signatures and drop messages from unpaired or revoked devices, recording them in the local log.
+- [ ] **OBJ-21.6** At-most-once execution. Remember processed message ids and their results; on a duplicate, resend the stored result instead of running again.
+- [ ] **OBJ-21.7** Never run an expired command. Surface `expired` and `targetOffline` events from the bridge to the task that sent the command, as structured errors.
+- [ ] **OBJ-21.8** Emit `bridgeStateChanged` (connected, reconnecting, offline) and structured `userError` kinds for "Bridge down" and "Unpaired device". The Mac app shows them (OBJ-27).
+- [ ] **OBJ-21.9** When [OBJ-03](OBJ-03-harness-skeleton.md) is done, wire the module into the harness (coordinate with Brent) and expose its RPC methods on the harness socket.
+- [ ] **OBJ-21.10** Tests against the deployed bridge with a test phone client: pairing, round trip, unknown device dropped, duplicate delivery, expiry, unpair.
 
 ## Expectations
 
@@ -56,7 +60,7 @@ After this objective, the Mac can pair with a phone and exchange encrypted, sign
 
 ## Outcomes
 
-- The bridge client in the harness, pairing RPC methods, the Mac pairing screen, and connection state in the menu bar.
+- The bridge client module in the harness, pairing RPC methods, and connection state events.
 
 ## Out of scope
 

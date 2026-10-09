@@ -2,17 +2,19 @@
 id: OBJ-23
 title: Android bridge client and pairing
 product: android
+assignee: Brent
 touches: []
 specs: [SPEC-08]
 status: todo
 priority: p0
 depends-on: [OBJ-02, OBJ-13, OBJ-22]
+integrates-with: []
 tags: [objective, p0, android, bridge]
 ---
 
 # OBJ-23 Android bridge client and pairing
 
-**Product:** [Yumi for Android](../android/README.md) · **Specs:** [SPEC-08](../specs/08-device-bridge.md)
+**Product:** [Yumi for Android](../android/README.md) · **Specs:** [SPEC-08](../specs/08-device-bridge.md) · **Assignee:** Brent
 
 ## Project context
 

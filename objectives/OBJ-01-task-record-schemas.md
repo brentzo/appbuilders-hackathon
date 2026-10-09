@@ -1,18 +1,20 @@
 ---
 id: OBJ-01
-title: Task record and action schemas
+title: Task record schemas and cross-team contracts
 product: protocol
+assignee: Brent
 touches: []
 specs: [SPEC-02, SPEC-03, SPEC-05, SPEC-07, SPEC-11]
 status: in-progress
 priority: p0
 depends-on: []
+integrates-with: []
 tags: [objective, p0, protocol]
 ---
 
-# OBJ-01 Task record and action schemas
+# OBJ-01 Task record schemas and cross-team contracts
 
-**Product:** [Yumi Protocol](../protocol/README.md) · **Specs:** [SPEC-02](../specs/02-task-lifecycle.md), [SPEC-03](../specs/03-lane-routing.md), [SPEC-05](../specs/05-mac-gui-control.md), [SPEC-07](../specs/07-safety.md), [SPEC-11](../specs/11-user-facing-errors.md)
+**Product:** [Yumi Protocol](../protocol/README.md) · **Specs:** [SPEC-02](../specs/02-task-lifecycle.md), [SPEC-03](../specs/03-lane-routing.md), [SPEC-05](../specs/05-mac-gui-control.md), [SPEC-07](../specs/07-safety.md), [SPEC-11](../specs/11-user-facing-errors.md) · **Assignee:** Brent
 
 ## Project context
 
@@ -29,6 +31,7 @@ tags: [objective, p0, protocol]
 Every long-running behavior in Yumi depends on the task record: resuming after a crash, handing work between workers, routing to lanes, approvals, and the action log.
 The harness (TypeScript), the Mac app (Swift), and the Android app (Kotlin) all read and write these shapes, so they must be defined once, as JSON Schema, with generated types for each language.
 This is the first thing other objectives build on.
+It also defines every contract between people's work (harness and Mac app, harness and bridge client) and ships mock stand-ins, so Brent, Patrick, and Jepoy can each build against the contract without waiting for each other.
 
 ## Read first
 
@@ -62,6 +65,11 @@ This is the first thing other objectives build on.
 - [ ] **OBJ-01.13** Generate TypeScript, Swift, and Kotlin types with one command, and add a check that fails if generated files are out of date.
 - [ ] **OBJ-01.14** Add example JSON files for each schema and a test that validates every example.
 - [ ] **OBJ-01.15** Update `protocol/README.md` with the layout, the generate command, and how other products import the types.
+- [ ] **OBJ-01.16** Add the contracts the parallel work split relies on that OBJ-01.11 does not list yet, each with a schema and an example:
+  - Harness to Mac app: `listWindows`, `getWindowFrame`, `setWindowFrame` (window tiling and locks), and `storeSecret`, `loadSecret` (Keychain, used by the bridge client).
+  - Events from the harness: `tilingSuggested`, `waitingForWindow`, `interruptedTaskFound`, `bridgeStateChanged`, the goal confirmation prompt and the user's reply, and `userError` carrying an `ErrorKind`.
+- [ ] **OBJ-01.17** Build two mock stand-ins in `protocol/mocks/`: a **mock harness** that serves the local socket, answers every harness method with example data, and plays scripted event sequences; and a **mock Mac app** that answers every Mac-side method with example data. The Mac app is built against the mock harness, and the harness against the mock Mac app, until the real ones exist. Mocks return the same shapes as the real side, including errors.
+- [ ] **OBJ-01.18** Document how to run each mock and how to script an event sequence.
 
 ## Expectations
 
@@ -75,6 +83,8 @@ This is the first thing other objectives build on.
 - [ ] Every row of the SPEC-11 table has an `ErrorKind` value.
 - [ ] Generated types compile in TypeScript, Swift, and Kotlin, and unions come out as real sum types.
 - [ ] One command regenerates all types, and the out-of-date check runs in CI or a pre-commit step.
+- [ ] Every RPC method and event in OBJ-01.11 and OBJ-01.16 has a schema and a valid example.
+- [ ] A client can connect to the mock harness, call every method, and receive a scripted event sequence. The mock Mac app answers every Mac-side method.
 
 ## Outcomes
 
@@ -82,6 +92,7 @@ This is the first thing other objectives build on.
 - Generated types for TypeScript, Swift, and Kotlin, and the recorded generator choice.
 - Example files and a validation test.
 - An updated `protocol/README.md`.
+- All cross-team RPC contracts, and the mock harness and mock Mac app in `protocol/mocks/`.
 
 ## Out of scope
 

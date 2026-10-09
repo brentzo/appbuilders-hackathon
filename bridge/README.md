@@ -4,6 +4,8 @@ The relay server on our VPS that connects the Mac and the phone in both directio
 It only routes and stores encrypted messages.
 It can never read them.
 
+Owner: Jepoy.
+
 Status: empty scaffold, nothing built yet.
 
 ## Responsibilities

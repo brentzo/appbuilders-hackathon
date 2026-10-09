@@ -2,17 +2,19 @@
 id: OBJ-02
 title: Bridge envelope and end-to-end crypto
 product: protocol
+assignee: Jepoy
 touches: []
 specs: [SPEC-08]
 status: todo
 priority: p0
 depends-on: []
+integrates-with: []
 tags: [objective, p0, protocol, bridge, safety]
 ---
 
 # OBJ-02 Bridge envelope and end-to-end crypto
 
-**Product:** [Yumi Protocol](../protocol/README.md) · **Specs:** [SPEC-08](../specs/08-device-bridge.md)
+**Product:** [Yumi Protocol](../protocol/README.md) · **Specs:** [SPEC-08](../specs/08-device-bridge.md) · **Assignee:** Jepoy
 
 ## Project context
 
