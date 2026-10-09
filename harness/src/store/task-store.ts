@@ -289,51 +289,42 @@ export class TaskStore {
 
   /** Adds a subtask at the end of its task's plan. Its first status counts as a status change and emits one event. */
   addSubtask(input: NewSubtask): Subtask {
-    const status = input.status ?? "pending";
-    if (!INITIAL_SUBTASK_STATUSES.includes(status)) {
-      throw this.illegal(new IllegalTransitionError("subtask", input.id ?? "(new)", "(new)", status));
-    }
-    const subtask: Subtask = {
-      id: input.id ?? randomUUID(),
-      taskId: input.taskId,
-      title: input.title,
-      instruction: input.instruction,
-      dependsOn: input.dependsOn ?? [],
-      proposedLane: input.proposedLane,
-      ...optional("needsKeyboard", input.needsKeyboard),
-      ...optional("target", input.target),
-      status,
-      attempts: 0,
-    };
-    this.check("Subtask", subtask);
+    const subtask = this.newSubtask(input);
     const task = this.transaction(() => {
       const current = this.requireTask(input.taskId);
-      const plan = [...current.plan, subtask.id];
-      this.stmt(
-        `INSERT INTO subtasks (id, task_id, position, title, instruction, depends_on, proposed_lane, needs_keyboard, target, status,
-           attempts)
-         VALUES ($id, $taskId, $position, $title, $instruction, $dependsOn, $proposedLane, $needsKeyboard, $target, $status, 0)`,
-      ).run({
-        id: subtask.id,
-        taskId: subtask.taskId,
-        position: current.plan.length,
-        title: subtask.title,
-        instruction: subtask.instruction,
-        dependsOn: JSON.stringify(subtask.dependsOn),
-        proposedLane: subtask.proposedLane,
-        needsKeyboard: subtask.needsKeyboard === undefined ? null : Number(subtask.needsKeyboard),
-        target: json(subtask.target),
-        status: subtask.status,
-      });
-      this.stmt("UPDATE tasks SET plan = $plan, updated_at = $updatedAt WHERE id = $id").run({
-        id: current.id,
-        plan: JSON.stringify(plan),
-        updatedAt: this.now().toISOString(),
-      });
+      this.insertSubtasks(current, [subtask]);
       return current;
     });
     this.emit({ taskId: task.id, status: task.status, subtaskId: subtask.id, subtaskStatus: subtask.status });
     return subtask;
+  }
+
+  /**
+   * Saves a checked plan and starts the task (SPEC-02 r1): adds every subtask, in order, and moves the task from
+   * planning to running, in one transaction, so a crash never leaves half a plan. The task must be planning and
+   * have no subtasks yet. After the commit, emits one event for the task, then one per subtask.
+   */
+  savePlan(taskId: Uuid, subtasks: readonly Omit<NewSubtask, "taskId">[]): { task: Task; subtasks: Subtask[] } {
+    const created = subtasks.map((input) => this.newSubtask({ ...input, taskId }));
+    const task = this.transaction(() => {
+      const current = this.requireTask(taskId);
+      if (current.status !== "planning")
+        throw this.illegal(new IllegalTransitionError("task", taskId, current.status, "running"));
+      if (current.plan.length > 0) throw this.refuse("planAlreadySaved", `Task ${taskId} already has a plan`);
+      this.insertSubtasks(current, created);
+      const next: Task = { ...current, plan: created.map((s) => s.id), status: "running", updatedAt: this.now().toISOString() };
+      this.check("Task", next);
+      this.stmt("UPDATE tasks SET status = $status, updated_at = $updatedAt WHERE id = $id").run({
+        id: taskId,
+        status: next.status,
+        updatedAt: next.updatedAt,
+      });
+      return next;
+    });
+    this.emit({ taskId, status: task.status });
+    for (const subtask of created)
+      this.emit({ taskId, status: task.status, subtaskId: subtask.id, subtaskStatus: subtask.status });
+    return { task, subtasks: created };
   }
 
   getSubtask(id: Uuid): Subtask | undefined {
@@ -677,6 +668,57 @@ export class TaskStore {
     const row = this.stmt("SELECT * FROM steps WHERE id = ?").get(id) as StepRow | undefined;
     if (!row) throw this.refuse("unknownStep", `No step ${id}`);
     return row;
+  }
+
+  /** A new subtask record from its input, checked against the contract. Not written yet. */
+  private newSubtask(input: NewSubtask): Subtask {
+    const status = input.status ?? "pending";
+    if (!INITIAL_SUBTASK_STATUSES.includes(status)) {
+      throw this.illegal(new IllegalTransitionError("subtask", input.id ?? "(new)", "(new)", status));
+    }
+    const subtask: Subtask = {
+      id: input.id ?? randomUUID(),
+      taskId: input.taskId,
+      title: input.title,
+      instruction: input.instruction,
+      dependsOn: input.dependsOn ?? [],
+      proposedLane: input.proposedLane,
+      ...optional("needsKeyboard", input.needsKeyboard),
+      ...optional("target", input.target),
+      status,
+      attempts: 0,
+    };
+    this.check("Subtask", subtask);
+    return subtask;
+  }
+
+  /** Appends subtasks to a task's plan. Call inside a transaction. */
+  private insertSubtasks(task: Task, subtasks: readonly Subtask[]): void {
+    const plan = [...task.plan];
+    for (const subtask of subtasks) {
+      this.stmt(
+        `INSERT INTO subtasks (id, task_id, position, title, instruction, depends_on, proposed_lane, needs_keyboard, target, status,
+           attempts)
+         VALUES ($id, $taskId, $position, $title, $instruction, $dependsOn, $proposedLane, $needsKeyboard, $target, $status, 0)`,
+      ).run({
+        id: subtask.id,
+        taskId: subtask.taskId,
+        position: plan.length,
+        title: subtask.title,
+        instruction: subtask.instruction,
+        dependsOn: JSON.stringify(subtask.dependsOn),
+        proposedLane: subtask.proposedLane,
+        needsKeyboard: subtask.needsKeyboard === undefined ? null : Number(subtask.needsKeyboard),
+        target: json(subtask.target),
+        status: subtask.status,
+      });
+      plan.push(subtask.id);
+    }
+    this.stmt("UPDATE tasks SET plan = $plan, updated_at = $updatedAt WHERE id = $id").run({
+      id: task.id,
+      plan: JSON.stringify(plan),
+      updatedAt: this.now().toISOString(),
+    });
   }
 
   private writeSubtask(subtask: Subtask): Subtask {

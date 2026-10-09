@@ -12,7 +12,8 @@ import type { AddressInfo, Socket } from "node:net";
  * - an unhandled exception: 500 with Starlette's plain-text "Internal Server Error";
  * - a crashed server: the connection drops without an answer.
  * The success body's fields and the 422 body were checked against the real server on 2026-10-09.
- * Each request takes the next scripted reply and is recorded for assertions.
+ * Each request takes the next scripted reply and is recorded for assertions. When no reply is scripted, a responder
+ * set with `respond` answers instead, so tests with concurrent requests can answer each by what it asks.
  */
 
 export type MockReply =
@@ -31,13 +32,18 @@ export interface MockModelServer {
   /** Every request body received, in order. */
   requests: Record<string, unknown>[];
   reply(...replies: MockReply[]): void;
+  /** Answers every request that has no scripted reply. It may wait, to stand in for decoding time. */
+  respond(responder: MockResponder): void;
   close(): Promise<void>;
 }
+
+export type MockResponder = (body: Record<string, unknown>) => MockReply | Promise<MockReply>;
 
 export async function startMockModelServer(model = "mlx-community/Qwen3.5-9B-4bit"): Promise<MockModelServer> {
   const queue: MockReply[] = [];
   const requests: Record<string, unknown>[] = [];
   const sockets = new Set<Socket>();
+  let responder: MockResponder | undefined;
 
   const server: Server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
     if (req.method !== "POST" || (req.url !== "/v1/chat/completions" && req.url !== "/chat/completions")) {
@@ -45,7 +51,9 @@ export async function startMockModelServer(model = "mlx-community/Qwen3.5-9B-4bi
     }
     const body = JSON.parse(await readBody(req)) as Record<string, unknown>;
     requests.push(body);
-    const next = queue.shift() ?? { kind: "httpError", status: 500, detail: "Mock model server has no scripted reply" };
+    const next =
+      queue.shift() ??
+      (responder ? await responder(body) : { kind: "httpError", status: 500, detail: "Mock model server has no scripted reply" });
     switch (next.kind) {
       case "content":
         return send(res, 200, chatResponse(model, next.content, next.finishReason ?? "stop", null, next));
@@ -92,6 +100,9 @@ export async function startMockModelServer(model = "mlx-community/Qwen3.5-9B-4bi
     baseUrl: `http://127.0.0.1:${port}/v1`,
     requests,
     reply: (...replies) => queue.push(...replies),
+    respond: (next) => {
+      responder = next;
+    },
     close: () =>
       new Promise((resolve) => {
         for (const socket of sockets) socket.destroy();

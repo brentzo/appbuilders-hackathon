@@ -15,6 +15,11 @@ export interface ModelConfig {
   topK: number;
   /** Send the output schema as `response_format` so the server constrains decoding (SPEC-05 r10). */
   structuredOutput: boolean;
+  /**
+   * How many requests the server decodes at once, and so how many subtasks the scheduler runs at the same time.
+   * mlx-vlm decodes concurrent requests in one continuous batch; start it with `--max-num-seqs` set to this value.
+   */
+  parallelSlots: number;
 }
 
 export interface HarnessConfig {
@@ -37,12 +42,13 @@ export const DEFAULT_MODEL_CONFIG: ModelConfig = {
   topP: 0.8,
   topK: 20,
   structuredOutput: true,
+  parallelSlots: 3,
 };
 
 /**
  * Reads the configuration from environment variables, falling back to the defaults:
  * YUMI_SUPPORT_DIR, YUMI_MODEL_BASE_URL, YUMI_MODEL, YUMI_MODEL_TIMEOUT_MS, YUMI_MODEL_MAX_TOKENS,
- * and YUMI_MODEL_STRUCTURED_OUTPUT ("0" turns schema-constrained decoding off).
+ * YUMI_MODEL_STRUCTURED_OUTPUT ("0" turns schema-constrained decoding off), and YUMI_MODEL_PARALLEL_SLOTS.
  */
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): HarnessConfig {
   const supportDir = resolve(env["YUMI_SUPPORT_DIR"] || DEFAULT_SUPPORT_DIR);
@@ -57,6 +63,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): HarnessConfig 
       timeoutMs: positiveInteger(env, "YUMI_MODEL_TIMEOUT_MS", DEFAULT_MODEL_CONFIG.timeoutMs),
       maxTokens: positiveInteger(env, "YUMI_MODEL_MAX_TOKENS", DEFAULT_MODEL_CONFIG.maxTokens),
       structuredOutput: env["YUMI_MODEL_STRUCTURED_OUTPUT"] !== "0",
+      parallelSlots: positiveInteger(env, "YUMI_MODEL_PARALLEL_SLOTS", DEFAULT_MODEL_CONFIG.parallelSlots),
     },
   };
 }
