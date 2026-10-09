@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import { mkdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -102,19 +102,16 @@ describe("finding files an app wrote (OBJ-36.8)", () => {
   beforeEach(() => (dir = tempDir()));
   afterEach(() => dir.cleanup());
 
-  const settle = () => new Promise((resolve) => setTimeout(resolve, 300));
-
   it("reports new and changed files in the home folder once, and never Library, hidden files, or files that are gone", async () => {
     const home = dir.path;
-    for (const folder of ["Downloads", "Documents/Deck.key/Data", "Library/Caches", ".config"])
+    for (const folder of ["Downloads", "Documents", "Library/Caches", ".config"])
       mkdirSync(join(home, folder), { recursive: true });
     writeFileSync(join(home, "Documents", "Old notes.txt"), "old");
-    // Made yesterday: on macOS, moving the modification time back moves the creation time with it.
-    const yesterday = new Date(Date.now() - 86_400_000);
-    utimesSync(join(home, "Documents", "Old notes.txt"), yesterday, yesterday);
-    await settle();
+    // Let its creation time fall outside the watcher slack; POSIX filesystems do not let utimes backdate birthtime.
+    await new Promise((resolve) => setTimeout(resolve, 1100));
     const watch = await watchHome(home, new MemoryLogger());
     try {
+      mkdirSync(join(home, "Documents", "Deck.key", "Data"), { recursive: true });
       writeFileSync(join(home, "Downloads", "Q3 Report.pdf"), "%PDF-");
       writeFileSync(join(home, "Documents", "Deck.key", "Data", "image.jpg"), "jpg");
       writeFileSync(join(home, "Documents", "Old notes.txt"), "changed");
