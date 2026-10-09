@@ -30,7 +30,7 @@ Deleting is allowed only with a strict confirmation, screen content can never gi
 
 2. Secret locations are `~/.ssh`, `~/.gnupg`, `~/.aws`, `~/Library/Keychains`, and browser profile folders.
 3. Yumi has no free-form shell or AppleScript. File work goes through typed tools only: `read_file`, `list_dir`, `write_new_file`, `copy`, `move`, `open`, and `move_to_trash`. The harness checks every call.
-4. `copy` and `move` never replace an existing file. If a name is taken, the new file gets a numbered name.
+4. `copy` and `move` never replace an existing file. If a name is taken, the new file gets a numbered name. Names are compared without regard to case, because Mac volumes are case-insensitive by default: `Report.pdf` takes the name `report.pdf`.
 5. A blocked action never runs, even if the user says yes. Yumi says "I can't do that. It's blocked to keep your Mac safe, so I skipped it. Want me to keep going with the rest?" with "Keep going" and "Stop" buttons.
 6. Risk is read from the action itself:
    - For accessibility actions, from the element's label. "Send", "Delete", and "Move to Trash" ask. "Empty Trash", "Buy", "Pay", and "Install" are blocked.

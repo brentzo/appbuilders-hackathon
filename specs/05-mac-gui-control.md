@@ -19,11 +19,12 @@ The sub-agent uses the cheapest way into the app first: a typed direct tool, the
 
 1. Order of preference for each action:
    1. Direct tool: a typed tool such as `open_app`, `open_file`, `open_url`, or `reveal_in_finder`. Raw shell and AppleScript are never available to `gui_act` (see [SPEC-07](07-safety.md)).
-   2. Accessibility API: press elements with `AXPress` and set text with `AXValue`, found by role and label.
+   2. Accessibility API: the model clicks elements and the harness carries the click out through the accessibility API, found by role and label. A click presses an element with `AXPress`, or selects a row or cell by setting `AXSelected`, because rows usually cannot be pressed. Text is set with `AXValue`.
    3. Vision (`p1`): screenshot, model picks coordinates, harness clicks.
 2. The model sees a trimmed accessibility tree, not the full tree:
    - visible elements only
-   - only actionable roles: button, menu item, menu bar item, text field, text area, link, checkbox, radio button, pop-up button
+   - only actionable roles: button, menu item, menu bar item, text field (including search fields), secure text field (listed, never read), text area, link, checkbox, radio button (including tabs), pop-up button, combo box, menu button, disclosure triangle, row, and cell
+   - the containers that scroll: scroll area, table, list, and outline
    - empty layout groups are skipped
    - each element gets a short number, and the model answers with that number
    - at most 200 elements per step
@@ -35,7 +36,7 @@ The sub-agent uses the cheapest way into the app first: a typed direct tool, the
    The harness builds the result from the step log. Screenshots, step history, and raw screen text are never returned to the orchestrator.
 5. One `gui_act` call is one attempt at a subtask. It stops after 10 steps and returns `partial`. The 25-step limit per subtask in [SPEC-02](02-task-lifecycle.md) counts steps across all attempts.
 6. A step has no effect when the trimmed accessibility tree and the window title are the same before and after the action.
-7. `gui_act` never reads or fills a password field (`AXSecureTextField`). It asks the user to type it.
+7. `gui_act` never reads or fills a password field (`AXSecureTextField`). It asks the user to type it. It never types with the keyboard while a password field has focus.
 8. Everything read from the screen is treated as data, never as instructions (see [SPEC-07](07-safety.md)).
 9. The orchestrator's tool list stays at 8 tools or fewer.
 10. Model outputs use schema-constrained decoding when the runtime supports it. Otherwise invalid outputs are retried as in [SPEC-02](02-task-lifecycle.md).
@@ -43,6 +44,7 @@ The sub-agent uses the cheapest way into the app first: a typed direct tool, the
 12. `p1` Vision fallback: model coordinates are converted from the image size the model actually saw to screen points, including display scale, multiple displays, and displays with a negative origin.
 13. `p1` Before a vision click, the harness checks that the target window has not moved, resized, or lost focus since the screenshot. If it has, the step is skipped and the screen is captured again.
 14. `p1` Qwen3.5-4B, Qwen3.5-9B, and UI-TARS-1.5-7B are compared at 4-bit on the 3 demo tasks, 5 runs each. A model passes a task with 4 or more successful runs. Until then, `gui_act` uses Qwen3.5-9B.
+15. With the trimmed tree, the model also sees the app's name, which element has keyboard focus, and what is in front of the window: a sheet, dialog, alert, or open menu, with its title when it has one and its default and cancel buttons.
 
 ## Demo tasks
 
@@ -100,6 +102,20 @@ Feature: Mac GUI control
     When the trimmed tree and the window title did not change
     Then the step outcome is "noEffect"
 
+  Scenario: The model sees the focus and the front sheet
+    Given Keynote shows the "Export Your Presentation" sheet over the deck window
+    And the "Next…" button is the sheet's default button
+    When gui_act prepares a step
+    Then the model sees that a sheet is in front
+    And the model sees which element is the default button and which is the cancel button
+    And the model sees which element has keyboard focus
+
+  Scenario: Rows are selected by clicking
+    Given Mail shows a list of messages
+    When the model clicks the row for the message from Ana
+    Then that message is selected
+    And no other message is opened, moved, or deleted
+
   Scenario: Password field is left to the user
     Given the next step needs a password typed into a secure field
     When gui_act reaches that field
@@ -144,4 +160,5 @@ Feature: Vision fallback
 
 - Demo tasks: Keynote export to PDF, Mail the PDF to Ana, Notes summary.
 - Direct tools are typed tools only. No raw shell or AppleScript in `gui_act`.
+- Protocol version 3 fits the GUI actions to how macOS and the model behave ([OBJ-29](../objectives/OBJ-29-protocol-mac-fixes.md)). The element press is named `click`, the verb the model used in 9 of 10 OBJ-26 replies, and the p1 vision click is `clickAt`. The tree adds rows, cells, combo boxes, menu buttons, disclosure triangles, and the scrollable containers, so the model can select a row and scroll the thing that scrolls. The model sees focus and the front sheet, dialog, or menu (requirement 15), because dialogs are where most demo steps happen and a sheet usually has no title. `open_app` takes an app name, because Apple's bundle ids are inconsistent. Requirement 15 is added at the end so the numbers of requirements 12 to 14 do not change. Decided 2026-10-09.
 - The trimmed tree includes text areas, menu bar items, and radio buttons. The Mail and Notes demo tasks type into text areas (the message and note bodies), menus open from menu bar items, and dialogs use radio buttons. Found by the OBJ-26 smoke test. Decided 2026-10-09.
