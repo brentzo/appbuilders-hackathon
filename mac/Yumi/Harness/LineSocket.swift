@@ -102,13 +102,17 @@ nonisolated final class LineSocket: @unchecked Sendable {
         queue.async { [self] in closeOnQueue() }
     }
 
-    /// Starts delivering lines (and the close). Call it once.
+    /// Starts delivering lines (and the close). Call it once. Runs on the socket's queue, like
+    /// every other use of `source`.
     func startReading() {
-        let source = DispatchSource.makeReadSource(fileDescriptor: fd, queue: queue)
-        source.setEventHandler { [self] in readAvailable() }
-        source.setCancelHandler { [fd] in Darwin.close(fd) }
-        self.source = source
-        source.resume()
+        queue.async { [self] in
+            guard !closed, source == nil else { return }
+            let source = DispatchSource.makeReadSource(fileDescriptor: fd, queue: queue)
+            source.setEventHandler { [self] in readAvailable() }
+            source.setCancelHandler { [fd] in Darwin.close(fd) }
+            self.source = source
+            source.resume()
+        }
     }
 
     private func readAvailable() {
