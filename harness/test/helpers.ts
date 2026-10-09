@@ -1,4 +1,5 @@
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { connect, type Socket } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,4 +21,32 @@ export function exampleWorkerInput(): WorkerInput {
 export function tempDir(): { path: string; cleanup: () => void } {
   const path = mkdtempSync(join(tmpdir(), "yumi-"));
   return { path, cleanup: () => rmSync(path, { recursive: true, force: true }) };
+}
+
+/** A bare JSON-RPC client: one JSON message per line, as the contract says. */
+export async function rawClient(path: string) {
+  const socket: Socket = await new Promise((resolve, reject) => {
+    const s = connect(path, () => resolve(s)).once("error", reject);
+  });
+  socket.setEncoding("utf8");
+  const lines: unknown[] = [];
+  let buffer = "";
+  const waiters: (() => void)[] = [];
+  socket.on("data", (chunk: string) => {
+    buffer += chunk;
+    let i: number;
+    while ((i = buffer.indexOf("\n")) >= 0) {
+      lines.push(JSON.parse(buffer.slice(0, i)));
+      buffer = buffer.slice(i + 1);
+      waiters.splice(0).forEach((w) => w());
+    }
+  });
+  return {
+    send: (message: unknown) => socket.write(`${JSON.stringify(message)}\n`),
+    next: async (): Promise<unknown> => {
+      while (lines.length === 0) await new Promise<void>((resolve) => waiters.push(resolve));
+      return lines.shift();
+    },
+    close: () => socket.destroy(),
+  };
 }

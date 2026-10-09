@@ -1,13 +1,13 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { statSync, writeFileSync } from "node:fs";
-import { connect, createServer, type Socket } from "node:net";
+import { createServer } from "node:net";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { validate } from "@yumi/protocol";
 import { PROTOCOL_VERSION } from "@yumi/protocol/types";
 import { MemoryLogger } from "../src/log.ts";
 import { HarnessAlreadyRunningError, HarnessRpcServer } from "../src/rpc/server.ts";
-import { PROTOCOL_DIR, tempDir } from "./helpers.ts";
+import { PROTOCOL_DIR, rawClient, tempDir } from "./helpers.ts";
 
 let dir: { path: string; cleanup: () => void };
 let socketPath: string;
@@ -25,34 +25,6 @@ afterEach(async () => {
   server = undefined;
   dir.cleanup();
 });
-
-/** A bare JSON-RPC client: one JSON message per line, as the contract says. */
-async function rawClient(path: string) {
-  const socket: Socket = await new Promise((resolve, reject) => {
-    const s = connect(path, () => resolve(s)).once("error", reject);
-  });
-  socket.setEncoding("utf8");
-  const lines: unknown[] = [];
-  let buffer = "";
-  const waiters: (() => void)[] = [];
-  socket.on("data", (chunk: string) => {
-    buffer += chunk;
-    let i: number;
-    while ((i = buffer.indexOf("\n")) >= 0) {
-      lines.push(JSON.parse(buffer.slice(0, i)));
-      buffer = buffer.slice(i + 1);
-      waiters.splice(0).forEach((w) => w());
-    }
-  });
-  return {
-    send: (message: unknown) => socket.write(`${JSON.stringify(message)}\n`),
-    next: async (): Promise<unknown> => {
-      while (lines.length === 0) await new Promise<void>((resolve) => waiters.push(resolve));
-      return lines.shift();
-    },
-    close: () => socket.destroy(),
-  };
-}
 
 describe.skipIf(process.platform === "win32")("the local RPC server", () => {
   it("answers ping from a client on the socket", async () => {

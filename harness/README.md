@@ -7,7 +7,7 @@ The model is stateless; everything that makes Yumi feel long-running and reliabl
 Owner: Brent.
 
 Status: the skeleton is built ([OBJ-03](../objectives/OBJ-03-harness-skeleton.md)): the forked agent loop, the local model client, the tool registry, output validation with one retry, the local RPC server with `hello`, `ping`, and events, and the log.
-Tasks are not stored yet ([OBJ-04](../objectives/OBJ-04-task-store.md)).
+The task store is built ([OBJ-04](../objectives/OBJ-04-task-store.md)): tasks, subtasks, steps, screenshots, and the action log in SQLite, kept forever, with the history methods and the `taskStatusChanged` event.
 
 ## Responsibilities
 
@@ -30,7 +30,7 @@ Tasks are not stored yet ([OBJ-04](../objectives/OBJ-04-task-store.md)).
 - TypeScript on Node.js 24 or later (developed on Node.js 26.7.0), run with `tsx`.
 - The agent loop is forked from Pi's agent core, `@earendil-works/pi-agent-core` 1.1.0 (MIT). See [src/agent/FORK.md](src/agent/FORK.md) for the commit and what changed.
 - Model server: mlx-vlm 0.7.6 serving `mlx-community/Qwen3.5-9B-4bit` through its OpenAI-compatible API. Every step sends its output schema as `response_format`, and every reply is validated again against the protocol schema.
-- SQLite for the task store (OBJ-04).
+- SQLite for the task store, through Node's built-in `node:sqlite` (stability 1.2, release candidate, in Node.js 26.7.0), so there is no native dependency to build.
 - JSON-RPC 2.0 over a Unix domain socket for the Mac app, through the protocol's `RpcPeer`.
 - Types and validation come from [protocol](../protocol/README.md). Never hand-write a schema type here.
 
@@ -38,14 +38,19 @@ Tasks are not stored yet ([OBJ-04](../objectives/OBJ-04-task-store.md)).
 
 | Path | What it is |
 |---|---|
-| `src/main.ts` | Starts the harness: the log and the RPC server. |
+| `src/main.ts` | Starts the harness: the log, then `src/harness.ts`, which opens the task store and starts the RPC server. |
 | `src/config.ts` | Configuration from environment variables. |
 | `src/agent/` | The forked Pi agent loop, message types, and session state. |
 | `src/model/` | The model client (`client.ts`), the server's wire shapes (`openai.ts`), and the loop's stream function (`stream-fn.ts`). |
 | `src/tools/registry.ts` | The tool registry and per-call tool subsets (at most 10). Starts empty: Pi's coding tools are not included. |
 | `src/worker/` | One step: the prompt, the action names (`actions.ts`), the narrowed output schema, validation, and the one retry. |
 | `src/schema/bundle.ts` | Turns a protocol type into one self-contained JSON Schema. |
+| `src/harness.ts` | Opens the task store, starts the RPC server with the history methods, and sends status changes as events. |
+| `src/store/task-store.ts` | The task store: the only module with SQL. Tasks, subtasks, steps, screenshots, the action log, history queries, window locks, and app capabilities. |
+| `src/store/migrations.ts` | The database schema as ordered migrations, and the triggers that refuse deletes. |
+| `src/store/transitions.ts` | The allowed task and subtask status changes. |
 | `src/rpc/server.ts` | The local JSON-RPC server for the Mac app. |
+| `src/rpc/history.ts` | The `listTasks`, `searchTasks`, and `getTask` methods. |
 | `src/errors.ts` | Maps failures to the protocol's `UserError` kinds. Never builds user-facing text. |
 | `src/log.ts` | The local log file. |
 | `scripts/model-check.ts` | Checks the harness against the real model server. |
@@ -72,7 +77,7 @@ Environment variables, all optional:
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `YUMI_SUPPORT_DIR` | `~/Library/Application Support/Yumi` | Folder for `harness.sock` and `harness.log`. |
+| `YUMI_SUPPORT_DIR` | `~/Library/Application Support/Yumi` | Folder for `harness.sock`, `harness.log`, and the task store. Set it to run a second harness, or for tests, which never use the real folder. Keep it short: a socket path must fit in 104 bytes. |
 | `YUMI_MODEL_BASE_URL` | `http://127.0.0.1:8080/v1` | The model server's OpenAI-compatible API. |
 | `YUMI_MODEL` | `mlx-community/Qwen3.5-9B-4bit` | Model name sent with every request. |
 | `YUMI_MODEL_TIMEOUT_MS` | `120000` | Give up on one model request after this long. |
@@ -151,6 +156,51 @@ mlx-vlm 0.7.6 compiles schemas with llguidance 1.9.1, which rejects `uniqueItems
 - It refuses to start if another harness is already listening.
 - The Mac app calls `hello` with the protocol version first. Events go only to connections that said hello.
 - Build and test the Mac side against it with the protocol's mock Mac app: `npm start` here, then `npm run mock:mac` in `protocol/`.
+
+## Task store
+
+The task store is the single source of truth for long-running work ([SPEC-02](../specs/02-task-lifecycle.md)).
+Everything is kept forever (SPEC-02 r10): no code deletes tasks, subtasks, steps, action log lines, or screenshots, and database triggers refuse it.
+
+### On-disk layout
+
+Everything is in the support folder (`YUMI_SUPPORT_DIR`), readable only by this user:
+
+| Path | What it is |
+|---|---|
+| `tasks.db` | The SQLite database, in WAL mode with full sync. `tasks.db-wal` and `tasks.db-shm` sit next to it while it is open. |
+| `screenshots/<task id>/<step id>.png` | Step screenshots (`.jpg` for JPEG). `Step.screenshotPath` holds the absolute path. A file is never replaced. |
+| `harness.sock`, `harness.log` | The local RPC socket and the log. |
+
+| Table | Holds |
+|---|---|
+| `tasks` | One row per `Task`. `plan` is a JSON array of subtask ids. `created_ms` orders history. |
+| `subtasks` | One row per `Subtask`, with its `position` in the plan. Nested values are JSON. |
+| `steps` | One row per `Step`, with `outcome` and `duration_ms` NULL until the action finished. |
+| `action_log` | One row per `ActionLogEntry`, with the step it came from. Append-only. |
+| `window_locks` | One row per locked window. Working state: replaced and released. |
+| `app_capabilities` | One row per app and version probed. Working state: replaced. |
+
+`PRAGMA user_version` is the number of migrations applied.
+Migrations live in `src/store/migrations.ts`; add new ones at the end and never edit one that has shipped.
+A harness refuses a database written by a newer harness.
+
+### Rules the store enforces
+
+- Every record is checked against the protocol schema before it is written.
+- Status changes follow `src/store/transitions.ts`.
+  An illegal change, including a change to the status a record already has, is logged as `store.illegalTransition` and refused with `IllegalTransitionError`.
+- Every accepted status change, including a new task's or subtask's first status, emits exactly one `taskStatusChanged` event, after it is committed.
+- Checkpointing (SPEC-02 r3): `beginStep` commits the step with no outcome before the action runs, and `finishStep` writes the outcome, observation, and duration after it.
+  A subtask must be `running` to begin a step, and its previous step must have finished.
+- `finishStep` writes the action log line in the same transaction, for every outcome except `invalidOutput`, which ran nothing.
+- `listUnfinishedSteps` returns the steps a crash interrupted.
+
+### History
+
+`listTasks` and `searchTasks` answer newest first, 50 tasks by default.
+Search matches tasks whose goal, confirmed goal, summary, or subtask titles contain every word of the query, ignoring case and accents.
+`getTask` returns the task with its subtasks and steps.
 
 ## Errors and the log
 

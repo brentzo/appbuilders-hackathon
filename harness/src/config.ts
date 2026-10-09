@@ -1,5 +1,5 @@
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
 /** Settings for the local OpenAI-compatible model server. */
 export interface ModelConfig {
@@ -18,7 +18,7 @@ export interface ModelConfig {
 }
 
 export interface HarnessConfig {
-  /** Where the socket and the log live: the user's Application Support folder on the Mac. */
+  /** Where the socket, the log, and the task store live: the user's Application Support folder on the Mac. */
   supportDir: string;
   socketPath: string;
   logPath: string;
@@ -45,7 +45,7 @@ export const DEFAULT_MODEL_CONFIG: ModelConfig = {
  * and YUMI_MODEL_STRUCTURED_OUTPUT ("0" turns schema-constrained decoding off).
  */
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): HarnessConfig {
-  const supportDir = env["YUMI_SUPPORT_DIR"] || DEFAULT_SUPPORT_DIR;
+  const supportDir = resolve(env["YUMI_SUPPORT_DIR"] || DEFAULT_SUPPORT_DIR);
   return {
     supportDir,
     socketPath: join(supportDir, "harness.sock"),
