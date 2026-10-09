@@ -458,7 +458,7 @@ describe("startup recovery (OBJ-06.1)", () => {
 });
 
 describe("cancelTask and resumeTask (OBJ-06.3)", () => {
-  it("cancels an interrupted task without running anything: started subtasks fail, the others never run", async () => {
+  it("cancels an interrupted task without running anything: started subtasks fail, queued ones are dropped (OBJ-38.6)", async () => {
     const store = openStore(dir.path);
     const task = runningTask(store, ["Write the notes", "File them"]);
     store.close();
@@ -470,7 +470,7 @@ describe("cancelTask and resumeTask (OBJ-06.3)", () => {
     expect(h.store.getTask(task.id)!.status).toBe("cancelled");
     expect(h.store.listSubtasks(task.id).map((s) => [s.status, s.result?.note])).toEqual([
       ["failed", "Cancelled before it finished."],
-      ["pending", undefined],
+      ["failed", "Cancelled before it started."],
     ]);
     expect(h.store.listInterruptedTasks()).toEqual([]);
     await settle();

@@ -10,6 +10,7 @@ Status: the skeleton is built ([OBJ-03](../objectives/OBJ-03-harness-skeleton.md
 The task store is built ([OBJ-04](../objectives/OBJ-04-task-store.md)): tasks, subtasks, steps, screenshots, and the action log in SQLite, kept forever, with the history methods and the `taskStatusChanged` event.
 The planner, scheduler, and task summary are built ([OBJ-05](../objectives/OBJ-05-planner-and-scheduler.md)), with every subtask running as a helper on test-only file tools until the lane router and the typed file tools land.
 Resume and limits are built ([OBJ-06](../objectives/OBJ-06-resume-and-limits.md)): startup recovery, `resumeTask` and `cancelTask`, and the step, attempt, and depth limits.
+Approvals, pause, and the action log are built ([OBJ-38](../objectives/OBJ-38-approvals-pause-and-action-log.md)): the send and delete approvals with their re-checks, blocked actions, `pause` with two scopes, a cancel that stops every lane, and the action log file.
 
 ## Responsibilities
 
@@ -50,6 +51,9 @@ Resume and limits are built ([OBJ-06](../objectives/OBJ-06-resume-and-limits.md)
 | `src/safety/gate.ts` | `checkAction`, the one permission gate every action goes through. |
 | `src/safety/paths.ts` | Path resolution through `..` and symlinks, and the home, Library, dotfile, and secret checks. |
 | `src/safety/trash.ts` | The `move_to_trash` checks and the `FileSummary` for the delete card. |
+| `src/approvals/` | The approval flow and the `ApprovalGate` seam (`approval-flow.ts`), the card text (`copy.ts`), and finding and reading the To and Cc fields (`recipients.ts`). |
+| `src/control/run-control.ts` | One run's pause state, which every step loop checks before it acts. |
+| `src/action-log/text-log.ts` | The action log file, written from the task store. |
 | `src/worker/` | One step: the prompt, the action names (`actions.ts`), the narrowed output schema, validation, and the one retry. |
 | `src/router/` | The lane router (`router.ts`), the app capability probe and cache (`capability.ts`), and each lane's actions (`lanes.ts`). |
 | `src/schema/bundle.ts` | Turns a protocol type into one self-contained JSON Schema. |
@@ -61,7 +65,7 @@ Resume and limits are built ([OBJ-06](../objectives/OBJ-06-resume-and-limits.md)
 | `src/store/transitions.ts` | The allowed task and subtask status changes. |
 | `src/rpc/server.ts` | The local JSON-RPC server for the Mac app. |
 | `src/rpc/history.ts` | The `listTasks`, `searchTasks`, and `getTask` methods. |
-| `src/rpc/tasks.ts` | The `resumeTask` and `cancelTask` methods. |
+| `src/rpc/tasks.ts` | The `pause`, `resumeTask`, `cancelTask`, and `replyToBlockedAction` methods. |
 | `src/errors.ts` | Maps failures to the protocol's `UserError` kinds. Never builds user-facing text. |
 | `src/log.ts` | The local log file. |
 | `scripts/model-check.ts` | Checks the harness against the real model server. |
@@ -185,6 +189,7 @@ Everything is in the support folder (`YUMI_SUPPORT_DIR`), readable only by this 
 |---|---|
 | `tasks.db` | The SQLite database, in WAL mode with full sync. `tasks.db-wal` and `tasks.db-shm` sit next to it while it is open. |
 | `screenshots/<task id>/<step id>.png` | Step screenshots (`.jpg` for JPEG). `Step.screenshotPath` holds the absolute path. A file is never replaced. |
+| `Action log/<yyyy-mm-dd>.txt` | The action log file, one per day (see "Action log" below). |
 | `harness.sock`, `harness.log` | The local RPC socket and the log. |
 
 | Table | Holds |
@@ -193,6 +198,7 @@ Everything is in the support folder (`YUMI_SUPPORT_DIR`), readable only by this 
 | `subtasks` | One row per `Subtask`, with its `position` in the plan. Nested values are JSON. |
 | `steps` | One row per `Step`, with `outcome` and `duration_ms` NULL until the action finished. |
 | `action_log` | One row per `ActionLogEntry`, with the step it came from. Append-only. |
+| `approvals` | One row per `Approval`, as JSON with its decision, and `closed` once it can never be used again: used, declined, changed, or cancelled. |
 | `window_locks` | One row per locked window. Working state: replaced and released. |
 | `app_capabilities` | One row per app and version probed. Working state: replaced. |
 
@@ -243,13 +249,66 @@ Only `main` gets keystrokes (`type`, `key`); a ghost sets text with `setValue`, 
 
 Every action goes through `checkAction(action, { home, app })` in `src/safety/gate.ts` before it runs ([SPEC-07](../specs/07-safety.md)).
 It returns the level (`allowed`, `ask`, or `blocked`), the rule that decided it, and the `RecordedAction` with the level stored on it.
-Only `allowed` may run without the user; asking and the Trash are [OBJ-38](../objectives/OBJ-38-approvals-pause-and-action-log.md).
+Only `allowed` may run without the user; `ask` goes through the approval flow below, and `blocked` never runs.
 
 - The gate reads only the resolved action, the app the Mac app reported, and the real file system. It never reads model text.
 - The rules are data in `src/safety/rules.ts`. A rule changes only with a change to SPEC-07.
 - Paths are resolved through `..` and every symlink before the check, and names are compared without regard to case, as on a default Mac volume.
 - The file tools never replace a file: a taken name gets a number ("Report.pdf" becomes "Report 2.pdf").
 - There is no shell, AppleScript, or edit tool, and a test fails if the harness ever imports `child_process` or mentions `osascript`.
+
+## Approvals and blocked actions
+
+`ApprovalFlow` in `src/approvals/approval-flow.ts` implements the `ApprovalGate` seam that step loops call when the gate does not allow an action ([OBJ-38](../objectives/OBJ-38-approvals-pause-and-action-log.md)): the helper lane's tool steps now, and the `gui_act` step loop ([OBJ-36](../objectives/OBJ-36-gui-act-sub-agent.md)) for a Send button or key.
+
+- **`request(decision, context, signal)`** for an `ask`:
+  1. Builds the approval from real data only: for a send, the To and Cc fields read with the Mac app's `readFieldValues`; for a delete, the file list from `checkTrash` on the real file system. Never from model text.
+  2. Writes the `Approval` to the store, sets the subtask to `needsApproval` and the task to `waitingForUser`, and calls `showApprovalCard`.
+  3. A delete counts as approved only with `method: tap` (SPEC-07 r11): a voice "yes" shows the same card again. A send may be approved by a tap or by "send it" (`method: voice`, r15).
+  4. Right before the action, it reads the recipients or lists the files again, comparing each file's identity, size, and modification time. If anything changed, it closes the approval as `changed` and asks again with what is there now (r12, r14).
+  5. Closes the approval as `used` and returns `approved`: one approval covers exactly one action, once.
+- Only sends and `move_to_trash` deletes have a card. A send needs the step loop to pass the window and the element paths of its To and Cc fields (`findRecipientFields` finds them in the tree by role and label); Mail and Messages are the apps whose recipients it reads. Any other `ask` (a click no rule classifies in a risky app, a Delete button) answers `unavailable` and is not run.
+- **The card text** is in `src/approvals/copy.ts`, from SPEC-07 r13, the "Strict delete" scenario, and the SPEC-07 "Draft copy" table, which is still a draft for Patrick's review: "I'm about to send this email to Ana. Should I send it?", "with a copy to ...", "this message" for Messages, "Ana, Ben, and 3 others", and the one-file, one-folder, and several-folder delete forms.
+- **`move_to_trash`** is offered on the helper lane and only ever runs through the approval: the harness calls the Mac app's `moveToTrash` with exactly the approved, re-checked paths, and the log line lists every path that moved.
+- **`blocked(context, signal)`** for a `blocked` action: the step is already recorded as `blocked` and never runs. It sends a `userError` of kind `blockedAction` with the `stepId`, sets the task to `waitingForUser`, and waits. "Keep going" (`replyToBlockedAction`) carries on; "Stop" pauses the task through the pause path.
+- Approval timeouts (5 minutes) and approvals on the other device are SPEC-09 and not built: `expiresAt` is written but nothing acts on it.
+
+## Pause and cancel
+
+`TaskControl` in `src/scheduler/task-control.ts` is the one place tasks pause, resume, and cancel ([SPEC-06](../specs/06-user-control.md)).
+Each run has a `RunControl` (`src/control/run-control.ts`), and every step loop calls `mayAct(lane)` right before it writes and sends an action, so nothing is sent once a pause covers its lane.
+
+- **`pause(taskId, scope)`**, from the `pause` method. With no `taskId`, every working task pauses.
+  - `everyLane` (the default: the stop shortcut, the menu bar "Stop", the blocked-action "Stop"): the whole run stops, the step in progress gets its outcome, the working subtasks go back to ready, and the task is paused.
+  - `uiLanes` (the user took the mouse or keyboard): the ghost and main subtasks stop before their next action and go back to ready, no UI subtask starts, and helpers keep running. A helper that needs the user waits for the resume. While planning, it stops the planner, since nothing could keep running.
+  - A `uiLanes` pause while the task waits for the user and no UI lane is acting is ignored, as a second guard behind the Mac app (SPEC-06 r2).
+  - Both cancel every pending approval and blocked-action card: each open card gets `approvalCancelled`, the approval is closed as `cancelled`, a late tap is ignored, and the step is recorded as not done. After the resume, the action goes through the gate and asks again.
+- **`resumeTask`** after a `uiLanes` pause, while the helpers still run, lifts the pause in the same run, and the UI subtasks carry on in the same attempt. Otherwise it works as in "Resume and limits" below.
+- **`cancelTask`** stops every lane, helpers included, cancels every open approval and card, fails every subtask that had started ("Cancelled before it finished.") and drops every one that had not ("Cancelled before it started."), and sets the task to cancelled. Nothing runs after it.
+- A task the user took over can end while paused: helpers may finish or fail it.
+
+## Action log
+
+Every action that ran, was blocked, or was declined has an `ActionLogEntry` in the task store, written with its step's outcome ([SPEC-07](../specs/07-safety.md) r18).
+Each line is also written, as it is committed, to the action log file in the support folder:
+
+```
+~/Library/Application Support/Yumi/Action log/2026-10-09.txt
+```
+
+One file a day, in local time, with lines like these:
+
+```
+3:42 pm, Mac, main cursor: Clicked Export in Keynote
+3:43 pm, Mac, helper: Moved 2 files from Downloads to the Trash
+    /Users/ana/Downloads/old-invoice.pdf
+    /Users/ana/Downloads/old-receipt.pdf
+3:44 pm, Mac, task done ("export the deck as a PDF"): Read 3 files and clicked 12 times
+```
+
+- Lines say the time (am/pm), the device ("Mac" or "phone"), the lane ("helper", "ghost cursor", "main cursor"), and what happened in plain language. A delete lists every path on its own line.
+- When a task ends, a count line says what it did, counting only actions that ran: "Read 3 files and clicked 12 times".
+- Descriptions never contain text Yumi typed or set (`src/scheduler/describe.ts`), so a password never reaches the log (SPEC-07 r20). `describeGuiAction` is the line for a UI action, for OBJ-36.
 
 ## Planner and scheduler
 
@@ -264,8 +323,8 @@ Only `allowed` may run without the user; asking and the Trash are [OBJ-38](../ob
    A subtask whose app the router cannot check fails with the probe's error.
    If one fails, the others are stopped and the task fails; there is no replanning yet.
 4. **Work.** Every action goes through `checkAction` before it runs, and the step is written with the gate's level.
-   Only `allowed` runs; `ask` and `blocked` are recorded as blocked steps and not run, until approvals come with [OBJ-38](../objectives/OBJ-38-approvals-pause-and-action-log.md).
-   The helper lane's tools are OBJ-37's typed file tools (`fileHelperLane` in `src/scheduler/lanes.ts`).
+   `allowed` runs, `ask` runs only once the approval flow approved it, and `blocked` never runs (see "Approvals and blocked actions").
+   The helper lane's tools are OBJ-37's typed file tools and `move_to_trash` (`fileHelperLane` in `src/scheduler/lanes.ts`).
    Each step's worker input is exactly the confirmed goal, the subtask instruction, the subtask's last 5 finished steps, a fresh observation, and the lane's tools.
    Each recent step carries one line on what happened and, for a tool, what the tool returned (`toolOutput`, at most 4000 characters, cut with a note).
    A helper has no window, so its observation is empty.
@@ -285,17 +344,16 @@ Resume never starts on its own: the user is always asked first ([SPEC-02](../spe
 - **Startup recovery** (`src/scheduler/recovery.ts`) runs when the harness starts, before the socket opens.
   A step with no outcome is finished as `noEffect`, with an action log line such as "Started to create Note 4.md, but was interrupted before it finished".
   A task that was planning, running, or waiting for the user is paused and marked interrupted.
+  An approval still open is closed as cancelled, so a resume asks again.
   The subtasks of every paused task that were running, waiting for approval, or queued go back to `ready`, keeping their attempts, and their window locks are released.
 - **Asking:** each time an app says hello, the harness sends one `interruptedTaskFound` per interrupted task, so the app asks "I was interrupted while working on your task. Want me to pick up where I left off?"
   A task the user paused is not announced: `listTasks` returns it as `paused`, and the app shows Resume.
 - **`resumeTask`** sets a paused task back to `running` (or `planning` when it had no plan yet) and carries on in the background.
   Done subtasks stay done, no recorded step runs again, and each cut-off subtask goes on from its next step, with a fresh observation first, as the same attempt.
   A second resume while the task runs does nothing.
-- **`cancelTask`** stops the task's work if it runs, waits for the step in progress to get its outcome, fails every subtask that had started ("Cancelled before it finished."), and sets the task to `cancelled`.
-  Subtasks that never started stay as they are.
+- **`cancelTask`** stops the task's work if it runs, waits for the step in progress to get its outcome, fails every subtask that had started ("Cancelled before it finished.") and every one that had not ("Cancelled before it started."), and sets the task to `cancelled` (see "Pause and cancel").
   Cancelling a task that already ended does nothing.
-  OBJ-38 extends it to every lane and every command not yet run.
-- A request about an unknown task or a task that is not paused answers the `unexpected` kind, with the reason in the log as `task.refused`.
+- A request about an unknown task, or a resume of a task that is not paused, answers the `unexpected` kind, with the reason in the log as `task.refused`.
 - `startHarness` runs tasks only when given `work` (the model client, lanes, device id, home folder, and slots); without it, tasks can be cancelled but not started or resumed.
   `src/main.ts` does not pass it yet, because the harness learns its device id only after pairing; OBJ-17 wires it with `runTask`.
 - **Limits** come from the configuration (`Limits` in `src/config.ts`):

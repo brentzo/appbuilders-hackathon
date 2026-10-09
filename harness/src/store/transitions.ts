@@ -22,8 +22,9 @@ export const TASK_TRANSITIONS: Readonly<Record<TaskStatus, readonly TaskStatus[]
   running: ["waitingForUser", "paused", "done", "failed", "cancelled"],
   // An approval or question was answered, the approval timed out and paused the task (SPEC-09 r10), or it ended.
   waitingForUser: ["running", "paused", "failed", "cancelled"],
-  // Resume goes back to the work that was paused: planning or running.
-  paused: ["planning", "running", "cancelled", "failed"],
+  // Resume goes back to the work that was paused: planning or running. While the user has taken over, helpers keep
+  // running (SPEC-06 r2), so they can finish the task, or fail it, while it is paused.
+  paused: ["planning", "running", "done", "cancelled", "failed"],
   done: [],
   failed: [],
   cancelled: [],

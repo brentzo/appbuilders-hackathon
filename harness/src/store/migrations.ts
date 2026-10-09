@@ -120,6 +120,24 @@ export const MIGRATIONS: readonly string[] = [
   ALTER TABLE tasks ADD COLUMN interrupted INTEGER NOT NULL DEFAULT 0 CHECK (interrupted IN (0, 1));
   ALTER TABLE subtasks ADD COLUMN parent_subtask_id TEXT REFERENCES subtasks (id);
   `,
+  // 6: approvals (OBJ-38). One row per Approval, as JSON with its decision once the user answered. closed is NULL
+  // while the approval waits for the user, then why it can never be used again: used (the action ran), declined,
+  // changed (the recipients or files changed, so Yumi asked again), or cancelled (a pause, a cancel, or a restart).
+  // Kept forever, like the rest of the task's history.
+  `
+  CREATE TABLE approvals (
+    id TEXT PRIMARY KEY,
+    task_id TEXT NOT NULL REFERENCES tasks (id),
+    subtask_id TEXT NOT NULL REFERENCES subtasks (id),
+    step_id TEXT NOT NULL REFERENCES steps (id),
+    approval TEXT NOT NULL,
+    requested_ms INTEGER NOT NULL,
+    closed TEXT CHECK (closed IN ('used', 'declined', 'changed', 'cancelled'))
+  ) STRICT;
+  CREATE INDEX approvals_open ON approvals (task_id) WHERE closed IS NULL;
+  CREATE TRIGGER approvals_kept_forever BEFORE DELETE ON approvals
+    BEGIN SELECT RAISE(ABORT, 'task records are kept forever'); END;
+  `,
 ];
 
 /** Thrown when the database was written by a newer harness, whose schema this one does not know. */

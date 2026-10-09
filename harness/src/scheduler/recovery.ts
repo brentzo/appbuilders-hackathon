@@ -15,6 +15,8 @@ import { describeInterrupted } from "./describe.ts";
  * - A task the user paused stays paused, and is not marked: the app lists it with a Resume button.
  * - The subtasks of every paused task that were working go back to ready, and their window locks are released, so
  *   a resume routes them again and continues the attempt that was cut off.
+ * - An approval still open was never used, and its card is gone with the app: it is closed as cancelled, so a
+ *   resume asks again (OBJ-38).
  *
  * Every change goes through the store's status rules. Recovery is safe to run again after a crash halfway through:
  * each part only changes records that still need it.
@@ -56,6 +58,11 @@ export function recoverAfterRestart(store: TaskStore, logger: Logger): Recovery 
     steps++;
   }
 
+  for (const open of store.listOpenApprovals()) {
+    store.closeApproval(open.approval.id, "cancelled");
+    logger.info("recovery.approvalCancelled", { taskId: open.taskId, approvalId: open.approval.id });
+  }
+
   const interrupted: Uuid[] = [];
   for (const task of store.listTasksByStatus(WORKING)) {
     resetSubtasks(store, logger, task.id);
@@ -70,7 +77,11 @@ export function recoverAfterRestart(store: TaskStore, logger: Logger): Recovery 
   return { interrupted, steps };
 }
 
-function resetSubtasks(store: TaskStore, logger: Logger, taskId: Uuid): void {
+/**
+ * Sends a paused task's working subtasks back to ready and releases their window locks, so a resume routes them
+ * again and continues the attempt that was cut off. Also used by a pause (OBJ-38.5).
+ */
+export function resetSubtasks(store: TaskStore, logger: Logger, taskId: Uuid): void {
   const reset = new Set<Uuid>();
   for (const subtask of store.listSubtasks(taskId)) {
     const next = CUT_OFF[subtask.status];

@@ -1,5 +1,6 @@
 import type { Subtask, UserError, Uuid } from "@yumi/protocol/types";
 import { DEFAULT_LIMITS } from "../config.ts";
+import { isUiLane, RunControl } from "../control/run-control.ts";
 import { describeError } from "../log.ts";
 import { ProbeFailure } from "../router/index.ts";
 import type { LaneRunners, RouteSubtask } from "./lanes.ts";
@@ -12,6 +13,11 @@ import { runSubtask, type SubtaskRun, type SubtaskRunDeps } from "./subtask-runn
  *
  * Starting a subtask starts an attempt, up to the attempt limit (SPEC-02 r8). A subtask a resume continues
  * (`ScheduleOptions.continuing`) carries on with the attempt a pause or restart cut off, so it is not counted again.
+ *
+ * The run's `RunControl` stops it (OBJ-38): a pause of every lane or a cancel stops everything, and the statuses are
+ * the pause or cancel flow's to set. While the user has taken over (a UI-lanes pause), each ghost or main subtask
+ * stops before its next action and goes back to ready, no new one starts, and helpers keep running; the schedule
+ * waits for the resume and then starts the UI subtasks again as the same attempt (SPEC-06 r2).
  */
 
 export interface SchedulerDeps extends SubtaskRunDeps {
@@ -39,16 +45,21 @@ export async function runSchedule(
   taskId: Uuid,
   confirmedGoal: string,
   deps: SchedulerDeps,
-  signal?: AbortSignal,
+  control: RunControl = new RunControl(),
   options: ScheduleOptions = {},
 ): Promise<ScheduleOutcome> {
+  const signal = control.signal;
   const { store, logger } = deps;
   const limits = deps.limits ?? DEFAULT_LIMITS;
   if (!Number.isInteger(deps.slots) || deps.slots < 1)
     throw new Error(`The scheduler needs at least one slot, got ${deps.slots}`);
   const stop = new AbortController();
-  const stopSignal = signal ? AbortSignal.any([signal, stop.signal]) : stop.signal;
+  const stopSignal = AbortSignal.any([signal, stop.signal]);
   const active = new Map<Uuid, Promise<void>>();
+  /** UI subtasks a take-over stopped or kept from starting, until the resume (SPEC-06 r2). */
+  const held = new Set<Uuid>();
+  /** Subtasks whose attempt goes on when they start again: a resume's, and those a take-over stopped. */
+  const continuing = new Set(options.continuing ?? []);
   let failure: Extract<ScheduleOutcome, { outcome: "failed" }> | undefined;
   let workers = 0;
 
@@ -75,8 +86,8 @@ export async function runSchedule(
   };
 
   const runOne = async (subtask: Subtask) => {
-    const continuing = options.continuing?.has(subtask.id) === true && subtask.attempts > 0;
-    if (!continuing && subtask.attempts >= limits.attemptsPerSubtask) {
+    const continues = continuing.has(subtask.id) && subtask.attempts > 0;
+    if (!continues && subtask.attempts >= limits.attemptsPerSubtask) {
       // Its attempts are used up (SPEC-02 r8): fail it before routing, so nothing runs and no app is probed.
       logger.warn("subtask.attemptLimit", { taskId, subtaskId: subtask.id, attempts: subtask.attempts });
       store.setSubtaskStatus(subtask.id, "failed", {
@@ -96,12 +107,18 @@ export async function runSchedule(
       });
       return fail(subtask.id, error.userError);
     }
+    if (isUiLane(decision.lane) && control.uiLanesPaused) {
+      // The user has the mouse and keyboard: a UI subtask waits, still ready, for the resume (SPEC-06 r2).
+      logger.info("schedule.held", { taskId, subtaskId: subtask.id, lane: decision.lane });
+      held.add(subtask.id);
+      return;
+    }
     const runner = deps.lanes[decision.lane];
     const running = store.setSubtaskStatus(subtask.id, "running", {
       lane: decision.lane,
       routeReason: decision.reason,
       workerId: `${decision.lane}-${++workers}`,
-      attempts: continuing ? subtask.attempts : subtask.attempts + 1,
+      attempts: continues ? subtask.attempts : subtask.attempts + 1,
     });
     if (!runner) {
       logger.error("schedule.noLane", { taskId, subtaskId: subtask.id, lane: decision.lane });
@@ -115,18 +132,40 @@ export async function runSchedule(
       subtaskId: subtask.id,
       lane: decision.lane,
       attempt: running.attempts,
-      continuing,
+      continuing: continues,
       active: active.size,
     });
-    const run: SubtaskRun = await runSubtask(running, decision.lane, runner, confirmedGoal, deps, stopSignal);
+    const subtaskSignal = control.enter(subtask.id, decision.lane);
+    let run: SubtaskRun;
+    try {
+      run = await runSubtask(
+        running,
+        decision.lane,
+        runner,
+        confirmedGoal,
+        deps,
+        AbortSignal.any([subtaskSignal, stop.signal]),
+        control,
+      );
+    } finally {
+      control.leave(subtask.id);
+    }
     logger.info("schedule.finished", { taskId, subtaskId: subtask.id, outcome: run.outcome, status: run.result.status });
     if (run.outcome === "finished" && run.result.status === "done") {
       store.setSubtaskStatus(subtask.id, "done", { result: run.result });
       promoteReady(taskId);
       return;
     }
-    // Cancelled from outside (pause or cancel): what happens to the subtask is the pause and cancel flow's call (OBJ-38).
-    if (run.outcome === "aborted" && signal?.aborted) return;
+    // Stopped from outside (a pause of every lane, or a cancel): the pause and cancel flow sets the statuses (OBJ-38).
+    if (run.outcome === "aborted" && signal.aborted) return;
+    if (run.outcome === "aborted" && !stop.signal.aborted && !control.mayAct(decision.lane)) {
+      // The user took over: the subtask goes back to ready and carries on with this attempt after the resume.
+      store.setSubtaskStatus(subtask.id, "ready");
+      held.add(subtask.id);
+      continuing.add(subtask.id);
+      logger.info("schedule.pausedSubtask", { taskId, subtaskId: subtask.id, lane: decision.lane });
+      return;
+    }
     store.setSubtaskStatus(subtask.id, "failed", { result: run.result });
     if (run.outcome === "aborted") return;
     // A subtask the worker could not finish is "Couldn't finish a step" (SPEC-11 r14), named by its title. Failures
@@ -147,16 +186,18 @@ export async function runSchedule(
 
   promoteReady(taskId);
   for (;;) {
+    if (!control.uiLanesPaused) held.clear();
     if (!failure && !stopSignal.aborted) {
-      const ready = store.listSubtasks(taskId).filter((s) => s.status === "ready" && !active.has(s.id));
+      const ready = store.listSubtasks(taskId).filter((s) => s.status === "ready" && !active.has(s.id) && !held.has(s.id));
       for (const subtask of ready.slice(0, Math.max(0, deps.slots - active.size))) start(subtask);
     }
-    if (active.size === 0) break;
-    await Promise.race(active.values());
+    if (active.size === 0 && (held.size === 0 || failure || stopSignal.aborted)) break;
+    // Wait for a subtask to end, or for a pause, resume, or stop that changes what may start.
+    await Promise.race([...active.values(), control.changed()]);
   }
 
   if (failure) return failure;
-  if (signal?.aborted) return { outcome: "aborted" };
+  if (signal.aborted) return { outcome: "aborted" };
   const left = store.listSubtasks(taskId).filter((s) => s.status !== "done");
   if (left.length > 0) {
     // Cannot happen with a checked plan: every dependency is in the plan and there are no cycles.

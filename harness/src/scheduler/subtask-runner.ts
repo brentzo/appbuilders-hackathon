@@ -9,14 +9,16 @@ import type {
   ToolCall,
   UserError,
 } from "@yumi/protocol/types";
+import type { ApprovalAnswer, ApprovalGate } from "../approvals/approval-flow.ts";
 import { DEFAULT_LIMITS, type Limits } from "../config.ts";
+import type { RunControl } from "../control/run-control.ts";
 import { describeError, type Logger } from "../log.ts";
 import type { ModelClient } from "../model/client.ts";
 import { checkAction } from "../safety/gate.ts";
 import type { TaskStore } from "../store/task-store.ts";
 import { ACTION } from "../worker/actions.ts";
 import { runWorkerStep } from "../worker/step.ts";
-import { describeNotRun, describeToolRun } from "./describe.ts";
+import { describeNotDone, describeToolRun, describeTrashed, type NotDone } from "./describe.ts";
 import type { LaneRunner } from "./lanes.ts";
 import { buildSubtaskResult, finishedSoFar } from "./result.ts";
 import { buildWorkerInput } from "./worker-input.ts";
@@ -24,9 +26,12 @@ import { buildWorkerInput } from "./worker-input.ts";
 /**
  * Runs one subtask on its lane, one step at a time, until the worker finishes it: each step gets a fresh worker
  * input (SPEC-02 r5) and returns one validated action for its lane (r6, SPEC-03 r7). Every action goes through the
- * permission gate (SPEC-07 r1), is written with the gate's level before it runs, and is finished after (r3). Only
- * `allowed` runs: approvals are OBJ-38, so an action that asks is recorded as not run, and the worker is told why.
- * The outcome carries the subtask's structured result (OBJ-05.6). The caller changes the subtask's status.
+ * permission gate (SPEC-07 r1), is written with the gate's level before it runs, and is finished after (r3).
+ *
+ * Right before each action the run's pause state is checked, and nothing is written or sent once a pause covers
+ * this lane (SPEC-06 r4). An action that asks goes through the approval flow (OBJ-38) and runs only once approved
+ * and checked again; a blocked one never runs, and the user chooses to keep going or stop (SPEC-07 r5). The outcome
+ * carries the subtask's structured result (OBJ-05.6). The caller changes the subtask's status.
  */
 
 /** Longest observation line a step can store (`Step.observation`). */
@@ -54,6 +59,11 @@ export interface SubtaskRunDeps {
   home: string;
   /** The limits from the configuration (SPEC-02 r8). Defaults to `DEFAULT_LIMITS`. */
   limits?: Limits;
+  /**
+   * Asks the user about actions that ask, and about blocked ones (OBJ-38). The running harness always has it.
+   * Without it, an action that asks is recorded as not done, and a blocked one is skipped without asking.
+   */
+  approvals?: ApprovalGate;
 }
 
 export async function runSubtask(
@@ -63,6 +73,7 @@ export async function runSubtask(
   confirmedGoal: string,
   deps: SubtaskRunDeps,
   signal: AbortSignal,
+  control: RunControl,
 ): Promise<SubtaskRun> {
   const { store, logger } = deps;
   /** Real paths the tools created or changed, as they reported them (a taken name gets a number). */
@@ -71,8 +82,10 @@ export async function runSubtask(
   const lastAction = () => store.listActionLog(subtask.taskId).at(-1)?.description;
   const { stepsPerSubtask } = deps.limits ?? DEFAULT_LIMITS;
 
+  const stopped = (): SubtaskRun => ({ outcome: "aborted", result: result("partial", "Stopped before it finished.") });
+
   for (;;) {
-    if (signal.aborted) return { outcome: "aborted", result: result("partial", "Stopped before it finished.") };
+    if (signal.aborted || !control.mayAct(lane)) return stopped();
     // Every step of the subtask counts, across attempts and restarts (SPEC-05 r5), including steps a restart cut off.
     const steps = store.listSteps(subtask.id);
     if (steps.length >= stepsPerSubtask) {
@@ -102,7 +115,7 @@ export async function runSubtask(
 
     switch (step.outcome) {
       case "aborted":
-        return { outcome: "aborted", result: result("partial", "Stopped before it finished.") };
+        return stopped();
       case "error":
         return { outcome: "error", result: result("stuck", "The model could not answer."), userError: step.userError };
       case "invalidOutput":
@@ -122,8 +135,10 @@ export async function runSubtask(
       // lanes), so this is a bug. Stop rather than act on the screen without a lane that can.
       throw new Error(`The ${lane} lane cannot run a ${action.kind} action yet`);
     }
-    const path = await runTool(subtask, lane, runner, action.call, observation, deps, signal);
-    if (path !== undefined && action.call.tool !== "read_file" && action.call.tool !== "list_dir" && !files.includes(path)) {
+    const ran = await runTool(subtask, lane, runner, action.call, observation, deps, signal, control);
+    if (ran.stopped) return stopped();
+    const path = ran.path;
+    if (path !== undefined && !["read_file", "list_dir", "move_to_trash"].includes(action.call.tool) && !files.includes(path)) {
       files.push(path);
     }
   }
@@ -145,9 +160,32 @@ function describeFinished(store: TaskStore, subtask: Subtask): string | undefine
   return finishedSoFar([...done, ...worked]);
 }
 
+/** What one tool step did: the real path the tool used, or that the subtask must stop because a pause or cancel came. */
+type ToolStep = { stopped: true } | { stopped: false; path?: Path };
+
+/** What the worker reads about an action that was not done, by reason. */
+const NOT_DONE_OBSERVATION: Record<NotDone, (tool: string) => string> = {
+  needsApproval: (tool) => `Not done: ${tool} needs the user's approval, and there is no way to ask for it here.`,
+  blocked: (tool) => `Not done: Yumi's safety rules do not allow this ${tool}. Do not try it again.`,
+  declined: (tool) => `Not done: the user said no to this ${tool}.`,
+  paused: (tool) =>
+    `Not done: the task was paused before this ${tool} could run. If it is still needed, the user is asked again.`,
+  filesChanged: () => "Not done: the files changed or are gone, so nothing was moved to the Trash.",
+  noRecipients: () => "Not done: the recipients could not be read, so nothing was sent.",
+  couldNotAsk: (tool) => `Not done: the approval for this ${tool} could not be shown.`,
+};
+
+const UNAVAILABLE: Record<Extract<ApprovalAnswer, { outcome: "unavailable" }>["reason"], NotDone> = {
+  noApprovalCard: "needsApproval",
+  noRecipients: "noRecipients",
+  filesGone: "filesChanged",
+  couldNotAsk: "couldNotAsk",
+};
+
 /**
  * Runs one tool call as a step. The gate decides its level from the call and the real file system, and the step is
- * written with that level before anything runs (SPEC-02 r3, SPEC-07 r1). Returns the real path the tool used.
+ * written with that level before anything runs (SPEC-02 r3, SPEC-07 r1). An `ask` runs only after the approval
+ * flow approved it and checked it again; a `blocked` one never runs (SPEC-07 r5).
  */
 async function runTool(
   subtask: Subtask,
@@ -157,28 +195,53 @@ async function runTool(
   observation: Observation,
   deps: SubtaskRunDeps,
   signal: AbortSignal,
-): Promise<Path | undefined> {
+  control: RunControl,
+): Promise<ToolStep> {
   const { store, logger } = deps;
   const decision = checkAction({ action: { kind: ACTION.tool, call } }, { home: deps.home, app: observation.app });
+  // The pause check (SPEC-06 r4): once a pause covers this lane, nothing is written or sent.
+  if (signal.aborted || !control.mayAct(lane)) return { stopped: true };
   const step = store.beginStep({ subtaskId: subtask.id, lane, action: decision.recorded });
-
-  if (decision.level !== "allowed") {
-    // Approvals come in OBJ-38: an action that asks is not run, and neither is a blocked one (SPEC-07 r5).
-    logger.warn(decision.level === "ask" ? "step.needsApproval" : "step.blocked", {
-      taskId: subtask.taskId,
-      subtaskId: subtask.id,
-      tool: call.tool,
-      rule: decision.rule,
-    });
+  const log = { taskId: subtask.taskId, subtaskId: subtask.id, stepId: step.id, tool: call.tool, rule: decision.rule };
+  const notDone = (outcome: "blocked" | "declined" | "noEffect", why: NotDone) =>
     store.finishStep(step.id, {
-      outcome: "blocked",
-      observation:
-        decision.level === "ask"
-          ? `Not done: ${call.tool} needs the user's approval, which is not available yet.`
-          : `Not done: Yumi's safety rules do not allow this ${call.tool}.`,
-      log: { deviceId: deps.deviceId, description: describeNotRun(call, decision.level) },
+      outcome,
+      observation: NOT_DONE_OBSERVATION[why](call.tool),
+      log: { deviceId: deps.deviceId, description: describeNotDone(decision.recorded, observation.app, why) },
     });
-    return undefined;
+
+  if (decision.level === "blocked") {
+    // A blocked action never runs, whatever the user says (SPEC-07 r5).
+    logger.warn("step.blocked", log);
+    notDone("blocked", "blocked");
+    if (!deps.approvals) return { stopped: false };
+    const choice = await deps.approvals.blocked({ subtask, step, lane, control }, signal);
+    return { stopped: choice !== "keepGoing" };
+  }
+
+  if (decision.level === "ask") {
+    logger.info("step.needsApproval", log);
+    const answer: ApprovalAnswer = deps.approvals
+      ? await deps.approvals.request(decision, { subtask, step, lane, control }, signal)
+      : { outcome: "unavailable", reason: "noApprovalCard" };
+    switch (answer.outcome) {
+      case "declined":
+        notDone("declined", "declined");
+        return { stopped: false };
+      case "cancelled":
+        notDone("noEffect", "paused");
+        return { stopped: signal.aborted || !control.mayAct(lane) };
+      case "unavailable":
+        notDone(answer.reason === "filesGone" ? "noEffect" : "blocked", UNAVAILABLE[answer.reason]);
+        return { stopped: false };
+      case "approved":
+        break;
+    }
+    if (call.tool === "move_to_trash" && answer.files) {
+      await trash(step.id, answer.files.allPaths, deps);
+      return { stopped: false };
+    }
+    // Only move_to_trash asks among the typed tools today; any other approved call runs like an allowed one.
   }
 
   let run;
@@ -197,7 +260,35 @@ async function runTool(
     ...(run.outcome === "ok" && run.output !== "" ? { toolOutput: cut(run.output) } : {}),
     log: { deviceId: deps.deviceId, description },
   });
-  return run.outcome === "ok" ? run.path : undefined;
+  return { stopped: false, ...(run.outcome === "ok" && run.path ? { path: run.path } : {}) };
+}
+
+/**
+ * Moves exactly the approved, checked paths to the Trash through the Mac app (SPEC-07 r7, r12), and logs every
+ * path that moved (r18). Paths the app did not move make the step an error, so the worker knows.
+ */
+async function trash(stepId: string, paths: readonly Path[], deps: SubtaskRunDeps): Promise<void> {
+  const moved = await deps.approvals!.moveToTrash(paths);
+  const trashed = "trashed" in moved ? moved.trashed : [];
+  if (trashed.length === 0) {
+    deps.store.finishStep(stepId, {
+      outcome: "error",
+      observation: "Nothing was moved to the Trash: the Mac app could not move the files.",
+      log: {
+        deviceId: deps.deviceId,
+        description: `Tried to move ${paths.length === 1 ? "a file" : `${paths.length} files`} to the Trash`,
+      },
+    });
+    return;
+  }
+  const description = describeTrashed(trashed);
+  deps.store.finishStep(stepId, {
+    outcome: trashed.length === paths.length ? "ok" : "error",
+    observation: fit(
+      trashed.length === paths.length ? description : `${description}, but ${paths.length - trashed.length} could not be moved.`,
+    ),
+    log: { deviceId: deps.deviceId, description, paths: [...trashed] },
+  });
 }
 
 /** Cuts tool output to `MAX_TOOL_OUTPUT`, saying so, so the worker knows it saw only the start. */

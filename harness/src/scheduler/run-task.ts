@@ -1,4 +1,5 @@
 import type { DeviceId, Speak, Task, UserError, Uuid } from "@yumi/protocol/types";
+import { RunControl } from "../control/run-control.ts";
 import { makePlan, subtasksFromPlan } from "../planner/planner.ts";
 import { summarizeTask } from "../planner/summary.ts";
 import { runSchedule, type ScheduleOptions, type SchedulerDeps } from "./scheduler.ts";
@@ -26,8 +27,9 @@ export type RunTaskOutcome =
   /** Cancelled from outside; the task's status is left to the pause and cancel flow (OBJ-38). */
   | { outcome: "aborted" };
 
-export async function runTask(taskId: Uuid, deps: RunTaskDeps, signal?: AbortSignal): Promise<RunTaskOutcome> {
+export async function runTask(taskId: Uuid, deps: RunTaskDeps, control = new RunControl()): Promise<RunTaskOutcome> {
   const { store, logger } = deps;
+  const signal = control.signal;
   const task = store.getTask(taskId);
   if (!task) throw new Error(`No task ${taskId}`);
   if (task.status !== "planning" || !task.confirmedGoal) throw new Error(`Task ${taskId} is ${task.status}, not planning`);
@@ -39,7 +41,7 @@ export async function runTask(taskId: Uuid, deps: RunTaskDeps, signal?: AbortSig
     confirmedGoal,
     tools.filter((tool, i) => tools.findIndex((t) => t.name === tool.name) === i),
     model,
-    { taskId, ...(signal ? { signal } : {}) },
+    { taskId, signal },
   );
   switch (planned.outcome) {
     case "aborted":
@@ -53,7 +55,7 @@ export async function runTask(taskId: Uuid, deps: RunTaskDeps, signal?: AbortSig
       break;
   }
   store.savePlan(taskId, subtasksFromPlan(planned.plan));
-  return runPlan(task, confirmedGoal, deps, signal);
+  return runPlan(task, confirmedGoal, deps, control);
 }
 
 /**
@@ -61,7 +63,7 @@ export async function runTask(taskId: Uuid, deps: RunTaskDeps, signal?: AbortSig
  * where the pause or restart left them. Finished subtasks stay finished, and no recorded step runs again: each
  * subtask that was cut off goes on from its next step, with a fresh observation, as part of the same attempt.
  */
-export async function continueTask(taskId: Uuid, deps: RunTaskDeps, signal?: AbortSignal): Promise<RunTaskOutcome> {
+export async function continueTask(taskId: Uuid, deps: RunTaskDeps, control = new RunControl()): Promise<RunTaskOutcome> {
   const task = deps.store.getTask(taskId);
   if (!task) throw new Error(`No task ${taskId}`);
   if (task.status !== "running" || !task.confirmedGoal || task.plan.length === 0) {
@@ -75,7 +77,7 @@ export async function continueTask(taskId: Uuid, deps: RunTaskDeps, signal?: Abo
       .filter((s) => s.status === "ready" && s.attempts > 0)
       .map((s) => s.id),
   );
-  return runPlan(task, task.confirmedGoal, deps, signal, { continuing });
+  return runPlan(task, task.confirmedGoal, deps, control, { continuing });
 }
 
 /** Runs a saved plan to the end: the schedule, then the summary, spoken on the device the user spoke to. */
@@ -83,13 +85,14 @@ async function runPlan(
   task: Task,
   confirmedGoal: string,
   deps: RunTaskDeps,
-  signal?: AbortSignal,
+  control: RunControl,
   options: ScheduleOptions = {},
 ): Promise<RunTaskOutcome> {
   const { store, logger } = deps;
   const taskId = task.id;
   const model = { client: deps.client, logger };
-  const scheduled = await runSchedule(taskId, confirmedGoal, deps, signal, options);
+  const signal = control.signal;
+  const scheduled = await runSchedule(taskId, confirmedGoal, deps, control, options);
   if (scheduled.outcome === "aborted") return { outcome: "aborted" };
   if (scheduled.outcome === "failed") {
     // Without its own error, the failure was a bug in the harness, not the subtask: "Unexpected" with the last action.
@@ -97,10 +100,7 @@ async function runPlan(
     return fail(task, scheduled.userError ?? { kind: "unexpected", taskId, ...(lastAction ? { lastAction } : {}) }, deps);
   }
 
-  const summary = await summarizeTask(confirmedGoal, store.listSubtasks(taskId), model, {
-    taskId,
-    ...(signal ? { signal } : {}),
-  });
+  const summary = await summarizeTask(confirmedGoal, store.listSubtasks(taskId), model, { taskId, signal });
   if (summary === undefined) return { outcome: "aborted" };
   store.setTaskStatus(taskId, "done", { summary });
   deps.voice.speak(task.originDeviceId, { taskId, text: summary });

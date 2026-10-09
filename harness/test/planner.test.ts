@@ -263,9 +263,12 @@ describe("the helper lane's tools (OBJ-37's typed file tools)", () => {
   });
   afterEach(() => home.cleanup());
 
-  it("offers the five file tools and runs them on the given home folder", async () => {
+  it("offers the five file tools and move_to_trash, and runs the file tools on the given home folder", async () => {
     const { tools } = fileHelperLane({ home: home.path });
-    expect(tools.tools.map((t) => t.name)).toEqual(["read_file", "list_dir", "write_new_file", "copy", "move"]);
+    expect(tools.tools.map((t) => t.name)).toEqual(["read_file", "list_dir", "write_new_file", "copy", "move", "move_to_trash"]);
+    // move_to_trash only ever runs through the approval flow (OBJ-38.3): run as an allowed call, it does nothing.
+    expect(await tools.run({ tool: "move_to_trash", paths: ["~/Downloads/a.pdf"] })).toMatchObject({ outcome: "error" });
+    expect(existsSync(join(home.path, "Downloads", "a.pdf"))).toBe(true);
     const real = realpathSync(home.path);
     expect(await tools.run({ tool: "read_file", path: "~/Downloads/a.pdf" })).toEqual({
       outcome: "ok",

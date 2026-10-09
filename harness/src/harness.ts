@@ -1,4 +1,6 @@
 import type { Handler } from "@yumi/protocol";
+import { ActionLogFile } from "./action-log/text-log.ts";
+import { ApprovalFlow } from "./approvals/approval-flow.ts";
 import { DEFAULT_LIMITS, type HarnessConfig } from "./config.ts";
 import { describeError, type Logger } from "./log.ts";
 import { historyHandlers } from "./rpc/history.ts";
@@ -17,8 +19,12 @@ export interface Harness {
   server: HarnessRpcServer;
   /** The lane router (OBJ-07), created once and shared by every task. */
   router: LaneRouter;
-  /** Starts, resumes, and cancels tasks (OBJ-06). */
+  /** Starts, pauses, resumes, and cancels tasks (OBJ-06, OBJ-38). */
   tasks: TaskControl;
+  /** Approvals and blocked-action cards (OBJ-38). Absent when the harness cannot run tasks. */
+  approvals?: ApprovalFlow;
+  /** The action log file (OBJ-38.7). */
+  actionLog: ActionLogFile;
   /** What startup recovery found: tasks a restart cut off, and steps it finished as noEffect. */
   recovery: Recovery;
   close(): Promise<void>;
@@ -26,9 +32,9 @@ export interface Harness {
 
 /**
  * What running tasks needs beyond what the harness makes itself (the store, the lane router, the voice on the local
- * socket, and the limits from the configuration). Tests may replace the route and the voice.
+ * socket, the approval flow, and the limits from the configuration). Tests may replace the route and the voice.
  */
-export type HarnessWork = Omit<RunTaskDeps, "store" | "route" | "voice" | "limits"> &
+export type HarnessWork = Omit<RunTaskDeps, "store" | "route" | "voice" | "limits" | "approvals"> &
   Partial<Pick<RunTaskDeps, "route" | "voice">>;
 
 /** Extra parts wired into the RPC server, such as the Mac bridge client's methods. */
@@ -45,7 +51,8 @@ export interface HarnessOptions {
  * Opens the task store in the support folder and recovers what a restart cut off (OBJ-06), starts the local RPC
  * server with the history and task methods, and sends every task and subtask status change to the connected apps
  * as a `taskStatusChanged` event. Each time an app says hello, it gets one `interruptedTaskFound` per task a
- * restart cut off that the user has not answered about yet.
+ * restart cut off that the user has not answered about yet. Every action log line also goes to the action log file
+ * in the support folder (OBJ-38.7).
  */
 export async function startHarness(
   config: Pick<HarnessConfig, "supportDir" | "socketPath"> & Partial<Pick<HarnessConfig, "limits">>,
@@ -54,6 +61,13 @@ export async function startHarness(
 ): Promise<Harness> {
   const limits = config.limits ?? DEFAULT_LIMITS;
   const store = TaskStore.open({ dir: config.supportDir, logger, maxSubtaskDepth: limits.subtaskDepth });
+  // Before recovery, so the lines recovery writes for interrupted steps are in the file too.
+  const actionLog = new ActionLogFile({
+    supportDir: config.supportDir,
+    store,
+    logger,
+    macDeviceId: () => options.work?.deviceId,
+  }).start();
   try {
     // Before the server starts, so no app can ask about a task while its records are being repaired.
     const recovery = recoverAfterRestart(store, logger);
@@ -62,9 +76,16 @@ export async function startHarness(
     // before any message can arrive.
     // eslint-disable-next-line prefer-const
     let tasks: TaskControl | undefined;
+    // eslint-disable-next-line prefer-const
+    let approvals: ApprovalFlow | undefined;
     const ownHandlers = {
       ...historyHandlers(store, logger),
-      ...taskControlHandlers(() => tasks!, store),
+      ...taskControlHandlers(
+        () => tasks!,
+        store,
+        () => approvals,
+        logger,
+      ),
     };
     const clash = Object.keys(options.handlers ?? {}).filter((name) => name in ownHandlers);
     if (clash.length > 0) throw new Error(`RPC methods registered twice: ${clash.join(", ")}`);
@@ -81,16 +102,24 @@ export async function startHarness(
     store.onStatusChanged((event) => server.emit("taskStatusChanged", event));
     const router = createLaneRouter({ store, server, logger });
     const work = options.work;
+    const voice = work && (work.voice ?? localVoice(server, logger, work.deviceId));
+    approvals =
+      work &&
+      voice &&
+      new ApprovalFlow({
+        store,
+        logger,
+        mac: server,
+        emit: (event, payload) => server.emit(event, payload),
+        userError: (originDeviceId, error) => voice.userError(originDeviceId, error),
+        home: work.home,
+      });
     tasks = new TaskControl(
       store,
       logger,
-      work && {
-        ...work,
-        store,
-        limits,
-        route: work.route ?? routeWith(router),
-        voice: work.voice ?? localVoice(server, logger, work.deviceId),
-      },
+      work &&
+        voice && { ...work, store, limits, route: work.route ?? routeWith(router), voice, ...(approvals ? { approvals } : {}) },
+      approvals,
     );
     const control = tasks;
     return {
@@ -98,14 +127,18 @@ export async function startHarness(
       server,
       router,
       tasks: control,
+      ...(approvals ? { approvals } : {}),
+      actionLog,
       recovery,
       close: async () => {
         await control.close();
         await server.close();
+        actionLog.stop();
         store.close();
       },
     };
   } catch (error) {
+    actionLog.stop();
     store.close();
     throw error;
   }

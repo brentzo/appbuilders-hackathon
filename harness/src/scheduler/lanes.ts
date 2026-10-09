@@ -73,9 +73,28 @@ export function registryTools(registry: ToolRegistry, names: readonly ToolName[]
   };
 }
 
-/** The helper lane of the running harness: OBJ-37's typed file tools on the user's home folder. */
+/** How `move_to_trash` is offered to the model. */
+export const TRASH_TOOL_DESCRIPTION =
+  "Move files or folders to the Trash. Give every exact path; no wildcards. The user is always asked first.";
+
+/**
+ * Adds `move_to_trash` to a lane's tools (SPEC-07 r3, r7). The gate always asks or blocks it, so it only ever runs
+ * through the approval flow, which moves exactly the approved paths with the Mac app's `moveToTrash` (OBJ-38.3).
+ * Running it as an allowed call is a bug and does nothing.
+ */
+export function withTrash(tools: LaneTools): LaneTools {
+  return {
+    tools: [...tools.tools, { name: "move_to_trash", description: TRASH_TOOL_DESCRIPTION }],
+    run: (call, signal) =>
+      call.tool === "move_to_trash"
+        ? Promise.resolve({ outcome: "error", output: "Moving to the Trash needs the user's approval first." })
+        : tools.run(call, signal),
+  };
+}
+
+/** The helper lane of the running harness: OBJ-37's typed file tools on the user's home folder, and the Trash. */
 export function fileHelperLane(context: { home: string; logger?: Logger }): LaneRunner {
   const registry = new ToolRegistry();
   registerFileTools(registry, context);
-  return helperLane(registryTools(registry, FILE_TOOL_NAMES));
+  return helperLane(withTrash(registryTools(registry, FILE_TOOL_NAMES)));
 }

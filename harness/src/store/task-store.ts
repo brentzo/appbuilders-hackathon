@@ -6,6 +6,8 @@ import { validate } from "@yumi/protocol";
 import type {
   ActionLogEntry,
   AppCapability,
+  Approval,
+  ApprovalDecision,
   DeviceId,
   Lane,
   Path,
@@ -160,6 +162,21 @@ export interface TaskHistory extends TaskDetail {
 
 export type StatusListener = (event: TaskStatusChanged) => void;
 
+/** Called with each action log line after it is committed. */
+export type ActionLogListener = (entry: ActionLogEntry) => void;
+
+/** Why an approval can never be used again (OBJ-38). */
+export type ApprovalClosed = "used" | "declined" | "changed" | "cancelled";
+
+/** An approval with the records it belongs to. */
+export interface StoredApproval {
+  approval: Approval;
+  taskId: Uuid;
+  subtaskId: Uuid;
+  /** Absent while the approval waits for the user. */
+  closed?: ApprovalClosed;
+}
+
 /** A record that breaks the protocol contract. A bug in the caller; nothing was written. */
 export class InvalidRecordError extends Error {
   constructor(
@@ -191,6 +208,7 @@ export class TaskStore {
   private readonly now: () => Date;
   private readonly maxSubtaskDepth: number;
   private readonly listeners = new Set<StatusListener>();
+  private readonly logListeners = new Set<ActionLogListener>();
   private readonly statements = new Map<string, StatementSync>();
 
   private constructor(options: TaskStoreOptions) {
@@ -235,6 +253,12 @@ export class TaskStore {
   onStatusChanged(listener: StatusListener): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
+  }
+
+  /** Calls `listener` with every action log line after it is committed. Returns a function that stops it. */
+  onActionLogged(listener: ActionLogListener): () => void {
+    this.logListeners.add(listener);
+    return () => this.logListeners.delete(listener);
   }
 
   // Tasks
@@ -457,7 +481,8 @@ export class TaskStore {
    * log line, in one transaction. The duration defaults to the time since the step began.
    */
   finishStep(id: Uuid, result: StepResult): Step {
-    return this.transaction(() => {
+    let logged: ActionLogEntry | undefined;
+    const finished = this.transaction(() => {
       const row = this.requireStepRow(id);
       const current = stepFromRow(row);
       if (current.outcome !== undefined) {
@@ -483,7 +508,7 @@ export class TaskStore {
       });
       if (result.outcome !== "invalidOutput") {
         const subtask = this.requireSubtask(step.subtaskId);
-        this.insertActionLog(
+        logged = this.insertActionLog(
           {
             time: time.toISOString(),
             deviceId: result.log.deviceId,
@@ -499,6 +524,8 @@ export class TaskStore {
       }
       return step;
     });
+    if (logged) this.emitLogged(logged);
+    return finished;
   }
 
   /**
@@ -546,7 +573,9 @@ export class TaskStore {
   /** Appends a line for an action that is not a step (a step's line is written by `finishStep`). The time is now. */
   appendActionLog(entry: Omit<ActionLogEntry, "time">): ActionLogEntry {
     const time = this.now();
-    return this.transaction(() => this.insertActionLog({ ...entry, time: time.toISOString() }, time, undefined));
+    const logged = this.transaction(() => this.insertActionLog({ ...entry, time: time.toISOString() }, time, undefined));
+    this.emitLogged(logged);
+    return logged;
   }
 
   /** The action log lines of one subtask's steps, oldest first. */
@@ -558,10 +587,75 @@ export class TaskStore {
     return rows.map(actionLogFromRow);
   }
 
+  /** The action log line a step wrote when it finished, if it did. */
+  getStepActionLog(stepId: Uuid): ActionLogEntry | undefined {
+    const row = this.stmt("SELECT * FROM action_log WHERE step_id = ? ORDER BY id LIMIT 1").get(stepId) as
+      ActionLogRow | undefined;
+    return row && actionLogFromRow(row);
+  }
+
   /** A task's action log, oldest first. */
   listActionLog(taskId: Uuid): ActionLogEntry[] {
     const rows = this.stmt("SELECT * FROM action_log WHERE task_id = ? ORDER BY id").all(taskId) as unknown as ActionLogRow[];
     return rows.map(actionLogFromRow);
+  }
+
+  // Approvals (OBJ-38)
+
+  /** Writes a new approval, waiting for the user. Its step must exist; the subtask is the step's. */
+  addApproval(approval: Approval): StoredApproval {
+    return this.transaction(() => {
+      this.check("Approval", approval);
+      const step = stepFromRow(this.requireStepRow(approval.stepId));
+      const subtask = this.requireSubtask(step.subtaskId);
+      this.stmt(
+        `INSERT INTO approvals (id, task_id, subtask_id, step_id, approval, requested_ms)
+         VALUES ($id, $taskId, $subtaskId, $stepId, $approval, $requestedMs)`,
+      ).run({
+        id: approval.id,
+        taskId: subtask.taskId,
+        subtaskId: subtask.id,
+        stepId: approval.stepId,
+        approval: JSON.stringify(approval),
+        requestedMs: Date.parse(approval.requestedAt),
+      });
+      return { approval, taskId: subtask.taskId, subtaskId: subtask.id };
+    });
+  }
+
+  /** Records the user's answer on an approval that is still open. The schema refuses a delete approved by voice. */
+  decideApproval(id: Uuid, decision: ApprovalDecision): StoredApproval {
+    return this.transaction(() => {
+      const current = this.requireOpenApproval(id);
+      const approval: Approval = { ...current.approval, decision };
+      this.check("Approval", approval);
+      this.stmt("UPDATE approvals SET approval = $approval WHERE id = $id").run({ id, approval: JSON.stringify(approval) });
+      return { ...current, approval };
+    });
+  }
+
+  /** Closes an open approval for good, so it can never cover an action again. */
+  closeApproval(id: Uuid, closed: ApprovalClosed): StoredApproval {
+    return this.transaction(() => {
+      const current = this.requireOpenApproval(id);
+      this.stmt("UPDATE approvals SET closed = $closed WHERE id = $id").run({ id, closed });
+      return { ...current, closed };
+    });
+  }
+
+  getApproval(id: Uuid): StoredApproval | undefined {
+    const row = this.stmt("SELECT * FROM approvals WHERE id = ?").get(id) as ApprovalRow | undefined;
+    return row && approvalFromRow(row);
+  }
+
+  /** Approvals still waiting for the user, oldest first: one task's, or every task's. */
+  listOpenApprovals(taskId?: Uuid): StoredApproval[] {
+    const rows = (taskId === undefined
+      ? this.stmt("SELECT * FROM approvals WHERE closed IS NULL ORDER BY requested_ms, rowid").all()
+      : this.stmt("SELECT * FROM approvals WHERE closed IS NULL AND task_id = ? ORDER BY requested_ms, rowid").all(
+          taskId,
+        )) as unknown as ApprovalRow[];
+    return rows.map(approvalFromRow);
   }
 
   // History
@@ -685,6 +779,24 @@ export class TaskStore {
       if (this.db.isTransaction) this.db.exec("ROLLBACK");
       throw error;
     }
+  }
+
+  private emitLogged(entry: ActionLogEntry): void {
+    for (const listener of this.logListeners) {
+      try {
+        listener(entry);
+      } catch (error) {
+        // The line is committed; a failing listener must not undo it or stop the others.
+        this.logger.error("store.actionLogListenerFailed", { taskId: entry.taskId, ...describeError(error) });
+      }
+    }
+  }
+
+  private requireOpenApproval(id: Uuid): StoredApproval {
+    const stored = this.getApproval(id);
+    if (!stored) throw this.refuse("unknownApproval", `No approval ${id}`);
+    if (stored.closed) throw this.refuse("approvalClosed", `Approval ${id} is already closed (${stored.closed})`);
+    return stored;
   }
 
   private emit(event: TaskStatusChanged): void {
@@ -855,6 +967,25 @@ export class TaskStore {
 }
 
 // Rows and mapping. Columns are snake_case; nested values are JSON text; absent optional fields are NULL.
+
+interface ApprovalRow {
+  id: string;
+  task_id: string;
+  subtask_id: string;
+  step_id: string;
+  approval: string;
+  requested_ms: number;
+  closed: ApprovalClosed | null;
+}
+
+function approvalFromRow(row: ApprovalRow): StoredApproval {
+  return {
+    approval: JSON.parse(row.approval) as Approval,
+    taskId: row.task_id,
+    subtaskId: row.subtask_id,
+    ...(row.closed ? { closed: row.closed } : {}),
+  };
+}
 
 interface TaskRow {
   id: string;
