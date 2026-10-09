@@ -186,7 +186,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 <!-- generated:product-objectives:start -->
 | ID | Objective | Assignee | Status |
 |---|---|---|---|
-| [OBJ-14](../objectives/OBJ-14-mac-app-shell.md) | Mac app shell, permissions, and harness link | Patrick | in-progress |
+| [OBJ-14](../objectives/OBJ-14-mac-app-shell.md) | Mac app shell, permissions, and harness link | Patrick | done |
 | [OBJ-15](../objectives/OBJ-15-mac-voice-intake.md) | Mac voice intake | Patrick | todo |
 | [OBJ-16](../objectives/OBJ-16-mac-wake-word.md) | Mac wake word | Patrick | todo |
 | [OBJ-17](../objectives/OBJ-17-goal-confirmation.md) | Goal confirmation loop | Patrick | todo |
