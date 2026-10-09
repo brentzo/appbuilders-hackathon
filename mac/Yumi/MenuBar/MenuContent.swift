@@ -11,6 +11,12 @@ struct MenuContent: View {
 
         Divider()
 
+        if !model.permissions.allGranted {
+            Button("Set up permissions…") {
+                windows.showOnboarding()
+            }
+        }
+
         Button("Settings…") {
             windows.showSettings()
         }

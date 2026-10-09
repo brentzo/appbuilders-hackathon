@@ -7,12 +7,25 @@ import OSLog
 ///
 /// - `-YumiAppearance light|dark` forces the app's appearance without changing the system's.
 /// - `-YumiStatus ready|listening|working|paused` sets the menu's status line.
-/// - `-YumiOpen settings` opens a window at launch.
+/// - `-YumiOpen settings|onboarding` opens a window at launch instead of the usual onboarding check.
+/// - `-YumiPermissions mixed|granted` pretends permissions are in that state, without asking macOS.
+///   `mixed` has the microphone allowed and the other two missing.
 /// - `-YumiSnapshotDir <dir>` renders the opened window to PNG files at 1x and 2x scale, then quits.
 ///   Yumi draws its own window, so this needs no Screen Recording permission. The window's
 ///   translucent materials may render flatter than on screen.
 enum DebugLaunchOptions {
-    static func apply(to app: AppDelegate) {
+    static func permissionCenter() -> PermissionCenter {
+        #if DEBUG
+        if let fake = UserDefaults.standard.string(forKey: "YumiPermissions") {
+            return PermissionCenter(system: FakePermissionSystem(allGranted: fake == "granted"))
+        }
+        #endif
+        return PermissionCenter()
+    }
+
+    /// Applies the options and returns true if they opened a window.
+    @discardableResult
+    static func apply(to app: AppDelegate) -> Bool {
         #if DEBUG
         let arguments = UserDefaults.standard
         let appearance = arguments.string(forKey: "YumiAppearance")
@@ -29,6 +42,7 @@ enum DebugLaunchOptions {
         let opened: (name: String, window: NSWindow)?
         switch arguments.string(forKey: "YumiOpen") {
         case "settings": opened = ("settings", app.windows.showSettings())
+        case "onboarding": opened = ("onboarding", app.windows.showOnboarding())
         default: opened = nil
         }
 
@@ -39,10 +53,22 @@ enum DebugLaunchOptions {
                 NSApp.terminate(nil)
             }
         }
+        return opened != nil
+        #else
+        return false
         #endif
     }
 
     #if DEBUG
+    private struct FakePermissionSystem: PermissionSystem {
+        let allGranted: Bool
+        func state(of permission: Permission) -> PermissionState {
+            allGranted || permission == .microphone ? .granted : .missing
+        }
+        func request(_ permission: Permission) async {}
+        func open(_ url: URL) { NSWorkspace.shared.open(url) }
+    }
+
     private static func snapshot(_ window: NSWindow, to directory: URL, prefix: String) {
         let log = Logger(subsystem: "ph.appbuilders.yumi", category: "debug")
         guard let view = window.contentView?.superview else { return }

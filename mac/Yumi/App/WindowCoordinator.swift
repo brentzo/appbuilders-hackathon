@@ -6,6 +6,7 @@ import SwiftUI
 final class WindowCoordinator {
     private let model: AppModel
     private var settingsWindow: NSWindow?
+    private var onboardingWindow: NSWindow?
 
     init(model: AppModel) {
         self.model = model
@@ -18,6 +19,19 @@ final class WindowCoordinator {
             content: SettingsView(store: model.settings)
         )
         settingsWindow = window
+        present(window)
+        return window
+    }
+
+    @discardableResult
+    func showOnboarding() -> NSWindow {
+        let window = onboardingWindow ?? makeWindow(
+            title: "Welcome to Yumi",
+            content: OnboardingView(permissions: model.permissions) { [weak self] in
+                self?.onboardingWindow?.close()
+            }
+        )
+        onboardingWindow = window
         present(window)
         return window
     }
