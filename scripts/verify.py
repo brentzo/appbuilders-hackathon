@@ -63,6 +63,32 @@ def harness():
     return run("harness typecheck, lint, format, tests", ["npm", "run", "verify"], cwd), None
 
 
+def node_product(folder):
+    """A Node product whose package.json has a verify script: install once, then npm run verify."""
+    def check():
+        cwd = os.path.join(ROOT, folder)
+        if not os.path.exists(os.path.join(cwd, "package.json")):
+            return True, None  # nothing built yet, only the README
+        if not shutil.which("npm"):
+            return None, "npm is not installed"
+        if not os.path.isdir(os.path.join(cwd, "node_modules")) and not run(f"{folder} install", ["npm", "ci"], cwd):
+            return False, None
+        return run(f"{folder} checks", ["npm", "run", "verify"], cwd), None
+    return check
+
+
+def mac():
+    """The Mac app: build and run its tests (unit tests, the SPEC-11 copy check, RPC tests against the mock harness)."""
+    if not shutil.which("xcodebuild"):
+        return None, "needs a Mac with Xcode"
+    cwd = os.path.join(ROOT, "mac")
+    if not os.path.isdir(os.path.join(ROOT, "protocol", "node_modules")) and not run("protocol install", ["npm", "ci"], os.path.join(ROOT, "protocol")):
+        return False, None
+    # Ad hoc signing (empty DEVELOPMENT_TEAM): the tests need no personal team, and it works for everyone.
+    cmd = ["xcodebuild", "-project", "Yumi.xcodeproj", "-scheme", "Yumi", "-derivedDataPath", "build", "-quiet", "DEVELOPMENT_TEAM=", "test"]
+    return run("mac build and tests", cmd, cwd), None
+
+
 def docker_running():
     return shutil.which("docker") is not None and subprocess.run(
         ["docker", "info"], capture_output=True, shell=WINDOWS).returncode == 0
@@ -101,6 +127,9 @@ CHECKS = [
     ("protocol Swift and Kotlin", ("protocol/",), protocol_native, False),
     # The harness depends on @yumi/protocol, so a protocol change runs its tests too.
     ("harness", ("harness/", "protocol/", "specs/"), harness, True),
+    ("bridge", ("bridge/", "protocol/"), node_product("bridge"), True),
+    # The Mac app compiles the generated Swift types and checks its copy against SPEC-11. Only a Mac can build it.
+    ("mac", ("mac/", "protocol/", "specs/"), mac, False),
     ("android", ("android/", "specs/"), android, True),
     ("models/whisper", ("models/whisper/",), whisper, True),
 ]
