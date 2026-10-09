@@ -183,7 +183,7 @@ mlx-vlm 0.7.6 compiles schemas with llguidance 1.9.1, which rejects `uniqueItems
 | ID | Objective | Assignee | Status |
 |---|---|---|---|
 | [OBJ-03](../objectives/OBJ-03-harness-skeleton.md) | Harness skeleton and local model client | Brent | done |
-| [OBJ-04](../objectives/OBJ-04-task-store.md) | Task store and history | Brent | todo |
+| [OBJ-04](../objectives/OBJ-04-task-store.md) | Task store and history | Brent | in-progress |
 | [OBJ-05](../objectives/OBJ-05-planner-and-scheduler.md) | Planner, scheduler, and task summary | Brent | todo |
 | [OBJ-06](../objectives/OBJ-06-resume-and-limits.md) | Resume and limits | Brent | todo |
 | [OBJ-07](../objectives/OBJ-07-lane-router-core.md) | Lane router core | Brent | todo |
