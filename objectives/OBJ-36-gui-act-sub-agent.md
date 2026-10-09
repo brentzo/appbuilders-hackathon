@@ -96,7 +96,9 @@ Build against the mock Mac app from [OBJ-01](OBJ-01-task-record-schemas.md) unti
   - Approvals, blocked actions, and pausing use OBJ-38's `ApprovalGate` and `RunControl`; the stand-in that declined every approval is gone (orchestrator, 2026-10-10).
     A declined approval does not end the attempt: the step is recorded as declined and the model reads that the user said no, as on the helper lane, so the user does not get "Couldn't finish a step" right after saying no.
     A blocked action goes to the blocked-action card: "Keep going" carries on, and "Stop" (`cancelTask`, OBJ-45) ends the run. Without the approval flow, it ends the attempt with `blockedAction`.
-  - When the target app has no window to read, the harness opens it with `open_app` as a step of its own.
+  - gui_act works in the window OBJ-08's router locked for the subtask (`subtask.target.windowId`), and never takes or releases a lock itself: the scheduler releases the window and the cursor when the run ends.
+    When the router gave the subtask no window, because the app had none, the harness opens the app with `open_app` as a step of its own.
+    When the locked window cannot be read, the attempt ends as stuck, and gui_act does not pick another window.
 - **Known gap:** the harness names elements by number (`#3`), because the observation carries no paths. The Mac app resolves numbers itself for `executeAction`, but `readFieldValues` cannot, so the approval flow cannot read a Mail draft's recipients and a send is not run ("because Yumi couldn't read who it was going to").
   Fix: OBJ-39's protocol ask, either `ExecuteActionResult` returning the resolved element or `readFieldValues` taking element numbers (Patrick for the Mac app, Jepoy for the protocol).
 - **For the real runs:** the Mac app's socket is fixed at `~/Library/Application Support/Yumi/harness.sock` (`mac/Yumi/Harness/HarnessSocket.swift`), and the app launches its own harness from the repo it was built from, which does not run tasks yet.
