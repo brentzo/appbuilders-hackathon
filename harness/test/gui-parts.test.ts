@@ -140,6 +140,22 @@ describe("finding files an app wrote (OBJ-36.8)", () => {
       watch.close();
     }
   });
+
+  it("never reports files inside a Git working tree, such as build output (live Keynote runs, 2026-10-10)", async () => {
+    const home = dir.path;
+    for (const folder of ["Developer/app/.git", "Developer/app/mac/build/Objects", "Yumi smoke test"])
+      mkdirSync(join(home, folder), { recursive: true });
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    const watch = await watchHome(home, new MemoryLogger());
+    try {
+      for (let n = 0; n < 20; n++) writeFileSync(join(home, "Developer", "app", "mac", "build", "Objects", `f${n}.o`), "o");
+      writeFileSync(join(home, "Developer", "app", "README.md"), "changed");
+      writeFileSync(join(home, "Yumi smoke test", "Q3 Report run 41.pdf"), "%PDF-");
+      expect(await watch.takeNew()).toEqual([{ path: "~/Yumi smoke test/Q3 Report run 41.pdf", created: true }]);
+    } finally {
+      watch.close();
+    }
+  });
 });
 
 describe("gui_act against the harness's RPC server", () => {

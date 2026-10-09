@@ -1,4 +1,4 @@
-import { mkdirSync, rmSync, statSync, watch, writeFileSync, type FSWatcher } from "node:fs";
+import { existsSync, mkdirSync, rmSync, statSync, watch, writeFileSync, type FSWatcher } from "node:fs";
 import { join, sep } from "node:path";
 import type { Path } from "@yumi/protocol/types";
 import { describeError, type Logger } from "../log.ts";
@@ -9,6 +9,8 @@ import { describeError, type Logger } from "../log.ts";
  * the file system's own change events (FSEvents on macOS, through Node's recursive `fs.watch`), and reports a file
  * only if it still exists and was written after the attempt began. `~/Library` and hidden files and folders are
  * never reported: apps write caches and settings there all the time, and the file tools may not touch them either.
+ * Nor is anything inside a Git working tree: builds write thousands of files there, and on the live Keynote runs
+ * (2026-10-10) other people's Xcode builds under `~/Developer` filled the model's step with "New file" lines.
  *
  * Events arrive a little after the write, later when the Mac is busy, and a new watch goes live a little after it is
  * set up. So the watcher writes a marker file of its own in `~/Library/Application Support/Yumi` and waits for that file's event,
@@ -115,7 +117,24 @@ export const watchHome: WatchHome = async (home, logger) => {
     return false;
   };
 
+  /** Folders known to be inside a Git working tree or not, so each folder is looked up once per attempt. */
+  const repoFolders = new Map<string, boolean>();
+  const insideRepo = (relative: string): boolean => {
+    const parts = relative.split(sep).slice(0, -1);
+    for (let depth = 1; depth <= parts.length; depth++) {
+      const folder = parts.slice(0, depth).join(sep);
+      let repo = repoFolders.get(folder);
+      if (repo === undefined) {
+        repo = existsSync(join(home, folder, ".git"));
+        repoFolders.set(folder, repo);
+      }
+      if (repo) return true;
+    }
+    return false;
+  };
+
   const check = (relative: string): FileChange | undefined => {
+    if (insideRepo(relative)) return undefined;
     try {
       const stat = statSync(join(home, relative));
       const isFile = stat.isFile() || (stat.isDirectory() && PACKAGE.test(relative));

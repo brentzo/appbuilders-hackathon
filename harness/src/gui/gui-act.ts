@@ -222,6 +222,12 @@ export async function guiAct(subtaskId: Uuid, deps: GuiActDeps, options: GuiActO
   }
 }
 
+/** What the model reads for an action it repeats after it was blocked. */
+const BLOCKED_AGAIN = "Not run: this exact action was blocked before. Choose a different action.";
+
+/** The most new or changed files one step's observation names, so a burst of writes never floods the model. */
+const FILE_LINES = 3;
+
 /** What happened to an action the loop tried to run: the attempt goes on with a new look, or it ends. */
 type ActResult = { next: Observation } | { end: GuiActRun };
 
@@ -236,6 +242,10 @@ class Attempt {
   /** Steps of this attempt whose action worked. */
   private worked = 0;
   private readonly streaks: Streaks = { noEffect: 0, invalidOutput: 0 };
+  /** Actions blocked in this attempt, so the same one is never asked about again. */
+  private readonly blockedActions = new Set<string>();
+  /** How often the model proposed an action that was already blocked. */
+  private blockedRepeats = 0;
   private last: Observation | undefined;
 
   constructor(
@@ -409,10 +419,20 @@ class Attempt {
     this.steps++;
     const notDone = (outcome: "blocked" | "declined" | "noEffect", why: NotDone) =>
       this.finishStep(step, outcome, NOT_DONE[why], describeNotDone(decision.recorded, app, why));
+    const key = JSON.stringify(action);
 
+    if (this.blockedActions.has(key)) {
+      // The same action again after "Keep going": the user already heard about it, so it is not asked about again,
+      // and a model that keeps repeating it is stuck (live Keynote runs, 2026-10-10).
+      this.finishStep(step, "blocked", BLOCKED_AGAIN, describeNotDone(decision.recorded, app, "blocked"));
+      this.blockedRepeats++;
+      if (this.blockedRepeats >= INVALID_OUTPUT_LIMIT) return { end: this.end("invalidOutput", "stuck") };
+      return { next: before ?? (await this.look()) };
+    }
     if (decision.level === "blocked") {
       this.deps.logger.warn("gui.blocked", { taskId: this.taskId, subtaskId: this.subtask.id, rule: decision.rule });
       notDone("blocked", "blocked");
+      this.blockedActions.add(key);
       return this.afterBlocked(step, before);
     }
     if (decision.level === "ask") {
@@ -465,6 +485,7 @@ class Attempt {
       if (error.userError?.kind === "blockedAction") {
         // A password field or a keystroke from a ghost: the Mac app's own guard (OBJ-39).
         notDone("blocked", "blocked");
+        this.blockedActions.add(key);
         return this.afterBlocked(step, before);
       }
       this.finishStep(step, "error", "The Mac app could not run this action.", describeGuiAction(decision.recorded, app, false));
@@ -489,8 +510,13 @@ class Attempt {
     const outcome = stepOutcome(action, ran, before, after, files);
     const line = fit(observationLine(action, ran, outcome, before, after, files));
     if (outcome === "blocked") {
-      // The Mac app stopped it partway: typing that reached a password field (SPEC-05 r7).
       this.finishStep(step, "blocked", line, describeNotDone(decision.recorded, app, "blocked"));
+      // Only typing can stop partway, at a password field (SPEC-05 r7). Any other action the Mac app answers as
+      // blocked never ran: the app is stopped on its side, for example after it saw the user take over. That is a
+      // pause, not a blocked action, so the task pauses and the user's Resume carries on (live Keynote runs,
+      // 2026-10-10: the blocked-action card came back on every "Keep going").
+      if (action.kind !== ACTION.type) return { end: this.macStopped() };
+      this.blockedActions.add(key);
       return this.afterBlocked(step, after);
     }
     this.finishStep(step, outcome, line, describeGuiAction(decision.recorded, app, outcome === "ok"));
@@ -502,6 +528,19 @@ class Attempt {
     }
     if (this.streaks.invalidOutput >= INVALID_OUTPUT_LIMIT) return { end: this.end("invalidOutput", "stuck") };
     return { next: after };
+  }
+
+  /**
+   * The Mac app refused to act because it is stopped on its side. Pauses the UI lanes as a take-over does (SPEC-06 r2),
+   * so the task shows as paused and the user's Resume (`resumeTask`) starts the lanes again; the step stays recorded
+   * as not done, so the same action is tried again after the resume.
+   */
+  private macStopped(): GuiActRun {
+    this.deps.logger.warn("gui.macStopped", { taskId: this.taskId, subtaskId: this.subtask.id });
+    this.options.control.pauseUiLanes();
+    const status = this.deps.store.getTask(this.taskId)?.status;
+    if (status === "running" || status === "waitingForUser") this.deps.store.setTaskStatus(this.taskId, "paused");
+    return this.aborted();
   }
 
   /**
@@ -772,9 +811,11 @@ function observationLine(
   after: Observation,
   files: readonly FileChange[],
 ): string {
-  const fileLine = files
-    .map((file) => `${file.created ? "New file" : "Changed file"}: ${file.path.split("/").at(-1)}.`)
-    .join(" ");
+  const shown = files
+    .slice(0, FILE_LINES)
+    .map((file) => `${file.created ? "New file" : "Changed file"}: ${file.path.split("/").at(-1)}.`);
+  const more = files.length - FILE_LINES;
+  const fileLine = [...shown, ...(more > 0 ? [`And ${more} more ${more === 1 ? "file" : "files"}.`] : [])].join(" ");
   if (outcome === "noEffect") {
     const why =
       ran.outcome === "error"

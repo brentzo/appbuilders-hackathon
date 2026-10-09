@@ -4,6 +4,8 @@
 //
 // Run: npm run gui:run -- --app Keynote --instruction "In Keynote, export ..." [--goal "..."] [--runs 5] [--first 41]
 // "{run}" in the instruction becomes the run's number, from --first on, so each run can name its own file.
+// --cancel id,id cancels tasks first, the way the app's cancelTask does, for test tasks left over from earlier runs.
+// With --cancel alone, it cancels and stops without waiting for the Mac app.
 // The lane router picks the lane, as in a real task.
 // Start the model server first (README, "The local model server"), then this script, then the Mac app, which
 // connects to harness.sock in YUMI_SUPPORT_DIR (default ~/Library/Application Support/Yumi). The script refuses to
@@ -23,9 +25,11 @@ const { values } = parseArgs({
     goal: { type: "string" },
     runs: { type: "string", default: "1" },
     first: { type: "string", default: "1" },
+    cancel: { type: "string" },
   },
 });
-if (!values.app || !values.instruction) {
+const cancels = values.cancel?.split(",").filter(Boolean) ?? [];
+if ((!values.app || !values.instruction) && cancels.length === 0) {
   console.error('Usage: npm run gui:run -- --app Keynote --instruction "..." [--goal "..."] [--runs 5]');
   process.exit(2);
 }
@@ -39,12 +43,20 @@ const harness = await startHarness(config, logger, {
   work: {
     client: new ModelClient(config.model, logger),
     logger,
-    deviceId: "mac",
+    deviceId: "mac-local",
     home,
     lanes: { helper: fileHelperLane({ home, logger }) },
     slots: 1,
   },
 });
+for (const taskId of cancels) {
+  await harness.tasks.cancel(taskId);
+  console.error(`Cancelled ${taskId}: ${harness.store.getTask(taskId)?.status}`);
+}
+if (!values.app || !values.instruction) {
+  await harness.close();
+  process.exit(0);
+}
 console.error(`Listening on ${config.socketPath}. Start the Mac app now. Log: ${config.logPath}`);
 for (let waited = 0; harness.server.readyConnections === 0; waited += 250) {
   if (waited > 120_000) throw new Error("The Mac app did not connect within 2 minutes");
@@ -55,7 +67,7 @@ const first = Number(values.first);
 for (let run = first; run < first + Number(values.runs); run++) {
   const instruction = values.instruction.replaceAll("{run}", String(run));
   const goal = values.goal ?? instruction;
-  const task = harness.store.createTask({ originDeviceId: "mac", goal });
+  const task = harness.store.createTask({ originDeviceId: "mac-local", goal });
   harness.store.setTaskStatus(task.id, "planning", { confirmedGoal: goal });
   const { subtasks } = harness.store.savePlan(task.id, [
     {

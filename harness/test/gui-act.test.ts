@@ -593,6 +593,55 @@ describe("gui_act limits and endings (OBJ-36.5 to OBJ-36.8)", () => {
     );
   });
 
+  it("never asks again about an action that was blocked, and a model that keeps repeating it is stuck (live Keynote runs, 2026-10-10)", async () => {
+    await connect(quitMenu());
+    scriptModel(() => reply({ kind: "click", element: 2 }));
+    const { gate, blockedCalls } = approvalsAnswering({ outcome: "cancelled" }, "keepGoing");
+    const { subtask } = guiSubtask();
+    const run = ended(await act(subtask, { approvals: gate }));
+
+    expect(blockedCalls).toHaveLength(1);
+    expect(mac!.executed).toEqual([]);
+    const steps = harness.store.listSteps(subtask.id);
+    expect(steps.map((s) => s.outcome)).toEqual(["blocked", "blocked", "blocked"]);
+    expect(steps[1]!.observation).toBe("Not run: this exact action was blocked before. Choose a different action.");
+    expect(run).toMatchObject({ reason: "invalidOutput", result: { status: "stuck" } });
+  });
+
+  it("pauses instead of showing the blocked-action card when the Mac app refuses a click because it is stopped on its side", async () => {
+    // The Mac app answers this way while its own stop is on, for example after it saw the user take over.
+    await connect(
+      staticApp(
+        KEYNOTE,
+        {
+          app: "Keynote",
+          title: "Q3 Report",
+          elements: [
+            { role: "menuBarItem", label: "File" },
+            { role: "button", label: "Don’t Update" },
+          ],
+        },
+        () => ({ outcome: "blocked", observation: "Nothing ran: Yumi is paused, or the goal is not confirmed yet." }),
+      ),
+    );
+    scriptModel(() => reply({ kind: "click", element: 1 }));
+    const { gate, blockedCalls } = approvalsAnswering({ outcome: "cancelled" }, "keepGoing");
+    const control = new RunControl();
+    const { subtask } = guiSubtask();
+    const run = await act(subtask, { approvals: gate }, control);
+
+    expect(run.outcome).toBe("aborted");
+    expect(blockedCalls).toEqual([]);
+    expect(control.uiLanesPaused).toBe(true);
+    expect(harness.store.getTask(subtask.taskId)!.status).toBe("paused");
+    const [step] = harness.store.listSteps(subtask.id);
+    expect(step).toMatchObject({
+      outcome: "blocked",
+      action: { permission: "allowed", element: { role: "menuBarItem", label: "File" } },
+    });
+    expect(logger.entries.some((e) => e.event === "gui.macStopped")).toBe(true);
+  });
+
   it("ends with blockedAction when there is no approval flow", async () => {
     await connect(quitMenu());
     scriptModel(() => reply({ kind: "click", element: 2 }));
