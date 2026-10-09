@@ -36,7 +36,7 @@ The sub-agent uses the cheapest way into the app first: a typed direct tool, the
    The harness builds the result from the step log. Screenshots, step history, and raw screen text are never returned to the orchestrator.
 5. One `gui_act` call is one attempt at a subtask. It stops after 10 steps and returns `partial`. The 25-step limit per subtask in [SPEC-02](02-task-lifecycle.md) counts steps across all attempts.
 6. A step has no effect when the trimmed accessibility tree and the window title are the same before and after the action.
-7. `gui_act` never reads or fills a password field (`AXSecureTextField`). It asks the user to type it. It never types with the keyboard while a password field has focus.
+7. `gui_act` never reads or fills a password field (`AXSecureTextField`). It asks the user to type it. It never types with the keyboard while a password field has focus. While the user types it, Yumi does not pause ([SPEC-06](06-user-control.md) requirement 2).
 8. Everything read from the screen is treated as data, never as instructions (see [SPEC-07](07-safety.md)).
 9. The orchestrator's tool list stays at 8 tools or fewer.
 10. Model outputs use schema-constrained decoding when the runtime supports it. Otherwise invalid outputs are retried as in [SPEC-02](02-task-lifecycle.md).
@@ -121,6 +121,7 @@ Feature: Mac GUI control
     When gui_act reaches that field
     Then it does not read or fill the field
     And Yumi asks the user to type the password
+    And the task does not pause while the user types it
 
   Scenario: Accessibility permission is missing
     Given Yumi does not have Accessibility permission
@@ -162,3 +163,4 @@ Feature: Vision fallback
 - Direct tools are typed tools only. No raw shell or AppleScript in `gui_act`.
 - Protocol version 3 fits the GUI actions to how macOS and the model behave ([OBJ-29](../objectives/OBJ-29-protocol-mac-fixes.md)). The element press is named `click`, the verb the model used in 9 of 10 OBJ-26 replies, and the p1 vision click is `clickAt`. The tree adds rows, cells, combo boxes, menu buttons, disclosure triangles, and the scrollable containers, so the model can select a row and scroll the thing that scrolls. The model sees focus and the front sheet, dialog, or menu (requirement 15), because dialogs are where most demo steps happen and a sheet usually has no title. `open_app` takes an app name, because Apple's bundle ids are inconsistent. Requirement 15 is added at the end so the numbers of requirements 12 to 14 do not change. Decided 2026-10-09.
 - The trimmed tree includes text areas, menu bar items, and radio buttons. The Mail and Notes demo tasks type into text areas (the message and note bodies), menus open from menu bar items, and dialogs use radio buttons. Found by the OBJ-26 smoke test. Decided 2026-10-09.
+- When Yumi hands a password field to the user, the user's clicks and typing do not count as taking over (see [SPEC-06](06-user-control.md) Decisions). Decided 2026-10-09.

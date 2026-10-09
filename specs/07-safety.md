@@ -24,7 +24,7 @@ Deleting is allowed only with a strict confirmation, screen content can never gi
 
    | Level | Actions |
    |---|---|
-   | Allowed | Read files in the home folder, list folders, open apps, files, and URLs, click and type in apps, create new files and folders, copy and move files without replacing anything, edit files Yumi created in this task |
+   | Allowed | Read files in the home folder, list folders, open apps, files, and URLs, click and type in apps, create new files and folders, copy and move files without replacing anything |
    | Ask every time | Send an email or message, delete files |
    | Blocked | Shell commands, `sudo`, installing software, changing system settings, payments and purchases, emptying the Trash, quitting or force-quitting apps, changing file permissions, running downloaded scripts, writing dotfiles or anything in `~/Library`, replacing a file Yumi did not create, reading secret locations |
 
@@ -33,9 +33,9 @@ Deleting is allowed only with a strict confirmation, screen content can never gi
 4. `copy` and `move` never replace an existing file. If a name is taken, the new file gets a numbered name. Names are compared without regard to case, because Mac volumes are case-insensitive by default: `Report.pdf` takes the name `report.pdf`.
 5. A blocked action never runs, even if the user says yes. Yumi says "I can't do that. It's blocked to keep your Mac safe, so I skipped it. Want me to keep going with the rest?" with "Keep going" and "Stop" buttons.
 6. Risk is read from the action itself:
-   - For accessibility actions, from the element's label. "Send", "Delete", and "Move to Trash" ask. "Empty Trash", "Buy", "Pay", and "Install" are blocked.
-   - For key presses, from a per-app list. Return in Messages, Command-Return and Command-Shift-D in Mail ask. Command-Delete in Finder asks. Command-Shift-Delete in Finder is blocked.
-   - Anything the harness cannot classify asks.
+   - For accessibility actions, from the element's label. "Send", "Delete", and "Move to Trash" ask. "Empty Trash", "Buy", "Pay", "Install", "Quit", and "Force Quit" are blocked.
+   - For key presses, from a per-app list. Return in Messages, Command-Return and Command-Shift-D in Mail ask. Command-Delete in Finder asks. Command-Shift-Delete in Finder is blocked. Command-Q and Command-Option-Escape are blocked in every app.
+   - Anything the harness cannot classify asks. This applies only to key presses, and to clicks in apps on the risky-app list: Mail, Messages, WhatsApp, Finder, and System Settings. Other clicks are allowed.
 
 ### Strict delete
 
@@ -143,6 +143,10 @@ Feature: Strict delete
   Scenario: Emptying the Trash is blocked
     When the next action is pressing "Empty Trash" in Finder
     Then it does not run
+
+  Scenario: Quitting an app is blocked
+    When the next action is pressing Command-Q in Keynote
+    Then it does not run
 ```
 
 ```gherkin
@@ -215,3 +219,10 @@ Feature: Action log
 - No shell or AppleScript. Typed file tools only.
 - Delete is strict: Trash only, exact paths, tap to approve, one approval per exact list, protected folders blocked.
 - No "always allow". Sending and deleting ask every time.
+- "Quit", "Force Quit", Command-Q, and Command-Option-Escape are blocked, because the permission table blocks quitting and force-quitting apps and these are the ways to do it. Decided 2026-10-09.
+- "Anything the harness cannot classify asks" applies only to key presses and to clicks in apps on a short risky-app list (Mail, Messages, WhatsApp, Finder, System Settings). Other clicks are allowed, so ordinary clicks never ask. Decided 2026-10-09.
+- Editing files Yumi created in this task is dropped from the allowed list for p0. No typed tool edits a file, and `write_new_file` never replaces one. Decided 2026-10-09.
+
+## Open questions
+
+- Clicks in risky apps: with the rule above, every click in Mail whose label is not on a list asks, including "New Message" and attaching a file. Demo task 2 in [SPEC-05](05-mac-gui-control.md) drafts and attaches in Mail and asks only before Send. Options: (a) a short per-app list of safe labels for risky apps, such as "New Message" and "Attach" in Mail; (b) ask only for unclassified key presses in risky apps, and allow unlisted clicks. Recommendation: (a), so the demo asks only before Send while risky apps stay strict.
