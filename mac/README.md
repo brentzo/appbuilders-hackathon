@@ -149,6 +149,21 @@ Sending and deleting ask every time ([OBJ-40](../objectives/OBJ-40-mac-approval-
   A wildcard or relative path is refused before anything moves.
 - The blocked-action card is the error window: "Keep going" calls `resumeTask` and "Stop" calls `cancelTask`.
 
+### Stop and take-over
+
+The user can always stop Yumi ([OBJ-35](../objectives/OBJ-35-mac-stop-and-take-over.md)).
+
+- Control-Option-Escape (a Carbon hot key, no permission needed) and "Stop" in the menu pause every lane.
+  Yumi says "Paused. Say continue when you're ready, or cancel to stop for good." and listens for the answer.
+- Moving the mouse, clicking, scrolling, or typing while a cursor works in a running task pauses silently.
+  A listen-only event tap watches for it; events tagged as Yumi's own, input on Yumi's own panels, and input while Yumi waits for the user (a card, a handed-over password) never count.
+- The stop is local first: typing stops before its next chunk, and `executeAction` refuses everything, checked again right before acting.
+  Then the harness gets `pause`, open approval cards close, and every cursor freezes in the paused state.
+- The paused panel has "Resume" and "Cancel".
+  Resume calls `resumeTask` and lifts the local stop once the harness reports the task running.
+  Cancel calls `cancelTask`, fades every cursor, and says "Okay, I stopped. Nothing else will happen."
+- While macOS Secure Input is on, key presses do not reach the tap; Yumi logs when it turns on and off.
+
 ### Window tiling
 
 When the harness sends `tilingSuggested`, Yumi asks "Want me to arrange your windows so you can watch all of us work?" out loud and in a small panel at the top of the task's display, with "Arrange windows" and "Leave them" ([OBJ-20](../objectives/OBJ-20-window-tiling.md)).
@@ -213,6 +228,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 | `Yumi/Settings/` | Settings, their local storage, and the harness settings hand-off |
 | `Yumi/GUI/` | Controlling other apps: the trimmed tree reader, element actions, tagged keystrokes, the direct tools, and the GUI debug window |
 | `Yumi/Approvals/` | Send and delete approval cards, their copy, and `moveToTrash` |
+| `Yumi/Control/` | The stop shortcut, the take-over watcher, the local stop, and the paused panel |
 | `Yumi/Confirmation/` | Goal confirmation: the repeat-back panel, the `speak` interface, and listening for the answer |
 | `Yumi/Tiling/` | Window tiling: the consent panel, the grid, and saving and restoring window frames |
 | `Yumi/Overlay/` | The click-through cursor overlay: panels per display, the placeholder cursor drawing, motion, helper chips, and the cursor debug actions |

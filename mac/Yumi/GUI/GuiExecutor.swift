@@ -15,8 +15,10 @@ final class GuiExecutor {
     let keystrokes: KeystrokeSender
     /// Shows a failure to the user through the error presenter (OBJ-39.8). Set by the app.
     var onUserError: ((UserError) -> Void)?
-    /// False while a goal waits for its confirmation and no task is confirmed: then nothing acts,
-    /// whatever the harness sends (OBJ-17.7). Set by the app.
+    /// False while a goal waits for its confirmation and no task is confirmed (OBJ-17.7), and while
+    /// Yumi is stopped (OBJ-35.2): then nothing acts, whatever the harness sends. Set by the app.
+    /// Checked when a request arrives and again right before acting, so a pause that lands while
+    /// the cursor is still moving wins.
     var actionsAllowed: () -> Bool = { true }
 
     private let overlay: CursorOverlay?
@@ -56,9 +58,7 @@ final class GuiExecutor {
 
     func executeAction(_ params: ExecuteActionParams) async throws -> ExecuteActionResult {
         try await reporting {
-            guard actionsAllowed() else {
-                return Self.result(.blocked, "No goal is confirmed yet.")
-            }
+            guard actionsAllowed() else { return Self.notAllowed }
             // A password field is never filled, whatever else is true (SPEC-05 r7).
             if params.action.element?.role == .secureTextField {
                 switch params.action.action {
@@ -107,6 +107,7 @@ final class GuiExecutor {
             try await activate(params.target)
         }
         await moveCursor(params.cursorId, toTopLeft: CGPoint(x: frame.midX, y: frame.midY))
+        guard actionsAllowed() else { return Self.notAllowed }
         do {
             return Self.result(.ok, try perform(kept))
         } catch let error as AXFailure {
@@ -181,6 +182,7 @@ final class GuiExecutor {
         if let frame = appNode.element(kAXFocusedUIElementAttribute).flatMap({ LiveNode(element: $0).frame }) {
             await moveCursor(params.cursorId, toTopLeft: CGPoint(x: frame.midX, y: frame.midY))
         }
+        guard actionsAllowed() else { return Self.notAllowed }
         let typed = await keystrokes.type(text) { focusIsSecure(appNode) }
         if typed.stopped {
             return Self.result(.blocked, "Stopped typing after \(typed.typed) of \(typed.total) characters.")
@@ -193,6 +195,7 @@ final class GuiExecutor {
         try requireAccessibility()
         guard KeyCombo(combo) != nil else { return Self.result(.invalidOutput, "\(combo) is not a key combination Yumi knows.") }
         try await activate(params.target)
+        guard actionsAllowed() else { return Self.notAllowed }
         _ = keystrokes.press(combo)
         return Self.result(.ok, "Pressed \(combo).")
     }
@@ -335,6 +338,8 @@ final class GuiExecutor {
     private static func capitalized(_ text: String) -> String {
         text.prefix(1).uppercased() + text.dropFirst()
     }
+
+    static let notAllowed = result(.blocked, "Nothing ran: Yumi is paused, or the goal is not confirmed yet.")
 
     static func result(_ outcome: StepOutcome, _ text: String) -> ExecuteActionResult {
         ExecuteActionResult(outcome: outcome, observation: String(text.prefix(300)))

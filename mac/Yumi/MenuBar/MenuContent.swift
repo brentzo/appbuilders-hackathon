@@ -14,6 +14,13 @@ struct MenuContent: View {
             Text("Using the \(mock)")
         }
 
+        if model.status == .working {
+            // Same as Control-Option-Escape: pauses every lane (SPEC-06 r1).
+            Button(PauseCopy.stop) {
+                harness.pause.stop(.menu)
+            }
+        }
+
         PhoneMenuItems(phone: .shared)
 
         Divider()

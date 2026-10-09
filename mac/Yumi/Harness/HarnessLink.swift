@@ -30,6 +30,10 @@ final class HarnessLink {
     let confirmation: GoalConfirmation
     /// The send and delete cards, and the Trash (OBJ-40).
     let approvals: ApprovalCards
+    /// Stop, take-over, and the paused panel (OBJ-35).
+    let pause: PauseController
+    private var stopShortcut: StopShortcut?
+    private var takeOverWatcher: TakeOverWatcher?
     /// Helper subtasks shown as chips, by subtask id.
     private var helperSubtasks: Set<String> = []
 
@@ -59,6 +63,10 @@ final class HarnessLink {
             speech: speech, listen: { await confirmation.listener.listenForReply() }, presenter: ApprovalPanel(), overlay: overlay
         )
         client.appMethods = AppMethodServer(gui: gui, approvals: approvals)
+        pause = PauseController(
+            speech: speech, listen: { await confirmation.listener.listenForReply() }, panel: PausedPanel(), overlay: overlay,
+            keystrokes: gui.keystrokes, approvals: approvals, tasks: HarnessTaskControl(client: client)
+        )
         usesMock = launcher.isMock
         model.mockHarnessName = launcher.isMock ? launcher.displayName : nil
     }
@@ -67,8 +75,21 @@ final class HarnessLink {
         overlay.start()
         gui.onUserError = { [weak self] error in self?.onUserError?(error) }
         gui.actionsAllowed = { [weak self] in
-            self.map { Self.actionsAllowed(for: Array($0.taskStatuses.values)) } ?? true
+            guard let self else { return true }
+            return !pause.isStopped && Self.actionsAllowed(for: Array(taskStatuses.values))
         }
+        pause.activeTasks = { [weak self] in
+            self?.taskStatuses.filter { !WindowTiler.finished.contains($0.value) && $0.value != .awaitingConfirmation }.map(\.key) ?? []
+        }
+        let shortcut = StopShortcut { [weak self] in self?.pause.stop(.shortcut) }
+        shortcut.register()
+        stopShortcut = shortcut
+        let watcher = TakeOverWatcher(
+            uiLaneActing: { [weak self] in self?.uiLaneActing ?? false },
+            onTakeOver: { [weak self] in self?.pause.stop(.takeOver) }
+        )
+        watcher.start()
+        takeOverWatcher = watcher
         client.onLinkStateChange = { [weak self] state in
             guard let self else { return }
             model.harnessReady = state == .connected
@@ -102,6 +123,7 @@ final class HarnessLink {
             taskStatuses[change.taskId] = change.status
             tiler.taskStatusChanged(change.taskId, change.status)
             confirmation.taskStatusChanged(change.taskId, change.status)
+            pause.taskStatusChanged(change.taskId, change.status)
             model.taskStatus = Self.appStatus(for: Array(taskStatuses.values))
             if let subtaskId = change.subtaskId, let status = change.subtaskStatus,
                Self.finishedSubtask.contains(status), helperSubtasks.remove(subtaskId) != nil {
@@ -160,6 +182,13 @@ final class HarnessLink {
         if statuses.contains(where: active.contains) { return .working }
         if statuses.contains(.paused) { return .paused }
         return .ready
+    }
+
+    /// A cursor is working in a running task and Yumi is not waiting for the user: only then does
+    /// the user's own input count as taking over (SPEC-06 r2). Helpers have no cursor.
+    private var uiLaneActing: Bool {
+        !pause.isStopped && taskStatuses.values.contains(.running) && !overlay.cursors.isEmpty
+            && approvals.openApprovalIds.isEmpty
     }
 
     /// Before any goal is confirmed nothing may act (OBJ-17.7): a goal waiting for its answer, with
