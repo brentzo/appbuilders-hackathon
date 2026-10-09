@@ -16,7 +16,7 @@ nonisolated enum WakeWordModels {
     /// The real model from OBJ-12. Used as soon as the file is in the folder.
     static let heyYumi = "hey_yumi.onnx"
     /// STAND-IN until OBJ-12's "Hey Yumi" model exists: openWakeWord's pre-trained "hey jarvis"
-    /// (openWakeWord v0.5.1 release). Say "Hey Jarvis" to wake Yumi while this is in use.
+    /// (openWakeWord v0.5.1 release). It wakes on "Hey Jarvis", but the app names it "Hey Yumi".
     static let standIn = "hey_jarvis_v0.1.onnx"
 
     /// openWakeWord's default threshold, until OBJ-12 picks one for "Hey Yumi".
@@ -32,7 +32,7 @@ nonisolated enum WakeWordModels {
         let has = { FileManager.default.fileExists(atPath: folder.appendingPathComponent($0).path) }
         guard has(melspectrogram), has(embedding) else { return nil }
         if has(heyYumi) { return Choice(file: heyYumi, phrase: "Hey Yumi", isStandIn: false) }
-        if has(standIn) { return Choice(file: standIn, phrase: "Hey Jarvis", isStandIn: true) }
+        if has(standIn) { return Choice(file: standIn, phrase: "Hey Yumi", isStandIn: true) }
         return nil
     }
 

@@ -79,7 +79,7 @@ struct WakeWordTests {
         model.settings.wakeWordEnabled = true
         listener.update()
         #expect(listener.isListening)
-        #expect(listener.phrase == "Hey Jarvis", "the stand-in until OBJ-12")
+        #expect(listener.phrase == "Hey Yumi", "the product name, even on the stand-in model")
 
         model.settings.wakeWordEnabled = false
         listener.update()
