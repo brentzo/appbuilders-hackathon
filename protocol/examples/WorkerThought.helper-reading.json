@@ -1,0 +1,10 @@
+{
+  "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+  "subtaskId": "3c2b1a09-8f7e-4d6c-8b5a-4f3e2d1c0b9a",
+  "title": "Find the latest invoices",
+  "lane": "helper",
+  "sees": "Files: the folder Downloads has 12 items",
+  "lastAction": "Looked in the folder Downloads",
+  "decision": "Read invoice-2026-10.pdf",
+  "at": "2026-10-10T15:42:09+08:00"
+}

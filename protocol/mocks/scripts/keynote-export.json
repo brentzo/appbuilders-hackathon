@@ -22,6 +22,7 @@
       }
     },
     { "afterMs": 400, "event": "cursorCommand", "payload": { "command": "setState", "cursorId": "main", "state": "acting" } },
+    { "afterMs": 100, "event": "workerThought", "example": "WorkerThought.main-export" },
     { "afterMs": 1500, "event": "taskStatusChanged", "example": "TaskStatusChanged.subtask-done" },
     { "afterMs": 300, "event": "taskStatusChanged", "payload": { "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8", "status": "done" } },
     { "afterMs": 100, "event": "speak", "example": "Speak.summary" },

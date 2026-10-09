@@ -1108,6 +1108,12 @@ data class SetCursorState(
     val state: CursorState,
 ) : CursorCommand
 
+/** Turns Debug mode on or off (SPEC-07 r22). The app sends it after every hello and whenever the user changes the setting: on by default in Debug builds, off in release builds. With Debug mode on, the harness writes the detailed debug log on this device and sends workerThought events. */
+@Serializable
+data class SetDebugModeParams(
+    val enabled: Boolean,
+)
+
 /** Start a timer through the Android set-timer intent. */
 @Serializable
 @SerialName("set_timer")
@@ -1594,7 +1600,30 @@ data class WorkerInput(
 /** Exactly one action. This is the JSON the model must return. */
 @Serializable
 data class WorkerOutput(
+    /** Why this action, in one short sentence. Asked for only in Debug mode, before the action, and shown in the thoughts panel (SPEC-07 r23). Never decides anything. */
+    val reason: String? = null,
     val action: ModelAction,
+)
+
+/** What one subtask's worker is doing and why, for the thoughts panel (SPEC-07 r23). Sent only in Debug mode: when the model has chosen the next action, and again when the action has finished. Each event replaces the last one for its subtask. A cursor's panel finds it by cursorId; a helper chip's by subtaskId. Text typed or set is never part of it (SPEC-07 r20). */
+@Serializable
+data class WorkerThought(
+    val taskId: String,
+    val subtaskId: String,
+    /** The cursor doing the work: main for the main lane, the ghost's own id for a ghost. Absent for a helper, which has no cursor. */
+    val cursorId: String? = null,
+    /** The subtask's title. */
+    val title: String,
+    val lane: Lane,
+    /** A short summary of what the worker sees: the app, window, and what is in front, or for a helper what its last tool returned. */
+    val sees: String,
+    /** The last thing it did, as its action log line, for example Clicked Export in Keynote. Absent before its first action. */
+    val lastAction: String? = null,
+    /** The action the model chose last, in plain language, for example Click Export (element 12). */
+    val decision: String? = null,
+    /** The model's reason for that decision, in its own words. Absent when the model gave none. */
+    val reason: String? = null,
+    val at: String,
 )
 
 /** Create a new file. Never replaces an existing file. */
@@ -1621,6 +1650,7 @@ enum class RpcMethod(val wireName: String) {
     StartPairing("startPairing"),
     ListPairedDevices("listPairedDevices"),
     Unpair("unpair"),
+    SetDebugMode("setDebugMode"),
     ExecuteAction("executeAction"),
     ObserveWindow("observeWindow"),
     ReadFieldValues("readFieldValues"),
@@ -1650,5 +1680,6 @@ enum class RpcEvent(val wireName: String) {
     TilingSuggested("tilingSuggested"),
     RouteDecided("routeDecided"),
     Speak("speak"),
-    BridgeStateChanged("bridgeStateChanged");
+    BridgeStateChanged("bridgeStateChanged"),
+    WorkerThought("workerThought");
 }

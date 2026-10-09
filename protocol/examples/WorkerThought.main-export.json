@@ -1,0 +1,12 @@
+{
+  "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+  "subtaskId": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+  "cursorId": "main",
+  "title": "Export the deck as a PDF",
+  "lane": "main",
+  "sees": "Keynote, \"Q3 Review\", with the Export sheet in front (14 elements)",
+  "lastAction": "Clicked Export To in Keynote",
+  "decision": "Click \"Next…\" (element 9)",
+  "reason": "PDF is already selected in the Export sheet, so Next moves on to saving the file.",
+  "at": "2026-10-10T15:42:07+08:00"
+}

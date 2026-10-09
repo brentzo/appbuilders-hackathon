@@ -927,6 +927,11 @@ export interface SetCursorState {
   state: CursorState;
 }
 
+/** Turns Debug mode on or off (SPEC-07 r22). The app sends it after every hello and whenever the user changes the setting: on by default in Debug builds, off in release builds. With Debug mode on, the harness writes the detailed debug log on this device and sends workerThought events. */
+export interface SetDebugModeParams {
+  enabled: boolean;
+}
+
 /** Start a timer through the Android set-timer intent. */
 export interface SetTimerCall {
   tool: "set_timer";
@@ -1340,7 +1345,29 @@ export interface WorkerInput {
 
 /** Exactly one action. This is the JSON the model must return. */
 export interface WorkerOutput {
+  /** Why this action, in one short sentence. Asked for only in Debug mode, before the action, and shown in the thoughts panel (SPEC-07 r23). Never decides anything. */
+  reason?: string;
   action: ModelAction;
+}
+
+/** What one subtask's worker is doing and why, for the thoughts panel (SPEC-07 r23). Sent only in Debug mode: when the model has chosen the next action, and again when the action has finished. Each event replaces the last one for its subtask. A cursor's panel finds it by cursorId; a helper chip's by subtaskId. Text typed or set is never part of it (SPEC-07 r20). */
+export interface WorkerThought {
+  taskId: Uuid;
+  subtaskId: Uuid;
+  /** The cursor doing the work: main for the main lane, the ghost's own id for a ghost. Absent for a helper, which has no cursor. */
+  cursorId?: string;
+  /** The subtask's title. */
+  title: string;
+  lane: Lane;
+  /** A short summary of what the worker sees: the app, window, and what is in front, or for a helper what its last tool returned. */
+  sees: string;
+  /** The last thing it did, as its action log line, for example Clicked Export in Keynote. Absent before its first action. */
+  lastAction?: string;
+  /** The action the model chose last, in plain language, for example Click Export (element 12). */
+  decision?: string;
+  /** The model's reason for that decision, in its own words. Absent when the model gave none. */
+  reason?: string;
+  at: Timestamp;
 }
 
 /** Create a new file. Never replaces an existing file. */
@@ -1366,6 +1393,7 @@ export interface RpcMethods {
   startPairing: { direction: "appToHarness"; params: Empty; result: StartPairingResult };
   listPairedDevices: { direction: "appToHarness"; params: Empty; result: PairedDeviceList };
   unpair: { direction: "appToHarness"; params: UnpairParams; result: Empty };
+  setDebugMode: { direction: "appToHarness"; params: SetDebugModeParams; result: Empty };
   executeAction: { direction: "harnessToApp"; params: ExecuteActionParams; result: ExecuteActionResult };
   observeWindow: { direction: "harnessToApp"; params: ObserveWindowParams; result: Observation };
   readFieldValues: { direction: "harnessToApp"; params: ReadFieldValuesParams; result: ReadFieldValuesResult };
@@ -1396,4 +1424,5 @@ export interface RpcEvents {
   routeDecided: RouteDecided;
   speak: Speak;
   bridgeStateChanged: BridgeStateChanged;
+  workerThought: WorkerThought;
 }

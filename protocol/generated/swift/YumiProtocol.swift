@@ -1861,6 +1861,15 @@ public struct SetCursorState: Codable, Equatable, Sendable {
     }
 }
 
+/// Turns Debug mode on or off (SPEC-07 r22). The app sends it after every hello and whenever the user changes the setting: on by default in Debug builds, off in release builds. With Debug mode on, the harness writes the detailed debug log on this device and sends workerThought events.
+public struct SetDebugModeParams: Codable, Equatable, Sendable {
+    public var enabled: Bool
+
+    public init(enabled: Bool) {
+        self.enabled = enabled
+    }
+}
+
 /// Start a timer through the Android set-timer intent.
 public struct SetTimerCall: Codable, Equatable, Sendable {
     public var seconds: Int
@@ -2630,10 +2639,46 @@ public struct WorkerInput: Codable, Equatable, Sendable {
 
 /// Exactly one action. This is the JSON the model must return.
 public struct WorkerOutput: Codable, Equatable, Sendable {
+    /// Why this action, in one short sentence. Asked for only in Debug mode, before the action, and shown in the thoughts panel (SPEC-07 r23). Never decides anything.
+    public var reason: String?
     public var action: ModelAction
 
-    public init(action: ModelAction) {
+    public init(reason: String? = nil, action: ModelAction) {
+        self.reason = reason
         self.action = action
+    }
+}
+
+/// What one subtask's worker is doing and why, for the thoughts panel (SPEC-07 r23). Sent only in Debug mode: when the model has chosen the next action, and again when the action has finished. Each event replaces the last one for its subtask. A cursor's panel finds it by cursorId; a helper chip's by subtaskId. Text typed or set is never part of it (SPEC-07 r20).
+public struct WorkerThought: Codable, Equatable, Sendable {
+    public var taskId: String
+    public var subtaskId: String
+    /// The cursor doing the work: main for the main lane, the ghost's own id for a ghost. Absent for a helper, which has no cursor.
+    public var cursorId: String?
+    /// The subtask's title.
+    public var title: String
+    public var lane: Lane
+    /// A short summary of what the worker sees: the app, window, and what is in front, or for a helper what its last tool returned.
+    public var sees: String
+    /// The last thing it did, as its action log line, for example Clicked Export in Keynote. Absent before its first action.
+    public var lastAction: String?
+    /// The action the model chose last, in plain language, for example Click Export (element 12).
+    public var decision: String?
+    /// The model's reason for that decision, in its own words. Absent when the model gave none.
+    public var reason: String?
+    public var at: String
+
+    public init(taskId: String, subtaskId: String, cursorId: String? = nil, title: String, lane: Lane, sees: String, lastAction: String? = nil, decision: String? = nil, reason: String? = nil, at: String) {
+        self.taskId = taskId
+        self.subtaskId = subtaskId
+        self.cursorId = cursorId
+        self.title = title
+        self.lane = lane
+        self.sees = sees
+        self.lastAction = lastAction
+        self.decision = decision
+        self.reason = reason
+        self.at = at
     }
 }
 
@@ -2664,6 +2709,7 @@ public enum RpcMethod: String, CaseIterable, Sendable {
     case startPairing
     case listPairedDevices
     case unpair
+    case setDebugMode
     case executeAction
     case observeWindow
     case readFieldValues
@@ -2694,4 +2740,5 @@ public enum RpcEvent: String, CaseIterable, Sendable {
     case routeDecided
     case speak
     case bridgeStateChanged
+    case workerThought
 }

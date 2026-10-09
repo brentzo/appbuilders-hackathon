@@ -49,6 +49,7 @@
       "additionalProperties": false,
       "required": ["action"],
       "properties": {
+        "reason": { "description": "Why this action, in one short sentence. Asked for only in Debug mode, before the action, and shown in the thoughts panel (SPEC-07 r23). Never decides anything.", "type": "string", "minLength": 1, "maxLength": 200 },
         "action": { "$ref": "action.json#/$defs/ModelAction" }
       }
     }

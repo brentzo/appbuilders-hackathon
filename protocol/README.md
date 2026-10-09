@@ -156,6 +156,12 @@ Pausing, approvals, and blocked actions (SPEC-06, SPEC-07, [OBJ-38](../objective
 - `showApprovalCard` resolves when the user answers, and the harness sends `approvalCancelled` when a pause or cancel drops the approval first; the app then closes the card and ignores a late tap.
 - A blocked action is a `userError` of kind `blockedAction`. The app shows "Keep going", which calls `resumeTask`, and "Stop", which calls `cancelTask` (gap G6, resolved in OBJ-45).
 
+Debug mode (SPEC-07 r22 and r23, [OBJ-52](../objectives/OBJ-52-harness-debug-logs.md)):
+
+- `setDebugMode` turns it on or off. The app sends it after every `hello` and whenever the user changes the setting, so the harness never keeps its own copy across restarts.
+- With Debug mode on, the harness sends `workerThought` for each step: when the model has chosen the action, and again when the action has finished. Each event replaces the last one for its subtask. A cursor's thoughts panel finds it by `cursorId` and a helper chip's by `subtaskId`.
+- `WorkerOutput.reason` is the model's one-sentence reason, asked for only in Debug mode. It never changes what runs.
+
 `src/rpc.ts` implements this for TypeScript (`RpcPeer`) and validates every message in both directions.
 The Swift and Kotlin sides follow the same rules.
 
@@ -212,7 +218,7 @@ Options for both:
 
 | Script | Shows |
 |---|---|
-| `keynote-export` | Repeat-back, planning, the main cursor exporting a Keynote deck, and the spoken summary |
+| `keynote-export` | Repeat-back, planning, the main cursor exporting a Keynote deck with one `workerThought`, and the spoken summary |
 | `approval-and-question` | A question from the model, then a pause that cancels a pending approval |
 | `windows-and-bridge` | Bridge state changes, a resumable task, a tiling suggestion, a busy window, and errors |
 

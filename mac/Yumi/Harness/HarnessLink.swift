@@ -164,7 +164,7 @@ final class HarnessLink {
         case .bridgeStateChanged(let change):
             PhoneLink.shared.update(connection: PhoneLink.Connection(change.state))
         default:
-            // questionAsked, interruptedTaskFound and waitingForWindow are consumed in later objectives.
+            // questionAsked, interruptedTaskFound, waitingForWindow and workerThought (OBJ-53) are consumed in later objectives.
             log.info("Not handled yet: \(event.name, privacy: .public)")
         }
     }

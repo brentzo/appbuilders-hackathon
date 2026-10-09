@@ -15,6 +15,7 @@ enum HarnessEvent: Sendable {
     case routeDecided(RouteDecided)
     case speak(Speak)
     case bridgeStateChanged(BridgeStateChanged)
+    case workerThought(WorkerThought)
 
     enum DecodeError: Error {
         case unknownEvent(String)
@@ -38,6 +39,7 @@ enum HarnessEvent: Sendable {
         case .routeDecided: return .routeDecided(try decoder.decode(RouteDecided.self, from: payload))
         case .speak: return .speak(try decoder.decode(Speak.self, from: payload))
         case .bridgeStateChanged: return .bridgeStateChanged(try decoder.decode(BridgeStateChanged.self, from: payload))
+        case .workerThought: return .workerThought(try decoder.decode(WorkerThought.self, from: payload))
         }
     }
 
@@ -55,6 +57,7 @@ enum HarnessEvent: Sendable {
         case .routeDecided: RpcEvent.routeDecided.rawValue
         case .speak: RpcEvent.speak.rawValue
         case .bridgeStateChanged: RpcEvent.bridgeStateChanged.rawValue
+        case .workerThought: RpcEvent.workerThought.rawValue
         }
     }
 }

@@ -68,6 +68,32 @@ describe("local RPC", () => {
     expect(methods["answerQuestion"]).toEqual({ direction: "appToHarness", params: "AnswerQuestionParams", result: "Empty" });
   });
 
+  it("turns Debug mode on and off, and sends a worker's thoughts (SPEC-07 r22, r23)", () => {
+    const { methods, events } = rpc();
+    expect(methods["setDebugMode"]).toEqual({ direction: "appToHarness", params: "SetDebugModeParams", result: "Empty" });
+    expect(events["workerThought"]).toBe("WorkerThought");
+    expect(validate("SetDebugModeParams", { enabled: false }).valid).toBe(true);
+    expect(validate("SetDebugModeParams", {}).valid).toBe(false);
+    const thought = {
+      taskId: "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+      subtaskId: "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+      title: "Find the invoices",
+      lane: "helper",
+      sees: "Files",
+      at: "2026-10-10T15:42:07+08:00",
+    };
+    expect(validate("WorkerThought", thought).errors).toEqual([]);
+    expect(validate("WorkerThought", { ...thought, reason: "x".repeat(201) }).valid).toBe(false);
+    expect(validate("WorkerThought", { ...thought, typed: "hunter2" }).valid).toBe(false);
+  });
+
+  it("takes a model's reason with its action, or no reason at all", () => {
+    const action = { kind: "click", element: 4 };
+    expect(validate("WorkerOutput", { action }).valid).toBe(true);
+    expect(validate("WorkerOutput", { reason: "Export is in the File menu.", action }).valid).toBe(true);
+    expect(validate("WorkerOutput", { reason: "", action }).valid).toBe(false);
+  });
+
   it("takes a confirmation reply as a button or as speech", () => {
     const taskId = "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8";
     expect(validate("ReplyToConfirmationParams", { taskId, reply: { kind: "button", choice: "goAhead" } }).valid).toBe(true);

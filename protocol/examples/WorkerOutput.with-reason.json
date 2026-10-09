@@ -1,0 +1,7 @@
+{
+  "reason": "The File menu is open and Export To is the way to make a PDF.",
+  "action": {
+    "kind": "click",
+    "element": 4
+  }
+}

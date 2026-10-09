@@ -20,6 +20,7 @@
       "startPairing": { "direction": "appToHarness", "params": "Empty", "result": "StartPairingResult" },
       "listPairedDevices": { "direction": "appToHarness", "params": "Empty", "result": "PairedDeviceList" },
       "unpair": { "direction": "appToHarness", "params": "UnpairParams", "result": "Empty" },
+      "setDebugMode": { "direction": "appToHarness", "params": "SetDebugModeParams", "result": "Empty" },
       "executeAction": { "direction": "harnessToApp", "params": "ExecuteActionParams", "result": "ExecuteActionResult" },
       "observeWindow": { "direction": "harnessToApp", "params": "ObserveWindowParams", "result": "Observation" },
       "readFieldValues": { "direction": "harnessToApp", "params": "ReadFieldValuesParams", "result": "ReadFieldValuesResult" },
@@ -47,7 +48,8 @@
       "tilingSuggested": "TilingSuggested",
       "routeDecided": "RouteDecided",
       "speak": "Speak",
-      "bridgeStateChanged": "BridgeStateChanged"
+      "bridgeStateChanged": "BridgeStateChanged",
+      "workerThought": "WorkerThought"
     }
   },
   "$defs": {
@@ -643,6 +645,33 @@
       "properties": {
         "text": { "type": "string", "minLength": 1 },
         "taskId": { "$ref": "common.json#/$defs/Uuid" }
+      }
+    },
+    "SetDebugModeParams": {
+      "description": "Turns Debug mode on or off (SPEC-07 r22). The app sends it after every hello and whenever the user changes the setting: on by default in Debug builds, off in release builds. With Debug mode on, the harness writes the detailed debug log on this device and sends workerThought events.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled"],
+      "properties": {
+        "enabled": { "type": "boolean" }
+      }
+    },
+    "WorkerThought": {
+      "description": "What one subtask's worker is doing and why, for the thoughts panel (SPEC-07 r23). Sent only in Debug mode: when the model has chosen the next action, and again when the action has finished. Each event replaces the last one for its subtask. A cursor's panel finds it by cursorId; a helper chip's by subtaskId. Text typed or set is never part of it (SPEC-07 r20).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["taskId", "subtaskId", "title", "lane", "sees", "at"],
+      "properties": {
+        "taskId": { "$ref": "common.json#/$defs/Uuid" },
+        "subtaskId": { "$ref": "common.json#/$defs/Uuid" },
+        "cursorId": { "description": "The cursor doing the work: main for the main lane, the ghost's own id for a ghost. Absent for a helper, which has no cursor.", "type": "string", "minLength": 1 },
+        "title": { "description": "The subtask's title.", "type": "string", "minLength": 1, "maxLength": 60 },
+        "lane": { "$ref": "common.json#/$defs/Lane" },
+        "sees": { "description": "A short summary of what the worker sees: the app, window, and what is in front, or for a helper what its last tool returned.", "type": "string", "minLength": 1, "maxLength": 200 },
+        "lastAction": { "description": "The last thing it did, as its action log line, for example Clicked Export in Keynote. Absent before its first action.", "type": "string", "minLength": 1, "maxLength": 200 },
+        "decision": { "description": "The action the model chose last, in plain language, for example Click Export (element 12).", "type": "string", "minLength": 1, "maxLength": 200 },
+        "reason": { "description": "The model's reason for that decision, in its own words. Absent when the model gave none.", "type": "string", "minLength": 1, "maxLength": 200 },
+        "at": { "$ref": "common.json#/$defs/Timestamp" }
       }
     }
   }
