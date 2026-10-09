@@ -2,6 +2,7 @@
 //   npm run model:check                    send the protocol's example step and print the validated action
 //   npm run model:check -- --image a.png   send an image and print what the model sees, to confirm vision works
 //   npm run model:check -- --print-schema  print the WorkerOutput schema sent for the example step, then exit
+//   add --explain to either to ask for the model's reason too, as Debug mode does (SPEC-07 r23)
 // The server must already be running (see harness/README.md). Configuration comes from the same environment
 // variables as the harness (src/config.ts). Log lines go to stderr.
 import { readFileSync } from "node:fs";
@@ -29,9 +30,10 @@ const input = JSON.parse(
 ) as WorkerInput;
 /** The main lane offers every action, so the check covers the whole action schema. */
 const LANE = "main";
+const explain = flag("--explain") >= 0;
 
 if (flag("--print-schema") >= 0) {
-  console.log(JSON.stringify(workerOutputSchemaFor(input, LANE), null, 2));
+  console.log(JSON.stringify(workerOutputSchemaFor(input, LANE, { explain }), null, 2));
   process.exit(0);
 }
 
@@ -61,7 +63,7 @@ if (imageAt >= 0) {
   process.exit(0);
 }
 
-const result = await runWorkerStep(input, { client, logger: stderrLogger }, { lane: LANE });
+const result = await runWorkerStep(input, { client, logger: stderrLogger }, { lane: LANE, explain });
 console.log(JSON.stringify(result, null, 2));
 if (result.outcome !== "ok") {
   console.error(`FAILED: ${result.outcome}`);

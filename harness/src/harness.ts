@@ -1,14 +1,17 @@
+import { join } from "node:path";
 import { RpcFailure, type Handler } from "@yumi/protocol";
-import type { AnswerQuestionParams, Empty } from "@yumi/protocol/types";
+import type { AnswerQuestionParams, Empty, WorkerThought } from "@yumi/protocol/types";
 import { ActionLogFile } from "./action-log/text-log.ts";
 import { ApprovalFlow } from "./approvals/approval-flow.ts";
 import { DEFAULT_LIMITS, type HarnessConfig } from "./config.ts";
 import { abandonUnconfirmed, GoalConfirmation } from "./confirm/confirmation.ts";
+import { DEBUG_LOG_FOLDER, DebugLog } from "./debug/debug-log.ts";
 import type { GuiServices } from "./gui/gui-act.ts";
 import { macAppGui } from "./gui/mac.ts";
 import { NoQuestionError, QuestionBroker } from "./gui/questions.ts";
 import { describeError, type Logger } from "./log.ts";
 import { confirmationHandlers } from "./rpc/confirmation.ts";
+import { debugHandlers } from "./rpc/debug.ts";
 import { historyHandlers } from "./rpc/history.ts";
 import { taskControlHandlers } from "./rpc/tasks.ts";
 import { createLaneRouter, type LaneRouter } from "./router/index.ts";
@@ -37,6 +40,8 @@ export interface Harness {
   questions: QuestionBroker;
   /** What startup recovery found: tasks a restart cut off, and steps it finished as noEffect. */
   recovery: Recovery;
+  /** The detailed debug log, and with it Debug mode (OBJ-52). */
+  debug: DebugLog;
   close(): Promise<void>;
 }
 
@@ -44,7 +49,7 @@ export interface Harness {
  * What running tasks needs beyond what the harness makes itself (the store, the lane router, the voice on the local
  * socket, the approval flow, and the limits from the configuration). Tests may replace the route and the voice.
  */
-export type HarnessWork = Omit<RunTaskDeps, "store" | "route" | "voice" | "limits" | "approvals" | "gui"> &
+export type HarnessWork = Omit<RunTaskDeps, "store" | "route" | "voice" | "limits" | "approvals" | "gui" | "debug" | "thoughts"> &
   Partial<Pick<RunTaskDeps, "route" | "voice">> & {
     /** Replaces parts of the ghost and main lanes, which by default act through the connected Mac app. */
     gui?: Partial<Omit<GuiServices, "questions">>;
@@ -58,6 +63,11 @@ export interface HarnessOptions {
   onReady?: () => void;
   /** The model, lanes, and device for running tasks. Without it, tasks can be cancelled but not started or resumed. */
   work?: HarnessWork;
+  /**
+   * The detailed debug log, shared with the model client (OBJ-52). Without it, the harness keeps one in the support
+   * folder that starts off, so only `setDebugMode` turns it on.
+   */
+  debug?: DebugLog;
 }
 
 /**
@@ -65,7 +75,8 @@ export interface HarnessOptions {
  * server with the history and task methods, and sends every task and subtask status change to the connected apps
  * as a `taskStatusChanged` event. Each time an app says hello, it gets one `interruptedTaskFound` per task a
  * restart cut off that the user has not answered about yet. Every action log line also goes to the action log file
- * in the support folder (OBJ-38.7).
+ * in the support folder (OBJ-38.7). Debug logs older than 7 days are deleted, and `setDebugMode` turns Debug mode on
+ * and off (OBJ-52).
  */
 export async function startHarness(
   config: Pick<HarnessConfig, "supportDir" | "socketPath"> & Partial<Pick<HarnessConfig, "limits" | "cursorCap">>,
@@ -73,6 +84,8 @@ export async function startHarness(
   options: HarnessOptions = {},
 ): Promise<Harness> {
   const limits = config.limits ?? DEFAULT_LIMITS;
+  const debug = options.debug ?? new DebugLog({ dir: join(config.supportDir, DEBUG_LOG_FOLDER), enabled: false, logger });
+  debug.deleteOld();
   const store = TaskStore.open({ dir: config.supportDir, logger, maxSubtaskDepth: limits.subtaskDepth });
   // Before recovery, so the lines recovery writes for interrupted steps are in the file too.
   const actionLog = new ActionLogFile({
@@ -117,6 +130,7 @@ export async function startHarness(
         }
         return {};
       },
+      ...debugHandlers(debug),
     };
     const clash = Object.keys(options.handlers ?? {}).filter((name) => name in ownHandlers);
     if (clash.length > 0) throw new Error(`RPC methods registered twice: ${clash.join(", ")}`);
@@ -138,6 +152,10 @@ export async function startHarness(
       ...(config.cursorCap !== undefined ? { cursorCap: config.cursorCap } : {}),
     });
     const work = options.work;
+    // Each worker's thoughts, for the thoughts panel, only in Debug mode (SPEC-07 r23).
+    const thoughts = (thought: WorkerThought) => {
+      if (debug.enabled) server.emit("workerThought", thought);
+    };
     const voice = work && (work.voice ?? localVoice(server, logger, work.deviceId));
     approvals =
       work &&
@@ -160,6 +178,8 @@ export async function startHarness(
           limits,
           route: work.route ?? routeWith(router),
           voice,
+          debug,
+          thoughts,
           ...(approvals ? { approvals } : {}),
           gui: { mac: macAppGui(server, logger), ...work.gui, questions },
         },
@@ -172,6 +192,7 @@ export async function startHarness(
       app: server,
       voice: voice ?? localVoice(server, logger),
       tasks: () => control,
+      debug,
       ...(work ? { client: work.client } : {}),
     });
     const confirming = confirmation;
@@ -185,6 +206,7 @@ export async function startHarness(
       confirmation: confirming,
       questions,
       recovery,
+      debug,
       close: async () => {
         await confirming.close();
         await control.close();

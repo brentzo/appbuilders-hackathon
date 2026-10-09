@@ -1,5 +1,6 @@
 import type { JsonSchema } from "../agent/llm.ts";
 import type { Logger } from "../log.ts";
+import type { DebugLog } from "../debug/debug-log.ts";
 import type { ModelClient, ModelFailure } from "../model/client.ts";
 import type { ChatMessage } from "../model/openai.ts";
 
@@ -86,7 +87,7 @@ export type ClassifyResult =
 export async function classifyReply(
   repeatedBack: string,
   answer: string,
-  deps: { client: ModelClient; logger: Logger },
+  deps: { client: ModelClient; logger: Logger; debug?: DebugLog | undefined },
   options: { taskId?: string; signal?: AbortSignal } = {},
 ): Promise<ClassifyResult> {
   const fixed = fixedReply(answer);
@@ -96,11 +97,13 @@ export async function classifyReply(
     responseFormat: { name: "ConfirmationReply", schema: CLASSIFY_SCHEMA },
     signal: options.signal,
     purpose: "classifyReply",
+    taskId: options.taskId,
   });
   if (!result.ok) return { kind: "unclear", by: "failure", failure: result.failure };
   const kind = checkClassification(result.content);
   if (!kind) {
     deps.logger.warn("confirm.classifyRejected", { taskId: options.taskId, contentChars: result.content?.length ?? 0 });
+    deps.debug?.write("confirm.classifyRejected", { taskId: options.taskId, error: "The reply is not one of the four answers." });
     return { kind: "unclear", by: "failure", failure: { kind: "invalidOutput" } };
   }
   return { kind, by: "model" };

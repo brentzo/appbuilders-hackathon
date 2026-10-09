@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { extname } from "node:path";
 import type { ModelConfig } from "../config.ts";
+import type { DebugLog, Scrub } from "../debug/debug-log.ts";
 import { describeError, type Logger } from "../log.ts";
 import type { ChatContentPart, ChatErrorBody, ChatMessage, ChatRequest, ChatResponse, ChatTool, ChatToolCall } from "./openai.ts";
 
@@ -49,6 +50,11 @@ export interface ChatOptions {
   signal?: AbortSignal | undefined;
   /** What the call is for, for the log, for example "workerStep". */
   purpose: string;
+  /** The task and subtask the call is for, for both logs. */
+  taskId?: string | undefined;
+  subtaskId?: string | undefined;
+  /** How the debug log keeps password text out of this request and its reply (`src/debug/scrub.ts`). */
+  redact?: { reply(content: string | null): string | null; scrub: Scrub } | undefined;
 }
 
 export type FetchFn = typeof fetch;
@@ -58,6 +64,8 @@ export class ModelClient {
     readonly config: ModelConfig,
     private readonly logger: Logger,
     private readonly fetchFn: FetchFn = fetch,
+    /** The detailed debug log: every request and reply in full while Debug mode is on (SPEC-07 r22). */
+    private readonly debug?: DebugLog,
   ) {}
 
   async chat(options: ChatOptions): Promise<ChatResult> {
@@ -82,12 +90,16 @@ export class ModelClient {
     );
     const request = {
       purpose: options.purpose,
+      ...(options.taskId ? { taskId: options.taskId } : {}),
+      ...(options.subtaskId ? { subtaskId: options.subtaskId } : {}),
       model: this.config.model,
       messages: options.messages.length,
       images,
       structuredOutput: body.response_format !== undefined,
       tools: options.tools?.length ?? 0,
     };
+
+    const trace = this.trace(options, body);
 
     const timeout = AbortSignal.timeout(this.config.timeoutMs);
     const signal = options.signal ? AbortSignal.any([options.signal, timeout]) : timeout;
@@ -103,31 +115,39 @@ export class ModelClient {
         signal,
       });
     } catch (error) {
-      return this.fail(classifyFetchError(error, options.signal, timeout), elapsed(), { ...request, ...describeError(error) });
+      return this.fail(
+        classifyFetchError(error, options.signal, timeout),
+        elapsed(),
+        { ...request, ...describeError(error) },
+        trace,
+      );
     }
 
     let payload: unknown;
     try {
       payload = await response.json();
     } catch (error) {
-      if (!response.ok) return this.fail({ kind: "httpError", status: response.status }, elapsed(), request);
+      if (!response.ok) return this.fail({ kind: "httpError", status: response.status }, elapsed(), request, trace);
       const failure = classifyFetchError(error, options.signal, timeout);
-      return this.fail(failure.kind === "unreachable" ? { kind: "badResponse" } : failure, elapsed(), {
-        ...request,
-        ...describeError(error),
-      });
+      return this.fail(
+        failure.kind === "unreachable" ? { kind: "badResponse" } : failure,
+        elapsed(),
+        { ...request, ...describeError(error) },
+        trace,
+      );
     }
 
     if (!response.ok) {
-      return this.fail({ kind: "httpError", status: response.status }, elapsed(), {
-        ...request,
-        status: response.status,
-        detail: (payload as Partial<ChatErrorBody> | null)?.detail,
-      });
+      return this.fail(
+        { kind: "httpError", status: response.status },
+        elapsed(),
+        { ...request, status: response.status, detail: (payload as Partial<ChatErrorBody> | null)?.detail },
+        trace,
+      );
     }
 
     const choice = readChoice(payload);
-    if (!choice) return this.fail({ kind: "badResponse" }, elapsed(), request);
+    if (!choice) return this.fail({ kind: "badResponse" }, elapsed(), request, trace);
 
     const durationMs = elapsed();
     const raw = (payload as ChatResponse).usage;
@@ -144,14 +164,69 @@ export class ModelClient {
       contentChars: choice.content?.length ?? 0,
       toolCalls: choice.toolCalls.length,
     });
+    trace?.("model.reply", {
+      durationMs,
+      finishReason: choice.finishReason,
+      ...usage,
+      content: options.redact ? options.redact.reply(choice.content) : choice.content,
+      ...(choice.toolCalls.length > 0 ? { toolCalls: choice.toolCalls } : {}),
+    });
     return { ok: true, ...choice, usage, durationMs };
   }
 
-  private fail(failure: ModelFailure, durationMs: number, fields: Record<string, unknown>): ChatResult {
+  private fail(failure: ModelFailure, durationMs: number, fields: Record<string, unknown>, trace?: Trace): ChatResult {
     const level = failure.kind === "aborted" ? "info" : "error";
     this.logger[level]("model.failure", { failure: failure.kind, durationMs, ...fields });
+    trace?.("model.failure", { durationMs, ...fields, failure: failure.kind });
     return { ok: false, failure, durationMs };
   }
+
+  /**
+   * Writes the request to the debug log while Debug mode is on, and returns how to write its reply under the same
+   * request number. Images are written as their type and size, not their data.
+   */
+  private trace(options: ChatOptions, body: ChatRequest): Trace | undefined {
+    const debug = this.debug;
+    if (!debug?.enabled) return undefined;
+    const ids = {
+      requestId: debug.nextRequestId(),
+      purpose: options.purpose,
+      ...(options.taskId ? { taskId: options.taskId } : {}),
+      ...(options.subtaskId ? { subtaskId: options.subtaskId } : {}),
+    };
+    const scrub = options.redact?.scrub;
+    debug.write(
+      "model.request",
+      {
+        ...ids,
+        model: body.model,
+        schema: options.responseFormat?.name ?? null,
+        structuredOutput: body.response_format !== undefined,
+        maxTokens: body.max_tokens,
+        messages: body.messages.map(withoutImageData),
+        ...(options.tools && options.tools.length > 0 ? { tools: options.tools.map((t) => t.function.name) } : {}),
+      },
+      scrub,
+    );
+    return (event, fields) => debug.write(event, { ...ids, ...fields }, scrub);
+  }
+}
+
+type Trace = (event: string, fields: Record<string, unknown>) => void;
+
+/** A message for the debug log: an image's data URL becomes "[image image/png, 412 KB]". */
+function withoutImageData(message: ChatMessage): ChatMessage {
+  if (!Array.isArray(message.content)) return message;
+  return {
+    ...message,
+    content: message.content.map((part) => {
+      if (part.type !== "image_url") return part;
+      const url = part.image_url.url;
+      const type = /^data:([^;,]+)/.exec(url)?.[1] ?? "unknown type";
+      const kb = Math.round(((url.length - url.indexOf(",") - 1) * 0.75) / 1024);
+      return { type: "text", text: `[image ${type}, ${kb} KB]` };
+    }),
+  } as ChatMessage;
 }
 
 /** Tells a timeout, a cancel, and an unreachable server apart from the error's structure, never its message. */

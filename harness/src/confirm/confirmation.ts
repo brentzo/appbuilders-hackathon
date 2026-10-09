@@ -1,4 +1,5 @@
 import type { ConfirmationReply, CursorCommand, SubmitGoalParams, UserError, Uuid } from "@yumi/protocol/types";
+import type { DebugLog } from "../debug/debug-log.ts";
 import { userErrorForModelFailure } from "../errors.ts";
 import { describeError, type Logger } from "../log.ts";
 import type { ModelClient, ModelFailure } from "../model/client.ts";
@@ -64,6 +65,8 @@ export interface ConfirmationDeps {
   tasks: () => TaskControl;
   /** The model for the repeat-back and for reading answers. Without it, goals are refused. */
   client?: ModelClient;
+  /** The detailed debug log (OBJ-52): what was heard, how each answer was read, and what Yumi said back. */
+  debug?: DebugLog;
 }
 
 /** Why `submitGoal` or `replyToConfirmation` was refused; the app shows "Unexpected", the reason is in the log. */
@@ -122,6 +125,11 @@ export class GoalConfirmation {
     };
     this.open.set(task.id, question);
     logger.info("confirm.goalReceived", { taskId: task.id, transcriptChars: params.transcript.length });
+    this.deps.debug?.write("voice.goal", {
+      taskId: task.id,
+      originDeviceId: params.originDeviceId,
+      transcript: params.transcript,
+    });
     this.cursor({ command: "spawn", cursorId: MAIN_CURSOR_ID, cursorKind: "main" });
     this.enqueue(question, () => this.restate(question, false));
     return task.id;
@@ -141,8 +149,10 @@ export class GoalConfirmation {
         throw new ConfirmationError("unknownTask", `No task ${taskId}`);
       }
       logger.info("confirm.replyIgnored", { taskId, status: task.status, reply: reply.kind });
+      this.deps.debug?.write("voice.answer", { taskId, reply, ignored: task.status });
       return;
     }
+    this.deps.debug?.write("voice.answer", { taskId, reply });
     this.enqueue(question, () => this.answer(question, reply));
   }
 
@@ -164,6 +174,8 @@ export class GoalConfirmation {
   private async answer(question: OpenQuestion, reply: ConfirmationReply): Promise<void> {
     if (!this.stillOpen(question)) return;
     const kind = await this.kindOf(question, reply);
+    // "none": Change it was pressed, the model failed, or the harness is stopping.
+    this.deps.debug?.write("confirm.read", { taskId: question.taskId, reply, kind: kind ?? "none" });
     if (kind === undefined || !this.stillOpen(question)) return;
     switch (kind) {
       case "confirm":
@@ -208,6 +220,13 @@ export class GoalConfirmation {
       return undefined;
     }
     logger.info("confirm.answer", { taskId, kind: result.kind, by: result.by, answerChars: reply.text.length });
+    this.deps.debug?.write("confirm.classified", {
+      taskId,
+      text: reply.text,
+      kind: result.kind,
+      by: result.by,
+      ...(result.by === "failure" ? { failure: result.failure.kind } : {}),
+    });
     return result.kind;
   }
 
@@ -232,6 +251,13 @@ export class GoalConfirmation {
     }
     question.goal = result.goal;
     question.said = repeatBack(result.goal, afterCorrection);
+    this.deps.debug?.write("confirm.repeatBack", {
+      taskId: question.taskId,
+      transcript: question.transcript,
+      corrections: question.corrections,
+      goal: result.goal,
+      said: question.said,
+    });
     this.ask(question);
   }
 
@@ -248,6 +274,7 @@ export class GoalConfirmation {
 
   private unclear(question: OpenQuestion): void {
     question.unclear++;
+    this.deps.debug?.write("confirm.unclear", { taskId: question.taskId, times: question.unclear });
     if (question.unclear === 1) {
       this.ask(question);
       return;
@@ -264,6 +291,7 @@ export class GoalConfirmation {
     this.open.delete(taskId);
     store.setTaskStatus(taskId, "planning", { confirmedGoal: confirmedGoalFrom(question.goal!) });
     logger.info("confirm.confirmed", { taskId, corrections: question.corrections.length });
+    this.deps.debug?.write("confirm.confirmed", { taskId, confirmedGoal: confirmedGoalFrom(question.goal!) });
     this.startWork(taskId, question.originDeviceId);
   }
 
@@ -282,6 +310,12 @@ export class GoalConfirmation {
       status: "planning",
     });
     logger.info("confirm.autoMode", { taskId: task.id, transcriptChars: params.transcript.length });
+    this.deps.debug?.write("voice.goal", {
+      taskId: task.id,
+      originDeviceId: params.originDeviceId,
+      transcript: params.transcript,
+      autoMode: true,
+    });
     this.cursor({ command: "spawn", cursorId: MAIN_CURSOR_ID, cursorKind: "main" });
     this.startWork(task.id, task.originDeviceId);
     return task.id;
@@ -303,6 +337,7 @@ export class GoalConfirmation {
     // The app says "Okay, I won't do anything." and fades the cursor when it sees the task cancelled.
     this.deps.store.setTaskStatus(question.taskId, "cancelled");
     this.deps.logger.info("confirm.cancelled", { taskId: question.taskId });
+    this.deps.debug?.write("confirm.cancelled", { taskId: question.taskId });
   }
 
   private modelFailed(question: OpenQuestion, failure: ModelFailure): void {
@@ -316,6 +351,7 @@ export class GoalConfirmation {
   /** Ends a question that cannot go on: the task is cancelled with nothing run, and the user hears why. */
   private end(question: OpenQuestion, userError: UserError): void {
     this.open.delete(question.taskId);
+    this.deps.debug?.write("confirm.ended", { taskId: question.taskId, userError });
     try {
       // The error goes first, so the app knows this cancel came with one and says only the error copy, not
       // "Okay, I won't do anything." (Brent's decision, 2026-10-10).
@@ -331,8 +367,8 @@ export class GoalConfirmation {
     return this.open.get(question.taskId) === question && !this.stopping.signal.aborted;
   }
 
-  private model(): { client: ModelClient; logger: Logger } {
-    return { client: this.deps.client!, logger: this.deps.logger };
+  private model(): { client: ModelClient; logger: Logger; debug?: DebugLog | undefined } {
+    return { client: this.deps.client!, logger: this.deps.logger, debug: this.deps.debug };
   }
 
   private cursor(command: CursorCommand): void {

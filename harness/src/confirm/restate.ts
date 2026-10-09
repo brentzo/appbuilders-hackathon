@@ -1,5 +1,6 @@
 import type { JsonSchema } from "../agent/llm.ts";
 import type { Logger } from "../log.ts";
+import type { DebugLog } from "../debug/debug-log.ts";
 import type { ModelClient, ModelFailure } from "../model/client.ts";
 import type { ChatMessage } from "../model/openai.ts";
 
@@ -106,7 +107,7 @@ export type RestateResult = { ok: true; goal: string } | { ok: false; failure: M
 /** Asks the model for the clause, with one retry for an invalid reply. */
 export async function restateGoal(
   words: GoalWords,
-  deps: { client: ModelClient; logger: Logger },
+  deps: { client: ModelClient; logger: Logger; debug?: DebugLog | undefined },
   options: { taskId?: string; signal?: AbortSignal } = {},
 ): Promise<RestateResult> {
   const first = buildRestateMessages(words);
@@ -117,11 +118,13 @@ export async function restateGoal(
       responseFormat: { name: "Restatement", schema: RESTATE_SCHEMA },
       signal: options.signal,
       purpose: "restateGoal",
+      taskId: options.taskId,
     });
     if (!answer.ok) return { ok: false, failure: answer.failure };
     const check = checkRestatement(answer.content);
     if (check.ok) return check;
     deps.logger.warn("confirm.restateRejected", { taskId: options.taskId, reply, error: check.error });
+    deps.debug?.write("confirm.restateRejected", { taskId: options.taskId, reply, error: check.error });
     messages = [
       ...first,
       { role: "assistant", content: answer.content },

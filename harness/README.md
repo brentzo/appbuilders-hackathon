@@ -12,6 +12,7 @@ The planner, scheduler, and task summary are built ([OBJ-05](../objectives/OBJ-0
 Resume and limits are built ([OBJ-06](../objectives/OBJ-06-resume-and-limits.md)): startup recovery, `resumeTask` and `cancelTask`, and the step, attempt, and depth limits.
 Approvals, pause, and the action log are built ([OBJ-38](../objectives/OBJ-38-approvals-pause-and-action-log.md)): the send and delete approvals with their re-checks, blocked actions, `pause` with two scopes, a cancel that stops every lane, and the action log file.
 The `gui_act` sub-agent is built ([OBJ-36](../objectives/OBJ-36-gui-act-sub-agent.md)): ghost and main subtasks run a short step loop in the target app's window through the Mac app, and return a structured result.
+Debug mode is built ([OBJ-52](../objectives/OBJ-52-harness-debug-logs.md)): the detailed debug log, its 7-day retention, `setDebugMode`, and the `workerThought` events for the thoughts panel.
 
 ## Responsibilities
 
@@ -72,6 +73,8 @@ The `gui_act` sub-agent is built ([OBJ-36](../objectives/OBJ-36-gui-act-sub-agen
 | `src/confirm/` | The goal confirmation loop (`confirmation.ts`), the repeat-back prompt and checks (`restate.ts`), and reading the user's answer (`classify.ts`). A goal sent with `autoMode` skips the loop and starts in `planning` with the trimmed transcript as `confirmedGoal` (SPEC-01 r14). |
 | `src/errors.ts` | Maps failures to the protocol's `UserError` kinds. Never builds user-facing text. |
 | `src/log.ts` | The local log file. |
+| `src/debug/` | Debug mode (OBJ-52): the detailed debug log and its retention (`debug-log.ts`), keeping password text out of it (`scrub.ts`), and the words of each `workerThought` (`thoughts.ts`). |
+| `src/rpc/debug.ts` | The `setDebugMode` method. |
 | `scripts/model-check.ts` | Checks the harness against the real model server. |
 | `scripts/gui-run.ts` | Runs one `gui_act` subtask on the real Mac app and model, several times, and prints each run's steps and time. |
 | `scripts/check-grammar.py` | Checks that the output schema compiles as mlx-vlm's grammar, without loading a model. |
@@ -109,6 +112,7 @@ Environment variables, all optional:
 | `YUMI_ATTEMPTS_PER_SUBTASK` | `3` | Attempts per subtask, from 1 to 3 (`Subtask.attempts` allows at most 3). |
 | `YUMI_SUBTASK_DEPTH` | `1` | How deep subtasks may nest. 1: only the planner makes subtasks. |
 | `YUMI_CURSOR_CAP` | `3` | Visible cursors at once, including `main` (SPEC-03 r6). More ghost and main subtasks queue. |
+| `YUMI_DEBUG_MODE` | on | `0` starts with Debug mode off. The Mac app's setting, sent with `setDebugMode` after every hello, wins. See "Debug mode" below. |
 
 Sampling uses the Qwen3.5 model card's instruct settings (temperature 0.7, top_p 0.8, top_k 20), with thinking off.
 
@@ -199,6 +203,7 @@ Everything is in the support folder (`YUMI_SUPPORT_DIR`), readable only by this 
 | `screenshots/<task id>/<step id>.png` | Step screenshots (`.jpg` for JPEG). `Step.screenshotPath` holds the absolute path. A file is never replaced. |
 | `Action log/<yyyy-mm-dd>.txt` | The action log file, one per day (see "Action log" below). |
 | `harness.sock`, `harness.log` | The local RPC socket and the log. |
+| `Debug log/<yyyy-mm-dd>.jsonl` | The detailed debug log, one file a day, only while Debug mode is on, deleted after 7 days (see "Debug mode"). |
 
 | Table | Holds |
 |---|---|
@@ -453,8 +458,58 @@ The app's own harness then exits because the socket is taken, and the app keeps 
 
 - The log is `harness.log` in the support folder, one JSON object per line: model errors with the server's detail and status, timing, and token counts.
   It never holds prompts, screen text, or model replies, only their sizes.
+  The words are in the debug log (see "Debug mode").
 - Failures that reach the user are `UserError` kinds from the protocol, with no technical detail.
   An unreachable model server is `modelFailedToLoad`; every other model failure is `unexpected`.
+
+## Debug mode
+
+Debug mode ([SPEC-07](../specs/07-safety.md) r22 and r23) keeps what `harness.log` leaves out, so a failed goal can be explained on the device without guessing.
+
+- **Setting:** the Mac app sends `setDebugMode` after every hello and whenever the user changes it: on by default in Debug builds, off in release builds ([OBJ-53](../objectives/OBJ-53-mac-thoughts-panel.md)).
+  Until the app says, the harness uses `YUMI_DEBUG_MODE`, which is on, because a harness run from source is a development run.
+  The harness keeps no copy of the setting, so a restarted harness follows the app again after its hello.
+- **Where:** `~/Library/Application Support/Yumi/Debug log/<yyyy-mm-dd>.jsonl`, one file a day in local time, readable only by you.
+  It never leaves the Mac: nothing reads it back or sends it anywhere.
+- **Retention:** files whose last change is more than 7 days old are deleted when the harness starts, in either mode, and again when a new day's file begins.
+- **Off:** nothing is written, no folder is made, no `workerThought` is sent, and the model is not asked for its reason.
+- **Passwords:** the Mac app never reads a secure field's value, and for each subtask the log learns the text of every `type` or `setValue` that could reach a password field and removes it from every line, as `[password field text removed]`.
+  A reply that is not JSON while a password field is on screen is logged by length only (SPEC-07 r20).
+- **Thoughts:** each step sends a `workerThought` for the thoughts panel: the subtask title, lane, cursor, a short summary of what it sees, its last action, and the model's decision and reason.
+  In Debug mode the model writes a one-sentence `reason` before its action; the reason never changes what runs.
+
+### Reading it
+
+Each line is one JSON object with `time` (UTC) and `event`.
+Every line about a task has its `taskId`, and every line about a subtask has its `subtaskId`.
+
+| Event | What it holds |
+|---|---|
+| `voice.goal` | The transcript as the Mac app heard it, and the device. |
+| `voice.answer` | The user's answer to the repeat-back: the spoken text as transcribed, or the button. |
+| `confirm.classified`, `confirm.read` | How the answer was read: `confirm`, `cancel`, `correction`, or `unclear`, and whether by the fixed list, the model, or a failure. |
+| `confirm.repeatBack` | The transcript, the corrections, and the sentence Yumi said back. |
+| `confirm.confirmed`, `confirm.cancelled`, `confirm.unclear`, `confirm.ended` | How the question ended, with the `UserError` when it ended in one. |
+| `model.request` | `requestId`, `purpose` (`restateGoal`, `classifyReply`, `plan`, `workerStep`, `summary`), the schema name, and every message. Images are written as their type and size. |
+| `model.reply`, `model.failure` | The same `requestId` and `purpose`, then the reply's content, finish reason, tokens, and `durationMs`; or the failure kind with the server's detail. |
+| `plan.made`, `plan.rejected` | The checked plan, or why the reply failed the plan checks. `gaveUp` marks the second rejection. |
+| `task.planning`, `task.done`, `task.failed` | The confirmed goal; the summary; or the `UserError` the user got and, in `why`, what really happened. |
+| `subtask.started`, `subtask.ended` | The subtask's instruction and lane; its outcome, result, and error. |
+| `step.decided` | The step number, the full observation, what the worker sees, the action, the decision in words, and the model's reason. |
+| `step.invalidOutput` | Why a worker reply was rejected. |
+| `step.finished` | The step's outcome, permission, the one-line observation, the tool output, and how long it took. |
+
+`jq` reads it well, for example `jq -c 'select(.taskId == "<id>")' "Debug log/2026-10-10.jsonl"`.
+
+### Debugging a failed goal
+
+1. Make sure Debug mode was on when it failed, then open today's file in `~/Library/Application Support/Yumi/Debug log/`.
+2. Find the goal: search for the words you said in the `voice.goal` lines, and take its `taskId`.
+3. Read that task's lines in order: `jq -c 'select(.taskId == "<id>") | {time, event}' "<file>"` gives the outline.
+4. **What was heard:** `voice.goal` and `voice.answer` show the transcripts exactly. If Yumi misread your answer, `confirm.classified` shows the text and what it was read as.
+5. **What the model was asked and answered:** each `model.request` has its messages; find its `model.reply` by `requestId`. A `model.failure` names why the model did not answer.
+6. **Why it stopped:** `task.failed` has the error you saw and `why`. Before it, look for `plan.rejected` (the planner's reply broke the checks), `step.invalidOutput` (a worker reply was rejected twice), or `subtask.ended` with a `userError`.
+7. The same task's lines in `harness.log` have the timings and the server's error detail.
 
 ## Interfaces
 

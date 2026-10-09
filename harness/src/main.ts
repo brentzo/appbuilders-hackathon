@@ -4,6 +4,7 @@ import { homedir, hostname } from "node:os";
 import { join } from "node:path";
 import { loadConfig } from "./config.ts";
 import { BridgeClient } from "./bridge-client/client.ts";
+import { DebugLog } from "./debug/debug-log.ts";
 import { describeError, FileLogger } from "./log.ts";
 import { startHarness } from "./harness.ts";
 import { ModelClient } from "./model/client.ts";
@@ -22,7 +23,10 @@ logger.info("harness.starting", {
   socketPath: config.socketPath,
   model: config.model.model,
   modelBaseUrl: config.model.baseUrl,
+  debugMode: config.debugMode,
 });
+// Shared by the model client and the harness, so `setDebugMode` turns every part of the debug log on or off.
+const debug = new DebugLog({ dir: config.debugLogDir, enabled: config.debugMode, logger });
 
 try {
   const bridge = new BridgeClient({
@@ -41,18 +45,22 @@ try {
   const harness = await startHarness(config, logger, {
     handlers: bridge.handlers,
     work: {
-      client: new ModelClient(config.model, logger),
+      client: new ModelClient(config.model, logger, fetch, debug),
       logger,
       deviceId: MAC_DEVICE_ID,
       home,
       lanes: { helper: fileHelperLane({ home, logger }) },
       slots: config.model.parallelSlots,
     },
+    debug,
     onReady: () => {
       void bridge.start().catch((error: unknown) => logger.error("bridge.startFailed", { error: String(error) }));
     },
   });
-  console.log(`Yumi harness listening on ${config.socketPath}. Tasks: ${harness.store.dbPath}. Log: ${config.logPath}`);
+  console.log(
+    `Yumi harness listening on ${config.socketPath}. Tasks: ${harness.store.dbPath}. Log: ${config.logPath}. ` +
+      `Debug log (${debug.enabled ? "on" : "off"}): ${config.debugLogDir}`,
+  );
   const stop = async (signal: string) => {
     logger.info("harness.stopping", { signal });
     bridge.stop();

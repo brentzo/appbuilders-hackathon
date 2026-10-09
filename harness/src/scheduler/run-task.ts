@@ -35,7 +35,8 @@ export async function runTask(taskId: Uuid, deps: RunTaskDeps, control = new Run
   if (!task) throw new Error(`No task ${taskId}`);
   if (task.status !== "planning" || !task.confirmedGoal) throw new Error(`Task ${taskId} is ${task.status}, not planning`);
   const confirmedGoal = task.confirmedGoal;
-  const model = { client: deps.client, logger };
+  const model = { client: deps.client, logger, debug: deps.debug };
+  deps.debug?.write("task.planning", { taskId, confirmedGoal });
 
   // The orchestrator's tools (SPEC-05 r9): gui_act for work in an app's window, and the helper lane's tools.
   const tools = orchestratorTools(
@@ -50,7 +51,7 @@ export async function runTask(taskId: Uuid, deps: RunTaskDeps, control = new Run
       return fail(task, planned.userError, deps);
     case "invalidPlan":
       // The planner could not make a plan that passes the checks. Nothing ran, so there is no last action.
-      return fail(task, { kind: "unexpected", taskId }, deps);
+      return fail(task, { kind: "unexpected", taskId }, deps, `No valid plan after two replies: ${planned.error}`);
     case "ok":
       break;
   }
@@ -90,14 +91,19 @@ async function runPlan(
 ): Promise<RunTaskOutcome> {
   const { store, logger } = deps;
   const taskId = task.id;
-  const model = { client: deps.client, logger };
+  const model = { client: deps.client, logger, debug: deps.debug };
   const signal = control.signal;
   const scheduled = await runSchedule(taskId, confirmedGoal, deps, control, options);
   if (scheduled.outcome === "aborted") return { outcome: "aborted" };
   if (scheduled.outcome === "failed") {
     // Without its own error, the failure was a bug in the harness, not the subtask: "Unexpected" with the last action.
     const lastAction = store.listActionLog(taskId).at(-1)?.description;
-    return fail(task, scheduled.userError ?? { kind: "unexpected", taskId, ...(lastAction ? { lastAction } : {}) }, deps);
+    return fail(
+      task,
+      scheduled.userError ?? { kind: "unexpected", taskId, ...(lastAction ? { lastAction } : {}) },
+      deps,
+      `Subtask ${scheduled.subtaskId} failed${scheduled.userError ? "" : " without its own error, so the harness says Unexpected"}`,
+    );
   }
 
   const summary = await summarizeTask(confirmedGoal, store.listSubtasks(taskId), model, { taskId, signal });
@@ -105,14 +111,17 @@ async function runPlan(
   store.setTaskStatus(taskId, "done", { summary });
   deps.voice.speak(task.originDeviceId, { taskId, text: summary });
   logger.info("task.done", { taskId, subtasks: store.listSubtasks(taskId).length, summaryChars: summary.length });
+  deps.debug?.write("task.done", { taskId, summary });
   return { outcome: "done", summary };
 }
 
-function fail(task: Task, userError: UserError, deps: RunTaskDeps): RunTaskOutcome {
+/** Fails the task and tells the user. `why` is for the debug log only: what went wrong, in the team's words. */
+function fail(task: Task, userError: UserError, deps: RunTaskDeps, why?: string): RunTaskOutcome {
   const error: UserError = { ...userError, taskId: task.id };
   deps.store.setTaskStatus(task.id, "failed");
   deps.voice.userError(task.originDeviceId, error);
   deps.logger.warn("task.failed", { taskId: task.id, kind: error.kind });
+  deps.debug?.write("task.failed", { taskId: task.id, userError: error, ...(why ? { why } : {}) });
   return { outcome: "failed", userError: error };
 }
 

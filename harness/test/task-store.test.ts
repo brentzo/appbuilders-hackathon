@@ -529,13 +529,14 @@ describe("nothing is deleted", () => {
     );
     expect(new Set(deletes)).toEqual(new Set(["store/task-store.ts: window_locks"]));
     // No file removal in the store; the RPC server removes only its own socket file, the move tool removes a file's
-    // old name only after the same file has its new one (OBJ-37), and gui_act's file watch removes only its own marker
-    // in Yumi's support folder (OBJ-36).
+    // old name only after the same file has its new one (OBJ-37), gui_act's file watch removes only its own marker
+    // in Yumi's support folder (OBJ-36), and the debug log deletes only its own day files after 7 days (SPEC-07 r22,
+    // OBJ-52).
     const removals = sources
       .filter(({ text }) => /\b(rmSync|unlinkSync|rm|unlink|rmdirSync)\(/.test(text))
       .map(({ file }) => file.replaceAll("\\", "/"))
       .sort();
-    expect(removals).toEqual(["gui/file-watch.ts", "rpc/server.ts", "tools/file-tools.ts"]);
+    expect(removals).toEqual(["debug/debug-log.ts", "gui/file-watch.ts", "rpc/server.ts", "tools/file-tools.ts"]);
     expect(existsSync(join(srcDir, "store"))).toBe(true);
   });
 });

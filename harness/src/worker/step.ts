@@ -1,7 +1,9 @@
 import { validate } from "@yumi/protocol";
 import type { Lane, UserError, WorkerInput, WorkerOutput } from "@yumi/protocol/types";
+import { PasswordScrubber } from "../debug/scrub.ts";
 import { userErrorForModelFailure } from "../errors.ts";
 import type { Logger } from "../log.ts";
+import type { DebugLog } from "../debug/debug-log.ts";
 import type { ModelClient, Usage } from "../model/client.ts";
 import { buildWorkerMessages } from "./prompt.ts";
 import { workerOutputSchemaFor } from "./schema.ts";
@@ -36,10 +38,18 @@ export interface WorkerStepOptions {
   lane: Lane;
   signal?: AbortSignal;
   taskId?: string;
+  subtaskId?: string;
   /** Fills {last action} if the step ends in the Unexpected error. */
   lastAction?: string;
   /** How an action that would fill a password field is treated. Defaults to `reject`. */
   secureFields?: SecureFieldRule;
+  /** Ask the model for its reason too. Defaults to whether Debug mode is on. */
+  explain?: boolean;
+  /**
+   * Keeps password text out of the debug log for the whole subtask (`src/debug/scrub.ts`), so text learned in one
+   * step's reply is also removed from the next step's prompt. Defaults to one for this step.
+   */
+  scrubber?: PasswordScrubber;
 }
 
 /** One retry after the first invalid reply. */
@@ -47,20 +57,26 @@ const MAX_ATTEMPTS = 2;
 
 export async function runWorkerStep(
   input: WorkerInput,
-  deps: { client: ModelClient; logger: Logger },
+  deps: { client: ModelClient; logger: Logger; debug?: DebugLog | undefined },
   options: WorkerStepOptions,
 ): Promise<WorkerStepResult> {
   const inputCheck = validate("WorkerInput", input);
   if (!inputCheck.valid) throw new Error(`Invalid WorkerInput: ${inputCheck.errors.join("; ")}`);
 
   const attempts: StepAttempt[] = [];
+  const explain = options.explain ?? deps.debug?.enabled === true;
+  const scrubber = options.scrubber ?? new PasswordScrubber();
   let current = input;
   for (;;) {
+    const observation = current.observation;
     const reply = await deps.client.chat({
-      messages: await buildWorkerMessages(current, options.lane),
-      responseFormat: { name: "WorkerOutput", schema: workerOutputSchemaFor(current, options.lane) },
+      messages: await buildWorkerMessages(current, options.lane, explain),
+      responseFormat: { name: "WorkerOutput", schema: workerOutputSchemaFor(current, options.lane, { explain }) },
       signal: options.signal,
       purpose: "workerStep",
+      taskId: options.taskId,
+      subtaskId: options.subtaskId,
+      redact: { reply: (content) => scrubber.reply(content, observation), scrub: scrubber.scrub },
     });
 
     if (!reply.ok) {
@@ -85,6 +101,11 @@ export async function runWorkerStep(
       finishReason: reply.finishReason,
       validationError: check.error,
     });
+    deps.debug?.write(
+      "step.invalidOutput",
+      { taskId: options.taskId, subtaskId: options.subtaskId, attempt: attempts.length, validationError: check.error },
+      scrubber.scrub,
+    );
     if (attempts.length >= MAX_ATTEMPTS) return { outcome: "invalidOutput", validationError: check.error, attempts };
     current = { ...input, validationError: check.error };
   }

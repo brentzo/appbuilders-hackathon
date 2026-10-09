@@ -39,6 +39,11 @@ export interface LaneTools {
 export interface LaneRunner {
   observe(subtask: Subtask, signal?: AbortSignal): Promise<Observation>;
   tools: LaneTools;
+  /**
+   * The id of the cursor working on the subtask, for its `workerThought` (OBJ-52). A ghost lane gives each ghost's
+   * own id; without it, the main lane's cursor is `main` and a helper has none.
+   */
+  cursorId?(subtask: Subtask): string | undefined;
 }
 
 /** The lanes the scheduler can run. Until OBJ-36 (gui_act), only the helper lane exists. */

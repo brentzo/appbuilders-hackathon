@@ -1,5 +1,6 @@
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
+import { DEBUG_LOG_FOLDER } from "./debug/debug-log.ts";
 
 /** Settings for the local OpenAI-compatible model server. */
 export interface ModelConfig {
@@ -37,6 +38,13 @@ export interface HarnessConfig {
   supportDir: string;
   socketPath: string;
   logPath: string;
+  /** The detailed debug log's folder (SPEC-07 r22): `Debug log` in the support folder. */
+  debugLogDir: string;
+  /**
+   * Debug mode when the harness starts, before the Mac app sends its setting with `setDebugMode`: on, because the
+   * harness runs from source, which is a development run. A release build of the app turns it off after hello.
+   */
+  debugMode: boolean;
   model: ModelConfig;
   limits: Limits;
   /** How many cursors may be visible at once, including `main` (SPEC-03 r6). More UI subtasks queue. */
@@ -74,8 +82,8 @@ export const MAX_ATTEMPTS_PER_SUBTASK = 3;
  * Reads the configuration from environment variables, falling back to the defaults:
  * YUMI_SUPPORT_DIR, YUMI_MODEL_BASE_URL, YUMI_MODEL, YUMI_MODEL_TIMEOUT_MS, YUMI_MODEL_MAX_TOKENS,
  * YUMI_MODEL_STRUCTURED_OUTPUT ("0" turns schema-constrained decoding off), YUMI_MODEL_PARALLEL_SLOTS, and the
- * limits YUMI_STEPS_PER_SUBTASK, YUMI_ATTEMPTS_PER_SUBTASK (at most 3), and YUMI_SUBTASK_DEPTH, and the cursor cap
- * YUMI_CURSOR_CAP.
+ * limits YUMI_STEPS_PER_SUBTASK, YUMI_ATTEMPTS_PER_SUBTASK (at most 3), and YUMI_SUBTASK_DEPTH, the cursor cap
+ * YUMI_CURSOR_CAP, and YUMI_DEBUG_MODE ("0" starts with Debug mode off).
  */
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): HarnessConfig {
   const supportDir = resolve(env["YUMI_SUPPORT_DIR"] || DEFAULT_SUPPORT_DIR);
@@ -83,6 +91,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): HarnessConfig 
     supportDir,
     socketPath: join(supportDir, "harness.sock"),
     logPath: join(supportDir, "harness.log"),
+    debugLogDir: join(supportDir, DEBUG_LOG_FOLDER),
+    debugMode: env["YUMI_DEBUG_MODE"] !== "0",
     model: {
       ...DEFAULT_MODEL_CONFIG,
       baseUrl: (env["YUMI_MODEL_BASE_URL"] || DEFAULT_MODEL_CONFIG.baseUrl).replace(/\/+$/, ""),

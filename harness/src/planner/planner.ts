@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Plan, UserError, Uuid } from "@yumi/protocol/types";
 import { userErrorForModelFailure } from "../errors.ts";
 import type { Logger } from "../log.ts";
+import type { DebugLog } from "../debug/debug-log.ts";
 import type { ModelClient } from "../model/client.ts";
 import type { JsonSchema } from "../agent/llm.ts";
 import { bundleType } from "../schema/bundle.ts";
@@ -34,7 +35,7 @@ const MAX_REPLIES = 2;
 export async function makePlan(
   confirmedGoal: string,
   tools: readonly PlannerTool[],
-  deps: { client: ModelClient; logger: Logger },
+  deps: { client: ModelClient; logger: Logger; debug?: DebugLog | undefined },
   options: PlanOptions = {},
 ): Promise<PlanResult> {
   const first = buildPlannerMessages(confirmedGoal, tools);
@@ -45,6 +46,7 @@ export async function makePlan(
       responseFormat: { name: "Plan", schema: planSchemaForModel() },
       signal: options.signal,
       purpose: "plan",
+      taskId: options.taskId,
     });
     if (!answer.ok) {
       const userError = userErrorForModelFailure(answer.failure, options.taskId ? { taskId: options.taskId } : {});
@@ -54,9 +56,17 @@ export async function makePlan(
     const check = checkPlan(answer.content);
     if (check.ok) {
       deps.logger.info("plan.ok", { taskId: options.taskId, reply, subtasks: check.plan.subtasks.length });
+      deps.debug?.write("plan.made", { taskId: options.taskId, reply, plan: check.plan });
       return { outcome: "ok", plan: check.plan };
     }
     deps.logger.warn("plan.rejected", { taskId: options.taskId, reply, finishReason: answer.finishReason, error: check.error });
+    deps.debug?.write("plan.rejected", {
+      taskId: options.taskId,
+      reply,
+      finishReason: answer.finishReason,
+      error: check.error,
+      ...(reply >= MAX_REPLIES ? { gaveUp: true } : {}),
+    });
     if (reply >= MAX_REPLIES) return { outcome: "invalidPlan", error: check.error };
     messages = buildPlannerRetryMessages(first, answer.content, check.error);
   }

@@ -8,10 +8,14 @@ import type {
   SubtaskResult,
   ToolCall,
   UserError,
+  WorkerThought,
 } from "@yumi/protocol/types";
 import type { ApprovalAnswer, ApprovalGate } from "../approvals/approval-flow.ts";
 import { DEFAULT_LIMITS, type Limits } from "../config.ts";
 import type { RunControl } from "../control/run-control.ts";
+import type { DebugLog } from "../debug/debug-log.ts";
+import { cursorIdFor, describeSees } from "../debug/thoughts.ts";
+import { SubtaskTrail } from "../debug/trail.ts";
 import { describeError, type Logger } from "../log.ts";
 import type { ModelClient } from "../model/client.ts";
 import { checkAction } from "../safety/gate.ts";
@@ -64,6 +68,10 @@ export interface SubtaskRunDeps {
    * Without it, an action that asks is recorded as not done, and a blocked one is skipped without asking.
    */
   approvals?: ApprovalGate;
+  /** The detailed debug log (OBJ-52): each step's observation, decision, and outcome, while Debug mode is on. */
+  debug?: DebugLog;
+  /** Sends a worker's thoughts to the app; the harness sends them only in Debug mode (SPEC-07 r23). */
+  thoughts?: (thought: WorkerThought) => void;
 }
 
 export async function runSubtask(
@@ -74,6 +82,27 @@ export async function runSubtask(
   deps: SubtaskRunDeps,
   signal: AbortSignal,
   control: RunControl,
+): Promise<SubtaskRun> {
+  const trail = new SubtaskTrail(deps, subtask, lane, cursorIdFor(lane, subtask, runner));
+  trail.started({ attempt: subtask.attempts });
+  const run = await runSteps(subtask, lane, runner, confirmedGoal, deps, signal, control, trail);
+  trail.ended({
+    outcome: run.outcome,
+    result: run.result,
+    ...("userError" in run && run.userError ? { userError: run.userError } : {}),
+  });
+  return run;
+}
+
+async function runSteps(
+  subtask: Subtask,
+  lane: Lane,
+  runner: LaneRunner,
+  confirmedGoal: string,
+  deps: SubtaskRunDeps,
+  signal: AbortSignal,
+  control: RunControl,
+  trail: SubtaskTrail,
 ): Promise<SubtaskRun> {
   const { store, logger } = deps;
   /** Real paths the tools created or changed, as they reported them (a taken name gets a number). */
@@ -109,8 +138,15 @@ export async function runSubtask(
     const last = lastAction();
     const step = await runWorkerStep(
       input,
-      { client: deps.client, logger },
-      { lane, signal, taskId: subtask.taskId, ...(last ? { lastAction: last } : {}) },
+      { client: deps.client, logger, debug: deps.debug },
+      {
+        lane,
+        signal,
+        taskId: subtask.taskId,
+        subtaskId: subtask.id,
+        scrubber: trail.scrubber,
+        ...(last ? { lastAction: last } : {}),
+      },
     );
 
     switch (step.outcome) {
@@ -125,6 +161,7 @@ export async function runSubtask(
     }
 
     const action = step.output.action;
+    trail.decided(steps.length + 1, observation, step.output, step.attempts.length, steps.at(-1));
     if (action.kind === ACTION.finish) return { outcome: "finished", result: result(action.status, action.note) };
     if (action.kind === ACTION.ask) {
       // Questions to the user are not wired up yet (waitingForUser, OBJ-38): end the subtask instead of guessing.
@@ -136,6 +173,8 @@ export async function runSubtask(
       throw new Error(`The ${lane} lane cannot run a ${action.kind} action yet`);
     }
     const ran = await runTool(subtask, lane, runner, action.call, observation, deps, signal, control);
+    const finished = store.listSteps(subtask.id).at(-1);
+    if (finished && finished.id !== steps.at(-1)?.id) trail.finished(finished, describeSees(observation, finished));
     if (ran.stopped) return stopped();
     const path = ran.path;
     if (path !== undefined && !["read_file", "list_dir", "move_to_trash"].includes(action.call.tool) && !files.includes(path)) {

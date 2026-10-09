@@ -9,11 +9,16 @@ import { ACTION, ACTION_TYPE_NAME, ELEMENT_ACTIONS } from "./actions.ts";
  * the lane's actions (SPEC-03 r7), only the element numbers on screen, only the lane's tools, and the vision click
  * only when there is a screenshot. The server then cannot decode an action the step would reject. The reply is still
  * checked against the full protocol schema and the same rules afterwards (validate.ts), because not every server
- * constrains decoding.
+ * constrains decoding. With `explain` (Debug mode), the model must also give a one-sentence `reason`.
  */
-export function workerOutputSchemaFor(input: WorkerInput, lane: Lane): JsonSchema {
+export function workerOutputSchemaFor(input: WorkerInput, lane: Lane, options: { explain?: boolean } = {}): JsonSchema {
   const schema = bundleType("WorkerOutput", { forModel: true });
   const defs = schema["$defs"] as Record<string, JsonSchema>;
+  // In Debug mode the model writes its reason first, so the reason comes before the action it explains (SPEC-07
+  // r23). Otherwise the reason is left out of the grammar, so it costs no tokens.
+  const output = defs["WorkerOutput"]!;
+  if (options.explain) output["required"] = ["reason", "action"];
+  else delete (output["properties"] as Record<string, JsonSchema>)["reason"];
   const actions = defs["ModelAction"]!;
   const toolCall = defs["ToolCall"]!;
   const removeAction = (name: string) => {

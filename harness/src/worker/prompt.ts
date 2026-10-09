@@ -54,12 +54,17 @@ const UI_RULES: readonly string[] = [
   '- When a step says "new file", that file was just saved. If saving it was the job, finish.',
 ];
 
-/** The system prompt for a step in `lane`. It lists only the actions the lane allows (SPEC-03 r7). */
-export function workerSystemPrompt(lane: Lane): string {
+/**
+ * The system prompt for a step in `lane`. It lists only the actions the lane allows (SPEC-03 r7). With `explain`
+ * (Debug mode), the model also says why, for the thoughts panel (SPEC-07 r23).
+ */
+export function workerSystemPrompt(lane: Lane, explain = false): string {
   return [
     "You are Yumi, operating apps on a Mac for the user, one action at a time.",
     "Each turn you see the user's goal, your current instruction, your last steps, and the elements of one window.",
-    'Reply with exactly one JSON object and nothing else: {"action": {...}}.',
+    explain
+      ? 'Reply with exactly one JSON object and nothing else: {"reason": "...", "action": {...}}. The reason says why this action, in one short sentence under 150 characters.'
+      : 'Reply with exactly one JSON object and nothing else: {"action": {...}}.',
     "",
     "Actions:",
     ...ACTION_LINES.filter(([kind]) => laneAllows(lane, kind)).map(([, line]) => line),
@@ -81,7 +86,7 @@ export function workerSystemPrompt(lane: Lane): string {
   ].join("\n");
 }
 
-export async function buildWorkerMessages(input: WorkerInput, lane: Lane): Promise<ChatMessage[]> {
+export async function buildWorkerMessages(input: WorkerInput, lane: Lane, explain = false): Promise<ChatMessage[]> {
   const lines = [
     `Goal: ${input.confirmedGoal}`,
     `Instruction: ${input.instruction}`,
@@ -107,7 +112,7 @@ export async function buildWorkerMessages(input: WorkerInput, lane: Lane): Promi
     ? [await imagePart({ path: input.observation.screenshotPath }), { type: "text", text }]
     : text;
   return [
-    { role: "system", content: workerSystemPrompt(lane) },
+    { role: "system", content: workerSystemPrompt(lane, explain) },
     { role: "user", content },
   ];
 }

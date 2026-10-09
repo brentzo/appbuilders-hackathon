@@ -1,6 +1,7 @@
 import type { Subtask, Uuid } from "@yumi/protocol/types";
 import type { JsonSchema } from "../agent/llm.ts";
 import type { Logger } from "../log.ts";
+import type { DebugLog } from "../debug/debug-log.ts";
 import type { ModelClient } from "../model/client.ts";
 import type { ChatMessage } from "../model/openai.ts";
 
@@ -88,7 +89,7 @@ export interface SummaryOptions {
 export async function summarizeTask(
   confirmedGoal: string,
   subtasks: readonly Subtask[],
-  deps: { client: ModelClient; logger: Logger },
+  deps: { client: ModelClient; logger: Logger; debug?: DebugLog | undefined },
   options: SummaryOptions = {},
 ): Promise<string | undefined> {
   const first = buildSummaryMessages(confirmedGoal, subtasks);
@@ -99,6 +100,7 @@ export async function summarizeTask(
       responseFormat: { name: "Summary", schema: SUMMARY_SCHEMA },
       signal: options.signal,
       purpose: "summary",
+      taskId: options.taskId,
     });
     if (!answer.ok) {
       if (answer.failure.kind === "aborted") return undefined;
@@ -109,6 +111,7 @@ export async function summarizeTask(
     const check = checkSummary(answer.content);
     if (check.ok) return check.summary;
     deps.logger.warn("summary.rejected", { taskId: options.taskId, reply, error: check.error });
+    deps.debug?.write("summary.rejected", { taskId: options.taskId, reply, error: check.error });
     messages = [
       ...first,
       { role: "assistant", content: answer.content },
