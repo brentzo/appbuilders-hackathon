@@ -5,7 +5,7 @@ product: harness
 assignee: Brent
 touches: [mac]
 specs: [SPEC-03]
-status: todo
+status: done
 priority: p0
 depends-on: [OBJ-06, OBJ-08]
 integrates-with: []
@@ -42,19 +42,19 @@ If the main cursor gets stuck too, Yumi asks the user for help.
 
 ## Tasks
 
-- [ ] **OBJ-09.1** Count consecutive `invalidOutput` and `noEffect` outcomes per subtask.
-- [ ] **OBJ-09.2** Trigger a handoff after 2 consecutive `invalidOutput` or 3 consecutive `noEffect` on a ghost.
-- [ ] **OBJ-09.3** On handoff: set the subtask to `handoff`, release the window lock, record `lastGoodStep`, and queue the subtask for `main` with route reason `promotedAfterFailure`.
-- [ ] **OBJ-09.4** Emit `cursorCommand` events for the visual: fade out the ghost, move the main cursor to the window.
-- [ ] **OBJ-09.5** When `main` picks up the subtask, build its input from the task record and a fresh observation, starting after `lastGoodStep`.
-- [ ] **OBJ-09.6** If `main` hits 3 consecutive `noEffect` on a handed-off subtask, pause it and emit a user-facing error event of kind `stuckOnScreen`.
-- [ ] **OBJ-09.7** Tests with scripted outcomes: both handoff triggers, lock release, resume from the last good step, the stuck-on-main path.
+- [x] **OBJ-09.1** Count consecutive `invalidOutput` and `noEffect` outcomes per subtask.
+- [x] **OBJ-09.2** Trigger a handoff after 2 consecutive `invalidOutput` or 3 consecutive `noEffect` on a ghost.
+- [x] **OBJ-09.3** On handoff: set the subtask to `handoff`, release the window lock, record `lastGoodStep`, and queue the subtask for `main` with route reason `promotedAfterFailure`.
+- [x] **OBJ-09.4** Emit `cursorCommand` events for the visual: fade out the ghost, move the main cursor to the window.
+- [x] **OBJ-09.5** When `main` picks up the subtask, build its input from the task record and a fresh observation, starting after `lastGoodStep`.
+- [x] **OBJ-09.6** If `main` hits 3 consecutive `noEffect` on a handed-off subtask, pause it and emit a user-facing error event of kind `stuckOnScreen`.
+- [x] **OBJ-09.7** Tests with scripted outcomes: both handoff triggers, lock release, resume from the last good step, the stuck-on-main path.
 
 ## Expectations
 
-- [ ] SPEC-03 scenarios "Stuck ghost hands off to the main cursor" and "Main cursor also gets stuck" pass.
-- [ ] The handed-off subtask never repeats steps that already had an `ok` outcome.
-- [ ] The step log is intact after a handoff.
+- [x] SPEC-03 scenarios "Stuck ghost hands off to the main cursor" and "Main cursor also gets stuck" pass.
+- [x] The handed-off subtask never repeats steps that already had an `ok` outcome.
+- [x] The step log is intact after a handoff.
 
 ## Expected outcomes
 
@@ -67,4 +67,24 @@ If the main cursor gets stuck too, Yumi asks the user for help.
 
 ## Outcome
 
-_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._
+- **Result:** Done.
+- **Delivered:**
+  - `harness/src/scheduler/handoff.ts`: `handoffDue` (2 invalid replies or 3 no-effect steps in a row, from `gui_act`'s streaks) and `lastGoodStep`.
+  - `harness/src/scheduler/gui-lane.ts`: a stuck ghost returns the new `handoff` run outcome instead of failing; a handed-off subtask first spawns and moves the main cursor to the window's center (`elementPath: "AXWindow"`). The ghost's own `gui_act` attempt already fades its cursor.
+  - `harness/src/scheduler/scheduler.ts`: on `handoff`, the subtask is set to `handoff` with `lastGoodStep` (the store releases its window lock in the same change), then `queued`, and routed again to `main`. If `main` gets stuck on it, the UI lanes pause, the task goes to `paused`, and the user gets a `stuckOnScreen` error; Resume tries again on `main`.
+  - `harness/src/router/router.ts` and `harness/src/scheduler/lanes.ts`: `route(subtask, proposed, promoted)` sends a handed-off subtask to `main` with reason `promotedAfterFailure`. Its claim prefers the window the ghost worked in.
+  - `harness/test/ghost-handoff.test.ts`: runs the scheduler, the real lane router, and `gui_act` against a fake Keynote window, with no socket.
+- **Commits:** `feat(harness): hand a stuck ghost's subtask to the main cursor` (this commit).
+- **Expectations:**
+  - "Stuck ghost hands off to the main cursor": test of the same name (status `handoff`, no window lock at that moment, ghost fade then main move, `promotedAfterFailure`, main continues). "Main cursor also gets stuck": test of the same name (`stuckOnScreen` error, task paused, Resume finishes on `main`).
+  - No repeated steps: the same test checks the Mac actions after the handoff are only main's new ones.
+  - Step log intact: the same test checks the ghost's step ids and outcomes are unchanged after the handoff.
+  - Both triggers: the no-effect scenario test, and "hands off after 2 invalid replies in a row".
+- **Not verified:**
+  - The full harness suite on macOS: on Windows, 198 tests fail before and after this change (Unix sockets and POSIX paths), the same list both times. Run `python3 scripts/verify.py` on a Mac.
+  - The fade and move on a real Mac overlay: run a goal whose ghost gets stuck (for example `-YumiMockScript` with a button that never changes the window) and watch the ghost fade and the main cat move to that window.
+- **Decisions and deviations:**
+  - The handed-off subtask is set to `queued` right after `handoff`, as docs/lane-router.md step 3 says, so a pause or restart finds it in a status the scheduler already handles.
+  - "Stuck on screen" for a stuck `main` pauses the task rather than failing it, so the user's Resume can carry on. "I'll show you" and "Skip this step" stay out of scope.
+  - Which subtasks were handed off is kept per run: after a restart, a handed-off subtask is routed by capability again.
+- **For the next objectives:** `RouteSubtask` takes an optional `promoted` flag. `SubtaskRun` has a `handoff` outcome that only the ghost lane returns. `SchedulerDeps.voice` carries the stuck error to the user.

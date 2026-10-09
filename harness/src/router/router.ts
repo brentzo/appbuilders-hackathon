@@ -23,7 +23,8 @@ import type { WindowCoordinator } from "./windows.ts";
  *    cursor cap) or `windowLocked` (a busy window the app cannot open a second one of). A queued decision is stored
  *    and sent like any other, and the caller routes again once `queued.wait` resolves.
  *
- * Ghost handoff comes in OBJ-09.
+ * A subtask a stuck ghost handed off (`promoted`, OBJ-09) goes to `main` with reason `promotedAfterFailure` after
+ * check 1, since `main` always accepts work (SPEC-03 r1, r8). Its claim prefers the window the ghost worked in.
  */
 
 export interface RouteDecision {
@@ -73,10 +74,10 @@ export class LaneRouter {
    * Rejects with `ProbeFailure` (carrying the SPEC-11 `UserError`) when the target app's capability cannot be
    * learned; nothing is stored or emitted then.
    */
-  async route(subtask: Subtask, proposed: Lane): Promise<RouteDecision> {
+  async route(subtask: Subtask, proposed: Lane, promoted = false): Promise<RouteDecision> {
     const { store, emit, logger } = this.options;
     const bundleId = await this.bundleIdOf(subtask);
-    const decision = await this.claim(subtask, bundleId, await this.decide(subtask, bundleId));
+    const decision = await this.claim(subtask, bundleId, await this.decide(subtask, bundleId, promoted));
     // The app the planner named, resolved, and the window the subtask got, so the lane knows where to work.
     const target = decision.target ?? (bundleId !== undefined && !subtask.target ? { bundleId } : undefined);
     store.updateSubtask(subtask.id, { lane: decision.lane, routeReason: decision.reason, ...(target ? { target } : {}) });
@@ -133,8 +134,9 @@ export class LaneRouter {
     };
   }
 
-  private async decide(subtask: Subtask, bundleId: string | undefined): Promise<RouteDecision> {
+  private async decide(subtask: Subtask, bundleId: string | undefined, promoted: boolean): Promise<RouteDecision> {
     if (bundleId === undefined) return { lane: "helper", reason: "noUI" };
+    if (promoted) return { lane: "main", reason: "promotedAfterFailure" };
     if (subtask.needsKeyboard) return { lane: "main", reason: "needsKeyboard" };
     const capability = await this.options.capabilities.capabilityOf(bundleId);
     return isBackgroundCapable(capability)

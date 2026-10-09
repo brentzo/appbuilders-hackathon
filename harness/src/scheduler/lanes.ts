@@ -10,14 +10,15 @@ import { ToolRegistry } from "../tools/registry.ts";
  */
 
 /**
- * Decides a subtask's lane, stores it on the subtask, and tells the apps. Rejects with `ProbeFailure` when the
- * target app's capability cannot be learned.
+ * Decides a subtask's lane, stores it on the subtask, and tells the apps. `promoted` is set for a subtask a stuck
+ * ghost handed off, which goes to `main` (OBJ-09). Rejects with `ProbeFailure` when the target app's capability
+ * cannot be learned.
  */
-export type RouteSubtask = (subtask: Subtask) => Promise<RouteDecision>;
+export type RouteSubtask = (subtask: Subtask, promoted?: boolean) => Promise<RouteDecision>;
 
 /** Routes through the lane router (OBJ-07), which only reads the planner's proposed lane for its log. */
 export function routeWith(router: LaneRouter): RouteSubtask {
-  return (subtask) => router.route(subtask, subtask.proposedLane);
+  return (subtask, promoted) => router.route(subtask, subtask.proposedLane, promoted);
 }
 
 /** How one tool call ended. The permission gate has already allowed it. */

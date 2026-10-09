@@ -1,11 +1,13 @@
-import type { Subtask, UserError, Uuid } from "@yumi/protocol/types";
+import type { Subtask, SubtaskResult, UserError, Uuid } from "@yumi/protocol/types";
 import { DEFAULT_LIMITS } from "../config.ts";
 import { isUiLane, RunControl } from "../control/run-control.ts";
 import type { GuiServices } from "../gui/gui-act.ts";
 import { describeError } from "../log.ts";
 import { ProbeFailure, type RouteDecision } from "../router/index.ts";
 import { runGuiSubtask } from "./gui-lane.ts";
+import { lastGoodStep } from "./handoff.ts";
 import type { LaneRunners, RouteSubtask } from "./lanes.ts";
+import type { TaskVoice } from "./run-task.ts";
 import { runSubtask, type SubtaskRun, type SubtaskRunDeps } from "./subtask-runner.ts";
 
 /**
@@ -24,6 +26,11 @@ import { runSubtask, type SubtaskRun, type SubtaskRunDeps } from "./subtask-runn
  * the pause or cancel flow's to set. While the user has taken over (a UI-lanes pause), each ghost or main subtask
  * stops before its next action and goes back to ready, no new one starts, and helpers keep running; the schedule
  * waits for the resume and then starts the UI subtasks again as the same attempt (SPEC-06 r2).
+ *
+ * A ghost that gets stuck hands its subtask off (SPEC-03 r8, r9, OBJ-09): the subtask goes to `handoff` with its
+ * last good step, which releases its window lock and cursor, then joins the main cursor's queue and is routed again
+ * to `main`. If the main cursor gets stuck on it too, the UI lanes pause and Yumi asks the user for help with
+ * "Stuck on screen" (SPEC-11); the user's Resume tries again on the main cursor.
  */
 
 export interface SchedulerDeps extends SubtaskRunDeps {
@@ -34,6 +41,8 @@ export interface SchedulerDeps extends SubtaskRunDeps {
   gui?: GuiServices;
   /** How many subtasks run at once: `ModelConfig.parallelSlots`. */
   slots: number;
+  /** Tells the user the main cursor is stuck on a handed-off subtask (OBJ-09). */
+  voice?: Pick<TaskVoice, "userError">;
 }
 
 export interface ScheduleOptions {
@@ -69,6 +78,8 @@ export async function runSchedule(
   const held = new Set<Uuid>();
   /** Subtasks whose attempt goes on when they start again: a resume's, and those a take-over stopped. */
   const continuing = new Set(options.continuing ?? []);
+  /** Subtasks a stuck ghost handed off: they are routed to the main cursor from now on (OBJ-09). */
+  const promoted = new Set<Uuid>();
   // The model's slots. A subtask queued for a cursor or a window gives its slot back while it waits, since it uses
   // no model, and takes one again before it runs; those waiting for a slot go before subtasks not started yet.
   let busy = 0;
@@ -132,34 +143,39 @@ export async function runSchedule(
       });
       return fail(subtask.id, { kind: "stepFailed", taskId, step: subtask.title });
     }
-    let decision;
-    try {
-      decision = await routeWhenThereIsRoom(subtask, slot);
-    } catch (error) {
-      if (!(error instanceof ProbeFailure)) throw error;
-      if (stopSignal.aborted) {
-        // The check failed after the stop: the subtask never started, and the stop decides what happens to it.
-        notStarted(subtask.id);
-        return;
+    // A handoff routes the subtask again, to the main cursor, once the ghost's cursor and window are given back.
+    for (let current = subtask, carryOn = continues; ; current = store.getSubtask(subtask.id)!, carryOn = false) {
+      let decision;
+      try {
+        decision = await routeWhenThereIsRoom(current, slot);
+      } catch (error) {
+        if (!(error instanceof ProbeFailure)) throw error;
+        if (stopSignal.aborted) {
+          // The check failed after the stop: the subtask never started, and the stop decides what happens to it.
+          notStarted(subtask.id);
+          return;
+        }
+        // The router could not learn what the target app supports, so no lane can work in it (OBJ-07 Outcome).
+        logger.warn("schedule.routeFailed", { taskId, subtaskId: subtask.id, kind: error.userError.kind });
+        store.setSubtaskStatus(subtask.id, "failed", {
+          result: { status: "blocked", files: [], note: "Could not check the app." },
+        });
+        return fail(subtask.id, error.userError);
       }
-      // The router could not learn what the target app supports, so no lane can work in it (OBJ-07 Outcome).
-      logger.warn("schedule.routeFailed", { taskId, subtaskId: subtask.id, kind: error.userError.kind });
-      store.setSubtaskStatus(subtask.id, "failed", {
-        result: { status: "blocked", files: [], note: "Could not check the app." },
-      });
-      return fail(subtask.id, error.userError);
-    }
-    if (!decision) return;
-    try {
-      if (stopSignal.aborted) {
-        // Stopped while it was routed (Brent's run, 2026-10-10: a pause during routing still started a ghost). The
-        // lock and cursor are given back below, and the subtask waits where routing left it.
-        notStarted(subtask.id);
-        return;
+      if (!decision) return;
+      let ended;
+      try {
+        if (stopSignal.aborted) {
+          // Stopped while it was routed (Brent's run, 2026-10-10: a pause during routing still started a ghost). The
+          // lock and cursor are given back below, and the subtask waits where routing left it.
+          notStarted(subtask.id);
+          return;
+        }
+        ended = await runRouted(current, decision, carryOn);
+      } finally {
+        decision.release?.();
       }
-      await runRouted(subtask, decision, continues);
-    } finally {
-      decision.release?.();
+      if (ended !== "handoff") return;
     }
   };
 
@@ -187,7 +203,7 @@ export async function runSchedule(
   const routeWhenThereIsRoom = async (subtask: Subtask, slot: { held: boolean }): Promise<RouteDecision | undefined> => {
     let current = subtask;
     for (;;) {
-      const decision = await deps.route(current);
+      const decision = await deps.route(current, promoted.has(current.id));
       if (!decision.queued) {
         if (!slot.held) {
           await takeSlot();
@@ -209,7 +225,7 @@ export async function runSchedule(
     }
   };
 
-  const runRouted = async (subtask: Subtask, decision: RouteDecision, continues: boolean) => {
+  const runRouted = async (subtask: Subtask, decision: RouteDecision, continues: boolean): Promise<"handoff" | void> => {
     if (isUiLane(decision.lane) && control.uiLanesPaused) {
       // The user has the mouse and keyboard: a UI subtask waits, still ready, for the resume (SPEC-06 r2).
       logger.info("schedule.held", { taskId, subtaskId: subtask.id, lane: decision.lane });
@@ -247,7 +263,7 @@ export async function runSchedule(
       const runSignal = AbortSignal.any([subtaskSignal, stop.signal]);
       const latestGoal = store.getTask(taskId)?.confirmedGoal ?? confirmedGoal;
       run = gui
-        ? await runGuiSubtask(running, latestGoal, { ...deps, ...gui }, runSignal, control, continues)
+        ? await runGuiSubtask(running, latestGoal, { ...deps, ...gui }, runSignal, control, continues, promoted.has(subtask.id))
         : await runSubtask(running, decision.lane, runner!, latestGoal, deps, runSignal, control);
     } finally {
       control.leave(subtask.id);
@@ -268,6 +284,14 @@ export async function runSchedule(
       logger.info("schedule.endedAfterStop", { taskId, subtaskId: subtask.id, outcome: run.outcome });
       return;
     }
+    if (run.outcome === "handoff" && !stop.signal.aborted) {
+      handOff(subtask.id, run.result);
+      return "handoff";
+    }
+    if (promoted.has(subtask.id) && run.outcome === "failed" && stuckOnScreen(run)) {
+      askForHelp(subtask.id);
+      return;
+    }
     if (run.outcome === "aborted" && !stop.signal.aborted && !control.mayAct(decision.lane)) {
       // The user took over: the subtask goes back to ready and carries on with this attempt after the resume.
       store.setSubtaskStatus(subtask.id, "ready");
@@ -281,6 +305,33 @@ export async function runSchedule(
     // A subtask the worker could not finish is "Couldn't finish a step" (SPEC-11 r14), named by its title. Failures
     // with their own SPEC-11 row (the model, the step guard) keep theirs.
     fail(subtask.id, "userError" in run && run.userError ? run.userError : { kind: "stepFailed", taskId, step: subtask.title });
+  };
+
+  /**
+   * Hands a stuck ghost's subtask to the main cursor (SPEC-03 r8, r9): `handoff` with the last good step releases its
+   * window lock in the same change, and it joins the main cursor's queue with its step log as it is.
+   */
+  const handOff = (subtaskId: Uuid, result: SubtaskResult) => {
+    const good = lastGoodStep(store.listSteps(subtaskId));
+    store.setSubtaskStatus(subtaskId, "handoff", { result, ...(good ? { lastGoodStep: good } : {}) });
+    store.setSubtaskStatus(subtaskId, "queued");
+    promoted.add(subtaskId);
+    logger.info("schedule.handoff", { taskId, subtaskId, ...(good ? { lastGoodStep: good } : {}) });
+  };
+
+  /**
+   * The main cursor got stuck on a handed-off subtask: the UI lanes pause as they do when the user takes over, the
+   * task shows as paused, and the user is asked for help with "Stuck on screen" (SPEC-03 "Main cursor also gets
+   * stuck"). The user's Resume routes the subtask to the main cursor again.
+   */
+  const askForHelp = (subtaskId: Uuid) => {
+    logger.warn("schedule.mainStuck", { taskId, subtaskId });
+    control.pauseUiLanes();
+    store.setSubtaskStatus(subtaskId, "ready");
+    held.add(subtaskId);
+    const task = store.getTask(taskId)!;
+    if (task.status === "running" || task.status === "waitingForUser") store.setTaskStatus(taskId, "paused");
+    deps.voice?.userError(task.originDeviceId, { kind: "stuckOnScreen", taskId });
   };
 
   /** Marks pending subtasks ready once every subtask they depend on is done. */
@@ -317,4 +368,9 @@ export async function runSchedule(
     return { outcome: "failed", subtaskId: left[0]!.id };
   }
   return { outcome: "done" };
+}
+
+/** A run that ended stuck on the screen: no effect, replies that did not fit, or a window that is gone. */
+function stuckOnScreen(run: Extract<SubtaskRun, { outcome: "failed" }>): boolean {
+  return run.result.status === "stuck" && (!run.userError || run.userError.kind === "stuckOnScreen");
 }

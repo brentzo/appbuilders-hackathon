@@ -542,7 +542,7 @@ Every line about a task has its `taskId`, and every line about a subtask has its
 | [OBJ-06](../objectives/OBJ-06-resume-and-limits.md) | Resume and limits | Brent | done |
 | [OBJ-07](../objectives/OBJ-07-lane-router-core.md) | Lane router core | Brent | done |
 | [OBJ-08](../objectives/OBJ-08-locks-busy-windows-cap.md) | Window locks, busy windows, and cursor cap | Brent | done |
-| [OBJ-09](../objectives/OBJ-09-ghost-handoff.md) | Ghost handoff | Brent | todo |
+| [OBJ-09](../objectives/OBJ-09-ghost-handoff.md) | Ghost handoff | Brent | done |
 | [OBJ-21](../objectives/OBJ-21-mac-bridge-client-and-pairing.md) | Mac bridge client and pairing | Jepoy | done |
 | [OBJ-36](../objectives/OBJ-36-gui-act-sub-agent.md) | gui_act sub-agent | Brent | in-progress |
 | [OBJ-37](../objectives/OBJ-37-permission-gate-and-file-tools.md) | Permission gate and typed file tools | Brent | done |

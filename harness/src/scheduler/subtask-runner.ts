@@ -51,7 +51,9 @@ export type SubtaskRun =
   /** The model could not answer. */
   | { outcome: "error"; result: SubtaskResult; userError: UserError }
   /** The caller cancelled. */
-  | { outcome: "aborted"; result: SubtaskResult };
+  | { outcome: "aborted"; result: SubtaskResult }
+  /** Only a ghost: it got stuck, and the subtask moves to the main cursor (SPEC-03 r8, OBJ-09). */
+  | { outcome: "handoff"; result: SubtaskResult };
 
 export interface SubtaskRunDeps {
   store: TaskStore;
