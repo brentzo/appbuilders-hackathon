@@ -28,6 +28,8 @@ struct MenuContent: View {
                 harness.submitSampleGoal()
             }
             .disabled(!model.harnessReady)
+
+            CursorDebugMenu(actions: CursorDebugActions(overlay: harness.overlay))
         }
 
         Button("Settings…") {

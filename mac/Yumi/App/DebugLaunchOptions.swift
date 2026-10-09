@@ -12,6 +12,7 @@ import YumiProtocol
 ///   usual onboarding check. An error uses the sample last action "Clicked Export in Keynote".
 /// - `-YumiPermissions mixed|granted` pretends permissions are in that state, without asking macOS.
 ///   `mixed` has the microphone allowed and the other two missing.
+/// - `-YumiOverlayDemo <dir>` shows sample cursors and writes the overlay as PNG files, then quits.
 /// - `-YumiSnapshotDir <dir>` makes the opened window key and active, renders it to PNG files at
 ///   1x and 2x scale, then quits. If the window cannot become key, it writes nothing.
 ///   Yumi draws its own window, so this needs no Screen Recording permission. The window's
@@ -39,6 +40,11 @@ enum DebugLaunchOptions {
 
         if let status = LaunchArguments.string("YumiStatus").flatMap(AppStatus.init(rawValue:)) {
             app.model.statusOverride = status
+        }
+
+        if let directory = LaunchArguments.string("YumiOverlayDemo") {
+            runOverlayDemo(app.harness.overlay, writingTo: URL(fileURLWithPath: directory))
+            return true
         }
 
         let opened: (name: String, window: NSWindow)?
@@ -73,6 +79,26 @@ enum DebugLaunchOptions {
         }
         func request(_ permission: Permission) async {}
         func open(_ url: URL) { NSWorkspace.shared.open(url) }
+    }
+
+    /// `-YumiOverlayDemo <dir>`: a main cursor and two labeled ghosts in different states plus a
+    /// helper chip, rendered to PNG files over white and black, then quits.
+    private static func runOverlayDemo(_ overlay: CursorOverlay, writingTo directory: URL) {
+        guard let screen = NSScreen.screens.first else { return }
+        let center = CGPoint(x: screen.frame.midX, y: screen.frame.midY)
+        overlay.spawn(id: "main", kind: .main, label: nil, at: center)
+        overlay.update("main") { $0.state = .thinking }
+        overlay.spawn(id: "ghost-1", kind: .ghost, label: "Fill expense form", at: CGPoint(x: center.x - 260, y: center.y + 140))
+        overlay.update("ghost-1") { $0.state = .acting }
+        overlay.spawn(id: "ghost-2", kind: .ghost, label: "Rename invoices in Downloads", at: CGPoint(x: center.x + 220, y: center.y - 160))
+        overlay.update("ghost-2") { $0.state = .waitingForUser }
+        overlay.showHelperChip(id: "helper", text: "Helper working")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            for file in overlay.debugRender(to: directory) {
+                print("Overlay snapshot: \(file.path)")
+            }
+            NSApp.terminate(nil)
+        }
     }
 
     /// Snapshots show the window as the user sees it while using it: key and active, so accent
