@@ -84,11 +84,14 @@ Audio never leaves the Mac, and the native recognizer can never fall back to the
   - Debug test aids: `-YumiVoiceFile` and `-YumiReplyFile` play a recording in place of the microphone. The distributed notification `ph.appbuilders.yumi.debug.pushToTalk` (`press` or `release`) holds push-to-talk.
   - Tests: `mac/YumiTests/VoiceIntakeTests.swift`.
 - **Commits:**
-  - `cb5474c docs(objectives): start OBJ-15`
-  - `a455745 feat(mac): push-to-talk with the on-device recognizer, sending the goal to the harness`
-  - `5b591a6 feat(mac): add Whisper large-v3-turbo through WhisperKit, and the recognizer rule with an "I speak Taglish" setting`
-  - `fa2d023 feat(mac): listen for the spoken answer after the repeat-back, with the main cursor as the listening indicator`
-  - `docs(mac): document voice intake` and `docs(objectives): record the OBJ-15 outcome so far` (these commits)
+  - `2845ce4 docs(objectives): start OBJ-15`
+  - `f513103 feat(mac): push-to-talk with the on-device recognizer, sending the goal to the harness`
+  - `ba2fa3d feat(mac): add Whisper large-v3-turbo through WhisperKit, and the recognizer rule with an "I speak Taglish" setting`
+  - `5674bde feat(mac): listen for the spoken answer after the repeat-back, with the main cursor as the listening indicator`
+  - `1965f9b docs(mac): document voice intake`
+  - `3d5b954 docs(objectives): record the OBJ-15 outcome so far`
+  - `d140940 fix(mac): let other hot keys through the push-to-talk handler`
+  - `docs(objectives): update the OBJ-15 outcome after the rebase` (this commit)
 - **Expectations:**
   - "Push-to-talk on the Mac", live against the mock harness:
     - Holding ⌥Space (synthetic key events) turned the microphone on (the macOS microphone indicator showed), with the listening cursor next to the pointer.
@@ -109,7 +112,7 @@ Audio never leaves the Mac, and the native recognizer can never fall back to the
     - Apple's recognizer: 169 to 365 ms.
     - Whisper: 1.6 s for a 3-second goal, and 1.8 s for a 16-second one (3.7 s on the first run after launch).
     - Whisper first load: 6 minutes (download and Core ML compile). After that, 15 to 17 s at each launch.
-  - Mac tests: 95 tests in 18 suites pass. `aSpokenAnswerReachesTheHarness` runs the real `GoalConfirmation` with `VoiceIntake` as its listener, and "Yes, go ahead." is transcribed and sent as the spoken answer.
+  - Mac tests: 102 tests in 19 suites pass, rebased on main with OBJ-17, OBJ-40, and OBJ-35. `verify.py` passes. `aSpokenAnswerReachesTheHarness` runs the real `GoalConfirmation` with `VoiceIntake` as its listener, and "Yes, go ahead." is transcribed and sent as the spoken answer.
 - **Not verified:**
   - The hand check for Patrick, on a build where Yumi is allowed the microphone:
     1. In another app, hold ⌥Space, say "export my Keynote deck as a PDF", and release.
@@ -123,6 +126,8 @@ Audio never leaves the Mac, and the native recognizer can never fall back to the
   - Whisper's memory next to Qwen3.5-9B was not measured. OBJ-11 measures it.
   - Ad hoc builds are asked for the microphone again after every rebuild. While that prompt is open, push-to-talk does nothing.
   - Pressing push-to-talk while a task's main cursor is on screen reuses that cursor for listening.
+  - Pressing ⌥Space while a task runs may count as the user taking over (OBJ-35's take-over watcher) and pause the task. Not tried.
+  - The stop shortcut (OBJ-35) and push-to-talk now each handle only their own hot key; pressing both was not tried live.
 - **Decisions and deviations:**
   - The recognizer rule (OBJ-15.5), for SPEC-01:
     - "I speak Taglish" (off by default) transcribes every goal with Whisper, with Apple's recognizer as the fallback.
