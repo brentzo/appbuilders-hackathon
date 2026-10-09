@@ -18,6 +18,7 @@ final class SettingsStore {
         static let autoMode = "settings.autoMode"
         static let demoModeEnabled = "settings.demoModeEnabled"
         static let visibleCursorCap = "settings.visibleCursorCap"
+        static let debugMode = "settings.debugMode"
     }
 
     init(defaults: UserDefaults = .standard, sink: HarnessSettingsSink) {
@@ -56,6 +57,11 @@ final class SettingsStore {
         set { update { $0.visibleCursorCap = Self.clampCap(newValue) } }
     }
 
+    var debugMode: Bool {
+        get { settings.debugMode }
+        set { update { $0.debugMode = newValue } }
+    }
+
     private func update(_ change: (inout YumiSettings) -> Void) {
         var next = settings
         change(&next)
@@ -71,6 +77,7 @@ final class SettingsStore {
         defaults.set(settings.autoMode, forKey: Key.autoMode)
         defaults.set(settings.demoModeEnabled, forKey: Key.demoModeEnabled)
         defaults.set(settings.visibleCursorCap, forKey: Key.visibleCursorCap)
+        defaults.set(settings.debugMode, forKey: Key.debugMode)
         do {
             defaults.set(try JSONEncoder().encode(settings.pushToTalkShortcut), forKey: Key.pushToTalkShortcut)
         } catch {
@@ -91,7 +98,8 @@ final class SettingsStore {
             speaksTaglish: defaults.object(forKey: Key.speaksTaglish) as? Bool ?? fallback.speaksTaglish,
             autoMode: defaults.object(forKey: Key.autoMode) as? Bool ?? fallback.autoMode,
             demoModeEnabled: defaults.object(forKey: Key.demoModeEnabled) as? Bool ?? fallback.demoModeEnabled,
-            visibleCursorCap: clampCap(defaults.object(forKey: Key.visibleCursorCap) as? Int ?? fallback.visibleCursorCap)
+            visibleCursorCap: clampCap(defaults.object(forKey: Key.visibleCursorCap) as? Int ?? fallback.visibleCursorCap),
+            debugMode: defaults.object(forKey: Key.debugMode) as? Bool ?? fallback.debugMode
         )
     }
 

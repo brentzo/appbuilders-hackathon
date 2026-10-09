@@ -73,6 +73,19 @@ struct HarnessClientTests {
         #expect(!result.taskId.isEmpty)
     }
 
+    /// The mock checks params against the protocol, so this is a valid `setDebugMode` (OBJ-53).
+    @Test func sendsDebugMode() async throws {
+        let mock = try await MockHarnessProcess.start()
+        defer { mock.stop() }
+        let client = HarnessClient(socketPath: mock.socketPath)
+        client.start()
+        defer { client.stop() }
+        try await wait(for: client, toBe: .connected)
+
+        _ = try await client.call(.setDebugMode, SetDebugModeParams(enabled: false), returning: Empty.self)
+        _ = try await client.call(.setDebugMode, SetDebugModeParams(enabled: true), returning: Empty.self)
+    }
+
     @Test func reconnectsAfterTheHarnessIsKilled() async throws {
         var mock = try await MockHarnessProcess.start()
         // Reads `mock` when the test ends, so it stops whichever mock is running then, even if the

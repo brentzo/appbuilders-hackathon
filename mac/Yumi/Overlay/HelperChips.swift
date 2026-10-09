@@ -11,6 +11,10 @@ final class HelperChips {
     private var scale: CGFloat = 2
     private var chips: [(id: String, layer: CALayer)] = []
     private var nextColor = 0
+    /// Where the panel sits on the screens, to give frames in global coordinates.
+    private var panelOrigin: CGPoint = .zero
+    /// Open thoughts panels under their chips, by chip id (OBJ-53).
+    private var cards: [String: ThoughtsCard] = [:]
 
     /// A chip's colors: a littermate's fur, its line for the dot and edge, and its label text.
     struct ChipColors {
@@ -41,7 +45,10 @@ final class HelperChips {
         panel.rootLayer.addSublayer(layer)
         container = layer
         panelSize = panel.rootLayer.bounds.size
+        panelOrigin = panel.screenFrame.origin
         scale = panel.backingScaleFactor
+        for card in cards.values { card.layer.removeFromSuperlayer() }
+        cards = [:]
         let existing = chips
         chips = []
         for chip in existing {
@@ -101,6 +108,7 @@ final class HelperChips {
 
     func remove(id: String, animated: Bool = true) {
         guard let index = chips.firstIndex(where: { $0.id == id }) else { return }
+        cards.removeValue(forKey: id)?.layer.removeFromSuperlayer()
         let layer = chips.remove(at: index).layer
         if animated {
             CATransaction.begin()
@@ -120,13 +128,48 @@ final class HelperChips {
 
     var count: Int { chips.count }
 
-    /// Stacked down from below the menu bar, right-aligned.
+    /// Opens a chip's thoughts panel under it, pushing the chips below it down, or closes it with nil.
+    func setThoughts(_ content: ThoughtsContent?, for id: String) {
+        guard let chip = chips.first(where: { $0.id == id }) else { return }
+        if let content {
+            let card = cards[id] ?? {
+                let card = ThoughtsCard()
+                card.setScale(scale)
+                container?.addSublayer(card.layer)
+                cards[id] = card
+                return card
+            }()
+            let colors = Self.palette[chip.layer.value(forKey: "colors") as? Int ?? 0]
+            card.show(content, accent: colors.fill, topRight: .zero)
+        } else {
+            cards.removeValue(forKey: id)?.layer.removeFromSuperlayer()
+        }
+        layout()
+    }
+
+    /// Each chip with its open panel, in global AppKit coordinates, for clicks in Debug mode.
+    var tapFrames: [(id: String, frame: CGRect)] {
+        chips.map { chip in
+            var frame = chip.layer.frame
+            if let card = cards[chip.id], card.isShown { frame = frame.union(card.frame) }
+            return (chip.id, frame.offsetBy(dx: panelOrigin.x, dy: panelOrigin.y))
+        }
+    }
+
+    /// Stacked down from below the menu bar, right-aligned, each open panel under its chip.
     private func layout() {
         var top = panelSize.height - 40
         for chip in chips {
             let size = chip.layer.bounds.size
             chip.layer.position = CGPoint(x: panelSize.width - 16 - size.width / 2, y: top - size.height / 2)
             top -= size.height + 6
+            if let card = cards[chip.id], card.isShown {
+                CATransaction.begin()
+                CATransaction.setDisableActions(true)
+                card.layer.frame.origin = CGPoint(x: panelSize.width - 16 - card.frame.width, y: top - card.frame.height)
+                CATransaction.commit()
+                top -= card.frame.height + 6
+            }
         }
     }
 }

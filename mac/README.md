@@ -149,6 +149,20 @@ With "Auto mode" on in Settings (off by default), the goal starts without the re
   The panel closes after 3 seconds, or when the task ends.
 - Approvals for sends and deletes still show their cards, and the stop shortcut works as always.
 
+### Debug mode and the thoughts panels
+
+"Debug mode" in Settings (Troubleshooting) is on by default in Debug builds and off in release builds ([OBJ-53](../objectives/OBJ-53-mac-thoughts-panel.md), SPEC-07 r22 and r23).
+
+- Yumi sends it to the harness with `setDebugMode` after every hello and on every change (`HarnessLink+DebugMode.swift`). The harness turns its detailed debug log, its `workerThought` events, and the model's reasons on and off with it.
+- In Debug mode, clicking a cat's bubble or a helper chip opens its thoughts panel: the subtask, the lane and the time of its last thought, what it sees, its last action, and the model's last decision and why. Clicking the panel again closes it.
+- The panel updates with every `workerThought`, and closes when its subtask is done or failed, when its cat or chip leaves, or when Debug mode turns off.
+- The main cat has no label, so in Debug mode its bubble shows the title of the subtask it is thinking about, once a thought arrives, to have something to click.
+- A cat's panel takes the bubble's place, moves sideways to stay on the display, and goes below the paws near the top. A chip's panel opens under the chip and pushes the chips below it down.
+- The overlay panels stay click-through (SPEC-04 r7). While the pointer is over a bubble, chip, or open panel, a small transparent panel the size of that target sits under it and takes the click (`ThoughtsClickTarget`); anywhere else there is nothing to click. It never activates Yumi, and a cat stays put while the pointer is on its bubble.
+- Moving the mouse during a running task still pauses it (SPEC-06 r2), so reaching for a bubble mid-task pauses the task; the panel stays readable, and "Resume" carries on.
+- Panels use the design tokens (`surface`, `line`, `ink`, `muted`) for the system's light or dark appearance, with a dot in the cat's or chip's coat.
+- The pieces: `WorkerThoughts.swift` (the view model and the panel's words), `ThoughtsCard.swift` (drawing), `ThoughtsClickTarget.swift` (clicks), `CursorOverlay+Thoughts.swift` (the overlay glue), and `ThoughtsDemo.swift` (the demo part and the snapshot).
+
 ### Voice intake
 
 Push-to-talk turns speech into a goal on the Mac ([OBJ-15](../objectives/OBJ-15-mac-voice-intake.md)).
@@ -258,10 +272,13 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 - `-YumiPermissions mixed|granted` pretends permissions are in that state, without asking macOS.
 - `-YumiStatus startingUp|ready|listening|working|paused` sets the menu's status line.
 - `-YumiOverlayDemo <dir>` shows sample cursors and a helper chip, writes each display's overlay over white and over black as PNG files, then quits.
-- `-YumiCursorDemo YES` plays a 32-second cursor demo on screen: the main cat drops out of the island and goes through its states, three ghosts follow it out and leap around, the ghosts finish and leap back into the island with a meow, and the main cat does the same last (Debug builds).
+- `-YumiCursorDemo YES` plays a 50-second cursor demo on screen: the main cat drops out of the island and goes through its states, three ghosts follow it out and leap around, the ghosts finish and leap back into the island with a meow, and the main cat does the same last (Debug builds).
   In the middle, the four cats line up idle, thinking, paused, and acting, and the demo moves your pointer onto each one: the first three hop away with their ears back and drift back, and the acting cat fades in place.
   Then the cats wait about 7 seconds for you to try it with your own pointer.
   Moving the pointer needs Accessibility; without it, only the hands-on part works.
+  Then, with Debug mode turned on for this part, the cats and a helper chip get made-up thoughts, and the demo opens the main cat's panel, a ghost's, and the helper's in turn, updates each one, and closes the helper's when its subtask ends.
+  Then the cats wait about 6 seconds for you to click a bubble yourself.
+- `-YumiOpen thoughts -YumiSnapshotDir <dir>` opens thoughts panels on the main cat, a ghost at the right edge, a ghost under the top of the display, and a helper chip, writes the overlay as PNG files over white and black, then quits. Add `-YumiAppearance dark` for the dark panels.
 - `-YumiSnapshotDir <dir>` makes the opened window the key, active window, writes it as PNG files at 1x and 2x, then quits.
   If the window never becomes key, it writes nothing and says so on standard error.
   It needs no Screen Recording permission.
@@ -292,7 +309,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 
 - The menu bar icon is the SF Symbol `cat` until the Rive cat ([OBJ-19](../objectives/OBJ-19-rive-cat-cursor.md)) exists.
 - Settings changes go to `PendingHarnessSettingsSink`, which only logs.
-  The protocol has no method for settings yet.
+  The protocol has no method for settings yet, except Debug mode, which goes to the harness with `setDebugMode`.
 - Model readiness is a placeholder that is always unknown (`ModelReadiness`).
   The protocol cannot report it yet; this is open with the protocol and harness owners.
 - Error buttons whose feature comes in a later objective are shown disabled: for example "Try again" outside "Didn't catch speech", and "Stop" or "Keep going" when the error names no task.

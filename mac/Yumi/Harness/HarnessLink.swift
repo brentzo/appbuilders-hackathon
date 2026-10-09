@@ -6,7 +6,7 @@ import YumiProtocol
 /// harness's events mean for the app. It writes plain app values into `AppModel`.
 @MainActor
 final class HarnessLink {
-    private let model: AppModel
+    let model: AppModel
     private let supervisor: HarnessSupervisor
     let client: HarnessClient
     /// True while the harness is the mock. Mock-only aids such as the sample goal check it.
@@ -103,6 +103,7 @@ final class HarnessLink {
             // Without a harness no task is running, so no cursor may stay (SPEC-04 r9).
             if state != .connected { overlay.fadeAll() }
             if state == .connected {
+                sendDebugMode()
                 PhoneLink.shared.refreshDevices()
                 restoreFinishedTilings()
             }
@@ -113,6 +114,7 @@ final class HarnessLink {
                 self?.handle(event)
             }
         }
+        startDebugMode()
         PhoneLink.shared.calls = PhoneCalls(client: client) { [weak self] error, method in self?.report(error, from: method) }
         supervisor.start()
         client.start()
@@ -133,9 +135,9 @@ final class HarnessLink {
             autoMode.taskStatusChanged(change.taskId, change.status)
             pause.taskStatusChanged(change.taskId, change.status)
             model.taskStatus = Self.appStatus(for: Array(taskStatuses.values))
-            if let subtaskId = change.subtaskId, let status = change.subtaskStatus,
-               Self.finishedSubtask.contains(status), helperSubtasks.remove(subtaskId) != nil {
-                overlay.removeHelperChip(id: subtaskId)
+            if let subtaskId = change.subtaskId, let status = change.subtaskStatus, Self.finishedSubtask.contains(status) {
+                overlay.subtaskEnded(subtaskId)
+                if helperSubtasks.remove(subtaskId) != nil { overlay.removeHelperChip(id: subtaskId) }
             }
             // Cursors carry no task id, so when no task is active every cursor leaves (SPEC-04 r9).
             if model.taskStatus == .ready {
@@ -163,8 +165,10 @@ final class HarnessLink {
             tiler.suggest(suggestion)
         case .bridgeStateChanged(let change):
             PhoneLink.shared.update(connection: PhoneLink.Connection(change.state))
+        case .workerThought(let thought):
+            overlay.receive(thought)
         default:
-            // questionAsked, interruptedTaskFound, waitingForWindow and workerThought (OBJ-53) are consumed in later objectives.
+            // questionAsked, interruptedTaskFound and waitingForWindow are consumed in later objectives.
             log.info("Not handled yet: \(event.name, privacy: .public)")
         }
     }

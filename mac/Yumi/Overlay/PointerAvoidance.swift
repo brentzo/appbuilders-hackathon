@@ -182,6 +182,12 @@ final class PointerAvoider {
     func evaluate(_ id: String) {
         guard let cursor = overlay?.cursors[id] else { return }
         let point = pointer()
+        // In Debug mode the user may be reaching for the cat's bubble to see its thoughts (OBJ-53):
+        // it stays put while the pointer is on it.
+        if overlay?.pointerIsOnThoughts(point, of: id) == true {
+            cancelReturn(id)
+            return
+        }
         let dodge = dodges[id] ?? Dodge()
         let busy = (busyUntil[id] ?? 0) > now()
         let reaction = PointerAvoidance.reaction(for: cursor.state, busy: busy, reduceMotion: reduceMotion())

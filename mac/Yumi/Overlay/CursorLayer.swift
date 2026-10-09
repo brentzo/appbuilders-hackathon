@@ -14,8 +14,13 @@ final class CursorLayer {
     private let badge = CALayer()
     private let badgeIcon = CALayer()
     private let bubble = CursorBubble()
+    /// The open thoughts panel, in the bubble's place (OBJ-53).
+    private let thoughtsCard = ThoughtsCard()
     /// Set by the overlay when there is no room above the cat on its display.
     var bubbleBelow = false
+    /// Set by the overlay while the cat's thoughts panel is open (Debug mode, OBJ-53), with how far
+    /// the panel moves sideways to stay on the display.
+    var thoughts: (content: ThoughtsContent, shift: CGFloat)?
 
     /// The whole pose image on screen, in points. Matches POINTS in mac/scripts/render-cursor-cat.py.
     static let catSize = CGSize(width: 48, height: 48)
@@ -62,6 +67,14 @@ final class CursorLayer {
         root.addSublayer(cat)
         root.addSublayer(badge)
         root.addSublayer(bubble.layer)
+        root.addSublayer(thoughtsCard.layer)
+    }
+
+    /// What a click opens or closes the thoughts panel on, around the click point: the open panel,
+    /// or else the bubble. Nil when neither shows.
+    var thoughtsTapFrame: CGRect? {
+        if thoughtsCard.isShown { return thoughtsCard.frame }
+        return bubble.layer.isHidden ? nil : bubble.layer.frame
     }
 
     /// The bubble's tail tip: just over the cat's head, or just under the paws.
@@ -85,6 +98,7 @@ final class CursorLayer {
             layer.contentsScale = scale
         }
         bubble.setScale(scale)
+        thoughtsCard.setScale(scale)
         if let shownPalette, let shownState {
             let image = earsBack ? shownPalette.earsBackImage : shownPalette.image(for: shownState)
             cat.contents = image?.layerContents(forContentsScale: scale)
@@ -139,8 +153,14 @@ final class CursorLayer {
 
         // Ghost bubbles wear the ghost's fur; the main cursor's sits on surface.
         let ghost = cursor.palette != .ginger
+        let anchor = bubbleBelow ? Self.bubbleAnchorBelow : Self.bubbleAnchorAbove
+        if let thoughts {
+            thoughtsCard.show(thoughts.content, accent: cursor.palette.fur, anchor: anchor, below: bubbleBelow, shift: thoughts.shift)
+        } else {
+            thoughtsCard.hide()
+        }
         bubble.show(
-            cursor.bubbleText, anchor: bubbleBelow ? Self.bubbleAnchorBelow : Self.bubbleAnchorAbove, below: bubbleBelow,
+            thoughts == nil ? cursor.bubbleText : nil, anchor: anchor, below: bubbleBelow,
             fill: ghost ? cursor.palette.fur : Self.surface,
             edge: ghost ? cursor.palette.labelText.withAlphaComponent(0.25) : cursor.palette.fur,
             textColor: cursor.palette.labelText, live: cursor.transcript != nil

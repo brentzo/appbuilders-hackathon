@@ -14,6 +14,9 @@ struct OverlayCursor: Equatable {
     var step: String?
     /// While the user speaks, the words heard so far, shown instead of the label.
     var transcript: String?
+    /// In Debug mode, the title of the subtask the cat thinks about, so a cat without a label (the
+    /// main cat) still has a bubble to click for its thoughts (OBJ-53).
+    var thoughtTitle: String?
     /// The main cat is ginger; ghosts are littermates in their own coat (SPEC-04 r15).
     var palette: CatPalette = .ginger
     var position: CGPoint
@@ -25,7 +28,7 @@ struct OverlayCursor: Equatable {
     /// and its current step ("Fill expense form · typing the amount"). Nil hides the bubble.
     var bubbleText: String? {
         if let transcript, !transcript.isEmpty { return transcript }
-        guard let label, !label.isEmpty else { return nil }
+        guard let label = label ?? thoughtTitle, !label.isEmpty else { return nil }
         guard let detail = step ?? state.bubbleWord else { return label }
         return "\(label) · \(detail)"
     }

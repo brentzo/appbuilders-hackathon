@@ -33,6 +33,11 @@ final class CursorOverlay {
     private let locator: ElementLocating
     /// Keeps cats from covering what the user points at (SPEC-04 r21).
     private(set) lazy var avoider = PointerAvoider(overlay: self)
+    /// What each worker is thinking and which panels are open, in Debug mode (OBJ-53).
+    let thoughts = WorkerThoughts(enabled: false)
+    /// Takes clicks on bubbles, chips, and open panels in Debug mode, and nowhere else.
+    let thoughtsClicks = ThoughtsClickTarget()
+    var appearanceObservation: NSKeyValueObservation?
     private let log = Logger(subsystem: "ph.appbuilders.yumi", category: "overlay")
 
     init(locator: ElementLocating = AccessibilityElementLocator()) {
@@ -40,6 +45,7 @@ final class CursorOverlay {
     }
 
     func start() {
+        wireThoughts()
         rebuildPanels()
         screenObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
@@ -202,7 +208,13 @@ final class CursorOverlay {
     /// display where the cursor rests.
     private func draw(_ cursor: OverlayCursor, with layer: CursorLayer, on panel: OverlayPanel) {
         let home = panels.first { $0.screenFrame.contains(cursor.position) } ?? panel
-        layer.bubbleBelow = CursorLayer.bubbleNeedsFlip(cursor.bubbleText, at: cursor.position, visible: home.visibleFrame)
+        if let open = thoughtsLayout(for: cursor, visible: home.visibleFrame) {
+            layer.thoughts = (open.content, open.shift)
+            layer.bubbleBelow = open.below
+        } else {
+            layer.thoughts = nil
+            layer.bubbleBelow = CursorLayer.bubbleNeedsFlip(cursor.bubbleText, at: cursor.position, visible: home.visibleFrame)
+        }
         layer.apply(cursor, scale: panel.backingScaleFactor)
     }
 
@@ -210,6 +222,8 @@ final class CursorOverlay {
     /// it fades where it is. Either way the cursor is gone within 1 second (SPEC-04 r9). A cat
     /// that finished its task meows as it goes.
     func fade(id: String, immediately: Bool = false) {
+        // Its panel closes first, so the cat goes home without it.
+        thoughts.targetLeft(.cursor(id))
         avoider.forget(id)
         guard let cursor = cursors.removeValue(forKey: id), let byPanel = layers.removeValue(forKey: id) else { return }
         // A cat that finished its task meows as it heads home.
@@ -260,6 +274,7 @@ final class CursorOverlay {
     func fadeAll() {
         for id in Array(cursors.keys) { fade(id: id) }
         chips.removeAll()
+        thoughts.clear()
     }
 
     /// Where the pointer tip of a cursor is, in protocol (top-left) coordinates. SPEC-05 clicks here.
@@ -274,10 +289,18 @@ final class CursorOverlay {
     }
 
     func removeHelperChip(id: String) {
+        thoughts.targetLeft(.chip(id))
         chips.remove(id: id)
     }
 
     var helperChipCount: Int { chips.count }
+
+    /// Each chip with its open thoughts panel, in global AppKit coordinates (OBJ-53).
+    var chipTapFrames: [(id: String, frame: CGRect)] { chips.tapFrames }
+
+    func showChipThoughts(_ content: ThoughtsContent?, for id: String) {
+        chips.setThoughts(content, for: id)
+    }
 
     #if DEBUG
     /// Renders each display's overlay over a white and a black background into PNG files, so the
@@ -342,6 +365,7 @@ final class CursorOverlay {
             for cursor in cursors.values { addLayer(for: cursor, to: panel, arrival: nil) }
         }
         if let main = panels.first { chips.attach(to: main) }
+        refreshThoughts(thoughts.expanded)
         log.info("Overlay on \(self.panels.count) display(s)")
     }
 

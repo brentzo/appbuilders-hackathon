@@ -16,6 +16,9 @@ struct YumiSettings: Equatable, Sendable {
     var demoModeEnabled: Bool
     /// How many cursors may be visible at once, `main` included (SPEC-03 requirement 6).
     var visibleCursorCap: Int
+    /// Keep detailed local logs and let the user expand a cat or helper chip to see what it is
+    /// thinking (SPEC-07 requirements 22 and 23, OBJ-53). Sent to the harness with `setDebugMode`.
+    var debugMode: Bool
 
     /// SPEC-03 caps visible cursors at 3, so the setting can only lower it.
     static let visibleCursorCapRange = 1...3
@@ -26,6 +29,16 @@ struct YumiSettings: Equatable, Sendable {
         speaksTaglish: false,
         autoMode: false,
         demoModeEnabled: false,
-        visibleCursorCap: 3
+        visibleCursorCap: 3,
+        debugMode: defaultDebugMode
     )
+
+    /// On in Debug builds and off in release builds (SPEC-07 requirement 22).
+    static var defaultDebugMode: Bool {
+        #if DEBUG
+        true
+        #else
+        false
+        #endif
+    }
 }

@@ -53,6 +53,13 @@ struct SettingsView: View {
                     Text("Arrange windows side by side without asking first.")
                 }
             }
+
+            Section("Troubleshooting") {
+                Toggle(isOn: $store.debugMode) {
+                    Text("Debug mode")
+                    Text("Keep detailed logs on this Mac for 7 days, and click a cat's bubble or a helper to see what it's thinking.")
+                }
+            }
         }
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)

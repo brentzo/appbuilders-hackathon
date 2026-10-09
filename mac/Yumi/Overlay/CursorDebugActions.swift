@@ -72,7 +72,7 @@ struct CursorDebugActions {
     /// or a pill under the menu bar) and goes through its states, three ghosts follow it out (one
     /// gets a move mid-spawn), everyone leaps around, they line up and dodge the pointer (OBJ-54),
     /// the ghosts finish and leap back into the island with a meow, and then the main cat does the
-    /// same. For screen recordings.
+    /// same. In between, they show what they are thinking (OBJ-53). For screen recordings.
     func playDemo() {
         guard let screen = NSScreen.main else { return }
         let frame = screen.visibleFrame
@@ -102,14 +102,14 @@ struct CursorDebugActions {
             (8.1, { setState(.moving); moveTo([point(0.65, 0.55), point(0.35, 0.45), point(0.8, 0.25), point(0.5, 0.98)]) }),
             (9.0, { setState(.waitingForUser) }),
             (9.8, { setState(.stuck) }),
-        ] + avoidDemoSteps(start: 10.6, frame: frame) + [
+        ] + avoidDemoSteps(start: 10.6, frame: frame) + thoughtsDemoSteps(start: 10.6 + Self.avoidDemoLength) + [
             (10.6, { setState(.done) }),
             (11.6, { for (id, _, _) in ghosts { overlay.apply(.fade(FadeCursor(cursorId: id))) } }),
             (12.6, { setState(.paused) }),
             // The main cat finishes last: a meow, and it leaps back into the island too.
             (13.6, { setState(.done) }),
             (14.4, { fadeAll() }),
-        ].map { ($0.0 + Self.avoidDemoLength, $0.1) }
+        ].map { ($0.0 + Self.avoidDemoLength + Self.thoughtsDemoLength, $0.1) }
         for (delay, step) in steps {
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) { MainActor.assumeIsolated { step() } }
         }

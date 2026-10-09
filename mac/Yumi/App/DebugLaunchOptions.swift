@@ -11,7 +11,7 @@ import YumiProtocol
 /// - `-YumiStatus startingUp|ready|listening|working|paused` sets the menu's status line.
 /// - `-YumiVoiceFile <path>` makes push-to-talk transcribe that recording instead of the microphone.
 /// - `-YumiReplyFile <path>` makes the spoken answer after a repeat-back transcribe that recording.
-/// - `-YumiOpen settings|onboarding|pairing|pairing-code|type-goal|menu|menu-busy|approval-send|approval-delete|paused|tiling|chips|panels|error:<ErrorKind>` opens a window at launch instead of the
+/// - `-YumiOpen settings|onboarding|pairing|pairing-code|type-goal|menu|menu-busy|approval-send|approval-delete|paused|tiling|chips|thoughts|panels|error:<ErrorKind>` opens a window at launch instead of the
 ///   usual onboarding check. An error uses the sample last action "Clicked Export in Keynote".
 /// - `-YumiPermissions mixed|granted` pretends permissions are in that state, without asking macOS.
 ///   `mixed` has the microphone allowed and the other two missing.
@@ -55,6 +55,10 @@ enum DebugLaunchOptions {
         }
         if LaunchArguments.string("YumiOpen") == "chips", let directory = LaunchArguments.string("YumiSnapshotDir") {
             runChipsDemo(app.harness.overlay, writingTo: URL(fileURLWithPath: directory))
+            return true
+        }
+        if LaunchArguments.string("YumiOpen") == "thoughts", let directory = LaunchArguments.string("YumiSnapshotDir") {
+            CursorDebugActions.runThoughtsSnapshot(app.harness.overlay, writingTo: URL(fileURLWithPath: directory))
             return true
         }
 
