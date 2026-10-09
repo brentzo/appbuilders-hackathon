@@ -30,7 +30,9 @@ Status: relay implementation in progress (OBJ-13). Live VPS rollout is tracked b
 - The bridge is the only path between devices for the hackathon. Security comes from end-to-end encryption, device signatures, and pairing, not from a private network.
 - NetBird stays on the VPS for the team's private access to the server, logs, and dev machines. Yumi's device traffic does not use it.
 - Every command expires after 2 minutes. Commands are never queued; goals waiting for an offline device are held on the origin device ([SPEC-09](../specs/09-cross-device-routing.md)).
-- Pending `pairRequest` frames live for 5 minutes as specified by the protocol. The mismatch with SPEC-08's 30-second "Mac does not answer" scenario is tracked by [OBJ-33](../objectives/OBJ-33-pairing-response-timeout-contract.md).
+- A `pairRequest` stays open for 30 seconds by the relay's clock, held for a Mac that reconnects within that window.
+  The relay alone decides whether the Mac's `pairAccept` was in time: it pairs, forwards, and sends the Mac `paired` in one step, or sends `pairExpired`.
+  Verdicts for an offline device are held for 2 minutes ([OBJ-33](../objectives/OBJ-33-pairing-response-timeout-contract.md), `protocol/docs/pairing.md` "The answer window").
 - Unpair revokes the pairing and held traffic immediately. The signed frame remains in SQLite and is replayed on reconnect; acknowledgement deletion awaits the frame identifier contract in [OBJ-31](../objectives/OBJ-31-unpair-delivery-ack-contract.md).
 
 ## Deployment

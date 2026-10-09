@@ -154,8 +154,28 @@ export class RelayStore {
       .all(to, now) as Array<{ fromDevice: string; sealed: string }>;
   }
 
-  finishPairRequest(from: string, to: string): void {
-    this.db.prepare("DELETE FROM pending_pairs WHERE from_device = ? AND to_device = ?").run(from, to);
+  /** Deletes a pairing request, open or past its window. Returns whether there was one. */
+  finishPairRequest(from: string, to: string): boolean {
+    return this.db.prepare("DELETE FROM pending_pairs WHERE from_device = ? AND to_device = ?").run(from, to).changes > 0;
+  }
+
+  /** Holds a pairing verdict for a device that is offline. One per pair of devices: the newest replaces the last. */
+  queuePairingNotice(recipient: string, frame: Extract<BridgeFrame, { frame: "paired" | "pairExpired" }>, expiresAt: string, createdAt: string): void {
+    this.queueNotice(recipient, frame.device, pairingNoticeId(frame.device), frame, expiresAt, createdAt);
+  }
+
+  /**
+   * Forgets the pairExpired verdicts held for either device about the other, so an old one cannot close a new
+   * attempt. A held paired verdict stays: the two are paired, and the Mac must still learn it.
+   */
+  clearPairingNotices(a: string, b: string): void {
+    this.db.prepare("DELETE FROM deliveries WHERE category = 'notice' AND json_extract(frame, '$.frame') = 'pairExpired' AND ((recipient = ? AND message_id = ?) OR (recipient = ? AND message_id = ?))")
+      .run(a, pairingNoticeId(b), b, pairingNoticeId(a));
+  }
+
+  /** Whether the device has ever authenticated, so the relay can hold frames for it. */
+  isRegistered(deviceId: string): boolean {
+    return this.signingKey(deviceId) !== undefined;
   }
 
   hasSeen(sender: string, messageId: string): boolean {
@@ -216,19 +236,30 @@ export class RelayStore {
     return this.pendingPairRequest(from, to, new Date(0).toISOString()) !== undefined;
   }
 
-  sweep(now: string): { expiredDeliveries: PendingDelivery[]; deleted: number } {
-    const expiredDeliveries = this.db.prepare("SELECT id AS rowid, recipient, sender, message_id AS messageId, category, frame, expires_at AS expiresAt FROM deliveries WHERE expires_at <= ? ORDER BY created_at, id")
-      .all(now) as PendingDelivery[];
-    const result = this.db.transaction(() => {
+  sweep(now: string): { expiredDeliveries: PendingDelivery[]; expiredPairRequests: PairRoute[]; deleted: number } {
+    return this.db.transaction(() => {
+      const expiredDeliveries = this.db.prepare("SELECT id AS rowid, recipient, sender, message_id AS messageId, category, frame, expires_at AS expiresAt FROM deliveries WHERE expires_at <= ? ORDER BY created_at, id")
+        .all(now) as PendingDelivery[];
+      const expiredPairRequests = this.db.prepare("SELECT from_device AS fromDevice, to_device AS toDevice FROM pending_pairs WHERE expires_at <= ? ORDER BY created_at, rowid")
+        .all(now) as PairRoute[];
       this.db.prepare("DELETE FROM deliveries WHERE expires_at <= ?").run(now);
       this.db.prepare("DELETE FROM pending_pairs WHERE expires_at <= ?").run(now);
       this.db.prepare("DELETE FROM seen_messages WHERE expires_at <= ?").run(now);
-      return expiredDeliveries.length;
+      return { expiredDeliveries, expiredPairRequests, deleted: expiredDeliveries.length };
     })();
-    return { expiredDeliveries, deleted: result };
   }
+}
+
+export interface PairRoute {
+  fromDevice: string;
+  toDevice: string;
 }
 
 function sortPair(a: string, b: string): [string, string] {
   return a < b ? [a, b] : [b, a];
+}
+
+/** Pairing verdicts share the notice queue, keyed by the other device instead of a message id. */
+function pairingNoticeId(other: string): string {
+  return `pairing:${other}`;
 }

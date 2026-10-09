@@ -27,27 +27,6 @@ describe("bridge relay end to end", () => {
     }
   });
 
-  it("does not retain a pairing request when the QR-code device is offline", async () => {
-    const fixture = await openRelayFixture();
-    const phone = await RelayDevice.connect(fixture.relay.url());
-    const macKeys = deviceKeysFromSeeds(randomBytes(32), randomBytes(32));
-    try {
-      const request = makePairRequest(phone, { keys: macKeys });
-      phone.send(request);
-      await until(() => fixture.logs.some(({ event }) => event === "pairing.targetOffline"));
-      expect(fixture.relay.store.isPendingPair(phone.keys.deviceId, macKeys.deviceId)).toBe(false);
-      const mac = await RelayDevice.connect(fixture.relay.url(), macKeys);
-      try {
-        await new Promise((resolve) => setTimeout(resolve, 30));
-        expect(mac.frames).toEqual([]);
-      } finally {
-        await mac.close();
-      }
-    } finally {
-      await phone.close();
-      await fixture.close();
-    }
-  });
 
   it("rejects cross-pair routing and immediately rejects a command to an offline peer", async () => {
     const fixture = await openRelayFixture();
@@ -210,6 +189,255 @@ describe("bridge relay end to end", () => {
   });
 });
 
+describe("pairing answer window (OBJ-33)", () => {
+  const start = new Date("2026-10-09T00:00:00.000Z");
+  const seconds = (n: number) => new Date(start.getTime() + n * 1000);
+
+  async function setup() {
+    let now = start;
+    const fixture = await openRelayFixture(undefined, () => now);
+    const mac = await RelayDevice.connect(fixture.relay.url());
+    const phone = await RelayDevice.connect(fixture.relay.url());
+    return {
+      fixture,
+      mac,
+      phone,
+      at: (n: number) => {
+        now = seconds(n);
+      },
+      close: async () => {
+        await mac.close();
+        await phone.close();
+        await fixture.close();
+      },
+    };
+  }
+
+  it("pairs when the Mac answers within 30 seconds, and tells the Mac it counted", async () => {
+    const { fixture, mac, phone, at, close } = await setup();
+    try {
+      phone.send(makePairRequest(phone, mac));
+      await mac.next("pairRequest");
+      at(29);
+      const accept = makePairAccept(mac, phone);
+      mac.send(accept);
+      expect(await phone.next("pairAccept")).toEqual(accept);
+      expect(await mac.next("paired", "pairExpired")).toEqual({ frame: "paired", device: phone.keys.deviceId });
+      expect(fixture.relay.store.isPaired(mac.keys.deviceId, phone.keys.deviceId)).toBe(true);
+    } finally {
+      await close();
+    }
+  });
+
+  it("closes an unanswered request after 30 seconds and refuses the Mac's late answer (SPEC-08 'Mac does not answer pairing', 'Mac answers pairing too late')", async () => {
+    const { fixture, mac, phone, at, close } = await setup();
+    try {
+      phone.send(makePairRequest(phone, mac));
+      await mac.next("pairRequest");
+      at(29);
+      fixture.relay.sweepExpired();
+      at(30);
+      fixture.relay.sweepExpired();
+      expect(await phone.next("pairExpired", "pairAccept")).toEqual({ frame: "pairExpired", device: mac.keys.deviceId });
+      expect(await mac.next("pairExpired", "paired")).toEqual({ frame: "pairExpired", device: phone.keys.deviceId });
+
+      at(31);
+      mac.send(makePairAccept(mac, phone));
+      expect(await mac.next("pairExpired", "paired")).toEqual({ frame: "pairExpired", device: phone.keys.deviceId });
+      await quiet();
+      expect(phone.frames.filter(({ frame }) => frame === "pairAccept")).toEqual([]);
+      expect(fixture.relay.store.isPaired(mac.keys.deviceId, phone.keys.deviceId)).toBe(false);
+    } finally {
+      await close();
+    }
+  });
+
+  it("lets the phone cancel, so a later answer from the Mac pairs nothing", async () => {
+    const { fixture, mac, phone, close } = await setup();
+    try {
+      phone.send(makePairRequest(phone, mac));
+      await mac.next("pairRequest");
+      phone.send({ frame: "pairCancel", from: phone.keys.deviceId, to: mac.keys.deviceId });
+      expect(await mac.next("pairExpired", "paired")).toEqual({ frame: "pairExpired", device: phone.keys.deviceId });
+
+      mac.send(makePairAccept(mac, phone));
+      expect(await mac.next("pairExpired", "paired")).toEqual({ frame: "pairExpired", device: phone.keys.deviceId });
+      await quiet();
+      expect(phone.frames).toEqual([]);
+      expect(fixture.relay.store.isPaired(mac.keys.deviceId, phone.keys.deviceId)).toBe(false);
+    } finally {
+      await close();
+    }
+  });
+
+  it("ignores a cancel from a device other than the requester", async () => {
+    const { fixture, mac, phone, close } = await setup();
+    const stranger = await RelayDevice.connect(fixture.relay.url());
+    try {
+      phone.send(makePairRequest(phone, mac));
+      await mac.next("pairRequest");
+      stranger.send({ frame: "pairCancel", from: stranger.keys.deviceId, to: mac.keys.deviceId });
+      stranger.send({ frame: "pairCancel", from: phone.keys.deviceId, to: mac.keys.deviceId });
+      await quiet();
+      mac.send(makePairAccept(mac, phone));
+      expect(await mac.next("paired", "pairExpired")).toEqual({ frame: "paired", device: phone.keys.deviceId });
+    } finally {
+      await stranger.close();
+      await close();
+    }
+  });
+
+  it("holds the request for a Mac that reconnects within the window", async () => {
+    let now = start;
+    const fixture = await openRelayFixture(undefined, () => now);
+    const phone = await RelayDevice.connect(fixture.relay.url());
+    const macKeys = deviceKeysFromSeeds(randomBytes(32), randomBytes(32));
+    try {
+      const request = makePairRequest(phone, { keys: macKeys });
+      phone.send(request);
+      await until(() => fixture.relay.store.isPendingPair(phone.keys.deviceId, macKeys.deviceId));
+      now = seconds(20);
+      const mac = await RelayDevice.connect(fixture.relay.url(), macKeys);
+      try {
+        expect(await mac.next("pairRequest")).toEqual(request);
+        mac.send(makePairAccept(mac, phone));
+        expect(await phone.next("pairAccept", "pairExpired")).toMatchObject({ frame: "pairAccept" });
+        expect(await mac.next("paired", "pairExpired")).toEqual({ frame: "paired", device: phone.keys.deviceId });
+      } finally {
+        await mac.close();
+      }
+    } finally {
+      await phone.close();
+      await fixture.close();
+    }
+  });
+
+  it("tells the phone after 30 seconds when the Mac never came online", async () => {
+    let now = start;
+    const fixture = await openRelayFixture(undefined, () => now);
+    const phone = await RelayDevice.connect(fixture.relay.url());
+    const macKeys = deviceKeysFromSeeds(randomBytes(32), randomBytes(32));
+    try {
+      phone.send(makePairRequest(phone, { keys: macKeys }));
+      await until(() => fixture.relay.store.isPendingPair(phone.keys.deviceId, macKeys.deviceId));
+      now = seconds(30);
+      fixture.relay.sweepExpired();
+      expect(await phone.next("pairExpired")).toEqual({ frame: "pairExpired", device: macKeys.deviceId });
+      const mac = await RelayDevice.connect(fixture.relay.url(), macKeys);
+      try {
+        await quiet();
+        expect(mac.frames.filter(({ frame }) => frame === "pairRequest")).toEqual([]);
+      } finally {
+        await mac.close();
+      }
+    } finally {
+      await phone.close();
+      await fixture.close();
+    }
+  });
+
+  it("refuses an answer that finds the phone offline, and tells the phone when it reconnects", async () => {
+    const { fixture, mac, phone, at, close } = await setup();
+    try {
+      phone.send(makePairRequest(phone, mac));
+      await mac.next("pairRequest");
+      await phone.close();
+      at(10);
+      mac.send(makePairAccept(mac, phone));
+      expect(await mac.next("pairExpired", "paired")).toEqual({ frame: "pairExpired", device: phone.keys.deviceId });
+      expect(fixture.relay.store.isPaired(mac.keys.deviceId, phone.keys.deviceId)).toBe(false);
+
+      const back = await RelayDevice.connect(fixture.relay.url(), phone.keys);
+      try {
+        expect(await back.next("pairExpired", "pairAccept")).toEqual({ frame: "pairExpired", device: mac.keys.deviceId });
+      } finally {
+        await back.close();
+      }
+    } finally {
+      await close();
+    }
+  });
+
+  it("holds the verdict for a Mac that dropped off before the window closed", async () => {
+    const { fixture, mac, phone, at, close } = await setup();
+    try {
+      phone.send(makePairRequest(phone, mac));
+      await mac.next("pairRequest");
+      await mac.close();
+      at(30);
+      fixture.relay.sweepExpired();
+      await phone.next("pairExpired");
+      const back = await RelayDevice.connect(fixture.relay.url(), mac.keys);
+      try {
+        expect(await back.next("pairExpired", "pairRequest")).toEqual({ frame: "pairExpired", device: phone.keys.deviceId });
+      } finally {
+        await back.close();
+      }
+    } finally {
+      await close();
+    }
+  });
+
+  it("tells the Mac a request closed when the phone unpairs while it is open", async () => {
+    const { mac, phone, close } = await setup();
+    try {
+      await pair(mac, phone);
+      await mac.next("paired");
+      phone.send(makePairRequest(phone, mac));
+      await mac.next("pairRequest");
+      phone.send(makeUnpair(phone, mac, new Date(Date.now() + 1000).toISOString()));
+      expect(await mac.next("pairExpired", "paired")).toEqual({ frame: "pairExpired", device: phone.keys.deviceId });
+    } finally {
+      await close();
+    }
+  });
+
+  it("keeps a held paired verdict when the phone sends another request, so the Mac still learns it paired", async () => {
+    const { fixture, mac, phone, close } = await setup();
+    try {
+      const store = fixture.relay.store;
+      store.queuePairingNotice(mac.keys.deviceId, { frame: "paired", device: phone.keys.deviceId }, seconds(120).toISOString(), start.toISOString());
+      store.queuePairingNotice(phone.keys.deviceId, { frame: "pairExpired", device: mac.keys.deviceId }, seconds(120).toISOString(), start.toISOString());
+      store.clearPairingNotices(phone.keys.deviceId, mac.keys.deviceId);
+      expect(store.queued(mac.keys.deviceId).map(({ frame }) => JSON.parse(frame))).toEqual([{ frame: "paired", device: phone.keys.deviceId }]);
+      expect(store.queued(phone.keys.deviceId)).toEqual([]);
+    } finally {
+      await close();
+    }
+  });
+
+  it("forgets an earlier verdict when the phone tries again, so an old pairExpired cannot cancel the new attempt", async () => {
+    const { fixture, mac, phone, at, close } = await setup();
+    try {
+      phone.send(makePairRequest(phone, mac));
+      await mac.next("pairRequest");
+      await mac.close();
+      at(30);
+      fixture.relay.sweepExpired();
+      await phone.next("pairExpired");
+
+      at(40);
+      const retry = makePairRequest(phone, mac);
+      phone.send(retry);
+      await until(() => fixture.relay.store.isPendingPair(phone.keys.deviceId, mac.keys.deviceId));
+      const back = await RelayDevice.connect(fixture.relay.url(), mac.keys);
+      try {
+        expect(await back.next("pairRequest", "pairExpired")).toEqual(retry);
+        await quiet();
+        expect(back.frames).toEqual([]);
+      } finally {
+        await back.close();
+      }
+    } finally {
+      await close();
+    }
+  });
+});
+
+async function quiet(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 50));
+}
+
 async function pair(mac: RelayDevice, phone: RelayDevice): Promise<void> {
   phone.send(makePairRequest(phone, mac));
   await mac.next("pairRequest");
@@ -233,6 +461,12 @@ function makePairRequest(phone: RelayDevice, mac: Pick<RelayDevice, "keys">) {
   const pairingSecret = randomBytes(32);
   const sealed = sealPairRequest({ deviceName: "Test Phone", platform: "android", signingPublicKey: toBase64(phone.keys.signing.publicKey), kxPublicKey: toBase64(phone.keys.kx.publicKey) }, { from: phone.keys.deviceId, to: mac.keys.deviceId }, pairingSecret);
   return { frame: "pairRequest", from: phone.keys.deviceId, to: mac.keys.deviceId, sealed };
+}
+
+function makeUnpair(from: RelayDevice, to: RelayDevice, at: string) {
+  const id = randomUUID();
+  const route = { id, from: from.keys.deviceId, to: to.keys.deviceId, at };
+  return { frame: "unpair", ...route, signature: toBase64(sign(unpairSigningBytes(route), from.keys.signing.secretKey)) };
 }
 
 function makePairAccept(mac: RelayDevice, phone: RelayDevice) {

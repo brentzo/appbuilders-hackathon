@@ -13,15 +13,16 @@ import {
   toBase64,
 } from "@yumi/protocol/crypto";
 import {
+  PAIRING_ANSWER_SECONDS,
   PROTOCOL_VERSION,
   type BridgeFrame,
   type Envelope,
   type RefusedReason,
 } from "@yumi/protocol/types";
 import { WebSocket, WebSocketServer, type RawData } from "ws";
-import { RelayStore, type PendingDelivery } from "./store.ts";
+import { RelayStore } from "./store.ts";
 
-const PAIRING_MS = 5 * 60_000;
+const PAIRING_ANSWER_MS = PAIRING_ANSWER_SECONDS * 1000;
 const NOTICE_MS = 2 * 60_000;
 const AUTH_TIMEOUT_MS = 10_000;
 const MAX_FRAME_BYTES = 1_100_000;
@@ -111,12 +112,16 @@ export class Relay {
 
   sweepExpired(): void {
     const now = this.now();
-    const { expiredDeliveries } = this.store.sweep(now.toISOString());
+    const { expiredDeliveries, expiredPairRequests } = this.store.sweep(now.toISOString());
     for (const delivery of expiredDeliveries) {
       if (delivery.category === "envelope") {
         this.notice(delivery.sender, delivery.recipient, delivery.messageId, "expired");
         this.logger("message.expired", { from: delivery.sender, to: delivery.recipient, messageId: delivery.messageId });
       }
+    }
+    for (const { fromDevice, toDevice } of expiredPairRequests) {
+      this.pairingExpired(fromDevice, toDevice);
+      this.logger("pairing.expired", { from: fromDevice, to: toDevice });
     }
   }
 
@@ -195,6 +200,9 @@ export class Relay {
       case "pairAccept":
         this.pairAccept(frame);
         break;
+      case "pairCancel":
+        this.pairCancel(frame);
+        break;
       case "envelope":
         this.envelope(socket, connection.authenticated, frame.envelope);
         break;
@@ -226,34 +234,69 @@ export class Relay {
     this.flush(frame.deviceId, socket);
   }
 
+  /**
+   * Opens a pairing request for PAIRING_ANSWER_SECONDS by the relay's clock. The Mac gets it now, or when it
+   * reconnects within the window; when the window ends unanswered, sweepExpired sends both devices pairExpired.
+   */
   private pairRequest(frame: Extract<BridgeFrame, { frame: "pairRequest" }>): void {
     if (frame.from === frame.to) return this.logger("pairing.invalidRoute", { from: frame.from, to: frame.to });
-    const recipient = this.online.get(frame.to);
-    if (!recipient) {
-      this.logger("pairing.targetOffline", { from: frame.from, to: frame.to });
-      return;
-    }
     const now = this.now();
-    this.store.rememberPairRequest(frame.from, frame.to, frame.sealed, now.toISOString(), new Date(now.getTime() + PAIRING_MS).toISOString());
-    if (!this.send(recipient, frame)) {
-      this.store.finishPairRequest(frame.from, frame.to);
-      this.logger("pairing.targetOffline", { from: frame.from, to: frame.to });
-      return;
-    }
-    this.logger("pairing.request", { from: frame.from, to: frame.to });
+    this.store.clearPairingNotices(frame.from, frame.to);
+    this.store.rememberPairRequest(frame.from, frame.to, frame.sealed, now.toISOString(), new Date(now.getTime() + PAIRING_ANSWER_MS).toISOString());
+    const recipient = this.online.get(frame.to);
+    const delivered = recipient !== undefined && this.send(recipient, frame);
+    this.logger("pairing.request", { from: frame.from, to: frame.to, delivered });
   }
 
+  /**
+   * The Mac's answer counts only while its request is open and the phone is connected to receive it. Pairing,
+   * forwarding, and telling the Mac happen together, so the relay alone decides and a request it closed never pairs.
+   */
   private pairAccept(frame: Extract<BridgeFrame, { frame: "pairAccept" }>): void {
     const now = this.now();
-    const pending = this.store.pendingPairRequest(frame.to, frame.from, now.toISOString());
-    const recipient = this.online.get(frame.to);
-    if (!pending || !recipient || !this.send(recipient, frame)) {
-      this.logger("pairing.acceptDropped", { from: frame.from, to: frame.to });
+    const open = this.store.pendingPairRequest(frame.to, frame.from, now.toISOString()) !== undefined;
+    const phone = this.online.get(frame.to);
+    if (open && phone && this.send(phone, frame)) {
+      this.store.pair(frame.from, frame.to, now.toISOString());
+      this.store.finishPairRequest(frame.to, frame.from);
+      this.pairingVerdict(frame.from, { frame: "paired", device: frame.to });
+      this.logger("pairing.accepted", { from: frame.from, to: frame.to });
       return;
     }
-    this.store.pair(frame.from, frame.to, now.toISOString());
-    this.store.finishPairRequest(frame.to, frame.from);
-    this.logger("pairing.accepted", { from: frame.from, to: frame.to });
+    const phoneWaited = this.store.finishPairRequest(frame.to, frame.from);
+    this.pairingExpired(frame.to, frame.from, phoneWaited);
+    this.logger("pairing.acceptRefused", { from: frame.from, to: frame.to, open, phoneOnline: phone !== undefined });
+  }
+
+  /** The phone stopped waiting. The Mac learns the request closed; a pairAccept already forwarded is the phone's to undo. */
+  private pairCancel(frame: Extract<BridgeFrame, { frame: "pairCancel" }>): void {
+    if (!this.store.finishPairRequest(frame.from, frame.to)) return this.logger("pairing.cancelIgnored", { from: frame.from, to: frame.to });
+    this.pairingExpired(frame.from, frame.to, false);
+    this.logger("pairing.cancelled", { from: frame.from, to: frame.to });
+  }
+
+  /** An unpair closes any request still open between the two, and tells both, so neither keeps waiting on it. */
+  private closePairRequests(a: string, b: string): void {
+    if (this.store.finishPairRequest(a, b)) this.pairingExpired(a, b);
+    if (this.store.finishPairRequest(b, a)) this.pairingExpired(b, a);
+  }
+
+  /** Tells the Mac, and the phone unless it stopped waiting, that the phone's request to the Mac closed without pairing. */
+  private pairingExpired(phone: string, mac: string, tellPhone = true): void {
+    if (tellPhone) this.pairingVerdict(phone, { frame: "pairExpired", device: mac });
+    this.pairingVerdict(mac, { frame: "pairExpired", device: phone });
+  }
+
+  /**
+   * Sends a pairing verdict now, or holds it for NOTICE_MS for a device that is offline. A device that never
+   * connected has no request of its own to close, so nothing is held for it.
+   */
+  private pairingVerdict(deviceId: string, frame: Extract<BridgeFrame, { frame: "paired" | "pairExpired" }>): void {
+    const socket = this.online.get(deviceId);
+    if (socket && this.send(socket, frame)) return;
+    if (!this.store.isRegistered(deviceId)) return;
+    const now = this.now();
+    this.store.queuePairingNotice(deviceId, frame, new Date(now.getTime() + NOTICE_MS).toISOString(), now.toISOString());
   }
 
   private envelope(socket: WebSocket, authenticatedDevice: string, envelope: Envelope): void {
@@ -317,6 +360,7 @@ export class Relay {
         publicKey &&
         verify(fromBase64(frame.signature), unpairSigningBytes(frame), fromBase64(publicKey))
       ) {
+        this.closePairRequests(frame.from, frame.to);
         this.store.revokeAndRememberUnpair(frame.from, frame.to, frame, this.now().toISOString());
         const sender = this.online.get(frame.from);
         if (sender) this.send(sender, { frame: "ack", messageId: frame.id });
@@ -334,6 +378,7 @@ export class Relay {
       return;
     }
     const now = this.now().toISOString();
+    this.closePairRequests(frame.from, frame.to);
     this.store.revokeAndRememberUnpair(frame.from, frame.to, frame, now);
     const sender = this.online.get(frame.from);
     if (sender) this.send(sender, { frame: "ack", messageId: frame.id });
