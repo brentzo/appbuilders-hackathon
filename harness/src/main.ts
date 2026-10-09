@@ -21,6 +21,7 @@ try {
     bridgeUrl: process.env.YUMI_BRIDGE_URL || "wss://yumibridge.studiokova.co",
     deviceName: hostname(),
     databasePath: join(config.supportDir, "bridge.sqlite"),
+    onLog: (event) => logger.warn(`bridge.${event}`),
     rpc: {
       request: (method, params) => harness.server.request(method, params),
       notify: (event, payload) => {

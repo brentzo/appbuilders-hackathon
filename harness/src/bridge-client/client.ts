@@ -36,6 +36,8 @@ export interface BridgeClientOptions {
   allowLoopbackWs?: boolean;
   onMessage?: (message: unknown, peer: PairedDevice) => unknown | Promise<unknown>;
   onLog?: (event: string) => void;
+  /** First reconnect delay; it doubles up to 30 seconds. Tests shorten it. */
+  reconnectBaseMs?: number;
 }
 
 export interface BridgeRpc {
@@ -233,7 +235,8 @@ export class BridgeClient {
       this.resendOutbox();
       this.resendPendingUnpairs();
     } else if (frame.frame === "refused") {
-      this.options.rpc.notify("userError", { kind: "bridgeDown" });
+      this.options.onLog?.("relay-refused");
+      this.reportBridgeDown();
       this.socket?.close();
     } else if (frame.frame === "pairRequest") {
       void this.acceptPairRequest(frame);
@@ -457,12 +460,23 @@ export class BridgeClient {
       this.notifyState("offline");
       if (!this.offlineErrorReported) {
         this.offlineErrorReported = true;
-        this.options.rpc.notify("userError", { kind: "bridgeDown" });
+        this.options.onLog?.("relay-offline");
+        this.reportBridgeDown();
       }
     }
-    const delay = Math.min(30_000, 500 * 2 ** Math.min(this.attempt++, 6));
+    const delay = Math.min(30_000, (this.options.reconnectBaseMs ?? 500) * 2 ** Math.min(this.attempt++, 6));
     clearTimeout(this.reconnectTimer);
     this.reconnectTimer = setTimeout(() => this.connect(), delay);
+  }
+
+  /**
+   * Tells the user the bridge is down, but only when a phone is paired. With nothing paired there is no phone to
+   * reach, so the error would interrupt the user about something they never set up. The connection state still
+   * goes to the app, and the log records the failure.
+   */
+  private reportBridgeDown(): void {
+    if (this.listPairedDevices().devices.length === 0) return;
+    this.options.rpc.notify("userError", { kind: "bridgeDown" });
   }
 
   private resendOutbox(): void {
