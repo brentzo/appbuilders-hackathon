@@ -5,7 +5,7 @@ product: protocol
 assignee: Jepoy
 touches: []
 specs: [SPEC-09]
-status: in-progress
+status: done
 priority: p0
 depends-on: [OBJ-25]
 integrates-with: [OBJ-77, OBJ-78, OBJ-79, OBJ-80]
@@ -41,16 +41,16 @@ This objective adds those two, and writes down how each edge case uses the messa
 
 ## Tasks
 
-- [ ] **OBJ-76.1** Add an optional `wakeAddresses` to `toolList`: the hardware addresses of the sender's network interfaces, which the Mac sends so the phone can wake it with Wake-on-LAN on the same Wi-Fi (SPEC-09 r19).
-- [ ] **OBJ-76.2** Add `waitingForUnlock` to `GoalAcceptanceStatus`, for a Mac that is awake but locked: the goal starts by itself once the user unlocks it, and `progress` follows (SPEC-09 r20).
-- [ ] **OBJ-76.3** Write the edge cases into `protocol/README.md` as message sequences: presence (a `toolList` on connect, and a `ping` answered by `targetOffline` while the Mac is away), a queued goal on the phone, a busy Mac (`goalAccepted` with `queued`), no reply, Stop with the Mac unreachable, the 5-minute approval timeout, and waking a locked Mac.
-- [ ] **OBJ-76.4** Add examples and message sequences in `protocol/examples/sequences/` for "Mac is offline", "Mac is busy", "No answer to an approval", and "Mac wakes up locked", checked by the sequence test.
-- [ ] **OBJ-76.5** Regenerate the TypeScript, Swift, and Kotlin types and run the tests.
+- [x] **OBJ-76.1** Add an optional `wakeAddresses` to `toolList`: the hardware addresses of the sender's network interfaces, which the Mac sends so the phone can wake it with Wake-on-LAN on the same Wi-Fi (SPEC-09 r19).
+- [x] **OBJ-76.2** Add `waitingForUnlock` to `GoalAcceptanceStatus`, for a Mac that is awake but locked: the goal starts by itself once the user unlocks it, and `progress` follows (SPEC-09 r20).
+- [x] **OBJ-76.3** Write the edge cases into `protocol/README.md` as message sequences: presence (a `toolList` on connect, and a `ping` answered by `targetOffline` while the Mac is away), a queued goal on the phone, a busy Mac (`goalAccepted` with `queued`), no reply, Stop with the Mac unreachable, the 5-minute approval timeout, and waking a locked Mac.
+- [x] **OBJ-76.4** Add examples and message sequences in `protocol/examples/sequences/` for "Mac is offline", "Mac is busy", "No answer to an approval", and "Mac wakes up locked", checked by the sequence test.
+- [x] **OBJ-76.5** Regenerate the TypeScript, Swift, and Kotlin types and run the tests.
 
 ## Expectations
 
-- [ ] Every message in the new sequences validates against the contract.
-- [ ] Generated types compile in TypeScript, Swift, and Kotlin.
+- [x] Every message in the new sequences validates against the contract.
+- [x] Generated types compile in TypeScript, Swift, and Kotlin.
 
 ## Expected outcomes
 
@@ -63,4 +63,23 @@ This objective adds those two, and writes down how each edge case uses the messa
 
 ## Outcome
 
-_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._
+- **Result:** Done.
+- **Delivered:**
+  - `protocol/schemas/messages.json`: an optional `wakeAddresses` on `toolList` (a `HardwareAddress` type, six lower-case hex pairs), `waitingForUnlock` in `GoalAcceptanceStatus`, a `resumeConfirmed` result, and an optional `error` (`UserError`) on a failed `goalFinished`.
+  - `protocol/schemas/rpc.json`: the harness-to-app method `getScreenLock`, answered with `ScreenLockState`, so the harness learns the lock from the Mac app and runs nothing itself (SPEC-07 r3); the mock Mac app answers unlocked.
+  - Sequences in `protocol/examples/sequences/` for "Mac is offline", "Mac is busy", "No answer to an approval", "Stop when the Mac cannot be reached", and "Mac wakes up locked". A step may be a relay frame, such as `targetOffline`.
+  - Examples for each change, regenerated types, and the edge cases written under "Cross-device messages" in `protocol/README.md`.
+- **Commits:**
+  - `617d9cd feat(protocol): add Mac wake addresses, a locked-Mac goal status, and SPEC-09 edge case sequences (OBJ-76)`
+  - `15fbe55 feat(protocol): confirm a resumed goal and add the error kind to a failed goal's finish`
+  - `a300569 feat(protocol): let the harness ask the Mac app whether the screen is locked (OBJ-80)`
+- **Expectations:**
+  - Every message in the new sequences validates: `protocol/test/message-sequences.test.ts`, which also checks each relay frame answers a command in its sequence.
+  - Generated types compile: `npm run verify` in `protocol/` (404 tests), and `npm run compile:swift` and `npm run compile:kotlin` round-trip all 203 examples.
+- **Not verified:** Nothing.
+- **Decisions and deviations:**
+  - No presence frame: a peer is back when its `toolList` arrives or a `ping` is answered instead of `targetOffline`, so the relay needs no redeploy.
+  - `goalFinished.summary` stays required: Brent's Android `GoalRouter` speaks it, so a failed goal sends both the line and its `error`.
+  - The protocol had no result for `resume`; `resumeConfirmed` adds one, and the harness answers with it instead of `goalAccepted`.
+  - Everything is additive, so the protocol version stays 4.
+- **For the next objectives:** OBJ-78 and OBJ-79 (Android) treat `targetOffline` for `delegateGoal` or `pause` as the Mac being away, keep the queued goal on the phone, send it on the Mac's `toolList` or a `pingResult`, keep the Mac's latest `wakeAddresses`, and show the "Other device locked" copy on `waitingForUnlock`. The Android `when` blocks have an `else`, so the new kinds change nothing until they are handled.

@@ -5,7 +5,7 @@ product: harness
 assignee: Brent
 touches: []
 specs: [SPEC-09]
-status: todo
+status: done
 priority: p1
 depends-on: [OBJ-76]
 integrates-with: [OBJ-68, OBJ-79]
@@ -38,15 +38,15 @@ When a woken Mac is still locked, the cursor cannot work, so the harness holds a
 
 ## Tasks
 
-- [ ] **OBJ-80.1** Send `wakeAddresses` in the Mac's `toolList`: the hardware addresses of its Wi-Fi and Ethernet interfaces, never a loopback or all-zero address.
-- [ ] **OBJ-80.2** Read whether the screen is locked through a small seam (on macOS, the console session's lock flag), testable with a stand-in.
-- [ ] **OBJ-80.3** A `delegateGoal` that arrives while the screen is locked is answered `goalAccepted` with status `waitingForUnlock`, and starts by itself once the screen is unlocked; a `cancel` before then drops it.
-- [ ] **OBJ-80.4** Tests with a scripted phone and a stand-in lock, and an update to `harness/README.md`.
+- [x] **OBJ-80.1** Send `wakeAddresses` in the Mac's `toolList`: the hardware addresses of its Wi-Fi and Ethernet interfaces, never a loopback or all-zero address.
+- [x] **OBJ-80.2** Read whether the screen is locked through a small seam (on macOS, the console session's lock flag), testable with a stand-in.
+- [x] **OBJ-80.3** A `delegateGoal` that arrives while the screen is locked is answered `goalAccepted` with status `waitingForUnlock`, and starts by itself once the screen is unlocked; a `cancel` before then drops it.
+- [x] **OBJ-80.4** Tests with a scripted phone and a stand-in lock, and an update to `harness/README.md`.
 
 ## Expectations
 
-- [ ] The Mac side of "Mac wakes up locked" passes with a scripted phone and a stand-in lock.
-- [ ] The harness never reads, stores, or types a password.
+- [x] The Mac side of "Mac wakes up locked" passes with a scripted phone and a stand-in lock.
+- [x] The harness never reads, stores, or types a password.
 
 ## Expected outcomes
 
@@ -58,4 +58,15 @@ When a woken Mac is still locked, the cursor cannot work, so the harness holds a
 
 ## Outcome
 
-_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._
+- **Result:** Done.
+- **Delivered:**
+  - `wakeAddresses()` in `harness/src/device.ts` (the `en` ports' hardware addresses, never loopback, virtual, or zero), sent in the Mac's `toolList` by `src/bridge-client/phone-tools.ts`.
+  - `appScreenLock()` in `harness/src/device.ts`, which asks the Mac app with `getScreenLock`, and the Mac app's answer from the console session's lock flag in `mac/Yumi/Native/AppMethodServer.swift`.
+  - In `src/bridge-client/delegated-goals.ts`, a goal that arrives on a locked screen is held, answered `waitingForUnlock`, started by itself once unlocked, and dropped by a `cancel` before then.
+- **Commits:** `6a442db feat(harness): add phone tools, approvals asked on the phone, a busy-Mac queue, and a locked-Mac hold to cross-device goals`, `626834f feat(mac): answer whether the screen is locked, read from the console session (OBJ-80)`, and the protocol commit `a300569`.
+- **Expectations:**
+  - The Mac side of "Mac wakes up locked" passes in `harness/test/cross-device.test.ts` with a scripted phone and both a stand-in lock and the mock Mac app's `getScreenLock`; `npm run verify` in `harness/` on Linux (36 test files, lint, and format).
+  - The harness never reads, stores, or types a password: nothing in the change touches one, and `permission-gate.test.ts` still proves the harness cannot run a shell command, so the lock is read by the Mac app.
+- **Not verified:** The Mac app's `getScreenLock`, since no Mac with Xcode was available. Patrick or Brent: build and run `AppMethodServerTests`, then lock the screen (Control-Command-Q) with a phone goal sent and check it starts after unlocking. Without it, the harness counts the Mac as unlocked.
+- **Decisions and deviations:** The objective asked for the console session's lock flag through a small seam; reading it in the harness needs a subprocess, which SPEC-07 r3 forbids, so the Mac app reads it and the harness asks with `getScreenLock`.
+- **For the next objectives:** [OBJ-79](OBJ-79-android-wake-the-mac.md) wakes the Mac with the addresses from the Mac's `toolList`; checking that the demo Mac wakes over Wi-Fi belongs to [OBJ-73](OBJ-73-live-cross-device-routing-acceptance.md).

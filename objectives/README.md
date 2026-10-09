@@ -122,22 +122,22 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-62](OBJ-62-mac-voice-interruption.md) | Mac listens for interruptions during a task | mac | Patrick | 06, 01 | 16, 35, 60 | 40, 61 | todo |
 | [OBJ-63](OBJ-63-question-answer-interruption.md) | Decide when an answer to a task question changes its goal | harness | Brent | 06 | 61 | 36 | todo |
 | [OBJ-64](OBJ-64-cross-device-local-rpc-contract.md) | Local RPC for cross-device routing on the Mac | protocol | Jepoy | 09 | 25 | 68, 70, 72 | done |
-| [OBJ-65](OBJ-65-harness-phone-tool-lane.md) | Phone tool lane in the harness | harness | Brent | 09, 07 | 25, 37, 49 | 23, 66 | todo |
+| [OBJ-65](OBJ-65-harness-phone-tool-lane.md) | Phone tool lane in the harness | harness | Brent | 09, 07 | 25, 37, 49 | 23, 66 | blocked |
 | [OBJ-66](OBJ-66-android-phone-tool-host.md) | Phone runs the Mac's tool calls | android | Brent | 09, 10 | 23, 25 | 65 | todo |
 | [OBJ-67](OBJ-67-android-goal-routing.md) | Phone repeats back a goal and runs it or sends it to the Mac | android | Brent | 09, 10 | 24, 66 | 68 | blocked |
 | [OBJ-68](OBJ-68-harness-delegated-goals.md) | Harness runs goals sent from the phone | harness | Brent | 09, 02 | 05, 25, 49 | 23, 64, 67, 69 | blocked |
 | [OBJ-69](OBJ-69-android-delegated-goal-screen.md) | Phone shows a goal working on the Mac, with Stop | android | Brent | 09, 10, 06 | 67 | 68, 70 | blocked |
-| [OBJ-70](OBJ-70-harness-phone-approvals-and-stop.md) | Harness takes approvals and Stop from the phone | harness | Brent | 09, 06, 07 | 38, 68 | 64, 69, 71, 72 | todo |
+| [OBJ-70](OBJ-70-harness-phone-approvals-and-stop.md) | Harness takes approvals and Stop from the phone | harness | Brent | 09, 06, 07 | 38, 68 | 64, 69, 71, 72 | blocked |
 | [OBJ-71](OBJ-71-android-approvals.md) | Approvals on the phone for goals running on the Mac | android | Brent | 09, 07 | 69 | 70 | todo |
 | [OBJ-72](OBJ-72-mac-cross-device-routing.md) | Mac app side of cross-device routing | mac | Patrick | 09 | 14 | 64, 68, 70 | in-progress |
 | [OBJ-73](OBJ-73-live-cross-device-routing-acceptance.md) | Live cross-device routing acceptance | bridge | Jepoy | 09 | 30, 65, 66, 67, 68, 69, 70, 71, 72 | - | todo |
 | [OBJ-74](OBJ-74-save-list-to-note.md) | Save a list into a new note | harness | Brent | 02, 01 | - | 17, 36, 50 | done |
 | [OBJ-75](OBJ-75-vision-fallback.md) | Vision fallback for apps without accessibility content | mac | Patrick | 05 | - | 36, 39 | in-progress |
-| [OBJ-76](OBJ-76-cross-device-edge-case-contracts.md) | Contracts for SPEC-09 edge cases and waking the Mac | protocol | Jepoy | 09 | 25 | 77, 78, 79, 80 | in-progress |
-| [OBJ-77](OBJ-77-harness-cross-device-edge-cases.md) | Harness edge cases for cross-device routing | harness | Brent | 09 | 76 | 65, 68, 70, 78 | todo |
+| [OBJ-76](OBJ-76-cross-device-edge-case-contracts.md) | Contracts for SPEC-09 edge cases and waking the Mac | protocol | Jepoy | 09 | 25 | 77, 78, 79, 80 | done |
+| [OBJ-77](OBJ-77-harness-cross-device-edge-cases.md) | Harness edge cases for cross-device routing | harness | Brent | 09 | 76 | 65, 68, 70, 78 | done |
 | [OBJ-78](OBJ-78-android-cross-device-edge-cases.md) | Android edge cases for goals sent to the Mac | android | Brent | 09 | 76 | 67, 69, 71, 77 | todo |
 | [OBJ-79](OBJ-79-android-wake-the-mac.md) | Wake the Mac from the phone | android | Brent | 09 | 76, 78 | 80 | todo |
-| [OBJ-80](OBJ-80-harness-wake-and-lock.md) | Harness wake addresses and a locked Mac | harness | Brent | 09 | 76 | 68, 79 | todo |
+| [OBJ-80](OBJ-80-harness-wake-and-lock.md) | Harness wake addresses and a locked Mac | harness | Brent | 09 | 76 | 68, 79 | done |
 <!-- generated:objectives-index:end -->
 
 ## Priority and blocking

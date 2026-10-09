@@ -5,7 +5,7 @@ product: harness
 assignee: Brent
 touches: []
 specs: [SPEC-09, SPEC-06, SPEC-07]
-status: todo
+status: blocked
 priority: p0
 depends-on: [OBJ-38, OBJ-68]
 integrates-with: [OBJ-64, OBJ-69, OBJ-71, OBJ-72]
@@ -41,16 +41,16 @@ For a goal from the phone, risky actions ask on the phone while the Mac shows on
 
 ## Tasks
 
-- [ ] **OBJ-70.1** For a task from the phone, send the approval as `approvalRequest` instead of calling `showApprovalCard`, and tell the Mac app with `approvalWaitingElsewhere`.
-- [ ] **OBJ-70.2** Handle `approvalResponse`: match the approval, reject a delete approved by `voice` (SPEC-07 r11), continue or skip the action, and send `approvalAnsweredElsewhere` to the app.
-- [ ] **OBJ-70.3** Handle `pause`, `resume`, and `cancel` from the phone through the same task control as the Mac's own Stop: the action in progress finishes and no new one starts.
-- [ ] **OBJ-70.4** Answer `pauseConfirmed` only once the task is really paused, and `cancelConfirmed` once cancelled.
-- [ ] **OBJ-70.5** Tests with a scripted phone, and an update to `harness/README.md`.
+- [x] **OBJ-70.1** For a task from the phone, send the approval as `approvalRequest` instead of calling `showApprovalCard`, and tell the Mac app with `approvalWaitingElsewhere`.
+- [x] **OBJ-70.2** Handle `approvalResponse`: match the approval, reject a delete approved by `voice` (SPEC-07 r11), continue or skip the action, and send `approvalAnsweredElsewhere` to the app.
+- [x] **OBJ-70.3** Handle `pause`, `resume`, and `cancel` from the phone through the same task control as the Mac's own Stop: the action in progress finishes and no new one starts.
+- [x] **OBJ-70.4** Answer `pauseConfirmed` only once the task is really paused, and `cancelConfirmed` once cancelled.
+- [x] **OBJ-70.5** Tests with a scripted phone, and an update to `harness/README.md`.
 
 ## Expectations
 
-- [ ] The Mac side passes with a scripted phone: "Approval is asked on the phone", "Stop from the phone pauses the Mac".
-- [ ] `pauseConfirmed` is never sent while an action is still running.
+- [x] The Mac side passes with a scripted phone: "Approval is asked on the phone", "Stop from the phone pauses the Mac".
+- [x] `pauseConfirmed` is never sent while an action is still running.
 
 ## Expected outcomes
 
@@ -63,4 +63,13 @@ For a goal from the phone, risky actions ask on the phone while the Mac shows on
 
 ## Outcome
 
-_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._
+- **Result:** Blocked.
+  Every task and expectation is done and verified, but its hard dependencies [OBJ-38](OBJ-38-approvals-pause-and-action-log.md) (`in-progress`) and [OBJ-68](OBJ-68-harness-delegated-goals.md) (`blocked`) are not `done`. It is done once they are. Brent cut approvals on the phone from the demo; these land after the cut, at Jepoy's request.
+- **Delivered:** `harness/src/bridge-client/phone-approvals.ts` asks a phone goal's approvals on the phone as `approvalRequest` commands, with an envelope that expires with the approval, and tells the Mac app with `approvalWaitingElsewhere` and `approvalAnsweredElsewhere`. `src/approvals/approval-flow.ts` uses it for a task whose origin is the paired phone, never calling `showApprovalCard` then, and sends `approvalCancelled` to the phone when it closes an open approval. Pause, resume, and cancel are Brent's from OBJ-68; resume is now confirmed with `resumeConfirmed`.
+- **Commits:** `6a442db feat(harness): add phone tools, approvals asked on the phone, a busy-Mac queue, and a locked-Mac hold to cross-device goals`.
+- **Expectations:**
+  - "Approval is asked on the phone" passes in `harness/test/cross-device.test.ts` (the banner, no card on the Mac, the move after a tap), and a delete answered by voice is asked again. "Stop from the phone pauses the Mac" passes in `harness/test/delegated-goals.test.ts`; `npm run verify` in `harness/` on Linux (36 test files, lint, and format).
+  - `pauseConfirmed` is never sent while an action runs: it is sent after `TaskControl.pause`, which returns once the step in progress has its outcome.
+- **Not verified:** The phone's approval card, which is [OBJ-71](OBJ-71-android-approvals.md).
+- **Decisions and deviations:** A command the harness refuses, such as control of a goal the phone did not send, gets no result instead of the bridge client's old `{ ok: true }`, which was not a valid payload; the phone's own timeout covers it.
+- **For the next objectives:** OBJ-71 answers `approvalRequest` with an `approvalResponse` result naming the request as `replyTo`, and closes its card on `approvalCancelled`.

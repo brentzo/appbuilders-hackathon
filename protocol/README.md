@@ -379,5 +379,5 @@ A sheet usually has no `AXTitle`.
 | [OBJ-56](../objectives/OBJ-56-unclassified-action-approval-contract.md) | Approval contract for unclassified risky actions | Jepoy | blocked |
 | [OBJ-60](../objectives/OBJ-60-goal-revision-contract.md) | Contract for changing the goal mid-task | Jepoy | in-progress |
 | [OBJ-64](../objectives/OBJ-64-cross-device-local-rpc-contract.md) | Local RPC for cross-device routing on the Mac | Jepoy | done |
-| [OBJ-76](../objectives/OBJ-76-cross-device-edge-case-contracts.md) | Contracts for SPEC-09 edge cases and waking the Mac | Jepoy | in-progress |
+| [OBJ-76](../objectives/OBJ-76-cross-device-edge-case-contracts.md) | Contracts for SPEC-09 edge cases and waking the Mac | Jepoy | done |
 <!-- generated:product-objectives:end -->

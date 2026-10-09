@@ -5,7 +5,7 @@ product: harness
 assignee: Brent
 touches: []
 specs: [SPEC-09]
-status: todo
+status: done
 priority: p0
 depends-on: [OBJ-76]
 integrates-with: [OBJ-65, OBJ-68, OBJ-70, OBJ-78]
@@ -39,15 +39,15 @@ A phone tool call to an offline phone must fail at once, a goal from the phone t
 
 ## Tasks
 
-- [ ] **OBJ-77.1** A `phone` call to a phone the relay reports offline (`targetOffline`) fails at once with `otherDeviceOffline` and is never queued; the brain tells the user with the SPEC-11 copy (SPEC-09 r16).
-- [ ] **OBJ-77.2** A `delegateGoal` that arrives while another task runs is queued behind it and answered with `goalAccepted` status `queued` and the running task's title, then started when the current task ends (SPEC-09 r14).
-- [ ] **OBJ-77.3** An approval asked on the phone that gets no `approvalResponse` by its `expiresAt` pauses the task, sends `approvalCancelled` to the phone and the app, and `progress` with status `paused` (SPEC-09 r10).
-- [ ] **OBJ-77.4** Tests with a scripted phone for each case, and an update to `harness/README.md`.
+- [x] **OBJ-77.1** A `phone` call to a phone the relay reports offline (`targetOffline`) fails at once with `otherDeviceOffline` and is never queued; the brain tells the user with the SPEC-11 copy (SPEC-09 r16).
+- [x] **OBJ-77.2** A `delegateGoal` that arrives while another task runs is queued behind it and answered with `goalAccepted` status `queued` and the running task's title, then started when the current task ends (SPEC-09 r14).
+- [x] **OBJ-77.3** An approval asked on the phone that gets no `approvalResponse` by its `expiresAt` pauses the task, sends `approvalCancelled` to the phone and the app, and `progress` with status `paused` (SPEC-09 r10).
+- [x] **OBJ-77.4** Tests with a scripted phone for each case, and an update to `harness/README.md`.
 
 ## Expectations
 
-- [ ] The Mac side passes with a scripted phone: "Phone is offline when the Mac calls a tool", "Mac is busy", "No answer to an approval".
-- [ ] No phone call is queued, and none waits longer than 2 minutes.
+- [x] The Mac side passes with a scripted phone: "Phone is offline when the Mac calls a tool", "Mac is busy", "No answer to an approval".
+- [x] No phone call is queued, and none waits longer than 2 minutes.
 
 ## Expected outcomes
 
@@ -60,4 +60,14 @@ A phone tool call to an offline phone must fail at once, a goal from the phone t
 
 ## Outcome
 
-_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._
+- **Result:** Done.
+- **Delivered:** in `harness/src/bridge-client/`: a phone call fails at once on `targetOffline` (`phone-tools.ts`), a goal from the phone queues behind a working task (`delegated-goals.ts`), and an approval with no answer by `expiresAt` closes and pauses the task (`src/approvals/approval-flow.ts`, wired in `src/harness.ts`). The bridge client reports undelivered messages to them (`onUndelivered`).
+- **Commits:** `6a442db feat(harness): add phone tools, approvals asked on the phone, a busy-Mac queue, and a locked-Mac hold to cross-device goals`.
+- **Expectations:**
+  - "Phone is offline when the Mac calls a tool", "Mac is busy", and "No answer to an approval" pass in `harness/test/cross-device.test.ts` with a scripted phone on the fake relay; `npm run verify` in `harness/` on Linux (36 test files, lint, and format).
+  - No phone call is queued, and none waits longer than 2 minutes: an offline call fails in under a second in that test, and `PHONE_CALL_MS` ends any other wait at 2 minutes.
+- **Not verified:** Nothing.
+- **Decisions and deviations:**
+  - The 5-minute timeout pauses a task from the Mac too, since `Approval.expiresAt` says so for every approval.
+  - A paused queued goal leaves the queue and starts only on `resume`.
+- **For the next objectives:** the phone sees a busy Mac as `goalAccepted` `queued` with `activeTaskTitle`, and a timed-out approval as `approvalCancelled` followed by `progress` `paused` ([OBJ-78](OBJ-78-android-cross-device-edge-cases.md)).
