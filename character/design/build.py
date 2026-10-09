@@ -143,9 +143,17 @@ SCHEME = [("primary", "accent"), ("onPrimary", "onAccent"), ("primaryContainer",
           ("onTertiary", "onAccent"), ("background", "paper"), ("onBackground", "ink"), ("surface", "surface"),
           ("onSurface", "ink"), ("surfaceVariant", "surfaceRaised"), ("onSurfaceVariant", "muted"),
           ("error", "hush"), ("onError", "onHush"), ("errorContainer", "hush"), ("onErrorContainer", "onHush"),
-          ("outline", "line"), ("outlineVariant", "line")]
+          ("outline", "line"), ("outlineVariant", "line"),
+          # Every remaining role, so no Material default (purple tint, gray containers) shows through.
+          ("tertiaryContainer", "halo"), ("onTertiaryContainer", "ink"), ("surfaceTint", "surface"),
+          ("inverseSurface", "ink"), ("inverseOnSurface", "paper"), ("scrim", "ink"),
+          ("surfaceBright", "surface"), ("surfaceDim", "paperDeep"), ("surfaceContainerLowest", "surface"),
+          ("surfaceContainerLow", "surface"), ("surfaceContainer", "surface"), ("surfaceContainerHigh", "surface"),
+          ("surfaceContainerHighest", "surfaceRaised")]
 SCHEME_ARGS = "\n" + "".join(f"        {role} = {{p}}.{tok},\n" for role, tok in SCHEME) + "    "
 kt = [f"// {HEADER}", "package ai.yumi.android.design", "",
+      "import androidx.compose.animation.core.CubicBezierEasing",
+      "import androidx.compose.animation.core.Easing",
       "import androidx.compose.material3.ColorScheme",
       "import androidx.compose.material3.Typography",
       "import androidx.compose.material3.darkColorScheme",
@@ -202,7 +210,9 @@ kt += ["}", "", "object YumiMotion {",
        f"    const val AVOID_RADIUS_PT = {m['avoidRadiusPt']}", f"    const val AVOID_HOP_PT = {m['avoidHopPt']}",
        f"    const val AVOID_HOP_MS = {m['avoidHopMs']}",
        f"    const val AVOID_FADE_OPACITY = {m['avoidFadeOpacity']}f", f"    const val AVOID_FADE_MS = {m['avoidFadeMs']}",
-       f"    const val AVOID_RETURN_MS = {m['avoidReturnMs']}", "}", ""]
+       f"    const val AVOID_RETURN_MS = {m['avoidReturnMs']}",
+       "    /** The symmetric ease in and out every move uses. */",
+       f"    val easing: Easing = CubicBezierEasing({e[0]}f, {e[1]}f, {e[2]}f, {e[3]}f)", "}", ""]
 open(os.path.join(OUT, "YumiTheme.kt"), "w", encoding="utf-8", newline="\n").write("\n".join(kt))
 
 # ---------- Android resources ----------

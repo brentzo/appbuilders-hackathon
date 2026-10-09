@@ -1,6 +1,8 @@
 // Generated from character/design/tokens.json by character/design/build.py. Do not edit by hand.
 package ai.yumi.android.design
 
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.Easing
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
@@ -97,6 +99,19 @@ fun yumiColorScheme(dark: Boolean): ColorScheme = if (dark) {
         onErrorContainer = YumiPalette.Dark.onHush,
         outline = YumiPalette.Dark.line,
         outlineVariant = YumiPalette.Dark.line,
+        tertiaryContainer = YumiPalette.Dark.halo,
+        onTertiaryContainer = YumiPalette.Dark.ink,
+        surfaceTint = YumiPalette.Dark.surface,
+        inverseSurface = YumiPalette.Dark.ink,
+        inverseOnSurface = YumiPalette.Dark.paper,
+        scrim = YumiPalette.Dark.ink,
+        surfaceBright = YumiPalette.Dark.surface,
+        surfaceDim = YumiPalette.Dark.paperDeep,
+        surfaceContainerLowest = YumiPalette.Dark.surface,
+        surfaceContainerLow = YumiPalette.Dark.surface,
+        surfaceContainer = YumiPalette.Dark.surface,
+        surfaceContainerHigh = YumiPalette.Dark.surface,
+        surfaceContainerHighest = YumiPalette.Dark.surfaceRaised,
     )
 } else {
     lightColorScheme(
@@ -123,6 +138,19 @@ fun yumiColorScheme(dark: Boolean): ColorScheme = if (dark) {
         onErrorContainer = YumiPalette.Light.onHush,
         outline = YumiPalette.Light.line,
         outlineVariant = YumiPalette.Light.line,
+        tertiaryContainer = YumiPalette.Light.halo,
+        onTertiaryContainer = YumiPalette.Light.ink,
+        surfaceTint = YumiPalette.Light.surface,
+        inverseSurface = YumiPalette.Light.ink,
+        inverseOnSurface = YumiPalette.Light.paper,
+        scrim = YumiPalette.Light.ink,
+        surfaceBright = YumiPalette.Light.surface,
+        surfaceDim = YumiPalette.Light.paperDeep,
+        surfaceContainerLowest = YumiPalette.Light.surface,
+        surfaceContainerLow = YumiPalette.Light.surface,
+        surfaceContainer = YumiPalette.Light.surface,
+        surfaceContainerHigh = YumiPalette.Light.surface,
+        surfaceContainerHighest = YumiPalette.Light.surfaceRaised,
     )
 }
 
@@ -185,4 +213,6 @@ object YumiMotion {
     const val AVOID_FADE_OPACITY = 0.25f
     const val AVOID_FADE_MS = 150
     const val AVOID_RETURN_MS = 1000
+    /** The symmetric ease in and out every move uses. */
+    val easing: Easing = CubicBezierEasing(0.65f, 0f, 0.35f, 1f)
 }
