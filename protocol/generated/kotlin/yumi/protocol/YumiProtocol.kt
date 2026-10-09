@@ -210,6 +210,8 @@ data class BridgeStateChanged(
     val state: BridgeState,
     /** The paired device, when there is one. */
     val peerDeviceId: String? = null,
+    /** This Mac's bridge device id (SPEC-09, OBJ-64). The app sends it as originDeviceId in submitGoal from now on. */
+    val deviceId: String? = null,
 )
 
 @Serializable
@@ -566,6 +568,8 @@ data class HelloResult(
     val protocolVersion: Long,
     /** The local model's state when the app connects, so an app that connects while the model loads knows it at once. Later changes come as modelStateChanged. */
     val modelState: ModelState? = null,
+    /** This Mac's bridge device id, once the harness knows it (SPEC-09, OBJ-64). The app sends it as originDeviceId in submitGoal. Missing on the first start, before the bridge client has loaded its keys; it then comes with bridgeStateChanged. */
+    val deviceId: String? = null,
 )
 
 /** Press a key combination, for example cmd+shift+e. Main lane only. Risk comes from a per-app list (SPEC-07 r6). */

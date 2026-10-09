@@ -362,10 +362,13 @@ public struct BridgeStateChanged: Codable, Equatable, Sendable {
     public var state: BridgeState
     /// The paired device, when there is one.
     public var peerDeviceId: String?
+    /// This Mac's bridge device id (SPEC-09, OBJ-64). The app sends it as originDeviceId in submitGoal from now on.
+    public var deviceId: String?
 
-    public init(state: BridgeState, peerDeviceId: String? = nil) {
+    public init(state: BridgeState, peerDeviceId: String? = nil, deviceId: String? = nil) {
         self.state = state
         self.peerDeviceId = peerDeviceId
+        self.deviceId = deviceId
     }
 }
 
@@ -917,10 +920,13 @@ public struct HelloResult: Codable, Equatable, Sendable {
     public var protocolVersion: Int
     /// The local model's state when the app connects, so an app that connects while the model loads knows it at once. Later changes come as modelStateChanged.
     public var modelState: ModelState?
+    /// This Mac's bridge device id, once the harness knows it (SPEC-09, OBJ-64). The app sends it as originDeviceId in submitGoal. Missing on the first start, before the bridge client has loaded its keys; it then comes with bridgeStateChanged.
+    public var deviceId: String?
 
-    public init(protocolVersion: Int, modelState: ModelState? = nil) {
+    public init(protocolVersion: Int, modelState: ModelState? = nil, deviceId: String? = nil) {
         self.protocolVersion = protocolVersion
         self.modelState = modelState
+        self.deviceId = deviceId
     }
 }
 

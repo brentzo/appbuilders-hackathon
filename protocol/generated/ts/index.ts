@@ -158,6 +158,8 @@ export interface BridgeStateChanged {
   state: BridgeState;
   /** The paired device, when there is one. */
   peerDeviceId?: DeviceId;
+  /** This Mac's bridge device id (SPEC-09, OBJ-64). The app sends it as originDeviceId in submitGoal from now on. */
+  deviceId?: DeviceId;
 }
 
 export interface ButtonReply {
@@ -433,6 +435,8 @@ export interface HelloResult {
   protocolVersion: ProtocolVersion;
   /** The local model's state when the app connects, so an app that connects while the model loads knows it at once. Later changes come as modelStateChanged. */
   modelState?: ModelState;
+  /** This Mac's bridge device id, once the harness knows it (SPEC-09, OBJ-64). The app sends it as originDeviceId in submitGoal. Missing on the first start, before the bridge client has loaded its keys; it then comes with bridgeStateChanged. */
+  deviceId?: DeviceId;
 }
 
 /** 32 bytes in standard base64 with padding: a public key, a pairing secret, or a challenge nonce. */

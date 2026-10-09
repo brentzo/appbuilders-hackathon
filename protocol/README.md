@@ -154,6 +154,14 @@ The harness and the Mac app talk JSON-RPC 2.0 over a Unix socket, one JSON messa
   The message is for logs only and never reaches the user.
 - Unknown methods answer `-32601`, and params that break the contract answer `-32602`.
 
+This Mac's device id (SPEC-09, [OBJ-64](../objectives/OBJ-64-cross-device-local-rpc-contract.md)):
+
+- Tasks and the action log name the device the user spoke to by its bridge device id, so a goal from the phone is told apart from one spoken on the Mac.
+- The harness reports this Mac's bridge device id as the optional `deviceId` in `HelloResult` and in every `bridgeStateChanged`, with no extra method call.
+  It is missing from `HelloResult` only on a first start, before the bridge client has loaded its keys; the next `bridgeStateChanged` carries it.
+- The app sends it as `originDeviceId` in `submitGoal`, and `mac-local` only until the harness has reported one. The harness reads `mac-local` as this Mac too.
+- Added in version 4 without a version change, since both properties are optional and older apps ignore them.
+
 Goal changes during a task (SPEC-06 requirements 14 to 20, OBJ-60):
 
 - The Mac pauses UI lanes with `pause(scope: uiLanes)` before it sends `reviseGoal` with the existing task id and what the user said.
