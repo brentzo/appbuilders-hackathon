@@ -25,6 +25,7 @@
       "readFieldValues": { "direction": "harnessToApp", "params": "ReadFieldValuesParams", "result": "ReadFieldValuesResult" },
       "showApprovalCard": { "direction": "harnessToApp", "params": "ShowApprovalCardParams", "result": "ApprovalDecision" },
       "probeAppCapability": { "direction": "harnessToApp", "params": "ProbeAppCapabilityParams", "result": "AppCapability" },
+      "getAppVersion": { "direction": "harnessToApp", "params": "GetAppVersionParams", "result": "AppVersionResult" },
       "openNewWindow": { "direction": "harnessToApp", "params": "OpenNewWindowParams", "result": "OpenNewWindowResult" },
       "moveToTrash": { "direction": "harnessToApp", "params": "MoveToTrashParams", "result": "MoveToTrashResult" },
       "listWindows": { "direction": "harnessToApp", "params": "ListWindowsParams", "result": "WindowList" },
@@ -274,6 +275,24 @@
       "additionalProperties": false,
       "required": ["bundleId"],
       "properties": { "bundleId": { "type": "string", "minLength": 1 } }
+    },
+    "GetAppVersionParams": {
+      "description": "Which app's installed version to read, so the harness re-probes an app only when its version changes (SPEC-03 r4).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bundleId"],
+      "properties": { "bundleId": { "type": "string", "minLength": 1 } }
+    },
+    "AppVersionResult": {
+      "description": "The installed version, read from the app bundle without launching the app.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "appVersion": {
+          "description": "Exactly the string probeAppCapability reports as AppCapability.appVersion. Absent when the app is not installed.",
+          "type": "string"
+        }
+      }
     },
     "OpenNewWindowParams": {
       "type": "object",

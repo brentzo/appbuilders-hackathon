@@ -16,6 +16,14 @@ export function exampleOf(type: string, label?: string): unknown {
   return JSON.parse(readFileSync(EXAMPLE_DIR + file, "utf8"));
 }
 
+/** Every example value for a type, in name order. */
+export function examplesOf(type: string): unknown[] {
+  return readdirSync(EXAMPLE_DIR)
+    .filter((f) => f.startsWith(`${type}.`) && f.endsWith(".json"))
+    .sort()
+    .map((file) => JSON.parse(readFileSync(EXAMPLE_DIR + file, "utf8")) as unknown);
+}
+
 /** Resolves "Type.label" or "Type" to its example. */
 export function exampleByName(name: string): unknown {
   const dot = name.indexOf(".");

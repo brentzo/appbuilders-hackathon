@@ -119,7 +119,7 @@
       "required": ["bundleId", "appVersion", "accessibility", "devtools", "probedAt"],
       "properties": {
         "bundleId": { "type": "string", "minLength": 1 },
-        "appVersion": { "type": "string" },
+        "appVersion": { "description": "The bundle's CFBundleShortVersionString, then its CFBundleVersion in parentheses, for example \"14.2 (7041.0.109)\". getAppVersion returns the same string.", "type": "string" },
         "accessibility": { "description": "An actionable accessibility tree was found.", "type": "boolean" },
         "devtools": { "description": "Chromium DevTools protocol is available.", "type": "boolean" },
         "probedAt": { "$ref": "common.json#/$defs/Timestamp" }

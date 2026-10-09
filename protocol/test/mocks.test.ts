@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { PROTOCOL_VERSION } from "../generated/ts/index.ts";
-import { exampleOf } from "../mocks/examples.ts";
+import { exampleOf, examplesOf } from "../mocks/examples.ts";
 import { connectMockMacApp } from "../mocks/mock-mac-app.ts";
 import { loadScript, SCRIPT_DIR, startMockHarness } from "../mocks/mock-harness.ts";
 import { loadRpcContract, RpcPeer, RpcRemoteError, validate } from "../src/index.ts";
@@ -117,6 +117,41 @@ describe("mock Mac app", () => {
     for (const [name, method] of methods("harnessToApp")) {
       await expect(harness.request(name, exampleOf(method.params)), name).resolves.toBeDefined();
     }
+  });
+});
+
+describe("mock Mac app capability answers", () => {
+  async function harnessWithMockMac(): Promise<RpcPeer> {
+    const path = socketPath();
+    const harnessSide = new Promise<RpcPeer>((resolve) => {
+      const server: Server = createServer((socket) => {
+        resolve(new RpcPeer({ role: "harness", socket, handlers: { hello: () => ({ protocolVersion: PROTOCOL_VERSION }) } }));
+      });
+      server.listen(path);
+      cleanups.push(() => new Promise<void>((r) => server.close(() => r())));
+    });
+    const app = await connectMockMacApp({ socketPath: path, quiet: true });
+    cleanups.push(() => app.close());
+    return harnessSide;
+  }
+
+  it("probes the app that was asked, for every AppCapability example", async () => {
+    const harness = await harnessWithMockMac();
+    const apps = examplesOf("AppCapability") as { bundleId: string; appVersion: string }[];
+    expect(apps.map((a) => a.bundleId)).toEqual(["com.google.Chrome", "com.apple.iWork.Keynote", "com.github.wez.wezterm"]);
+    for (const app of apps) {
+      expect(await harness.request("probeAppCapability", { bundleId: app.bundleId })).toEqual(app);
+      // The version lookup returns exactly the probe's appVersion, so the harness can find the cached result.
+      expect(await harness.request("getAppVersion", { bundleId: app.bundleId })).toEqual({ appVersion: app.appVersion });
+    }
+  });
+
+  it("answers an app that is not installed like the real Mac app: unsupportedRequest to a probe, no version", async () => {
+    const harness = await harnessWithMockMac();
+    const error = await harness.request("probeAppCapability", { bundleId: "com.example.NotInstalled" }).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(RpcRemoteError);
+    expect((error as RpcRemoteError).error).toMatchObject({ code: -32000, data: { kind: "unsupportedRequest" } });
+    expect(await harness.request("getAppVersion", { bundleId: "com.example.NotInstalled" })).toEqual({});
   });
 });
 

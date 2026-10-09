@@ -41,6 +41,7 @@ data class AnswerQuestionParams(
 @Serializable
 data class AppCapability(
     val bundleId: String,
+    /** The bundle's CFBundleShortVersionString, then its CFBundleVersion in parentheses, for example "14.2 (7041.0.109)". getAppVersion returns the same string. */
     val appVersion: String,
     /** An actionable accessibility tree was found. */
     val accessibility: Boolean,
@@ -94,6 +95,13 @@ enum class ApprovalMethod {
 
 /** An approval request waits 5 minutes; then the task pauses (SPEC-09 r10). */
 const val APPROVAL_REQUEST_EXPIRY_SECONDS: Long = 300L
+
+/** The installed version, read from the app bundle without launching the app. */
+@Serializable
+data class AppVersionResult(
+    /** Exactly the string probeAppCapability reports as AppCapability.appVersion. Absent when the app is not installed. */
+    val appVersion: String? = null,
+)
 
 /** Ask the user a question. The task waits for the answer. */
 @Serializable
@@ -382,6 +390,12 @@ enum class FinishStatus {
     @SerialName("done") Done,
     @SerialName("stuck") Stuck;
 }
+
+/** Which app's installed version to read, so the harness re-probes an app only when its version changes (SPEC-03 r4). */
+@Serializable
+data class GetAppVersionParams(
+    val bundleId: String,
+)
 
 /** The repeat-back sentence to speak and show (SPEC-01 r4). */
 @Serializable
@@ -1321,6 +1335,7 @@ enum class RpcMethod(val wireName: String) {
     ReadFieldValues("readFieldValues"),
     ShowApprovalCard("showApprovalCard"),
     ProbeAppCapability("probeAppCapability"),
+    GetAppVersion("getAppVersion"),
     OpenNewWindow("openNewWindow"),
     MoveToTrash("moveToTrash"),
     ListWindows("listWindows"),

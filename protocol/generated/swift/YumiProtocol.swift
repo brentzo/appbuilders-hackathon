@@ -50,6 +50,7 @@ public struct AnswerQuestionParams: Codable, Equatable, Sendable {
 /// Cached probe result per app version (SPEC-03 r4).
 public struct AppCapability: Codable, Equatable, Sendable {
     public var bundleId: String
+    /// The bundle's CFBundleShortVersionString, then its CFBundleVersion in parentheses, for example "14.2 (7041.0.109)". getAppVersion returns the same string.
     public var appVersion: String
     /// An actionable accessibility tree was found.
     public var accessibility: Bool
@@ -128,6 +129,16 @@ public enum ApprovalMethod: String, Codable, Equatable, Sendable, CaseIterable {
 
 /// An approval request waits 5 minutes; then the task pauses (SPEC-09 r10).
 public let APPROVAL_REQUEST_EXPIRY_SECONDS: Int = 300
+
+/// The installed version, read from the app bundle without launching the app.
+public struct AppVersionResult: Codable, Equatable, Sendable {
+    /// Exactly the string probeAppCapability reports as AppCapability.appVersion. Absent when the app is not installed.
+    public var appVersion: String?
+
+    public init(appVersion: String? = nil) {
+        self.appVersion = appVersion
+    }
+}
 
 /// Ask the user a question. The task waits for the answer.
 public struct AskAction: Codable, Equatable, Sendable {
@@ -667,6 +678,15 @@ public struct FinishAction: Codable, Equatable, Sendable {
 public enum FinishStatus: String, Codable, Equatable, Sendable, CaseIterable {
     case done
     case stuck
+}
+
+/// Which app's installed version to read, so the harness re-probes an app only when its version changes (SPEC-03 r4).
+public struct GetAppVersionParams: Codable, Equatable, Sendable {
+    public var bundleId: String
+
+    public init(bundleId: String) {
+        self.bundleId = bundleId
+    }
 }
 
 /// The repeat-back sentence to speak and show (SPEC-01 r4).
@@ -2144,6 +2164,7 @@ public enum RpcMethod: String, CaseIterable, Sendable {
     case readFieldValues
     case showApprovalCard
     case probeAppCapability
+    case getAppVersion
     case openNewWindow
     case moveToTrash
     case listWindows

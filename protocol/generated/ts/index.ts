@@ -29,6 +29,7 @@ export interface AnswerQuestionParams {
 /** Cached probe result per app version (SPEC-03 r4). */
 export interface AppCapability {
   bundleId: string;
+  /** The bundle's CFBundleShortVersionString, then its CFBundleVersion in parentheses, for example "14.2 (7041.0.109)". getAppVersion returns the same string. */
   appVersion: string;
   /** An actionable accessibility tree was found. */
   accessibility: boolean;
@@ -74,6 +75,12 @@ export const approvalMethodValues: readonly ApprovalMethod[] = ["tap", "voice"];
 /** An approval request waits 5 minutes; then the task pauses (SPEC-09 r10). */
 export const APPROVAL_REQUEST_EXPIRY_SECONDS = 300;
 export type ApprovalRequestExpirySeconds = typeof APPROVAL_REQUEST_EXPIRY_SECONDS;
+
+/** The installed version, read from the app bundle without launching the app. */
+export interface AppVersionResult {
+  /** Exactly the string probeAppCapability reports as AppCapability.appVersion. Absent when the app is not installed. */
+  appVersion?: string;
+}
 
 /** Ask the user a question. The task waits for the answer. */
 export interface AskAction {
@@ -292,6 +299,11 @@ export interface FinishAction {
 
 export type FinishStatus = "done" | "stuck";
 export const finishStatusValues: readonly FinishStatus[] = ["done", "stuck"];
+
+/** Which app's installed version to read, so the harness re-probes an app only when its version changes (SPEC-03 r4). */
+export interface GetAppVersionParams {
+  bundleId: string;
+}
 
 /** The repeat-back sentence to speak and show (SPEC-01 r4). */
 export interface GoalRestated {
@@ -1103,6 +1115,7 @@ export interface RpcMethods {
   readFieldValues: { direction: "harnessToApp"; params: ReadFieldValuesParams; result: ReadFieldValuesResult };
   showApprovalCard: { direction: "harnessToApp"; params: ShowApprovalCardParams; result: ApprovalDecision };
   probeAppCapability: { direction: "harnessToApp"; params: ProbeAppCapabilityParams; result: AppCapability };
+  getAppVersion: { direction: "harnessToApp"; params: GetAppVersionParams; result: AppVersionResult };
   openNewWindow: { direction: "harnessToApp"; params: OpenNewWindowParams; result: OpenNewWindowResult };
   moveToTrash: { direction: "harnessToApp"; params: MoveToTrashParams; result: MoveToTrashResult };
   listWindows: { direction: "harnessToApp"; params: ListWindowsParams; result: WindowList };

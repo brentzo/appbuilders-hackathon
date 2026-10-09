@@ -342,7 +342,7 @@ describe.skipIf(process.platform === "win32")("over the local RPC with the proto
     const decision = await live.route(chart, "main");
 
     expect(decision).toEqual({ lane: "ghost", reason: "backgroundCapable" });
-    expect(store.getAppCapability(KEYNOTE, "14.2")).toMatchObject({ accessibility: true, devtools: false });
+    expect(store.getAppCapability(KEYNOTE, "14.2 (7041.0.109)")).toMatchObject({ accessibility: true, devtools: false });
     expect(store.getSubtask(chart.id)).toMatchObject({ lane: "ghost", routeReason: "backgroundCapable" });
     const event = { taskId: chart.taskId, subtaskId: chart.id, lane: "ghost", reason: "backgroundCapable" };
     await waitFor(() => output.includes(`[mock Mac app] event routeDecided ${JSON.stringify(event)}`));

@@ -3,9 +3,15 @@
 // Run: npm run mock:mac -- [--socket <path>] [--fail method=kind,...]
 import { connect, type Socket } from "node:net";
 import { pathToFileURL } from "node:url";
-import { PROTOCOL_VERSION } from "../generated/ts/index.ts";
+import {
+  PROTOCOL_VERSION,
+  type AppCapability,
+  type AppVersionResult,
+  type GetAppVersionParams,
+  type ProbeAppCapabilityParams,
+} from "../generated/ts/index.ts";
 import { loadRpcContract, RpcFailure, RpcPeer, type Handler } from "../src/index.ts";
-import { exampleOf } from "./examples.ts";
+import { exampleOf, examplesOf } from "./examples.ts";
 import { defaultSocketPath, readArgs, readFailures } from "./socket.ts";
 
 export interface MockMacAppOptions {
@@ -22,6 +28,27 @@ export interface MockMacApp {
   close(): void;
 }
 
+/**
+ * The apps installed on the mock Mac: one per AppCapability example. Like the real Mac app, the mock answers for the
+ * app that was asked, and an app it does not have is not installed.
+ */
+const INSTALLED_APPS = new Map((examplesOf("AppCapability") as AppCapability[]).map((app) => [app.bundleId, app]));
+
+/** Methods whose answer depends on the params. Every other method answers with its example result. */
+const ANSWERS: Record<string, Handler> = {
+  probeAppCapability: (params) => {
+    const { bundleId } = params as ProbeAppCapabilityParams;
+    const app = INSTALLED_APPS.get(bundleId);
+    // The real Mac app's answer for an app that is not installed.
+    if (!app) throw new RpcFailure({ kind: "unsupportedRequest" }, `Mock: ${bundleId} is not installed`);
+    return app;
+  },
+  getAppVersion: (params): AppVersionResult => {
+    const app = INSTALLED_APPS.get((params as GetAppVersionParams).bundleId);
+    return app ? { appVersion: app.appVersion } : {};
+  },
+};
+
 export async function connectMockMacApp(options: MockMacAppOptions = {}): Promise<MockMacApp> {
   const socketPath = options.socketPath ?? defaultSocketPath();
   const contract = loadRpcContract();
@@ -34,7 +61,7 @@ export async function connectMockMacApp(options: MockMacAppOptions = {}): Promis
       log(`${name} ${JSON.stringify(params)}`);
       const failure = options.fail?.[name];
       if (failure) throw new RpcFailure({ kind: failure }, `Mock failure for ${name}`);
-      return exampleOf(method.result);
+      return ANSWERS[name] ? ANSWERS[name](params) : exampleOf(method.result);
     };
   }
 
