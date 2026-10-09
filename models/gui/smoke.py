@@ -16,6 +16,7 @@ Commands (run with models/gui/.venv/bin/python):
   tree  --app BUNDLE_ID     read-only: print the trimmed tree the model would see
   prompt --task T --run N   print the prompt for the first step (reads the screen, does not act)
   ping  --mode M            send a canned observation to the model, no screen access
+  bench                     model-only latency, validity, and peak memory at a realistic prompt size
   setup                     write the fixture PDF used by the Mail task
   run   --task T --run N --mode M   one live run (acts on the screen)
   report                    aggregate results/runs.jsonl into Markdown tables
@@ -905,6 +906,59 @@ def cmd_ping(args):
         print(f"{args.mode} {secs:.2f}s tokens={usage} valid={err is None} raw={raw!r}" + (f" error={err}" if err else ""))
 
 
+def bench_observation(n):
+    """A Keynote-sized synthetic window: n elements, the right one ("PDF…" in an open submenu) near the top."""
+    els = [
+        Element(1, "menuItem", "PDF…", None, True, "AXMenuItem", False, None),
+        Element(2, "menuItem", "PowerPoint…", None, True, "AXMenuItem", False, None),
+        Element(3, "menuItem", "Movie…", None, True, "AXMenuItem", False, None),
+        Element(4, "menuItem", "Animated GIF…", None, True, "AXMenuItem", False, None),
+        Element(5, "menuItem", "Images…", None, True, "AXMenuItem", False, None),
+        Element(6, "menuItem", "Keynote '09…", None, True, "AXMenuItem", False, None),
+    ]
+    filler = ["Play", "Keynote Live", "Table", "Chart", "Text", "Shape", "Media", "Comment", "Share", "Format", "Animate", "Document"]
+    i = len(els)
+    while len(els) < n - 9:
+        i += 1
+        els.append(Element(i, "button", f"{filler[i % len(filler)]} {i}" if i > 18 else filler[i % len(filler)], None, True, "AXButton", False, None))
+    for name in ["Apple", "Keynote", "File", "Edit", "Insert", "Slide", "Format", "Arrange", "View"]:
+        i += 1
+        els.append(Element(i, "menuBarItem", name, None, True, "AXMenuBarItem", False, None))
+    return Observation("Q3 Report.key (menu open)", els, 0, 0, 0.0)
+
+
+def cmd_bench(args):
+    """Model only, no screen: per-step latency, validity, and server peak memory at a realistic prompt size."""
+    obs = bench_observation(args.elements)
+    hist = [
+        {"index": 1, "action_text": "axPress [12] menuBarItem \"File\"", "outcome": "ok", "observation": "new: menuItem \"New\", menuItem \"Open…\", menuItem \"Export To\""},
+        {"index": 2, "action_text": "axPress [9] menuItem \"Export To\"", "outcome": "ok", "observation": "new: menuItem \"PDF…\", menuItem \"PowerPoint…\", menuItem \"Movie…\""},
+    ]
+    msgs = build_messages(TASKS["keynote"]["goal"], instruction_for("keynote", 0), hist, obs)
+    spid = server_pid()
+    env = environment()
+    rows = []
+    with PeakSampler(spid) as sampler:
+        for mode in args.modes:
+            for i in range(args.n):
+                raw, secs, usage = call_model(msgs, mode, len(obs.elements))
+                action, err = parse_action(raw, obs)
+                right = action == {"action": "axPress", "element": 1}
+                rows.append({"mode": mode, "secs": round(secs, 2), "valid": err is None, "right_element": right, "raw": raw, "usage": usage})
+                print(f"{mode} #{i+1}: {secs:.2f}s valid={err is None} right={right} tokens={usage.get('prompt_tokens')}/{usage.get('completion_tokens')} raw={raw!r}")
+    _, lifetime = footprint(spid) if spid else (None, None)
+    out = {
+        "kind": "bench", "elements": len(obs.elements), "env": env, "rows": rows,
+        "server_peak_gib": round(sampler.peak / 2**30, 2), "server_lifetime_peak_gib": round((lifetime or 0) / 2**30, 2),
+        "time": time.strftime("%Y-%m-%d %I:%M:%S %p"),
+    }
+    path = HERE / "results" / "bench.jsonl"
+    path.parent.mkdir(exist_ok=True)
+    with path.open("a") as f:
+        f.write(json.dumps(out) + "\n")
+    print(json.dumps({k: out[k] for k in ("elements", "server_peak_gib", "server_lifetime_peak_gib", "env")}, indent=1))
+
+
 def cmd_setup(args):
     """Write the fixture PDF the Mail task attaches. Creates a new file only; never replaces one."""
     FIXTURE_DIR.mkdir(parents=True, exist_ok=True)
@@ -1117,6 +1171,10 @@ def main():
     s = sub.add_parser("ping")
     s.add_argument("--mode", choices=["constrained", "free"], default="constrained")
     s.add_argument("-n", type=int, default=3)
+    s = sub.add_parser("bench")
+    s.add_argument("--elements", type=int, default=120)
+    s.add_argument("-n", type=int, default=5)
+    s.add_argument("--modes", nargs="+", default=["constrained", "free"])
     sub.add_parser("setup")
     s = sub.add_parser("run")
     s.add_argument("--task", choices=TASKS, required=True)
@@ -1124,7 +1182,7 @@ def main():
     s.add_argument("--mode", choices=["constrained", "free"], required=True)
     sub.add_parser("report")
     args = p.parse_args()
-    {"env": cmd_env, "tree": cmd_tree, "prompt": cmd_prompt, "ping": cmd_ping, "setup": cmd_setup, "run": cmd_run, "report": cmd_report}[args.cmd](args)
+    {"env": cmd_env, "tree": cmd_tree, "prompt": cmd_prompt, "ping": cmd_ping, "bench": cmd_bench, "setup": cmd_setup, "run": cmd_run, "report": cmd_report}[args.cmd](args)
 
 
 if __name__ == "__main__":
