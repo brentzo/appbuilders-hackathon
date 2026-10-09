@@ -83,18 +83,21 @@ The router checks what the target app actually supports and picks the cheapest l
   - `harness/src/worker/`: `runWorkerStep` now takes `{ lane }`. The schema sent to the model, the system prompt, and the validation offer and accept only that lane's actions.
   - `harness/src/store/`: migration 2 adds `subtasks.needs_keyboard`; `addSubtask` takes `needsKeyboard`.
   - `protocol/schemas/rpc.json`: the `getAppVersion` method (`GetAppVersionParams`, `AppVersionResult`), with examples. `protocol/schemas/common.json` and `task.json`: `needsKeyboard` in `RouteReason` and an optional `needsKeyboard` on `Subtask`, with examples. `AppCapability.appVersion` now documents its format. Types regenerated. The protocol stays at version 3: every change is an addition.
-  - `protocol/mocks/mock-mac-app.ts`: probes and version lookups answer for the app asked, from one `AppCapability` example per installed app (Chrome, Keynote, WezTerm, with Chrome's and WezTerm's real versions from this Mac). Any other app fails the probe with `unsupportedRequest` and has no version, as on the real Mac app.
+  - `protocol/mocks/mock-mac-app.ts`: probes and version lookups answer for the app asked, from one `AppCapability` example per installed app (Chrome, Keynote, WezTerm, with the real versions of the apps on this Mac; Keynote is "Keynote Creator Studio", `15.2.1 (7048.0.3)`). Any other app fails the probe with `unsupportedRequest` and has no version, as on the real Mac app.
   - `harness/README.md`: the `src/router/` layout row and a "Lane router" section.
   - Tests: `harness/test/lane-router.test.ts`, `harness/test/lane-tools.test.ts`, and new cases in `protocol/test/mocks.test.ts` and `protocol/test/validation.test.ts`.
 - **Commits:**
-  - `5039405 docs(objectives): start OBJ-07`
-  - `1922f38 feat(harness): add the lane router, the app capability cache, and lane tool sets`
-  - `5600624 fix(harness): drop schema conditionals from the grammar sent to the model`
-  - `29a61d2 docs(objectives): record the OBJ-07 outcome so far`
-  - `2ceb577 feat(protocol): add getAppVersion and make the mock Mac app probe the app asked`
-  - `d631703 feat(protocol): add needsKeyboard to Subtask and RouteReason`
-  - `83c81d5 feat(harness): route keyboard subtasks to main and look up app versions before probing`
-  - `docs(objectives): update the OBJ-07 outcome` (this Outcome)
+  - `9a47bd1 docs(objectives): start OBJ-07`
+  - `e613c5a feat(harness): add the lane router, the app capability cache, and lane tool sets`
+  - `61f9894 fix(harness): drop schema conditionals from the grammar sent to the model`
+  - `f9b00bd docs(objectives): record the OBJ-07 outcome so far`
+  - `86b48ee feat(protocol): add getAppVersion and make the mock Mac app probe the app asked`
+  - `4c24976 feat(protocol): add needsKeyboard to Subtask and RouteReason`
+  - `9e9f840 feat(harness): route keyboard subtasks to main and look up app versions before probing`
+  - `a51d56f docs(objectives): update the OBJ-07 outcome`
+  - `598f15e test(harness): run the permission gate's worker steps on the main lane`
+  - `bd1cc43 fix(protocol): use Keynote's real version in the examples`
+  - `docs(objectives): update the OBJ-07 outcome after merging OBJ-37` (this Outcome)
 - **Expectations:**
   - SPEC-03 scenarios, in `test/lane-router.test.ts` with a fake probe: "Scenario: Subtask with no UI runs as a helper" (lane `helper`, reason `noUI`, no probe, and only a `routeDecided` event, so no cursor command), "Scenario: Background-capable app gets a ghost cursor (lane decision only)" (Chrome with DevTools is `ghost`, `backgroundCapable`), "Scenario: App without background control goes to the main cursor" (`main`, `appNotBackgroundCapable`), and "Scenario: Planner proposes the wrong lane" (a `ghost` proposal for a canvas app is `main`). Four more cases override wrong proposals in both directions.
   - "Scenario: Parallel goal splits into lanes": the sheets subtask is `helper`, the Chrome form is `ghost`, and the Keynote subtask the planner marked `needsKeyboard` is `main` with reason `needsKeyboard`. Over the socket, the mock Mac app test routes Chrome to `ghost`, Keynote to `ghost`, WezTerm to `main` (`appNotBackgroundCapable`), and a `needsKeyboard` Keynote subtask to `main`.
@@ -102,21 +105,21 @@ The router checks what the target app actually supports and picks the cheapest l
   - Every routed subtask has a stored reason: "stores every routed subtask's lane and reason, and emits each decision as a valid routeDecided event", which validates each stored subtask and event against the protocol, and "keeps the decision after the store is closed and reopened".
   - OBJ-07.4, re-probe only on a version change: with the mock Mac app over the socket, three apps are probed once each, and a new router over the same database (a restart) reads each version with `getAppVersion` and probes nothing. With a fake version source, an updated version is probed once and both versions stay stored. A Mac app that answers "method not found" to `getAppVersion` falls back to one probe per app per run.
   - Failures: a probe the Mac app fails (`--fail probeAppCapability=accessibilityPermissionMissing`, or an app the mock does not have) rejects `route` with that `UserError` and stores nothing. Raw errors become `unexpected`, with the detail only in the log.
-  - `python3 scripts/verify.py` passes: docs, protocol (264 tests), harness (150 tests), bridge, Mac build and tests. Android and whisper passed on the run before the rebase; nothing in them changed.
+  - `python3 scripts/verify.py` passes after rebasing onto OBJ-37: docs, protocol (264 tests), harness (263 tests), bridge, and the Mac build and tests. Android and whisper passed on an earlier run; nothing in them changed.
 - **Not verified:**
   - The Swift and Kotlin compile checks in Docker (Docker is not running here; CI runs them on push). The Mac app builds and its tests pass with the regenerated Swift.
   - The real Mac app (Patrick, OBJ-27): it does not serve `getAppVersion` yet and answers "method not found", so until then the harness probes each app once per run. To add it in `mac/Yumi/Native/AppMethodServer.swift`: decode `GetAppVersionParams`; find the app with `NSWorkspace.shared.urlForApplication(withBundleIdentifier:)` without launching it; answer `AppVersionResult(appVersion: AppCapabilityProbe.version(of: url))`, so the string is exactly the probe's `appVersion`; answer `AppVersionResult()` with no version when the app is not installed.
   - OBJ-07.3 and OBJ-07.4 against the real Mac app. This needs a team-signed Yumi build with Accessibility granted (see OBJ-27's Outcome). With Yumi running the real harness, route a subtask whose target is `com.google.Chrome` and one whose target is WezTerm (`com.github.wez.wezterm`). Expect `ghost` with `backgroundCapable` and `main` with `appNotBackgroundCapable`, a `router.probed` line for each in `harness.log`, and one row each in `app_capabilities` in `tasks.db`. After `getAppVersion` ships, restart the harness, route both again, and expect `router.capabilityCached` lines and no new `router.probed` lines.
-  - The Keynote example's build number (`14.2 (7041.0.109)`) is illustrative: Keynote is not installed on this Mac.
 - **Decisions and deviations:**
   - The planner's proposed lane is logged, not used: the router picks the cheapest lane that passes (SPEC-03 r1). The planner's only way to ask for `main` is `needsKeyboard` (SPEC-03 r17, Brent's decision of 2026-10-09).
-  - A `needsKeyboard` subtask goes to `main` without probing its app, so its reason is `needsKeyboard` even when the app is not background-capable. A `needsKeyboard` subtask with no target app is still a `helper` (requirement 2); SPEC-03 does not cover that combination, and it is raised with Brent.
+  - A `needsKeyboard` subtask goes to `main` without probing its app, so its reason is `needsKeyboard` even when the app is not background-capable. A `needsKeyboard` subtask with no target app is still a `helper` (requirement 2), because there is no app to type into; the orchestrator confirmed this.
   - A failed probe is not cached and is not routed to `main`: `route` rejects with `ProbeFailure`, carrying the Mac app's `UserError` (for example `accessibilityPermissionMissing`, or `unsupportedRequest` for an app that is not installed), since the main cursor cannot work in that app either. The orchestrator confirmed this. Anything else (no Mac app connected, a method the app does not serve, a broken reply) is `unexpected`, with the detail in the log.
   - `getAppVersion` returns no version for an app that is not installed, instead of an error, because it is a lookup; the probe that follows reports the failure. If the two methods ever format the version differently, the router logs `router.versionMismatch` and probes once per run.
   - The router refuses a probe answer for a different bundle id.
   - Lane actions: `ghost` also loses `clickAt`, because a click at screen coordinates moves the real mouse (the design doc's lane table: ghosts use the accessibility API and DevTools). `helper` gets only `tool`, `ask`, and `finish`, because helpers never touch the UI. Typed tools are not split by lane here; the permission gate (OBJ-37) governs them.
   - Found along the way: since protocol version 3, the schema sent to the model contains `if`, `then`, and `else`, which llguidance 1.9.1 (mlx-vlm 0.7.6) refuses, so any real step offering `open_app` would fail. `scripts/check-grammar.py` reproduced it on the example step without loading a model. The bundler now drops those keywords for the model, the same way it drops `uniqueItems`; replies are still validated against the full schema. All three lanes' schemas compile.
   - A fix for the flaky bridge client test was dropped in the rebase, because `main` fixed it the same way in `712e727`.
+  - `runWorkerStep` requires the lane, so OBJ-37's two worker step tests in `test/permission-gate.test.ts` now pass `{ lane: "main" }`, the lane that offers every action, as when they were written.
 - **For the next objectives:**
   - Plugging the router into the OBJ-05 scheduler (OBJ-07.8): create it once in `startHarness` with `createLaneRouter({ store, server, logger })`. Where the scheduler's stand-in makes every subtask a helper, call `await router.route(subtask, subtask.proposedLane)` for each `ready` subtask, then run it on `decision.lane`. Pass that lane to `runWorkerStep(input, deps, { lane })`, and build `allowedTools` for it. On `ProbeFailure`, fail the subtask and send `error.userError` as the `userError` event; never show its message.
   - OBJ-05: pass the planner's `needsKeyboard` to `store.addSubtask({ ..., needsKeyboard })`; the router reads it from the subtask.
