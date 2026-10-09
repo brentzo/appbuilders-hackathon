@@ -48,7 +48,7 @@ Update the tables in this file and in the product README in the same commit.
 
 | ID | Objective | Product | Specs | Depends on | Status |
 |---|---|---|---|---|---|
-| [OBJ-01](OBJ-01-task-record-schemas.md) | Task record and action schemas | protocol | 02, 03, 05, 07, 11 | - | todo |
+| [OBJ-01](OBJ-01-task-record-schemas.md) | Task record and action schemas | protocol | 02, 03, 05, 07, 11 | - | in-progress |
 | [OBJ-02](OBJ-02-bridge-envelope-and-crypto.md) | Bridge envelope and end-to-end crypto | protocol | 08 | - | todo |
 | [OBJ-03](OBJ-03-harness-skeleton.md) | Harness skeleton and local model client | harness | 02 | 01 | todo |
 | [OBJ-04](OBJ-04-task-store.md) | Task store and history | harness | 02 | 01, 03 | todo |

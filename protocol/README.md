@@ -44,6 +44,6 @@ Status: empty scaffold, nothing built yet.
 
 | ID | Objective | Status |
 |---|---|---|
-| [OBJ-01](../objectives/OBJ-01-task-record-schemas.md) | Task record and action schemas | todo |
+| [OBJ-01](../objectives/OBJ-01-task-record-schemas.md) | Task record and action schemas | in-progress |
 | [OBJ-02](../objectives/OBJ-02-bridge-envelope-and-crypto.md) | Bridge envelope and end-to-end crypto | todo |
 | [OBJ-25](../objectives/OBJ-25-cross-device-messages.md) | Cross-device message kinds | todo |

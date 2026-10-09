@@ -4,7 +4,7 @@ title: Task record and action schemas
 product: protocol
 touches: []
 specs: [SPEC-02, SPEC-03, SPEC-05, SPEC-07, SPEC-11]
-status: todo
+status: in-progress
 priority: p0
 depends-on: []
 tags: [objective, p0, protocol]
