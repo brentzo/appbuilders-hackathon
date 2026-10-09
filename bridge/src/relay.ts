@@ -218,12 +218,13 @@ export class Relay {
   }
 
   private authenticate(socket: WebSocket, connection: Connection, frame: Extract<BridgeFrame, { frame: "authenticate" }>): void {
-    if (frame.protocolVersion !== PROTOCOL_VERSION) return this.refuse(socket, "unsupportedVersion");
     const publicKey = fromBase64(frame.signingPublicKey);
     if (deviceIdFor(publicKey) !== frame.deviceId) return this.refuse(socket, "deviceIdMismatch");
     if (!verify(fromBase64(frame.signature), relayAuthSigningBytes(connection.nonce, frame.deviceId), publicKey)) return this.refuse(socket, "badSignature");
+    if (frame.protocolVersion !== PROTOCOL_VERSION) return this.refuseVersion(socket, frame.deviceId, frame.protocolVersion);
     if (!this.store.registerDevice(frame.deviceId, frame.signingPublicKey, this.now().toISOString())) return this.refuse(socket, "deviceIdMismatch");
 
+    this.store.clearNeedsUpdate(frame.deviceId);
     clearTimeout(connection.authTimer);
     connection.authenticated = frame.deviceId;
     const old = this.online.get(frame.deviceId);
@@ -317,8 +318,9 @@ export class Relay {
     if (envelope.type === "command") {
       const recipient = this.online.get(envelope.to);
       if (!recipient || !this.send(recipient, { frame: "envelope", envelope })) {
-        this.notice(envelope.from, envelope.to, envelope.id, "targetOffline");
-        this.logger("message.targetOffline", { from: envelope.from, to: envelope.to, messageId: envelope.id });
+        const notice = this.store.needsUpdate(envelope.to) ? "targetNeedsUpdate" : "targetOffline";
+        this.notice(envelope.from, envelope.to, envelope.id, notice);
+        this.logger(`message.${notice}`, { from: envelope.from, to: envelope.to, messageId: envelope.id });
       } else {
         this.send(socket, { frame: "ack", messageId: envelope.id });
         this.logger("message.routed", { from: envelope.from, to: envelope.to, messageId: envelope.id, type: envelope.type });
@@ -402,7 +404,7 @@ export class Relay {
     this.logger("message.acknowledged", { deviceId, messageId });
   }
 
-  private notice(sender: string, target: string, messageId: string, type: "targetOffline" | "expired" | "notPaired"): void {
+  private notice(sender: string, target: string, messageId: string, type: Extract<BridgeFrame["frame"], "targetOffline" | "targetNeedsUpdate" | "expired" | "notPaired">): void {
     const frame: BridgeFrame = { frame: type, messageId, to: target };
     const recipient = this.online.get(sender);
     if (recipient && this.send(recipient, frame)) return;
@@ -426,10 +428,28 @@ export class Relay {
     }
   }
 
-  private refuse(socket: WebSocket, reason: RefusedReason): void {
+  private refuse(socket: WebSocket, reason: Exclude<RefusedReason, "unsupportedVersion">): void {
     this.logger("device.refused", { reason });
-    this.send(socket, { frame: "refused", reason });
-    setTimeout(() => socket.close(1008, reason), 20).unref();
+    this.closeRefused(socket, { frame: "refused", reason });
+  }
+
+  /**
+   * Runs only after the device proved its key, so nobody can mark someone else's device. The relay names its own
+   * version so the device knows which side needs an update, and remembers a registered device that is behind, so a
+   * sender is told it needs an update rather than that it is offline. The device keeps its registration and pairings.
+   */
+  private refuseVersion(socket: WebSocket, deviceId: string, protocolVersion: number): void {
+    if (this.store.isRegistered(deviceId)) {
+      if (protocolVersion < PROTOCOL_VERSION) this.store.markNeedsUpdate(deviceId, protocolVersion, this.now().toISOString());
+      else this.store.clearNeedsUpdate(deviceId);
+    }
+    this.logger("device.refused", { reason: "unsupportedVersion", deviceId, protocolVersion });
+    this.closeRefused(socket, { frame: "refused", reason: "unsupportedVersion", protocolVersion: PROTOCOL_VERSION });
+  }
+
+  private closeRefused(socket: WebSocket, frame: Extract<BridgeFrame, { frame: "refused" }>): void {
+    this.send(socket, frame);
+    setTimeout(() => socket.close(1008, frame.reason), 20).unref();
   }
 
   private invalidFrame(socket: WebSocket, connection: Connection): void {

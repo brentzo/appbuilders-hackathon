@@ -33,6 +33,8 @@ Status: relay implementation in progress (OBJ-13). Live VPS rollout is tracked b
 - A `pairRequest` stays open for 30 seconds by the relay's clock, held for a Mac that reconnects within that window.
   The relay alone decides whether the Mac's `pairAccept` was in time: it pairs, forwards, and sends the Mac `paired` in one step, or sends `pairExpired`.
   Verdicts for an offline device are held for 2 minutes ([OBJ-33](../objectives/OBJ-33-pairing-response-timeout-contract.md), `protocol/docs/pairing.md` "The answer window").
+- The relay refuses a device on another protocol version with its own version, after checking the device's signature.
+  It keeps the device's registration and pairings, and answers a command for a device that is behind with `targetNeedsUpdate` instead of `targetOffline` ([OBJ-34](../objectives/OBJ-34-protocol-version-upgrade-recovery.md), `protocol/docs/pairing.md` "Another protocol version").
 - Unpair revokes the pairing and held traffic immediately. The signed frame remains in SQLite and is replayed on reconnect; acknowledgement deletion awaits the frame identifier contract in [OBJ-31](../objectives/OBJ-31-unpair-delivery-ack-contract.md).
 
 ## Deployment

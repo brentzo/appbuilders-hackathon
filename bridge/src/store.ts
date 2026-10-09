@@ -72,6 +72,11 @@ export class RelayStore {
         acknowledged INTEGER NOT NULL DEFAULT 0 CHECK (acknowledged IN (0, 1)),
         PRIMARY KEY (from_device, to_device)
       );
+      CREATE TABLE IF NOT EXISTS devices_needing_update (
+        device_id TEXT PRIMARY KEY REFERENCES devices(device_id),
+        protocol_version INTEGER NOT NULL,
+        refused_at TEXT NOT NULL
+      );
     `);
     const unpairColumns = this.db.prepare("PRAGMA table_info(pending_unpairs)").all() as Array<{ name: string }>;
     if (!unpairColumns.some(({ name }) => name === "acknowledged"))
@@ -171,6 +176,21 @@ export class RelayStore {
   clearPairingNotices(a: string, b: string): void {
     this.db.prepare("DELETE FROM deliveries WHERE category = 'notice' AND json_extract(frame, '$.frame') = 'pairExpired' AND ((recipient = ? AND message_id = ?) OR (recipient = ? AND message_id = ?))")
       .run(a, pairingNoticeId(b), b, pairingNoticeId(a));
+  }
+
+  /** Remembers that a registered device was refused for an older protocol version, until it next authenticates. */
+  markNeedsUpdate(deviceId: string, protocolVersion: number, refusedAt: string): void {
+    this.db
+      .prepare("INSERT INTO devices_needing_update (device_id, protocol_version, refused_at) VALUES (?, ?, ?) ON CONFLICT (device_id) DO UPDATE SET protocol_version = excluded.protocol_version, refused_at = excluded.refused_at")
+      .run(deviceId, protocolVersion, refusedAt);
+  }
+
+  clearNeedsUpdate(deviceId: string): void {
+    this.db.prepare("DELETE FROM devices_needing_update WHERE device_id = ?").run(deviceId);
+  }
+
+  needsUpdate(deviceId: string): boolean {
+    return this.db.prepare("SELECT 1 FROM devices_needing_update WHERE device_id = ?").get(deviceId) !== undefined;
   }
 
   /** Whether the device has ever authenticated, so the relay can hold frames for it. */

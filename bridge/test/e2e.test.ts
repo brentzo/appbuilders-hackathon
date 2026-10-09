@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { deviceKeysFromSeeds, pairAcceptSigningBytes, publicKeysOf, sealEnvelope, sealPairRequest, sign, toBase64, unpairSigningBytes } from "@yumi/protocol/crypto";
+import { PROTOCOL_VERSION } from "@yumi/protocol/types";
 import { RelayDevice } from "./support/device.ts";
 import { openRelayFixture } from "./support/relay-fixture.ts";
 
@@ -430,6 +431,108 @@ describe("pairing answer window (OBJ-33)", () => {
       }
     } finally {
       await close();
+    }
+  });
+});
+
+describe("another protocol version (OBJ-34)", () => {
+  async function setup() {
+    const fixture = await openRelayFixture();
+    const mac = await RelayDevice.connect(fixture.relay.url());
+    let phone = await RelayDevice.connect(fixture.relay.url());
+    await pair(mac, phone);
+    await phone.close();
+    return {
+      fixture,
+      mac,
+      reconnectPhone: async (protocolVersion: number, signature?: string) => {
+        await phone.close();
+        phone = await RelayDevice.connect(fixture.relay.url(), phone.keys, protocolVersion, signature);
+        return phone;
+      },
+      close: async () => {
+        await mac.close();
+        await phone.close();
+        await fixture.close();
+      },
+    };
+  }
+
+  async function commandOutcome(mac: RelayDevice, phone: RelayDevice) {
+    const command = makeEnvelope(mac, phone, "command", { n: 1 });
+    mac.send({ frame: "envelope", envelope: command });
+    const notice = await mac.next("ack", "targetOffline", "targetNeedsUpdate");
+    expect(notice).toEqual(notice.frame === "ack" ? { frame: "ack", messageId: command.id } : { frame: notice.frame, messageId: command.id, to: phone.keys.deviceId });
+    return notice.frame;
+  }
+
+  it("refuses an older device with the relay's version, keeps it paired, and tells the sender it needs an update", async () => {
+    const { fixture, mac, reconnectPhone, close } = await setup();
+    try {
+      const phone = await reconnectPhone(PROTOCOL_VERSION - 1);
+      expect(phone.handshake).toEqual({ frame: "refused", reason: "unsupportedVersion", protocolVersion: PROTOCOL_VERSION });
+      expect(fixture.relay.store.isPaired(mac.keys.deviceId, phone.keys.deviceId)).toBe(true);
+
+      expect(await commandOutcome(mac, phone)).toBe("targetNeedsUpdate");
+      expect(fixture.relay.store.queuedCount()).toBe(0);
+    } finally {
+      await close();
+    }
+  });
+
+  it("delivers what it held once the device updates, with the same pairing and no new QR code", async () => {
+    const { mac, reconnectPhone, close } = await setup();
+    try {
+      const old = await reconnectPhone(PROTOCOL_VERSION - 1);
+      const event = makeEnvelope(mac, old, "event", { n: 2 });
+      mac.send({ frame: "envelope", envelope: event });
+      expect(await mac.next("ack")).toEqual({ frame: "ack", messageId: event.id });
+
+      const phone = await reconnectPhone(PROTOCOL_VERSION);
+      expect(phone.handshake).toEqual({ frame: "ready" });
+      expect(await phone.next("envelope")).toEqual({ frame: "envelope", envelope: event });
+      expect(await commandOutcome(mac, phone)).toBe("ack");
+
+      await phone.close();
+      await quiet();
+      expect(await commandOutcome(mac, phone)).toBe("targetOffline");
+    } finally {
+      await close();
+    }
+  });
+
+  it("refuses a device newer than the relay with the relay's version, and its sender hears only that it is offline", async () => {
+    const { mac, reconnectPhone, close } = await setup();
+    try {
+      await reconnectPhone(PROTOCOL_VERSION - 1);
+      const phone = await reconnectPhone(PROTOCOL_VERSION + 1);
+      expect(phone.handshake).toEqual({ frame: "refused", reason: "unsupportedVersion", protocolVersion: PROTOCOL_VERSION });
+      expect(await commandOutcome(mac, phone)).toBe("targetOffline");
+    } finally {
+      await close();
+    }
+  });
+
+  it("checks who a device is before its version, so a forged old connection changes nothing", async () => {
+    const { mac, reconnectPhone, close } = await setup();
+    try {
+      const phone = await reconnectPhone(PROTOCOL_VERSION - 1, `${"A".repeat(86)}==`);
+      expect(phone.handshake).toEqual({ frame: "refused", reason: "badSignature" });
+      expect(await commandOutcome(mac, phone)).toBe("targetOffline");
+    } finally {
+      await close();
+    }
+  });
+
+  it("does not register an unknown device on another version", async () => {
+    const fixture = await openRelayFixture();
+    const device = await RelayDevice.connect(fixture.relay.url(), undefined, PROTOCOL_VERSION - 1);
+    try {
+      expect(device.handshake).toEqual({ frame: "refused", reason: "unsupportedVersion", protocolVersion: PROTOCOL_VERSION });
+      expect(fixture.relay.store.isRegistered(device.keys.deviceId)).toBe(false);
+    } finally {
+      await device.close();
+      await fixture.close();
     }
   });
 });

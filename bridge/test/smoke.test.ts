@@ -25,7 +25,7 @@ describe("bridge relay smoke", () => {
     const wrongVersion = await RelayDevice.connect(fixture.relay.url(), undefined, PROTOCOL_VERSION + 1);
     const forged = await RelayDevice.connect(fixture.relay.url(), undefined, PROTOCOL_VERSION, `${"A".repeat(86)}==`);
     try {
-      expect(wrongVersion.handshake).toEqual({ frame: "refused", reason: "unsupportedVersion" });
+      expect(wrongVersion.handshake).toEqual({ frame: "refused", reason: "unsupportedVersion", protocolVersion: PROTOCOL_VERSION });
       expect(forged.handshake).toEqual({ frame: "refused", reason: "badSignature" });
     } finally {
       await wrongVersion.close();
