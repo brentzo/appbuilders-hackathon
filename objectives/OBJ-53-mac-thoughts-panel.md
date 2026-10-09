@@ -91,7 +91,7 @@ It reads the reasoning data that [OBJ-52](OBJ-52-harness-debug-logs.md) adds.
   - Several panels can be open at once, so the main cat and a ghost can be compared.
   - Reaching for a bubble during a running task used to pause it. Brent changed SPEC-06 r2 on 2026-10-10: pointer movement over, and clicks in, Yumi's own bubbles, panels, and chips never count, and small moves never count either.
   - The main cat's subtask title in its bubble in Debug mode was confirmed by the orchestrator, 2026-10-10.
-  - A cat stays put while the pointer is on its bubble or panel, instead of scooting (SPEC-04 r21), so it can be clicked.
+  - A cat stays put while the pointer is on its bubble or panel, so it can be clicked. Since 2026-10-10 no cat moves away from the pointer at all (SPEC-04 r21).
   - The panels follow the system appearance; the existing bubble stays on light paper as before.
   - Helper chips still say "Helper working"; their panel shows the subtask title from the thought.
   - Patrick's files changed: `CursorOverlay.swift` (stored properties and five hook lines), `CursorLayer.swift` (the card in the bubble's place, `thoughtsTapFrame`), `HelperChips.swift` (a card under a chip, `tapFrames`), `OverlayCursor.swift` (`thoughtTitle`), `PointerAvoidance.swift` (stay put on the bubble), `CursorDebugActions.swift` (the demo part), `DebugLaunchOptions.swift` (`-YumiOpen thoughts`), `HarnessLink.swift` (routing, `model` no longer private), the three settings files, `HarnessClientTests.swift`, and `mac/README.md`.
