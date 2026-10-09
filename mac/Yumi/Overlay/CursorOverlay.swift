@@ -21,6 +21,7 @@ final class CursorOverlay {
         set { roster.cursors = newValue }
     }
     private let roster = CursorRoster()
+    private let sounds = CatSounds()
     private var panels: [OverlayPanel] = []
     /// One layer per cursor per panel.
     private var layers: [String: [ObjectIdentifier: CursorLayer]] = [:]
@@ -193,11 +194,14 @@ final class CursorOverlay {
         layer.apply(cursor, scale: panel.backingScaleFactor)
     }
 
-    /// Ghosts leap back into the island and vanish; the main cat fades where it is. Either way
-    /// the cursor is gone within 1 second (SPEC-04 r9).
+    /// Every cat, the main one too, leaps back into the island and vanishes; with Reduce Motion on
+    /// it fades where it is. Either way the cursor is gone within 1 second (SPEC-04 r9). A cat
+    /// that finished its task meows as it goes.
     func fade(id: String, immediately: Bool = false) {
         guard let cursor = cursors.removeValue(forKey: id), let byPanel = layers.removeValue(forKey: id) else { return }
-        let island = cursor.kind == .ghost && !CursorMotion.reduceMotion ? self.island(near: cursor.position) : nil
+        // A cat that finished its task meows as it heads home.
+        if !immediately, cursor.state == .done { sounds.meow() }
+        let island = !CursorMotion.reduceMotion ? self.island(near: cursor.position) : nil
         if let island { island.open(for: CursorMotion.longestMove * 0.6) }
         for (panelId, layer) in byPanel {
             if immediately {

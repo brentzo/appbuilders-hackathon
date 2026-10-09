@@ -180,4 +180,20 @@ struct CursorOverlayTests {
         overlay.apply(.spawn(SpawnCursor(cursorId: "main", cursorKind: .main)))
         #expect(changed.get())
     }
+
+    final class NoSounds {}
+
+    @Test func aMeowAtMostEveryOneAndAHalfSecondsAndOnlyWithSoundsOn() throws {
+        let suite = "ph.appbuilders.yumi.tests.sounds.\(UUID().uuidString.prefix(8))"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        // The test bundle has no sound file, so nothing plays during the tests.
+        let sounds = CatSounds(defaults: defaults, bundle: Bundle(for: NoSounds.self))
+        let start = Date()
+        #expect(sounds.meow(now: start), "on by default")
+        #expect(!sounds.meow(now: start.addingTimeInterval(0.4)), "three ghosts finishing together give one meow")
+        #expect(sounds.meow(now: start.addingTimeInterval(1.6)))
+        defaults.set(false, forKey: CatSounds.playSoundsKey)
+        #expect(!sounds.meow(now: start.addingTimeInterval(5)))
+    }
 }
