@@ -41,7 +41,7 @@ Android Whisper is p1 in SPEC-01 and SPEC-10, so its phone-specific benchmark is
 
 - [ ] **OBJ-11.1** Record about 20 real Taglish goals from the team, with consent, including names, numbers, and app names. Store them in the team's shared storage, not in git.
 - [ ] **OBJ-11.2** Write the correct transcript for each and commit the transcripts to `models/whisper/transcripts/`.
-- [x] **OBJ-11.3** Write a script that runs each selected option (small, medium, large-v3-turbo, large-v3, and any compatible Tagalog fine-tune worth testing) through both Mac runtimes: WhisperKit and whisper.cpp. The runner uses their local HTTP servers so each model stays loaded across samples.
+- [x] **OBJ-11.3** Write a script that evaluates one selected model against a preloaded local endpoint, supporting both Mac runtimes: WhisperKit and whisper.cpp. Run it once per selected model/runtime combination when Mac access and recordings are available.
 - [ ] **OBJ-11.4** Measure word error rate and warm end-of-speech-to-transcript latency for every Mac combination. Also run about 10 plain English commands to decide whether Whisper alone is fast enough for English on the Mac under SPEC-01 requirements 2 and 3.
 - [ ] **OBJ-11.5** Measure memory on the Mac while Qwen3.5-9B and the wake word model are also loaded. Use the peak memory recorded in [OBJ-26](OBJ-26-gui-smoke-test.md) if it is done.
 - [ ] **OBJ-11.6** Check confirmed model sizes against the estimates in SPEC-01 and correct the table if they differ.

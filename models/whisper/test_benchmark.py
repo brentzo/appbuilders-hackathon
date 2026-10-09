@@ -27,12 +27,14 @@ class BenchmarkTests(unittest.TestCase):
         self.assertEqual(benchmark.word_error_rate("open Spotify", "open Safari"), (1, 2))
 
     def test_cli_posts_audio_and_records_transcript_latency_and_wer(self):
-        received = {}
+        received = []
 
         class Handler(BaseHTTPRequestHandler):
             def do_POST(self):
-                received["path"] = self.path
-                received["body"] = self.rfile.read(int(self.headers["Content-Length"]))
+                received.append({
+                    "path": self.path,
+                    "body": self.rfile.read(int(self.headers["Content-Length"])),
+                })
                 body = json.dumps({"text": "pakihanap yung resume"}).encode()
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
@@ -79,12 +81,14 @@ class BenchmarkTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
                 saved = json.loads(output.read_text(encoding="utf-8"))
                 row = saved["samples"][0]
-                self.assertEqual(received["path"], "/v1/audio/transcriptions")
-                self.assertIn(b"FAKE_AUDIO", received["body"])
+                self.assertEqual(len(received), 2, "one warm-up request plus one measured request")
+                self.assertTrue(all(call["path"] == "/v1/audio/transcriptions" for call in received))
+                self.assertTrue(all(b"FAKE_AUDIO" in call["body"] for call in received))
                 self.assertEqual(row["transcript"], "pakihanap yung resume")
                 self.assertGreaterEqual(row["latency_ms"], 0)
                 self.assertEqual(row["word_errors"], 0)
                 self.assertEqual(saved["summary"]["taglish"]["wer"], 0)
+                self.assertEqual(saved["summary"]["english"]["samples"], 0)
         finally:
             server.shutdown()
             server.server_close()

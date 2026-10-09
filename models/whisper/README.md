@@ -16,7 +16,7 @@ The audio directory is passed separately, so shared-storage paths and recordings
 ## Run
 
 Start one runtime with one model loaded and bound to localhost.
-The runner submits each clip sequentially and records per-request latency after the model is loaded.
+The runner submits the first clip once as a warm-up, then submits every clip sequentially and records per-request latency after the model is warm.
 It also reports corpus WER by language group.
 
 WhisperKit's official CLI supports a local OpenAI-compatible transcription server.
@@ -51,7 +51,8 @@ python3 models/whisper/benchmark.py \
 ```
 
 For whisper.cpp, set `--runtime whisper.cpp` and the `/inference` endpoint.
-The report stores per-clip references, transcripts, WER edit counts, and latency, plus group totals.
+The report stores per-clip references, transcripts, WER edit counts, and latency, plus Taglish and English totals.
+An unused group appears with a sample count of zero and no WER or latency value.
 The report does not measure peak memory; record that separately while the Mac brain and wake-word model are loaded.
 Treat results as local until the transcripts are reviewed and consent to commit them is confirmed.
 

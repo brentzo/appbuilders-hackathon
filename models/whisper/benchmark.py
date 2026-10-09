@@ -140,7 +140,18 @@ def summarize(samples):
     for sample in samples:
         groups[sample["group"]].append(sample)
     summary = {}
-    for name, rows in groups.items():
+    for name in ("taglish", "english"):
+        rows = groups[name]
+        if not rows:
+            summary[name] = {
+                "samples": 0,
+                "word_errors": 0,
+                "reference_words": 0,
+                "wer": None,
+                "mean_latency_ms": None,
+                "median_latency_ms": None,
+            }
+            continue
         errors = sum(row["word_errors"] for row in rows)
         reference_words = sum(row["reference_words"] for row in rows)
         summary[name] = {
@@ -170,6 +181,8 @@ def main():
         parser.error("--timeout must be greater than zero")
     validate_endpoint(args.endpoint)
     entries = load_manifest(args.manifest, args.audio_dir)
+    first = entries[0]
+    transcribe(args.endpoint, args.runtime, args.model, args.language, first["audio_path"], args.timeout)
     samples = []
     for item in entries:
         transcript, latency_ms = transcribe(

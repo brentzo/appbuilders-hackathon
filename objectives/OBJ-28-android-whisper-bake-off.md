@@ -43,12 +43,14 @@ This objective measures whisper.cpp on the 12 GB demo phone with the Android p1 
 - [ ] **OBJ-28.1** Reuse the consented Taglish corpus and add phone recordings only if they are needed to cover the device's microphone and noise conditions.
 - [ ] **OBJ-28.2** Run the selected Whisper options through whisper.cpp on the 12 GB demo phone, recording WER and warm end-of-speech-to-transcript latency.
 - [ ] **OBJ-28.3** Measure peak memory and latency with Qwen3.5-4B loaded as specified by SPEC-10 Part B.
-- [ ] **OBJ-28.4** Choose the smallest option whose errors do not change what Yumi repeats back, record its source and checksum, and update SPEC-01 and the models manifest.
+- [ ] **OBJ-28.4** Choose the smallest option whose errors do not change what Yumi repeats back and update SPEC-01 and the models manifest.
+- [ ] **OBJ-28.5** Confirm the selected model variant is supported by the Android whisper.cpp build, then record its license, download source, and checksum in the models manifest.
 
 ## Expectations
 
 - [ ] Results use real, consented Taglish recordings and include any skipped option with a reason.
 - [ ] The selected model fits alongside Qwen3.5-4B on the 12 GB demo phone.
+- [ ] Model variants, licenses, and checksums are recorded in the models manifest.
 - [ ] SPEC-01's Android p1 Whisper choice is resolved.
 - [ ] No voice recordings are committed.
 
