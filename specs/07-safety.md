@@ -213,6 +213,24 @@ Feature: Action log
     Then it shows "Read 3 files and clicked 12 times"
 ```
 
+## Draft copy
+
+Draft for Patrick's review, written 2026-10-09 in the style of the copy above.
+Until it is reviewed, objectives may build against it but must not treat it as final.
+`{names}` lists recipients from the real To field: "Ana", "Ana and Ben", "Ana, Ben, and Carla", or for more than 3, "Ana, Ben, and 3 others".
+
+| Moment | What the user hears and sees | Buttons |
+|---|---|---|
+| Asking the user to type a password ([SPEC-05](05-mac-gui-control.md) requirement 7) | "This needs your password, so please type it yourself. I won't read it. Tell me when you're done." | Done, Stop |
+| Declined email send | "Okay, I didn't send it. The draft is still there if you want to change anything." | none |
+| Delete card with one file | "I'm about to move old-invoice.pdf from Downloads to the Trash. Should I delete it?" | Delete, Don't delete |
+| Declined delete of one file | "Okay, I left the file alone. Want me to do anything else with it?" | none |
+| Delete card with files in several folders | "I'm about to move 12 files from 3 folders to the Trash, starting with old-invoice.pdf in Downloads. Should I delete them?" The card lists the first 5 names, each with its folder, and "and 7 more". | Delete, Don't delete |
+| Sending in Messages | "I'm about to send this message to Ana. Should I send it?" | Send, Don't send |
+| Declined Messages send | "Okay, I didn't send it. The message is still there if you want to change anything." | none |
+| Email to several recipients | "I'm about to send this email to {names}. Should I send it?" | Send, Don't send |
+| Email with Cc recipients | "I'm about to send this email to {names}, with a copy to {cc names}. Should I send it?" | Send, Don't send |
+
 ## Decisions
 
 - Permission levels: reading and writing are allowed, sending and deleting ask every time, destructive and dangerous actions are blocked.
@@ -225,4 +243,5 @@ Feature: Action log
 
 ## Open questions
 
+- Review the "Draft copy" table and make it final or change it.
 - Clicks in risky apps: with the rule above, every click in Mail whose label is not on a list asks, including "New Message" and attaching a file. Demo task 2 in [SPEC-05](05-mac-gui-control.md) drafts and attaches in Mail and asks only before Send. Options: (a) a short per-app list of safe labels for risky apps, such as "New Message" and "Attach" in Mail; (b) ask only for unclassified key presses in risky apps, and allow unlisted clicks. Recommendation: (a), so the demo asks only before Send while risky apps stay strict.

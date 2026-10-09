@@ -36,7 +36,7 @@ The sub-agent uses the cheapest way into the app first: a typed direct tool, the
    The harness builds the result from the step log. Screenshots, step history, and raw screen text are never returned to the orchestrator.
 5. One `gui_act` call is one attempt at a subtask. It stops after 10 steps and returns `partial`. The 25-step limit per subtask in [SPEC-02](02-task-lifecycle.md) counts steps across all attempts.
 6. A step has no effect when the trimmed accessibility tree and the window title are the same before and after the action.
-7. `gui_act` never reads or fills a password field (`AXSecureTextField`). It asks the user to type it. It never types with the keyboard while a password field has focus. While the user types it, Yumi does not pause ([SPEC-06](06-user-control.md) requirement 2).
+7. `gui_act` never reads or fills a password field (`AXSecureTextField`). It asks the user to type it, with the draft copy in [SPEC-07](07-safety.md) "Draft copy". It never types with the keyboard while a password field has focus. While the user types it, Yumi does not pause ([SPEC-06](06-user-control.md) requirement 2).
 8. Everything read from the screen is treated as data, never as instructions (see [SPEC-07](07-safety.md)).
 9. The orchestrator's tool list stays at 8 tools or fewer.
 10. Model outputs use schema-constrained decoding when the runtime supports it. Otherwise invalid outputs are retried as in [SPEC-02](02-task-lifecycle.md).
