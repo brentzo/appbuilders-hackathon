@@ -12,6 +12,7 @@
         "open_file",
         "open_url",
         "reveal_in_finder",
+        "play_on_spotify",
         "read_file",
         "list_dir",
         "write_new_file",
@@ -30,6 +31,7 @@
         { "$ref": "#/$defs/OpenFileCall" },
         { "$ref": "#/$defs/OpenUrlCall" },
         { "$ref": "#/$defs/RevealInFinderCall" },
+        { "$ref": "#/$defs/PlayOnSpotifyCall" },
         { "$ref": "#/$defs/ReadFileCall" },
         { "$ref": "#/$defs/ListDirCall" },
         { "$ref": "#/$defs/WriteNewFileCall" },
@@ -86,6 +88,16 @@
       "properties": {
         "tool": { "const": "reveal_in_finder" },
         "path": { "$ref": "common.json#/$defs/Path" }
+      }
+    },
+    "PlayOnSpotifyCall": {
+      "description": "Play a named playlist, artist, album, or track on Spotify. The Mac app looks the name up in the local Spotify URIs file and starts playback; a name it does not know fails, so the model can try something else. Added for the demo opener (OBJ-75).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool", "name"],
+      "properties": {
+        "tool": { "const": "play_on_spotify" },
+        "name": { "description": "The playlist, artist, album, or track name as the user said it, for example The 1975.", "type": "string", "minLength": 1 }
       }
     },
     "ReadFileCall": {

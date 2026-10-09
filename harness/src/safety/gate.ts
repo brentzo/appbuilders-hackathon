@@ -241,6 +241,9 @@ function checkTool(call: ToolCall, home: string): Verdict {
       return checkOpenFile(call.path, call.bundleId, home);
     case "reveal_in_finder":
       return checkPath(call.tool, call.path, home, "entry", "revealInFinder");
+    case "play_on_spotify":
+      // Playing audio on Spotify is benign; the name is looked up in a local map, never a script.
+      return { rule: "openApp" };
     case "read_file":
       return checkPath(call.tool, call.path, home, "target", "readFile");
     case "list_dir":

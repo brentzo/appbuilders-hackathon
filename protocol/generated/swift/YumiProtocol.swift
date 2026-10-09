@@ -1681,6 +1681,16 @@ public struct PlannedSubtask: Codable, Equatable, Sendable {
     }
 }
 
+/// Play a named playlist, artist, album, or track on Spotify. The Mac app looks the name up in the local Spotify URIs file and starts playback; a name it does not know fails, so the model can try something else. Added for the demo opener (OBJ-75).
+public struct PlayOnSpotifyCall: Codable, Equatable, Sendable {
+    /// The playlist, artist, album, or track name as the user said it, for example The 1975.
+    public var name: String
+
+    public init(name: String) {
+        self.name = name
+    }
+}
+
 public struct ProbeAppCapabilityParams: Codable, Equatable, Sendable {
     /// Use the bundle id the Mac app reports (WindowInfo.bundleId from listWindows), never one from memory: the same app can change id between versions, for example com.apple.Keynote for current Keynote and com.apple.iWork.Keynote for older ones.
     public var bundleId: String
@@ -2484,6 +2494,7 @@ public enum ToolCall: Codable, Equatable, Sendable {
     case openFile(OpenFileCall)
     case openUrl(OpenUrlCall)
     case revealInFinder(RevealInFinderCall)
+    case playOnSpotify(PlayOnSpotifyCall)
     case readFile(ReadFileCall)
     case listDir(ListDirCall)
     case writeNewFile(WriteNewFileCall)
@@ -2504,6 +2515,7 @@ public enum ToolCall: Codable, Equatable, Sendable {
         case "open_file": self = .openFile(try OpenFileCall(from: decoder))
         case "open_url": self = .openUrl(try OpenUrlCall(from: decoder))
         case "reveal_in_finder": self = .revealInFinder(try RevealInFinderCall(from: decoder))
+        case "play_on_spotify": self = .playOnSpotify(try PlayOnSpotifyCall(from: decoder))
         case "read_file": self = .readFile(try ReadFileCall(from: decoder))
         case "list_dir": self = .listDir(try ListDirCall(from: decoder))
         case "write_new_file": self = .writeNewFile(try WriteNewFileCall(from: decoder))
@@ -2530,6 +2542,9 @@ public enum ToolCall: Codable, Equatable, Sendable {
             try value.encode(to: encoder)
         case .revealInFinder(let value):
             try container.encode("reveal_in_finder", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .playOnSpotify(let value):
+            try container.encode("play_on_spotify", forKey: .discriminator)
             try value.encode(to: encoder)
         case .readFile(let value):
             try container.encode("read_file", forKey: .discriminator)
@@ -2596,6 +2611,7 @@ public enum ToolName: String, Codable, Equatable, Sendable, CaseIterable {
     case openFile = "open_file"
     case openUrl = "open_url"
     case revealInFinder = "reveal_in_finder"
+    case playOnSpotify = "play_on_spotify"
     case readFile = "read_file"
     case listDir = "list_dir"
     case writeNewFile = "write_new_file"

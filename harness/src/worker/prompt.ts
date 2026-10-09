@@ -41,6 +41,8 @@ const TOOL_CALLS: Readonly<Record<ToolName, string>> = {
   open_file: '{"tool": "open_file", "path": "~/Documents/Report.key"} opens a file in its app.',
   open_url: '{"tool": "open_url", "url": "https://example.com"} opens a web page in the browser.',
   reveal_in_finder: '{"tool": "reveal_in_finder", "path": "~/Downloads"} shows a folder, or a file in its folder, in Finder.',
+  play_on_spotify:
+    '{"tool": "play_on_spotify", "name": "The 1975"} plays a named playlist, artist, album, or track on Spotify. Use it for any "play X on Spotify" goal instead of clicking through Spotify.',
   read_file: '{"tool": "read_file", "path": "~/Documents/notes.txt"} reads a file.',
   list_dir: '{"tool": "list_dir", "path": "~/Documents"} lists a folder.',
   write_new_file: '{"tool": "write_new_file", "path": "~/Documents/new.txt", "content": "..."} creates a new file.',

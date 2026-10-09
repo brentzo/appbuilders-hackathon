@@ -1,4 +1,5 @@
 import AppKit
+import CoreGraphics
 import YumiProtocol
 
 /// The typed direct tools the Mac app runs (OBJ-39.6, SPEC-05 r1): `open_app`, `open_file`,
@@ -11,6 +12,7 @@ enum DirectTools {
         case fileNotFound
         case badURL
         case couldNotOpen
+        case nothingToPlay
     }
 
     /// Runs the tool and returns one line saying what happened, for the step log.
@@ -48,6 +50,8 @@ enum DirectTools {
             }
             NSWorkspace.shared.activateFileViewerSelecting([url])
             return "Showed \(url.lastPathComponent) in Finder."
+        case .playOnSpotify(let request):
+            return try await playOnSpotify(request.name)
         default:
             // File tools, the Trash and the phone are the harness's (OBJ-37, OBJ-40).
             throw Failure.couldNotOpen
@@ -57,9 +61,47 @@ enum DirectTools {
     /// Whether this app runs the tool, as opposed to the harness.
     static func runsHere(_ call: ToolCall) -> Bool {
         switch call {
-        case .openApp, .openFile, .openUrl, .revealInFinder: true
+        case .openApp, .openFile, .openUrl, .revealInFinder, .playOnSpotify: true
         default: false
         }
+    }
+
+    /// Plays a named playlist, artist, album, or track on Spotify, without AppleScript (SPEC-07 r3).
+    /// Spotify cannot turn a name into a URI, so the name is looked up in
+    /// `~/Library/Application Support/Yumi/spotify.json`, a plain map of name to `spotify:` URI. The
+    /// URI is opened (which loads the item but does not start it), then a space starts playback. A
+    /// name that is not in the map fails, so the model falls back to something else (OBJ-75).
+    private static func playOnSpotify(_ name: String) async throws -> String {
+        guard let uri = spotifyURI(for: name), let url = URL(string: uri) else { throw Failure.nothingToPlay }
+        guard NSWorkspace.shared.open(url) else { throw Failure.couldNotOpen }
+        try? await Task.sleep(for: .seconds(1.5))
+        pressSpace()
+        return "Playing \(name) on Spotify."
+    }
+
+    /// A space keystroke, tagged so the take-over watcher knows it is Yumi's (SPEC-06 r3).
+    private static func pressSpace() {
+        let source = CGEventSource(stateID: .hidSystemState)
+        source?.userData = KeystrokeSender.eventTag
+        for down in [true, false] {
+            let event = CGEvent(keyboardEventSource: source, virtualKey: 49, keyDown: down)
+            event?.setIntegerValueField(.eventSourceUserData, value: KeystrokeSender.eventTag)
+            event?.post(tap: .cghidEventTap)
+        }
+    }
+
+    /// The `spotify:` URI saved for a name, compared without case or surrounding space.
+    static func spotifyURI(for name: String) -> String? {
+        spotifyMap()[name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()]
+    }
+
+    /// The local name-to-URI map. Missing or unreadable means nothing is known, so nothing plays.
+    static func spotifyMap() -> [String: String] {
+        let url = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
+            .appendingPathComponent("Yumi/spotify.json")
+        guard let url, let data = try? Data(contentsOf: url),
+              let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: String] else { return [:] }
+        return Dictionary(object.map { ($0.key.lowercased(), $0.value) }, uniquingKeysWith: { $1 })
     }
 
     static func appURL(bundleId: String?, name: String?) throws -> URL {

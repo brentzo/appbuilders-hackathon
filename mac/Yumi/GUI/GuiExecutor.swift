@@ -348,6 +348,7 @@ final class GuiExecutor {
             case .appNotFound: "That app is not on this Mac."
             case .fileNotFound: "That file or folder does not exist."
             case .badURL: "That is not a web link."
+            case .nothingToPlay: "There is no Spotify item saved for that name."
             case .couldNotOpen: "macOS did not open it."
             }
             return Self.result(.error, text)

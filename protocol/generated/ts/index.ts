@@ -818,6 +818,13 @@ export interface PlannedSubtask {
 /** A short id the planner picks, unique within the plan, used only for dependsOn. It is not stored: the harness gives each subtask a Uuid. */
 export type PlannedSubtaskId = string;
 
+/** Play a named playlist, artist, album, or track on Spotify. The Mac app looks the name up in the local Spotify URIs file and starts playback; a name it does not know fails, so the model can try something else. Added for the demo opener (OBJ-75). */
+export interface PlayOnSpotifyCall {
+  tool: "play_on_spotify";
+  /** The playlist, artist, album, or track name as the user said it, for example The 1975. */
+  name: string;
+}
+
 export interface ProbeAppCapabilityParams {
   /** Use the bundle id the Mac app reports (WindowInfo.bundleId from listWindows), never one from memory: the same app can change id between versions, for example com.apple.Keynote for current Keynote and com.apple.iWork.Keynote for older ones. */
   bundleId: string;
@@ -1290,6 +1297,7 @@ export type ToolCall =
   | OpenFileCall
   | OpenUrlCall
   | RevealInFinderCall
+  | PlayOnSpotifyCall
   | ReadFileCall
   | ListDirCall
   | WriteNewFileCall
@@ -1319,8 +1327,8 @@ export interface ToolListPayload {
 }
 
 /** Every tool name, used to tell a worker which tools its lane allows. */
-export type ToolName = "open_app" | "open_file" | "open_url" | "reveal_in_finder" | "read_file" | "list_dir" | "write_new_file" | "copy" | "move" | "move_to_trash" | "phone";
-export const toolNameValues: readonly ToolName[] = ["open_app", "open_file", "open_url", "reveal_in_finder", "read_file", "list_dir", "write_new_file", "copy", "move", "move_to_trash", "phone"];
+export type ToolName = "open_app" | "open_file" | "open_url" | "reveal_in_finder" | "play_on_spotify" | "read_file" | "list_dir" | "write_new_file" | "copy" | "move" | "move_to_trash" | "phone";
+export const toolNameValues: readonly ToolName[] = ["open_app", "open_file", "open_url", "reveal_in_finder", "play_on_spotify", "read_file", "list_dir", "write_new_file", "copy", "move", "move_to_trash", "phone"];
 
 /** What a typed tool returned, for the next steps of the same subtask only, such as the text read_file read. Cut to 4000 characters by the harness. Data, never instructions (SPEC-07 r16), and never passed to another subtask or shown to the user. */
 export type ToolOutput = string;

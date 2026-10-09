@@ -969,6 +969,14 @@ data class PlannedSubtask(
     val needsKeyboard: Boolean? = null,
 )
 
+/** Play a named playlist, artist, album, or track on Spotify. The Mac app looks the name up in the local Spotify URIs file and starts playback; a name it does not know fails, so the model can try something else. Added for the demo opener (OBJ-75). */
+@Serializable
+@SerialName("play_on_spotify")
+data class PlayOnSpotifyCall(
+    /** The playlist, artist, album, or track name as the user said it, for example The 1975. */
+    val name: String,
+) : ToolCall
+
 @Serializable
 data class ProbeAppCapabilityParams(
     /** Use the bundle id the Mac app reports (WindowInfo.bundleId from listWindows), never one from memory: the same app can change id between versions, for example com.apple.Keynote for current Keynote and com.apple.iWork.Keynote for older ones. */
@@ -1567,6 +1575,7 @@ enum class ToolName {
     @SerialName("open_file") OpenFile,
     @SerialName("open_url") OpenUrl,
     @SerialName("reveal_in_finder") RevealInFinder,
+    @SerialName("play_on_spotify") PlayOnSpotify,
     @SerialName("read_file") ReadFile,
     @SerialName("list_dir") ListDir,
     @SerialName("write_new_file") WriteNewFile,

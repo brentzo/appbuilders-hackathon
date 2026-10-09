@@ -71,7 +71,7 @@ import {
  */
 
 /** The direct tools `gui_act` offers its worker (SPEC-05 r1). They run in the Mac app. */
-export const GUI_TOOLS: readonly ToolName[] = ["open_app", "open_file", "open_url", "reveal_in_finder"];
+export const GUI_TOOLS: readonly ToolName[] = ["open_app", "open_file", "open_url", "reveal_in_finder", "play_on_spotify"];
 
 /** Steps per attempt (SPEC-05 r5). Reaching it ends the attempt with `partial`. */
 export const STEPS_PER_ATTEMPT = 10;
