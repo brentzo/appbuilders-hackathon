@@ -9,15 +9,42 @@ struct OverlayCursor: Equatable {
     let kind: CursorKind
     var state: CursorState
     var label: String?
+    /// What the cursor is doing right now, shown after the label. The protocol has no field for
+    /// it yet, so it stays nil and the bubble falls back to a word for the state.
+    var step: String?
+    /// While the user speaks, the words heard so far, shown instead of the label.
+    var transcript: String?
     /// The main cat is ginger; ghosts are littermates in their own coat (SPEC-04 r15).
     var palette: CatPalette = .ginger
     var position: CGPoint
 
     /// A ghost's color, for its label; nil for the main cursor.
     var accent: NSColor? { palette == .ginger ? nil : palette.fur }
+
+    /// The speech bubble's text: the live transcript while the user speaks, otherwise the task
+    /// and its current step ("Fill expense form · typing the amount"). Nil hides the bubble.
+    var bubbleText: String? {
+        if let transcript, !transcript.isEmpty { return transcript }
+        guard let label, !label.isEmpty else { return nil }
+        guard let detail = step ?? state.bubbleWord else { return label }
+        return "\(label) · \(detail)"
+    }
 }
 
 extension CursorState {
+    /// A few words for the bubble when no step text is known.
+    var bubbleWord: String? {
+        switch self {
+        case .idle, .moving, .acting: nil
+        case .listening: "listening"
+        case .thinking: "thinking"
+        case .waitingForUser: "waiting for you"
+        case .paused: "paused"
+        case .done: "done"
+        case .stuck: "stuck"
+        }
+    }
+
     /// The SF Symbol shown in the state badge, next to the cat's pose for the state.
     var badgeSymbol: String? {
         switch self {

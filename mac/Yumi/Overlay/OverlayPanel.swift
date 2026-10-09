@@ -3,9 +3,12 @@ import AppKit
 /// One borderless, transparent, click-through panel covering one display (OBJ-18.1).
 final class OverlayPanel: NSPanel {
     let screenFrame: CGRect
+    /// The display without the menu bar and the Dock.
+    let visibleFrame: CGRect
 
     init(screen: NSScreen) {
         screenFrame = screen.frame
+        visibleFrame = screen.visibleFrame
         super.init(contentRect: screen.frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         isOpaque = false
         backgroundColor = .clear

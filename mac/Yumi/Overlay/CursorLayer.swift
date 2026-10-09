@@ -4,7 +4,7 @@ import YumiProtocol
 
 /// The drawing for one cursor on one display: the Yumi cat in its pose for the cursor state, in
 /// its palette (ginger for the main cursor, a littermate's coat for a ghost), a state badge, and a
-/// label pill. Static poses with small Core Animation motion stand in for the Rive cat (OBJ-19).
+/// speech bubble. Static poses with small Core Animation motion stand in for the Rive cat (OBJ-19).
 ///
 /// The layer's position is the click point: the spot between the cat's front paws (SPEC-04 r13).
 final class CursorLayer {
@@ -13,8 +13,9 @@ final class CursorLayer {
     private let cat = CALayer()
     private let badge = CALayer()
     private let badgeIcon = CALayer()
-    private let labelPill = CALayer()
-    private let labelText = CATextLayer()
+    private let bubble = CursorBubble()
+    /// Set by the overlay when there is no room above the cat on its display.
+    var bubbleBelow = false
 
     /// The whole pose image on screen, in points. Matches POINTS in mac/scripts/render-cursor-cat.py.
     static let catSize = CGSize(width: 48, height: 48)
@@ -56,18 +57,19 @@ final class CursorLayer {
         badgeIcon.contentsGravity = .resizeAspect
         badge.addSublayer(badgeIcon)
 
-        labelPill.cornerRadius = 10
-        labelPill.borderWidth = 1
-        labelPill.isHidden = true
-        labelText.fontSize = 12
-        labelText.font = NSFont.systemFont(ofSize: 12, weight: .semibold)
-        labelText.alignmentMode = .left
-        labelText.truncationMode = .end
-        labelPill.addSublayer(labelText)
-
         root.addSublayer(cat)
         root.addSublayer(badge)
-        root.addSublayer(labelPill)
+        root.addSublayer(bubble.layer)
+    }
+
+    /// The bubble's tail tip: just over the cat's head, or just under the paws.
+    static let bubbleAnchorAbove = CGPoint(x: catSize.width * (0.5 - hotspot.x), y: catSize.height * hotspot.y + 4)
+    static let bubbleAnchorBelow = CGPoint(x: 0, y: -4)
+
+    /// Whether a bubble with `text` over a cat at `point` (global) would leave the top of `visible`.
+    static func bubbleNeedsFlip(_ text: String?, at point: CGPoint, visible: CGRect) -> Bool {
+        guard let text else { return false }
+        return point.y + bubbleAnchorAbove.y + CursorBubble.height(for: text) > visible.maxY
     }
 
     /// Cards and chips on paper (design token `surface`).
@@ -77,9 +79,10 @@ final class CursorLayer {
 
     /// Sharp at every display scale: poses, text, and icons drawn at the display's scale.
     func setScale(_ scale: CGFloat) {
-        for layer in [root, cat, badge, badgeIcon, labelPill, labelText] as [CALayer] {
+        for layer in [root, cat, badge, badgeIcon] as [CALayer] {
             layer.contentsScale = scale
         }
+        bubble.setScale(scale)
         if let shownPalette, let shownState {
             cat.contents = shownPalette.image(for: shownState)?.layerContents(forContentsScale: scale)
         }
@@ -119,23 +122,16 @@ final class CursorLayer {
         badge.isHidden = badgeImage == nil
         badgeIcon.contents = badgeImage.flatMap { image(for: $0, scale: scale) }
 
-        if let label = cursor.label, !label.isEmpty {
-            // Ghost labels wear the ghost's fur; the main cursor's label sits on surface.
-            let ghost = cursor.palette != .ginger
-            labelPill.backgroundColor = (ghost ? cursor.palette.fur : Self.surface).cgColor
-            labelPill.borderColor = (ghost ? cursor.palette.labelText.withAlphaComponent(0.25) : cursor.palette.fur).cgColor
-            labelText.foregroundColor = cursor.palette.labelText.cgColor
-            labelText.string = label
-            let size = (label as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 12, weight: .semibold)])
-            let width = min(ceil(size.width) + 20, 240)
-            // Under the paws, starting a little left of the click point.
-            labelPill.frame = CGRect(x: -12, y: -28, width: width, height: 20)
-            labelText.frame = CGRect(x: 10, y: 2, width: width - 20, height: 16)
-            labelPill.isHidden = false
-        } else {
-            labelPill.isHidden = true
-        }
         CATransaction.commit()
+
+        // Ghost bubbles wear the ghost's fur; the main cursor's sits on surface.
+        let ghost = cursor.palette != .ginger
+        bubble.show(
+            cursor.bubbleText, anchor: bubbleBelow ? Self.bubbleAnchorBelow : Self.bubbleAnchorAbove, below: bubbleBelow,
+            fill: ghost ? cursor.palette.fur : Self.surface,
+            edge: ghost ? cursor.palette.labelText.withAlphaComponent(0.25) : cursor.palette.fur,
+            textColor: cursor.palette.labelText, live: cursor.transcript != nil
+        )
 
         if stateChanged { animate(state) }
     }

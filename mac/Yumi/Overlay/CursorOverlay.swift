@@ -117,6 +117,7 @@ final class CursorOverlay {
             CATransaction.commit()
             layer.root.removeAnimation(forKey: Self.spawnPath)
             layer.root.add(Self.leap(from: start, to: end, duration: duration), forKey: "move")
+            draw(cursor, with: layer, on: panel)
         }
         return duration
     }
@@ -134,8 +135,17 @@ final class CursorOverlay {
         change(&cursor)
         cursors[id] = cursor
         for panel in panels {
-            layers[id]?[ObjectIdentifier(panel)]?.apply(cursor, scale: panel.backingScaleFactor)
+            guard let layer = layers[id]?[ObjectIdentifier(panel)] else { continue }
+            draw(cursor, with: layer, on: panel)
         }
+    }
+
+    /// Redraws a cursor, with its bubble below the paws when there is no room for it above on the
+    /// display where the cursor rests.
+    private func draw(_ cursor: OverlayCursor, with layer: CursorLayer, on panel: OverlayPanel) {
+        let home = panels.first { $0.screenFrame.contains(cursor.position) } ?? panel
+        layer.bubbleBelow = CursorLayer.bubbleNeedsFlip(cursor.bubbleText, at: cursor.position, visible: home.visibleFrame)
+        layer.apply(cursor, scale: panel.backingScaleFactor)
     }
 
     /// Ghosts leap back into the island and vanish; the main cat fades where it is. Either way
@@ -287,7 +297,7 @@ final class CursorOverlay {
         let layer = CursorLayer()
         layer.setScale(panel.backingScaleFactor)
         layer.root.position = panel.local(cursor.position)
-        layer.apply(cursor, scale: panel.backingScaleFactor)
+        draw(cursor, with: layer, on: panel)
         panel.rootLayer.addSublayer(layer.root)
         layers[cursor.id, default: [:]][ObjectIdentifier(panel)] = layer
         guard let arrival else { return }
@@ -323,6 +333,7 @@ final class CursorOverlay {
             MainActor.assumeIsolated {
                 guard let self, let layer, let current = self.cursors[id] else { return }
                 layer.endPose(current, scale: panel.backingScaleFactor)
+                self.draw(current, with: layer, on: panel)
             }
         }
     }

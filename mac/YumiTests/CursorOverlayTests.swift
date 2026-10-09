@@ -110,4 +110,63 @@ struct CursorOverlayTests {
             #expect(steps.last! < middle / 10, "soft landing: \(steps.last!) vs \(middle)")
         }
     }
+
+    @Test func theBubbleShowsTheTaskAndStepAndFlipsBelowNearTheTop() throws {
+        var cursor = OverlayCursor(id: "g1", kind: .ghost, state: .acting, label: "Fill expense form", palette: .mint, position: CGPoint(x: 400, y: 400))
+        #expect(cursor.bubbleText == "Fill expense form")
+        cursor.step = "typing the amount"
+        #expect(cursor.bubbleText == "Fill expense form · typing the amount")
+        cursor.step = nil
+        cursor.state = .waitingForUser
+        #expect(cursor.bubbleText == "Fill expense form · waiting for you", "the state stands in for the step")
+        cursor.transcript = "export my keynote"
+        #expect(cursor.bubbleText == "export my keynote", "what the user says comes first")
+
+        // At most two lines and 240 points wide.
+        let long = String(repeating: "Rename the invoices in Downloads by client ", count: 4)
+        let card = CursorBubble.cardSize(for: long)
+        #expect(card.width <= CursorBubble.maxWidth)
+        #expect(card.height < CursorBubble.cardSize(for: "Hi").height * 2)
+
+        // Above the cat in the middle of the screen; below the paws right under the top edge.
+        let visible = CGRect(x: 0, y: 0, width: 1440, height: 870)
+        #expect(!CursorLayer.bubbleNeedsFlip("Export the deck", at: CGPoint(x: 700, y: 400), visible: visible))
+        #expect(CursorLayer.bubbleNeedsFlip("Export the deck", at: CGPoint(x: 700, y: 850), visible: visible))
+
+        // Optional picture for a human: TEST_RUNNER_YUMI_RENDER_DIR=<dir> writes the bubbles as PNG.
+        if let directory = ProcessInfo.processInfo.environment["YUMI_RENDER_DIR"] {
+            let samples: [(OverlayCursor, Bool)] = [
+                (OverlayCursor(id: "m", kind: .main, state: .thinking, label: "Export the deck", position: .zero), false),
+                (OverlayCursor(id: "a", kind: .ghost, state: .acting, label: "Fill expense form", step: "typing the amount", palette: .mint, position: .zero), false),
+                (OverlayCursor(id: "b", kind: .ghost, state: .moving, label: long, palette: .sky, position: .zero), false),
+                (OverlayCursor(id: "c", kind: .ghost, state: .waitingForUser, label: "Export the deck", palette: .slate, position: .zero), true),
+                (OverlayCursor(id: "t", kind: .main, state: .listening, transcript: "export my keynote deck as a", position: .zero), false),
+            ]
+            try render(samples, to: URL(fileURLWithPath: directory).appendingPathComponent("bubbles@2x.png"))
+        }
+    }
+
+    private func render(_ samples: [(OverlayCursor, Bool)], to file: URL) throws {
+        let cell = CGSize(width: 300, height: 170), scale: CGFloat = 2
+        let context = try #require(CGContext(
+            data: nil, width: Int(cell.width * CGFloat(samples.count) * scale), height: Int(cell.height * scale),
+            bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ))
+        context.scaleBy(x: scale, y: scale)
+        context.setFillColor(NSColor(srgbRed: 0.16, green: 0.17, blue: 0.2, alpha: 1).cgColor)
+        context.fill(CGRect(x: 0, y: 0, width: cell.width * CGFloat(samples.count), height: cell.height))
+        for (index, (cursor, below)) in samples.enumerated() {
+            let layer = CursorLayer()
+            layer.setScale(scale)
+            layer.bubbleBelow = below
+            layer.apply(cursor, scale: scale)
+            context.saveGState()
+            context.translateBy(x: cell.width * (CGFloat(index) + 0.5), y: below ? 110 : 45)
+            layer.root.render(in: context)
+            context.restoreGState()
+        }
+        let image = try #require(context.makeImage())
+        try NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:])?.write(to: file)
+    }
 }
