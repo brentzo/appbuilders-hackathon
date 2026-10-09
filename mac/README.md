@@ -135,6 +135,21 @@ Before any work starts, Yumi repeats the goal back ([OBJ-17](../objectives/OBJ-1
 - While a goal waits for its answer and no task is confirmed, `executeAction` does nothing.
 - Everything Yumi says goes through `SpeechOutput` (`SystemSpeech`, the system voice), including the harness's `speak` events and the tiling question.
 
+### Voice intake
+
+Push-to-talk turns speech into a goal on the Mac ([OBJ-15](../objectives/OBJ-15-mac-voice-intake.md)).
+
+- Hold the shortcut from settings (default ⌥Space) to talk, from any app, and release it to stop.
+  It is a Carbon hot key, so it needs no Accessibility permission.
+- While the microphone is on, the main cursor shows its listening state next to the pointer and the menu says "Yumi is listening".
+- The transcript goes to the harness with `HarnessLink.submitGoal`. Silence shows "Didn't catch speech", whose "Type instead" opens a box to type the goal.
+- Right after the repeat-back (and an approval card), the same path listens hands-free for the answer and stops after a short silence (`SpeechEndpoint`).
+- Recognizers, both on the device:
+  - Apple's: SpeechAnalyzer on macOS 26, which works with Siri and Dictation off and downloads its English model once; `SFSpeechRecognizer` forced on-device on macOS 15.
+  - Whisper large-v3-turbo through WhisperKit (`openai_whisper-large-v3-v20240930_turbo_632MB`), downloaded once to `~/Library/Application Support/Yumi/Models` and loaded when "I speak Taglish" is on.
+  - The rule is in `RecognizerRule`: "I speak Taglish" uses Whisper first, otherwise Apple's recognizer first; the other one is the fallback when the first fails, never when it heard silence.
+- Audio stays in memory and is dropped once transcribed.
+
 ### Approval cards and the Trash
 
 Sending and deleting ask every time ([OBJ-40](../objectives/OBJ-40-mac-approval-cards.md)).
@@ -231,6 +246,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 | `Yumi/GUI/` | Controlling other apps: the trimmed tree reader, element actions, tagged keystrokes, the direct tools, and the GUI debug window |
 | `Yumi/Approvals/` | Send and delete approval cards, their copy, and `moveToTrash` |
 | `Yumi/Control/` | The stop shortcut, the take-over watcher, the local stop, and the paused panel |
+| `Yumi/Voice/` | Voice intake: the push-to-talk hot key, the microphone, the recognizers and their rule, the silence endpoint, and the typed-goal box |
 | `Yumi/Confirmation/` | Goal confirmation: the repeat-back panel, the `speak` interface, and listening for the answer |
 | `Yumi/Tiling/` | Window tiling: the consent panel, the grid, and saving and restoring window frames |
 | `Yumi/Overlay/` | The click-through cursor overlay: panels per display, the placeholder cursor drawing, motion, helper chips, and the cursor debug actions |
@@ -245,15 +261,14 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
   The protocol has no method for settings yet.
 - Model readiness is a placeholder that is always unknown (`ModelReadiness`).
   The protocol cannot report it yet; this is open with the protocol and harness owners.
-- Error buttons whose feature comes in a later objective are shown disabled: for example "Try again", "Stop", and "Type instead".
+- Error buttons whose feature comes in a later objective are shown disabled: for example "Stop", and "Try again" outside "Didn't catch speech".
 - `showApprovalCard` and `moveToTrash` answer "method not found" until [OBJ-40](../objectives/OBJ-40-mac-approval-cards.md).
 - Cursors are a placeholder drawing (a black and white pointer, ghosts outlined in their color) until the Rive cat ([OBJ-19](../objectives/OBJ-19-rive-cat-cursor.md)).
 - A cursor moving to an element whose path does not resolve goes to the center of the target window, or the app's frontmost window.
 - Vision clicks (`clickAt`) are refused until the p1 vision fallback.
-- Spoken answers to the repeat-back and the tiling question wait for voice capture ([OBJ-15](../objectives/OBJ-15-mac-voice-intake.md)): `NoReplyListener` hears nothing, so the buttons are the only answer.
-  The tiling answer stays in the app: the protocol has no method to tell the harness.
+- The tiling question is answered with its buttons only, and its answer stays in the app: the protocol has no method to tell the harness.
 - Helper chips say "Helper working": the protocol's `routeDecided` event has no subtask title.
-- The status line follows task events. "Listening" waits for voice intake ([OBJ-15](../objectives/OBJ-15-mac-voice-intake.md)).
+- Whisper is large-v3-turbo until the bake-off ([OBJ-11](../objectives/OBJ-11-whisper-bake-off.md)) picks the Mac model.
 
 ## Specs
 
