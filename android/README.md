@@ -10,7 +10,9 @@ Owner: Brent.
 
 Status: app shell built ([OBJ-22](../objectives/OBJ-22-android-app-shell.md)): home screen with a placeholder cat, permission onboarding, settings, the foreground service, and the error presenter.
 Voice intake and the wake word work ([OBJ-24](../objectives/OBJ-24-android-voice-intake.md)), with Vosk spotting "Hey Yumi" ([OBJ-59](../objectives/OBJ-59-android-hey-yumi-vosk.md)) until OBJ-12's trained model exists.
-The bridge and the Rive cat are stand-ins until their objectives land.
+The phone pairs with the Mac and reaches the bridge ([OBJ-23](../objectives/OBJ-23-android-bridge-client.md)).
+For the demo ([OBJ-67](../objectives/OBJ-67-android-goal-routing.md), [OBJ-69](../objectives/OBJ-69-android-delegated-goal-screen.md)), the phone repeats a goal back, delegates the confirmed goal to the Mac, shows "Working on your Mac" with the current subtask and **Stop**, and speaks the summary.
+The Rive cat is a stand-in until OBJ-10 lands.
 
 ## Devices
 
@@ -109,6 +111,7 @@ If Yumi stops when the phone is locked, open Yumi's app settings from Yumi's Set
 
 - Settings shows a "Testing" section in debug builds, with a background permission test and a list of the stand-ins in the build.
 - The same test tool can run from a computer: `adb shell am broadcast -a ai.yumi.android.debug.RUN_TEST_TOOL -p ai.yumi.android`.
+- The bridge can be driven from a computer: `PAIR` with a base64 pairing offer, `GOAL` with a transcript as if spoken, and `UNPAIR`. Confirm a repeat-back by broadcasting `GOAL` again with `yes`, or cancel it with `no`.
 - Logs: `adb logcat -s YumiService YumiError YumiTestTool YumiNotifications Yumi YumiVoice YumiWakeWord`. Transcripts are never logged, only their word count.
 
 ### Code map
@@ -119,9 +122,10 @@ If Yumi stops when the phone is locked, open Yumi's app settings from Yumi's Set
 | `service/` | `YumiService` (foreground service), the `BridgeConnection` and `WakeWordDetector` seams, and their stand-ins |
 | `errors/` | `ErrorKind`, the SPEC-11 copy in `ErrorCopy.kt`, and `ErrorPresenter` |
 | `permissions/` | `PermissionCoordinator`: tools ask for permissions from anywhere, including the background |
-| `notifications/` | Notification channels, the service notification, and permission request notifications |
-| `ui/` | Compose screens: onboarding, home, settings, the cat renderer, and the theme |
-| `voice/` | Voice intake: `OnDeviceVoiceInput` (push-to-talk and after the wake word), `SpeechEngine` (the on-device recognizer only), `MicrophoneOwner`, the listening chime, and the `GoalSink.onGoal` entry point |
+| `routing/` | `GoalRouter`: the repeat-back, the `delegateGoal` send, and the working, paused, and finished states from the bridge's `progress`, `goalFinished`, and `pauseConfirmed`. The SPEC-10 r8 templates and reply lists are in `RepeatBack.kt` |
+| `notifications/` | Notification channels, the service notification (with "Working on your Mac" and Stop while a goal runs), and permission request notifications |
+| `ui/` | Compose screens: onboarding, home (including the goal cards in `ui/home/GoalCard.kt`), settings, the cat renderer, and the theme |
+| `voice/` | Voice intake: `OnDeviceVoiceInput` (push-to-talk and after the wake word), `SpeechEngine` (the on-device recognizer only), `MicrophoneOwner`, the listening chime, and the `GoalSink.onGoal` entry point. Speech output is `Speaker` (`AndroidTtsSpeaker`) |
 | `voice/wakeword/` | The wake word: `MicrophoneWakeWordDetector` (the microphone loop in the foreground service), `WakeWordChoice` (the switch between spotters), `VoskSpotter`, and for openWakeWord `AudioFeatures` (the Kotlin port of its feature step), `WakeWordEngine`, the ONNX models, and `WakeWordConfig` |
 
 ### Wake word models
@@ -181,4 +185,4 @@ The UI reads the phrase from there.
 | [OBJ-71](../objectives/OBJ-71-android-approvals.md) | Approvals on the phone for goals running on the Mac | Brent | todo |
 <!-- generated:product-objectives:end -->
 
-Not written yet: Part A phone-only goals, phone tools, and delegated goals (SPEC-09 and SPEC-10 Part A), and everything in Part B.
+Not written yet: the p0 phone-only rule (OBJ-67.1, cut for the demo, so every goal is delegated) and phone-run tools ([OBJ-66](../objectives/OBJ-66-android-phone-tool-host.md)), approvals on the phone ([OBJ-71](../objectives/OBJ-71-android-approvals.md)), and everything in Part B.

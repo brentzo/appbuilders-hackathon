@@ -40,6 +40,18 @@
     <string name="home_main_task">Main task</string>
     <string name="home_task_working">Working on your Mac</string>
     <string name="home_task_waiting">Waiting for your Mac</string>
+
+    <!-- Repeat-back and the delegated goal (SPEC-10 r8, SPEC-09 r9/r12) -->
+    <string name="goal_edit_label">What I heard</string>
+    <string name="goal_send">Send</string>
+    <string name="goal_cancel">Cancel</string>
+    <string name="goal_stop">Stop</string>
+    <string name="goal_resume">Resume</string>
+    <string name="goal_starting">Getting started</string>
+    <string name="goal_stopping">Stopping on your Mac…</string>
+    <string name="goal_paused">Paused</string>
+    <string name="notification_title_paused">Paused on your Mac</string>
+    <string name="notification_text_starting">Getting started</string>
     <string name="home_stopped_title">Yumi isn\'t running in the background</string>
     <string name="home_stopped_body">You stopped it, so your Mac can\'t reach this phone until you start it again.</string>
     <string name="home_stopped_action">Start again</string>

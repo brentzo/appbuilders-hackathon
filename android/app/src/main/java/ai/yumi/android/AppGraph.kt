@@ -7,12 +7,14 @@ import ai.yumi.android.bridge.BridgeCrypto
 import ai.yumi.android.bridge.DeviceKeyStore
 import ai.yumi.android.bridge.PrefsBridgeStore
 import ai.yumi.android.bridge.RelayBridge
+import ai.yumi.android.routing.GoalFlow
+import ai.yumi.android.routing.GoalRouter
 import ai.yumi.android.service.WakeWordDetector
 import ai.yumi.android.service.YumiStatus
 import ai.yumi.android.settings.SettingsStore
 import ai.yumi.android.tools.TestPermissionTool
+import ai.yumi.android.voice.AndroidTtsSpeaker
 import ai.yumi.android.voice.ChimeListeningSound
-import ai.yumi.android.voice.LastGoal
 import ai.yumi.android.voice.MicrophoneOwner
 import ai.yumi.android.voice.OnDeviceSpeechEngine
 import ai.yumi.android.voice.OnDeviceVoiceInput
@@ -56,7 +58,7 @@ class AppGraph(context: Context) {
         allowLoopback = BuildConfig.DEBUG,
         log = { Log.i("YumiBridge", it) },
     )
-    val goals = LastGoal()
+    val goals = GoalRouter(bridge = bridge, speaker = AndroidTtsSpeaker(context), scope = appScope)
     val microphone = MicrophoneOwner()
     val wakeWordConfig = WakeWordConfig.Current
     val voice: VoiceInput = OnDeviceVoiceInput(
@@ -76,8 +78,24 @@ class AppGraph(context: Context) {
     /** Set by [ai.yumi.android.service.YumiService] while it runs. */
     val serviceRunning = MutableStateFlow(false)
 
-    val status: StateFlow<YumiStatus> = combine(serviceRunning, bridge.state, wakeWord.listening, voice.listening, ::YumiStatus)
-        .stateIn(appScope, SharingStarted.Eagerly, YumiStatus())
+    val status: StateFlow<YumiStatus> = combine(
+        serviceRunning, bridge.state, wakeWord.listening, voice.listening, goals.state,
+    ) { service, connection, wake, listening, goal ->
+        YumiStatus(
+            serviceRunning = service,
+            connection = connection,
+            wakeWordListening = wake,
+            voiceListening = listening,
+            goalWorking = goal is GoalFlow.Working || goal is GoalFlow.Pausing,
+            goalPaused = goal is GoalFlow.Paused,
+            goalSubtask = when (goal) {
+                is GoalFlow.Working -> goal.subtask
+                is GoalFlow.Pausing -> goal.subtask
+                is GoalFlow.Paused -> goal.subtask
+                else -> null
+            },
+        )
+    }.stateIn(appScope, SharingStarted.Eagerly, YumiStatus())
 
     val permissions = PermissionCoordinator(AndroidPermissionEnvironment(context), errors)
     val testTool = TestPermissionTool(permissions)

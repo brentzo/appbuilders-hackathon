@@ -13,6 +13,7 @@ import ai.yumi.android.ui.components.YumiButton
 import ai.yumi.android.ui.components.isGranted
 import ai.yumi.android.ui.components.rememberPermissionAsker
 import ai.yumi.android.ui.components.rememberResumeCount
+import ai.yumi.android.ui.home.GoalAction
 import ai.yumi.android.ui.home.HomeNotice
 import ai.yumi.android.ui.home.HomeScreen
 import ai.yumi.android.ui.onboarding.OnboardingScreen
@@ -59,7 +60,8 @@ fun YumiApp(graph: AppGraph) {
     val voiceActive by graph.voice.active.collectAsStateWithLifecycle()
     val heard by graph.voice.partial.collectAsStateWithLifecycle()
     val voiceFailure by graph.voice.failure.collectAsStateWithLifecycle()
-    val lastGoal by graph.goals.text.collectAsStateWithLifecycle()
+    val goal by graph.goals.state.collectAsStateWithLifecycle()
+    val goalFailure by graph.goals.failure.collectAsStateWithLifecycle()
     val resumeCount = rememberResumeCount()
 
     // The window background shows until settings are read from disk, which takes a few milliseconds.
@@ -112,6 +114,14 @@ fun YumiApp(graph: AppGraph) {
         }
     }
 
+    // A goal that could not be sent (for example, no Mac paired yet) says so, then is forgotten.
+    LaunchedEffect(goalFailure) {
+        goalFailure?.let {
+            error = graph.errors.present(it)
+            graph.goals.clearFailure()
+        }
+    }
+
     val askMic = rememberPermissionAsker(Manifest.permission.RECORD_AUDIO, settings.askedPermissions, markAsked) {}
     val askNotifications = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         rememberPermissionAsker(Manifest.permission.POST_NOTIFICATIONS, settings.askedPermissions, markAsked) {}
@@ -137,7 +147,7 @@ fun YumiApp(graph: AppGraph) {
                     add(HomeNotice(R.string.home_battery_title, R.string.home_battery_body, R.string.home_battery_action, allowBattery))
                 }
             },
-            lastGoal = lastGoal,
+            goal = goal,
             error = error,
             onErrorButton = { button ->
                 error = null
@@ -150,6 +160,14 @@ fun YumiApp(graph: AppGraph) {
                     ErrorButton.TypeInstead -> typing = true
                     ErrorButton.TryAgain -> graph.voice.start()
                     else -> Unit
+                }
+            },
+            onGoalAction = { action ->
+                when (action) {
+                    is GoalAction.Confirm -> graph.goals.confirm(action.text)
+                    GoalAction.Cancel -> graph.goals.cancel()
+                    GoalAction.Stop -> graph.goals.stop()
+                    GoalAction.Resume -> graph.goals.resume()
                 }
             },
             onMic = {

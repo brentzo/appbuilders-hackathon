@@ -7,6 +7,7 @@ import ai.yumi.android.errors.PresentedButton
 import ai.yumi.android.errors.PresentedError
 import ai.yumi.android.notifications.connectionTextRes
 import ai.yumi.android.protocol.ConnectionState
+import ai.yumi.android.routing.GoalFlow
 import ai.yumi.android.ui.cat.CatState
 import ai.yumi.android.ui.cat.LocalCatRenderer
 import ai.yumi.android.ui.cat.rememberReduceMotion
@@ -14,7 +15,6 @@ import ai.yumi.android.ui.components.ErrorCard
 import ai.yumi.android.ui.components.HushCard
 import ai.yumi.android.ui.components.StatePill
 import ai.yumi.android.ui.components.YumiButton
-import ai.yumi.android.ui.components.YumiCard
 import ai.yumi.android.ui.components.YumiMark
 import ai.yumi.android.ui.theme.Yumi
 import androidx.compose.animation.AnimatedVisibility
@@ -95,9 +95,10 @@ fun HomeScreen(
     heard: String?,
     connection: ConnectionState,
     notices: List<HomeNotice>,
-    lastGoal: String?,
+    goal: GoalFlow,
     error: PresentedError?,
     onErrorButton: (PresentedButton) -> Unit,
+    onGoalAction: (GoalAction) -> Unit,
     onMic: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
@@ -119,7 +120,7 @@ fun HomeScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(YumiSpace.m, Alignment.CenterVertically),
             ) {
-                HomeContent(listening, heard, connection, notices, lastGoal, error, onErrorButton)
+                HomeContent(listening, heard, notices, goal, error, onErrorButton, onGoalAction)
             }
         }
         ConnectionLine(connection, Modifier.align(Alignment.CenterHorizontally))
@@ -161,11 +162,11 @@ private fun Header(onOpenSettings: () -> Unit) {
 private fun ColumnScope.HomeContent(
     listening: Boolean,
     heard: String?,
-    connection: ConnectionState,
     notices: List<HomeNotice>,
-    lastGoal: String?,
+    goal: GoalFlow,
     error: PresentedError?,
     onErrorButton: (PresentedButton) -> Unit,
+    onGoalAction: (GoalAction) -> Unit,
 ) {
     notices.forEach { NoticeCard(it) }
     val state = when {
@@ -196,9 +197,9 @@ private fun ColumnScope.HomeContent(
             .padding(horizontal = YumiSpace.l)
             .semantics { liveRegion = LiveRegionMode.Polite },
     )
-    if (lastGoal != null) {
+    if (goal != GoalFlow.Idle) {
         Spacer(Modifier.height(YumiSpace.xs))
-        TaskRow(lastGoal, connection)
+        GoalCard(goal, onGoalAction)
     }
     AnimatedVisibility(
         visible = error != null,
@@ -218,27 +219,6 @@ private fun HomeStatePill(state: CatState) {
             CatState.Idle -> StatePill(stringResource(R.string.home_state_ready), colors.halo, colors.accentText)
             CatState.Listening -> StatePill(stringResource(R.string.home_state_listening), colors.accent, colors.onAccent)
             CatState.Stuck -> StatePill(stringResource(R.string.home_state_needs_hand), colors.hush, colors.onHush)
-        }
-    }
-}
-
-/** The last goal, like a cursor row on the Mac: what the task is, and where it stands. */
-@Composable
-private fun TaskRow(goal: String, connection: ConnectionState) {
-    val colors = Yumi.colors
-    YumiCard {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.home_main_task), style = MaterialTheme.typography.bodySmall, color = colors.muted)
-                Spacer(Modifier.height(YumiSpace.xxs))
-                Text(goal, style = MaterialTheme.typography.bodyLarge, color = colors.ink)
-            }
-            Spacer(Modifier.width(YumiSpace.m))
-            if (connection == ConnectionState.Connected) {
-                StatePill(stringResource(R.string.home_task_working), colors.accent, colors.onAccent)
-            } else {
-                StatePill(stringResource(R.string.home_task_waiting), colors.surfaceRaised, colors.muted)
-            }
         }
     }
 }

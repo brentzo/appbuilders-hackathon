@@ -53,21 +53,38 @@ object YumiNotifications {
     /** The persistent notification of the foreground service: Yumi's state and a Stop button. */
     fun service(context: Context, status: YumiStatus): Notification {
         val title = when {
+            status.goalWorking -> context.getString(R.string.home_task_working)
+            status.goalPaused -> context.getString(R.string.notification_title_paused)
             status.voiceListening -> context.getString(R.string.notification_title_hearing)
             status.wakeWordListening -> context.getString(R.string.notification_title_listening, WakeWordConfig.Current.phrase)
             else -> context.getString(R.string.notification_title_running)
         }
-        val stop = PendingIntent.getService(
-            context,
-            0,
-            Intent(context, YumiService::class.java).setAction(YumiService.ACTION_STOP),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
+        // While a goal runs, Stop pauses it on the Mac (SPEC-09 r9). Otherwise Stop stops Yumi (SPEC-10 r4).
+        val stop = if (status.goalWorking) {
+            PendingIntent.getService(
+                context,
+                1,
+                Intent(context, YumiService::class.java).setAction(YumiService.ACTION_STOP_GOAL),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+        } else {
+            PendingIntent.getService(
+                context,
+                0,
+                Intent(context, YumiService::class.java).setAction(YumiService.ACTION_STOP),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+        }
+        val text = if (status.goalWorking || status.goalPaused) {
+            status.goalSubtask ?: context.getString(R.string.notification_text_starting)
+        } else {
+            context.getString(connectionTextRes(status.connection))
+        }
         return NotificationCompat.Builder(context, CHANNEL_RUNNING)
             .setSmallIcon(R.drawable.ic_cat)
             .setColor(ContextCompat.getColor(context, R.color.yumi_notification_accent))
             .setContentTitle(title)
-            .setContentText(context.getString(connectionTextRes(status.connection)))
+            .setContentText(text)
             .setContentIntent(openApp(context, requestCode = 0, intent = Intent(context, MainActivity::class.java)))
             .addAction(R.drawable.ic_stop, context.getString(R.string.notification_action_stop), stop)
             .setOngoing(true)

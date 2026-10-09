@@ -40,9 +40,16 @@ class YumiService : LifecycleService() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
-        if (intent?.action == ACTION_STOP) {
-            stopFromUser()
-            return START_NOT_STICKY
+        when (intent?.action) {
+            ACTION_STOP -> {
+                stopFromUser()
+                return START_NOT_STICKY
+            }
+            // The notification's Stop pauses a running goal instead of stopping Yumi (SPEC-09 r9).
+            ACTION_STOP_GOAL -> {
+                graph.goals.stop()
+                return START_STICKY
+            }
         }
         if (!enterForeground(withMicrophone = holdsMicrophone)) {
             stopSelf()
@@ -134,5 +141,6 @@ class YumiService : LifecycleService() {
     companion object {
         private const val TAG = "YumiService"
         const val ACTION_STOP = "ai.yumi.android.action.STOP"
+        const val ACTION_STOP_GOAL = "ai.yumi.android.action.STOP_GOAL"
     }
 }

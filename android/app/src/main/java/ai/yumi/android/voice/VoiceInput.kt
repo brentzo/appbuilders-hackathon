@@ -1,9 +1,7 @@
 package ai.yumi.android.voice
 
 import ai.yumi.android.errors.YumiException
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 
 /** How a listening session was started. */
 enum class VoiceTrigger { PushToTalk, WakeWord }
@@ -29,14 +27,7 @@ interface VoiceInput {
     fun clearFailure()
 }
 
-/** Where every goal goes, spoken or typed. Routing (SPEC-09, SPEC-10 Part A) connects it. */
+/** Where every goal goes, spoken or typed. [ai.yumi.android.routing.GoalRouter] connects it (SPEC-09, SPEC-10 Part A). */
 fun interface GoalSink {
     fun onGoal(text: String)
-}
-
-/** Stand-in until routing exists: keeps the last goal so the home screen can show it. */
-class LastGoal : GoalSink {
-    private val _text = MutableStateFlow<String?>(null)
-    val text: StateFlow<String?> = _text.asStateFlow()
-    override fun onGoal(text: String) { _text.value = text.trim().ifEmpty { null } }
 }
