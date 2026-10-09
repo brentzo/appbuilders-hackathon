@@ -165,6 +165,13 @@ With "Auto mode" on in Settings (off by default), the goal starts without the re
 - Panels use the design tokens (`surface`, `line`, `ink`, `muted`) for the system's light or dark appearance, with a dot in the cat's or chip's coat.
 - The pieces: `WorkerThoughts.swift` (the view model and the panel's words), `ThoughtsCard.swift` (drawing), `ThoughtsClickTarget.swift` (clicks), `CursorOverlay+Thoughts.swift` (the overlay glue), and `ThoughtsDemo.swift` (the demo part and the snapshot).
 
+### Task summary
+
+When a task finishes, the harness sends its summary as a `speak` event with the task's id (SPEC-02 r9).
+Yumi says it in its own voice and shows it in a small card in the top-right corner of the display with the pointer, under the menu bar (`Yumi/Summary/`).
+The card has a close button, closes on its own about 4 to 12 seconds after the line is said (longer for longer summaries), and goes when a new goal starts.
+Whatever summary text arrives is shown as is, for any way a task ends. A `speak` without a task id is only said.
+
 ### Voice intake
 
 Push-to-talk turns speech into a goal on the Mac ([OBJ-15](../objectives/OBJ-15-mac-voice-intake.md)).
@@ -305,8 +312,8 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 - `-YumiStatus startingUp|ready|listening|working|paused` sets the menu's status line.
 - `-YumiOverlayDemo <dir>` shows sample cursors and a helper chip, writes each display's overlay over white and over black as PNG files, then quits.
 - `-YumiSay "<line>"` says the line once Yumi's voice is ready, `-YumiSayOpening YES` says it as an opening line with the meow, and `-YumiVoiceFolder <path>` loads the voice from another folder, for example an empty one to see the warning. Timings are in the `speech` log (Debug builds).
-- `-YumiCursorDemo YES` plays a cursor demo of about a minute on screen: the main cat drops out of the island and goes through its states, three ghosts follow it out and leap around, the cats dodge the pointer (a quick hop when it comes at them, staying put beside a still pointer), the ghosts finish and leap back into the island with a meow, and the main cat does the same last (Debug builds).
-  In the middle, the four cats line up idle, thinking, paused, and acting, and the demo moves your pointer onto each one: the first three hop away with their ears back and drift back, and the acting cat fades in place.
+- `-YumiCursorDemo YES` plays a cursor demo of about a minute on screen: the main cat drops out of the island and goes through its states, three ghosts follow it out and leap around, the cats fade in place when the pointer comes at them (and stay solid beside a still pointer), the ghosts finish and leap back into the island with a meow, and the main cat does the same last (Debug builds).
+  In the middle, the four cats line up idle, thinking, paused, and acting, and the demo moves your pointer onto each one: each fades in place, never moving away, and the first three lay their ears back; each fades back after the pointer leaves.
   Then the cats wait about 7 seconds for you to try it with your own pointer.
   Moving the pointer needs Accessibility; without it, only the hands-on part works.
   Then, with Debug mode turned on for this part, the cats and a helper chip get made-up thoughts, and the demo opens the main cat's panel, a ghost's, and the helper's in turn, updates each one, and closes the helper's when its subtask ends.
@@ -334,6 +341,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 | `Packages/KokoroSwift/` | Kokoro for MLX Swift, copied from kokoro-ios with Yumi's changes (MIT) |
 | `Yumi/Voice/` | Voice intake: the push-to-talk hot key, the microphone, the recognizers and their rule, the silence endpoint, and the typed-goal box |
 | `Yumi/Confirmation/` | Goal confirmation: the repeat-back panel, the `speak` interface, and listening for the answer |
+| `Yumi/Summary/` | The finished task's summary: said, and shown in a card |
 | `Yumi/Tiling/` | Window tiling: the consent panel, the grid, and saving and restoring window frames |
 | `Yumi/Overlay/` | The click-through cursor overlay: panels per display, the cat cursor and its poses (`CursorCat.xcassets`, made by `scripts/render-cursor-cat.py`, plus the ears-back pose by `scripts/render-ears-back-cat.py`), motion, cats avoiding the user's pointer (`PointerAvoidance.swift`), helper chips, and the cursor debug actions |
 | `Yumi/Harness/` | Harness launcher and supervisor, the Unix socket, the JSON-RPC client, and event handling |

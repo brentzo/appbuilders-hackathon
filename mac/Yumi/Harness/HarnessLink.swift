@@ -26,6 +26,8 @@ final class HarnessLink {
     let tiler: WindowTiler
     /// Everything Yumi says out loud (OBJ-17.4).
     let speech: SpeechOutput
+    /// The finished task's summary, said and shown (SPEC-02 r9).
+    let summary: TaskSummary
     /// The repeat-back panel and the answers to it (OBJ-17).
     let confirmation: GoalConfirmation
     /// What Yumi heard and "On it.", in Auto mode (OBJ-50).
@@ -66,6 +68,7 @@ final class HarnessLink {
             _ = try await client.call(.replyToConfirmation, ReplyToConfirmationParams(taskId: taskId, reply: reply), returning: Empty.self)
         }
         autoMode = AutoModeAcknowledgement(speech: speech, presenter: confirmationPanel)
+        summary = TaskSummary(speech: speech, presenter: SummaryPanel())
         let confirmation = self.confirmation
         approvals = ApprovalCards(
             speech: speech, listen: { await confirmation.listener.listenForReply() }, presenter: ApprovalPanel(), overlay: overlay
@@ -164,7 +167,13 @@ final class HarnessLink {
         case .goalRestated(let restated):
             Task { await confirmation.goalRestated(restated) }
         case .speak(let line):
-            Task { await speech.speak(line.text) }
+            // A line with a task is that task's summary: said and shown on screen (SPEC-02 r9).
+            if let taskId = line.taskId {
+                log.notice("Task summary, \(line.text.count, privacy: .public) characters")
+                Task { await summary.taskFinished(taskId: taskId, summary: line.text) }
+            } else {
+                Task { await speech.speak(line.text) }
+            }
         case .approvalCancelled(let cancelled):
             approvals.cancel(approvalId: cancelled.approvalId)
         case .tilingSuggested(let suggestion):
@@ -242,6 +251,7 @@ final class HarnessLink {
     /// once (OBJ-17.3); the harness then restates the goal, or in Auto mode starts it, and Yumi
     /// shows what it heard and says "On it." (OBJ-50). Voice intake (OBJ-15) calls this.
     func submitGoal(_ transcript: String) {
+        summary.goalSubmitted()
         confirmation.goalSubmitted()
         let autoMode = model.settings.autoMode
         Task {
