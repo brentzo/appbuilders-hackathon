@@ -15,6 +15,9 @@ final class GuiExecutor {
     let keystrokes: KeystrokeSender
     /// Shows a failure to the user through the error presenter (OBJ-39.8). Set by the app.
     var onUserError: ((UserError) -> Void)?
+    /// False while a goal waits for its confirmation and no task is confirmed: then nothing acts,
+    /// whatever the harness sends (OBJ-17.7). Set by the app.
+    var actionsAllowed: () -> Bool = { true }
 
     private let overlay: CursorOverlay?
     private let isTrusted: () -> Bool
@@ -53,6 +56,9 @@ final class GuiExecutor {
 
     func executeAction(_ params: ExecuteActionParams) async throws -> ExecuteActionResult {
         try await reporting {
+            guard actionsAllowed() else {
+                return Self.result(.blocked, "No goal is confirmed yet.")
+            }
             // A password field is never filled, whatever else is true (SPEC-05 r7).
             if params.action.element?.role == .secureTextField {
                 switch params.action.action {

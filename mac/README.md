@@ -124,6 +124,17 @@ Debug builds have "GUI debug…" in the menu: a floating window that shows the t
 Clicking it does not activate Yumi, so a menu Yumi opened stays open while you press the next item.
 Yumi needs Accessibility permission for it, like for any task.
 
+### Goal confirmation
+
+Before any work starts, Yumi repeats the goal back ([OBJ-17](../objectives/OBJ-17-goal-confirmation.md)).
+
+- When a goal is submitted (`HarnessLink.submitGoal`, which voice intake calls), the main cursor appears next to the pointer right away.
+- The harness's `goalRestated` sentence is spoken and shown in a small panel with "Go ahead", "Change it", and "Cancel". The app never writes the sentence itself.
+- Every answer goes to the harness with `replyToConfirmation`: a button, or what the user said after the sentence (listened for at most twice per sentence, then only the buttons work).
+- "Cancel", or the harness cancelling the task while it waits, says "Okay, I won't do anything." and fades the cursor.
+- While a goal waits for its answer and no task is confirmed, `executeAction` does nothing.
+- Everything Yumi says goes through `SpeechOutput` (`SystemSpeech`, the system voice), including the harness's `speak` events and the tiling question.
+
 ### Window tiling
 
 When the harness sends `tilingSuggested`, Yumi asks "Want me to arrange your windows so you can watch all of us work?" out loud and in a small panel at the top of the task's display, with "Arrange windows" and "Leave them" ([OBJ-20](../objectives/OBJ-20-window-tiling.md)).
@@ -187,6 +198,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 | `Yumi/Onboarding/` | The permission onboarding window |
 | `Yumi/Settings/` | Settings, their local storage, and the harness settings hand-off |
 | `Yumi/GUI/` | Controlling other apps: the trimmed tree reader, element actions, tagged keystrokes, the direct tools, and the GUI debug window |
+| `Yumi/Confirmation/` | Goal confirmation: the repeat-back panel, the `speak` interface, and listening for the answer |
 | `Yumi/Tiling/` | Window tiling: the consent panel, the grid, and saving and restoring window frames |
 | `Yumi/Overlay/` | The click-through cursor overlay: panels per display, the placeholder cursor drawing, motion, helper chips, and the cursor debug actions |
 | `Yumi/Harness/` | Harness launcher and supervisor, the Unix socket, the JSON-RPC client, and event handling |
@@ -205,8 +217,8 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 - Cursors are a placeholder drawing (a black and white pointer, ghosts outlined in their color) until the Rive cat ([OBJ-19](../objectives/OBJ-19-rive-cat-cursor.md)).
 - A cursor moving to an element whose path does not resolve goes to the center of the target window, or the app's frontmost window.
 - Vision clicks (`clickAt`) are refused until the p1 vision fallback.
-- The tiling question is spoken with the system voice (`TilingVoice`) until the `speak` interface from [OBJ-17](../objectives/OBJ-17-goal-confirmation.md).
-  The answer is buttons only until voice replies exist, and it stays in the app: the protocol has no method to tell the harness.
+- Spoken answers to the repeat-back and the tiling question wait for voice capture ([OBJ-15](../objectives/OBJ-15-mac-voice-intake.md)): `NoReplyListener` hears nothing, so the buttons are the only answer.
+  The tiling answer stays in the app: the protocol has no method to tell the harness.
 - Helper chips say "Helper working": the protocol's `routeDecided` event has no subtask title.
 - The status line follows task events. "Listening" waits for voice intake ([OBJ-15](../objectives/OBJ-15-mac-voice-intake.md)).
 

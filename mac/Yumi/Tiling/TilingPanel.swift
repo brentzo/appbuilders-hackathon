@@ -1,5 +1,4 @@
 import AppKit
-import AVFoundation
 import SwiftUI
 
 /// The tiling question as a small floating panel at the top of the task's display (OBJ-20.2).
@@ -88,16 +87,5 @@ struct AlwaysProminentButtonStyle: ButtonStyle {
                 Color.accentColor.opacity(configuration.isPressed ? 0.8 : 1),
                 in: RoundedRectangle(cornerRadius: 5, style: .continuous)
             )
-    }
-}
-
-/// STAND-IN: says the question with the system voice until the `speak` interface from OBJ-17
-/// exists. Replace it there; the tiler only needs a `(String) -> Void`.
-@MainActor
-final class TilingVoice {
-    private let synthesizer = AVSpeechSynthesizer()
-
-    func say(_ text: String) {
-        synthesizer.speak(AVSpeechUtterance(string: text))
     }
 }

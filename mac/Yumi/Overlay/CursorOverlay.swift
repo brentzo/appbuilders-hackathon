@@ -46,6 +46,12 @@ final class CursorOverlay {
     func apply(_ command: CursorCommand) {
         switch command {
         case .spawn(let spawn):
+            if spawn.at == nil, cursors[spawn.cursorId]?.kind == spawn.cursorKind {
+                // Already on screen, for example the main cursor the app spawned when the goal
+                // arrived (OBJ-17.3): keep it where it is instead of blinking it back in.
+                update(spawn.cursorId) { $0.label = spawn.label }
+                return
+            }
             let point = spawn.at.flatMap(resolve) ?? nearUserPointer()
             self.spawn(id: spawn.cursorId, kind: spawn.cursorKind, label: spawn.label, at: point)
         case .move(let move):

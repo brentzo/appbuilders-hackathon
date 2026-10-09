@@ -24,6 +24,10 @@ final class HarnessLink {
     let gui: GuiExecutor
     /// Arranges the task's windows with the user's yes, and puts them back (OBJ-20).
     let tiler: WindowTiler
+    /// Everything Yumi says out loud (OBJ-17.4).
+    let speech: SpeechOutput
+    /// The repeat-back panel and the answers to it (OBJ-17).
+    let confirmation: GoalConfirmation
     /// Helper subtasks shown as chips, by subtask id.
     private var helperSubtasks: Set<String> = []
 
@@ -33,15 +37,21 @@ final class HarnessLink {
         supervisor = HarnessSupervisor(launcher: launcher)
         client = HarnessClient(socketPath: socketPath)
         gui = GuiExecutor(overlay: overlay)
+        let speech = SystemSpeech()
+        self.speech = speech
         let tilingPanel = TilingPanel()
-        let tilingVoice = TilingVoice()
         tiler = WindowTiler(
             demoMode: { model.settings.demoModeEnabled },
             taskArea: { TaskDisplay.area(overlay) },
             ask: { taskId, answer in tilingPanel.show(taskId: taskId, on: TaskDisplay.screen(overlay), answer: answer) },
             dismissQuestion: { tilingPanel.dismiss(taskId: $0) },
-            say: { tilingVoice.say($0) }
+            say: { text in Task { await speech.speak(text) } }
         )
+        confirmation = GoalConfirmation(
+            speech: speech, listener: NoReplyListener(), presenter: ConfirmationPanel(), overlay: overlay
+        ) { [client] taskId, reply in
+            _ = try await client.call(.replyToConfirmation, ReplyToConfirmationParams(taskId: taskId, reply: reply), returning: Empty.self)
+        }
         client.appMethods = AppMethodServer(gui: gui)
         usesMock = launcher.isMock
         model.mockHarnessName = launcher.isMock ? launcher.displayName : nil
@@ -50,6 +60,9 @@ final class HarnessLink {
     func start() {
         overlay.start()
         gui.onUserError = { [weak self] error in self?.onUserError?(error) }
+        gui.actionsAllowed = { [weak self] in
+            self.map { Self.actionsAllowed(for: Array($0.taskStatuses.values)) } ?? true
+        }
         client.onLinkStateChange = { [weak self] state in
             guard let self else { return }
             model.harnessReady = state == .connected
@@ -82,6 +95,7 @@ final class HarnessLink {
         case .taskStatusChanged(let change):
             taskStatuses[change.taskId] = change.status
             tiler.taskStatusChanged(change.taskId, change.status)
+            confirmation.taskStatusChanged(change.taskId, change.status)
             model.taskStatus = Self.appStatus(for: Array(taskStatuses.values))
             if let subtaskId = change.subtaskId, let status = change.subtaskStatus,
                Self.finishedSubtask.contains(status), helperSubtasks.remove(subtaskId) != nil {
@@ -102,13 +116,17 @@ final class HarnessLink {
         case .userError(let error):
             log.notice("The harness reported \(error.kind.rawValue, privacy: .public)")
             onUserError?(error)
+        case .goalRestated(let restated):
+            Task { await confirmation.goalRestated(restated) }
+        case .speak(let line):
+            Task { await speech.speak(line.text) }
         case .tilingSuggested(let suggestion):
             tiler.suggest(suggestion)
         case .bridgeStateChanged(let change):
             PhoneLink.shared.update(connection: PhoneLink.Connection(change.state))
         default:
-            // goalRestated, questionAsked, speak (voice and confirmation), approvalCancelled,
-            // interruptedTaskFound and waitingForWindow are consumed in later objectives.
+            // questionAsked, approvalCancelled, interruptedTaskFound and waitingForWindow are
+            // consumed in later objectives.
             log.info("Not handled yet: \(event.name, privacy: .public)")
         }
     }
@@ -137,6 +155,28 @@ final class HarnessLink {
         return .ready
     }
 
+    /// Before any goal is confirmed nothing may act (OBJ-17.7): a goal waiting for its answer, with
+    /// no task confirmed beside it, blocks every action the harness sends.
+    static func actionsAllowed(for statuses: [TaskStatus]) -> Bool {
+        let confirmed: Set<TaskStatus> = [.queued, .planning, .running, .waitingForUser]
+        return !statuses.contains(.awaitingConfirmation) || statuses.contains(where: confirmed.contains)
+    }
+
+    /// Sends a spoken or typed goal to the harness. The main cursor appears next to the pointer at
+    /// once (OBJ-17.3); the harness then restates the goal. Voice intake (OBJ-15) calls this.
+    func submitGoal(_ transcript: String) {
+        confirmation.goalSubmitted()
+        Task {
+            do {
+                let result = try await client.submitGoal(SubmitGoalParams(transcript: transcript, originDeviceId: "mac-local"))
+                log.notice("Goal submitted, task \(result.taskId, privacy: .public)")
+            } catch {
+                overlay.fade(id: GoalConfirmation.mainCursorId)
+                report(error, from: "submitGoal")
+            }
+        }
+    }
+
     /// Debug aid for the mock: submits a fixed goal so scripts that play on `submitGoal`
     /// (like keynote-export) run without voice intake (OBJ-15).
     func submitSampleGoal() {
@@ -144,16 +184,7 @@ final class HarnessLink {
             log.error("Ignored the sample goal: it is only for the mock harness")
             return
         }
-        Task {
-            do {
-                let result = try await client.submitGoal(
-                    SubmitGoalParams(transcript: "export my Keynote deck as a PDF", originDeviceId: "mac-local")
-                )
-                log.notice("Sample goal submitted, task \(result.taskId, privacy: .public)")
-            } catch {
-                report(error, from: "submitGoal")
-            }
-        }
+        submitGoal("export my Keynote deck as a PDF")
     }
 
     func submitSampleGoalWhenConnected() {
