@@ -68,6 +68,11 @@ final class AppMethodServer {
             case .getAppVersion:
                 let p = try decode(GetAppVersionParams.self, params)
                 return try encode(AppVersionResult(appVersion: AppCapabilityProbe.installedVersion(bundleId: p.bundleId)))
+            case .resolveApp:
+                let p = try decode(ResolveAppParams.self, params)
+                // Reads every app bundle's Info.plist, so it runs off the main actor.
+                let found = await Task.detached { AppResolver.resolve(p.name) }.value
+                return try encode(ResolveAppResult(bundleId: found?.bundleId))
             case .openNewWindow:
                 let p = try decode(OpenNewWindowParams.self, params)
                 return try encode(await NewWindowOpener.open(bundleId: p.bundleId))

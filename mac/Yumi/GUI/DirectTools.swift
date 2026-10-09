@@ -6,12 +6,6 @@ import YumiProtocol
 /// `NSWorkspace`. There is no shell, AppleScript, or `Process` here, by design (SPEC-07 r3).
 @MainActor
 enum DirectTools {
-    /// Where `open_app` looks for an app by name, when Launch Services has no bundle id for it.
-    static let applicationFolders = [
-        "/Applications", "/Applications/Utilities", "/System/Applications", "/System/Applications/Utilities",
-        NSString(string: "~/Applications").expandingTildeInPath,
-    ]
-
     enum Failure: Error, Equatable {
         case appNotFound
         case fileNotFound
@@ -73,17 +67,9 @@ enum DirectTools {
             guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId) else { throw Failure.appNotFound }
             return url
         }
-        guard let name = name?.trimmingCharacters(in: .whitespaces), !name.isEmpty, !name.contains("/") else {
-            throw Failure.appNotFound
-        }
-        let wanted = (name.lowercased().hasSuffix(".app") ? name : name + ".app").lowercased()
-        for folder in applicationFolders {
-            let entries = (try? FileManager.default.contentsOfDirectory(atPath: folder)) ?? []
-            if let match = entries.first(where: { $0.lowercased() == wanted }) {
-                return URL(fileURLWithPath: folder).appendingPathComponent(match)
-            }
-        }
-        throw Failure.appNotFound
+        // By the name the user sees, the same way `resolveApp` finds it, so an app the router found opens too.
+        guard let name, let found = AppResolver.resolve(name) else { throw Failure.appNotFound }
+        return found.url
     }
 
     static func existingFile(_ path: String) throws -> URL {

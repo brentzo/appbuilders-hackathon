@@ -119,6 +119,9 @@ The harness calls `observeWindow`, `executeAction`, and `readFieldValues`; `Yumi
 - A password field is listed with no value, never read, and never filled.
 - `type` and `key` run only for the main cursor, and every event carries the tag `0x59554D49` ("YUMI") in `kCGEventSourceUserData`.
 - `open_app`, `open_file`, `open_url`, and `reveal_in_finder` go through `NSWorkspace`. There is no shell or AppleScript anywhere in `Yumi/GUI/`.
+- `resolveApp` (`Yumi/Native/AppResolver.swift`) turns the app name a plan uses into the installed app's bundle id, without launching it, so the harness's router can probe it.
+  It searches the application folders (`/Applications`, `/System/Applications`, their `Utilities`, `~/Applications`, and `/System/Library/CoreServices` for Finder) and matches the name the user sees, ignoring case and accents: the name in Finder, `CFBundleName`, `CFBundleDisplayName`, or the file name.
+  It answers only with apps whose bundle id Launch Services knows, and an empty result when none matches. `open_app` by name finds apps the same way.
 
 Debug builds have "GUI debug…" in the menu: a floating window that shows the trimmed tree of any running app's front window and runs real `executeAction` calls on it, as the main cursor.
 Clicking it does not activate Yumi, so a menu Yumi opened stays open while you press the next item.
