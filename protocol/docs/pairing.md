@@ -16,6 +16,7 @@ Who builds what:
 - Which devices are paired with each other.
 - Results, events, notices, and pairing verdicts held for a device that dropped off, until they expire.
 - Each open pairing request, for its 30-second answer window.
+- Which devices it last refused for an older protocol version, until they connect on its version.
 
 It never sees a pairing secret, an X25519 key, or a payload in plain text.
 It logs routing fields, connection events, and errors only (OBJ-13 task 8).
@@ -29,18 +30,57 @@ Every connection starts the same way, for every device, every time.
 3. The device sends `authenticate`: its device id, its Ed25519 public key, its protocol version, and an Ed25519 signature over the canonical fields `yumi-relay-auth-v1`, the challenge bytes, and the device id.
 4. The relay checks, in order:
    - The frame matches the schema, or it refuses with `invalidFrame`.
-   - The protocol version is one it speaks, or `unsupportedVersion`.
-     The schema accepts any positive version (`PeerProtocolVersion`), so a device on another version reaches this check instead of failing as `invalidFrame`.
    - The device id is derived from the public key (see [crypto.md](crypto.md)), or `deviceIdMismatch`.
    - The signature verifies, or `badSignature`.
+   - The protocol version is the one it speaks, or `unsupportedVersion`, as in "Another protocol version" below.
+     The schema accepts any positive version (`PeerProtocolVersion`), so a device on another version reaches this check instead of failing as `invalidFrame`.
 5. A device id the relay has not seen is registered on the spot.
    Because the id is derived from the key, nobody can take over another device's id.
    A registered device that has no pairings can reach nobody, so the relay needs no list of allowed devices.
 6. If every check passes, the relay sends `ready`, then every held message and notice for the device, oldest first.
    Otherwise it sends `refused` with the reason and closes the connection.
 
-A device that is refused shows the "Bridge down" copy from [SPEC-11](../../specs/11-user-facing-errors.md), never the reason.
+A device that is refused for any other reason shows the "Bridge down" copy from [SPEC-11](../../specs/11-user-facing-errors.md), never the reason.
 A device that loses its connection reconnects with backoff, and shows connected, reconnecting, or offline (SPEC-08 r10).
+
+### Another protocol version
+
+The relay speaks exactly one protocol version, and devices are updated at different times, so a device can be behind the relay or ahead of it.
+The relay checks the version only after the signature, so it knows which device it refuses, and nobody can mark another device as out of date.
+
+From protocol version 4 on, `challenge`, `authenticate`, and `refused` only ever gain optional properties, and the signed `yumi-relay-auth-v1` text never changes.
+So a device on any later version can always connect far enough to learn why it was refused.
+
+The relay:
+
+- Sends `refused` with `unsupportedVersion` and its own `protocolVersion`, then closes the connection.
+- Never registers an unknown device on another version, and never removes a pairing or anything it holds because of a version.
+- Remembers a registered device that is behind it, and forgets that once the device connects on its version, or comes back ahead of it.
+- Answers a command for a device it remembers as behind with `targetNeedsUpdate` instead of `targetOffline`.
+  It learns that a device is behind only when the device tries to connect, so right after the relay is updated, a device that has not tried yet still gets `targetOffline`.
+  Like `targetOffline`, the command is dropped, never queued (SPEC-08 r7).
+  Results and events for that device are held as usual, and expire after 2 minutes.
+
+The refused device:
+
+- Compares the relay's `protocolVersion` with its own.
+  Behind the relay, Yumi on this device needs an update.
+  Ahead of it, the relay has not been updated yet, and the user cannot fix that.
+  A `refused` frame without a version comes from a relay older than this rule, so the device treats it as ahead.
+- Shows the connection state as offline, with the matching error kind rather than `bridgeDown`, so the user can tell it from a network outage.
+- Keeps its keys, its pairings, and every unpair it still has to send.
+  A refusal never unpairs anything, since the relay is not trusted to unpair two devices.
+- Stops reconnecting with backoff, and tries again every `UnsupportedVersionRetrySeconds` (5 minutes) and when the app starts.
+  Updating the app restarts it, so an updated device connects at once.
+
+Once it connects on the relay's version, it gets `ready` and everything held for it, as on any reconnect.
+Its pairings are unchanged, so no new QR code is needed.
+
+The sender of a command that gets `targetNeedsUpdate` tells the user that Yumi on the other device needs an update, instead of that it is offline.
+It can keep the goal waiting for that device, as for an offline device ([SPEC-09](../../specs/09-cross-device-routing.md) requirement 15).
+
+The SPEC-11 copy for these cases is added by [OBJ-42](../../objectives/OBJ-42-version-mismatch-copy.md).
+Until then, a refused device shows "Bridge down", and a sender maps `targetNeedsUpdate` to `otherDeviceOffline`.
 
 ## Pairing
 
@@ -143,7 +183,7 @@ A command that reaches the receiver after its expiry is never run (SPEC-08 r6).
 If its id already ran, the receiver resends the stored result; otherwise it tells the sender the command expired.
 That reply is a payload kind, defined in [OBJ-25](../../objectives/OBJ-25-cross-device-messages.md).
 
-Every notice the relay sends (`ack`, `targetOffline`, `expired`, `notPaired`) names the message id.
+Every notice the relay sends (`ack`, `targetOffline`, `targetNeedsUpdate`, `expired`, `notPaired`) names the message id.
 A notice for a sender that is offline is held for 2 minutes, like an event.
 
 The sender resends an envelope the relay has not acked, with the same id, after it reconnects, as long as the envelope has not expired.
@@ -154,9 +194,10 @@ The relay's notices map to [SPEC-11](../../specs/11-user-facing-errors.md) error
 | Notice | `ErrorKind` |
 |---|---|
 | `targetOffline` | `otherDeviceOffline` |
+| `targetNeedsUpdate` | `otherDeviceOffline`, until OBJ-42 adds its own kind |
 | `expired` | `commandExpired` |
 | `notPaired` | `unpairedDevice` |
-| `refused`, or no connection | `bridgeDown` |
+| `refused`, or no connection | `bridgeDown`, except `unsupportedVersion` as above |
 
 A `notPaired` notice only fails the message that caused it.
 The device never deletes keys because of it, since the relay is not trusted to unpair two devices.
@@ -178,7 +219,8 @@ From then on, the relay answers any envelope between the two with `notPaired`, a
 Pairing again needs a new QR code.
 
 Protocol version 4 adds the required unpair id and includes it in the signed bytes.
-Devices that speak another protocol version are refused during relay authentication.
+Devices that speak another protocol version are refused during relay authentication, as in "Another protocol version" above.
+An unpair the relay holds has no expiry, so a version that changes `UnpairFrame` must say how the relay carries held unpairs over.
 
 ## Lost device or key
 

@@ -139,6 +139,7 @@ export type BridgeFrame =
   | EnvelopeFrame
   | AckFrame
   | TargetOfflineFrame
+  | TargetNeedsUpdateFrame
   | ExpiredFrame
   | NotPairedFrame
   | PairRequestFrame
@@ -676,7 +677,7 @@ export type Payload =
   | PingPayload
   | PingResultPayload;
 
-/** The version another side says it speaks, before it is checked: in hello, the relay's authenticate frame, and the pairing QR code. Any version validates, so the receiver's own check runs and answers with its structured error (a UserError for hello, unsupportedVersion from the relay, pairingVersionsDiffer on the phone) instead of a schema error. Everything else uses ProtocolVersion. */
+/** The version another side says it speaks, before it is checked: in hello, the relay's authenticate frame, and the pairing QR code. Any version validates, so the receiver's own check runs and answers with its structured error (a UserError for hello, unsupportedVersion from the relay, pairingVersionsDiffer on the phone) instead of a schema error. The relay's refused frame also names its own version this way, so a device on any version can read it. Everything else uses ProtocolVersion. */
 export type PeerProtocolVersion = number;
 
 /** Decided by the harness for every action, never by the model (SPEC-07 r1). */
@@ -797,10 +798,12 @@ export interface Rect {
   height: number;
 }
 
-/** Relay to device: the connection is refused and will close. */
+/** Relay to device: the connection is refused and will close. Like challenge and authenticate, it only ever gains optional properties, so a device on any later version can read why it was refused. */
 export interface RefusedFrame {
   frame: "refused";
   reason: RefusedReason;
+  /** The version the relay speaks, sent only with unsupportedVersion. A device on an older version needs an update; a device on a newer one waits for the relay (protocol/docs/pairing.md, "Another protocol version"). Optional, because a relay from before OBJ-34 does not send it; the device then treats the relay as behind. */
+  protocolVersion?: PeerProtocolVersion;
 }
 
 export type RefusedReason = "badSignature" | "deviceIdMismatch" | "unsupportedVersion" | "invalidFrame";
@@ -1077,6 +1080,13 @@ export interface TargetApp {
   name?: string;
 }
 
+/** Relay to sender: a command's target is offline because the relay refused it for an older protocol version, so it was dropped, never queued. The sender shows that Yumi on the target needs an update instead of that it is offline (OBJ-34). */
+export interface TargetNeedsUpdateFrame {
+  frame: "targetNeedsUpdate";
+  messageId: Uuid;
+  to: DeviceId;
+}
+
 /** Relay to sender: a command's target is offline, so it was dropped, never queued (SPEC-08 r7). */
 export interface TargetOfflineFrame {
   frame: "targetOffline";
@@ -1240,6 +1250,10 @@ export interface UnpairFrame {
 export interface UnpairParams {
   deviceId: DeviceId;
 }
+
+/** A device the relay refused with unsupportedVersion tries again every 5 minutes and when the app starts, instead of reconnecting with backoff, keeping its keys and pairings (OBJ-34). */
+export const UNSUPPORTED_VERSION_RETRY_SECONDS = 300;
+export type UnsupportedVersionRetrySeconds = typeof UNSUPPORTED_VERSION_RETRY_SECONDS;
 
 /** An error the user will see. Apps turn it into the SPEC-11 copy. Technical details go to the local log, not here. */
 export interface UserError {

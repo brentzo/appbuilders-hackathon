@@ -255,6 +255,7 @@ public enum BridgeFrame: Codable, Equatable, Sendable {
     case envelope(EnvelopeFrame)
     case ack(AckFrame)
     case targetOffline(TargetOfflineFrame)
+    case targetNeedsUpdate(TargetNeedsUpdateFrame)
     case expired(ExpiredFrame)
     case notPaired(NotPairedFrame)
     case pairRequest(PairRequestFrame)
@@ -279,6 +280,7 @@ public enum BridgeFrame: Codable, Equatable, Sendable {
         case "envelope": self = .envelope(try EnvelopeFrame(from: decoder))
         case "ack": self = .ack(try AckFrame(from: decoder))
         case "targetOffline": self = .targetOffline(try TargetOfflineFrame(from: decoder))
+        case "targetNeedsUpdate": self = .targetNeedsUpdate(try TargetNeedsUpdateFrame(from: decoder))
         case "expired": self = .expired(try ExpiredFrame(from: decoder))
         case "notPaired": self = .notPaired(try NotPairedFrame(from: decoder))
         case "pairRequest": self = .pairRequest(try PairRequestFrame(from: decoder))
@@ -315,6 +317,9 @@ public enum BridgeFrame: Codable, Equatable, Sendable {
             try value.encode(to: encoder)
         case .targetOffline(let value):
             try container.encode("targetOffline", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .targetNeedsUpdate(let value):
+            try container.encode("targetNeedsUpdate", forKey: .discriminator)
             try value.encode(to: encoder)
         case .expired(let value):
             try container.encode("expired", forKey: .discriminator)
@@ -1644,12 +1649,15 @@ public struct Rect: Codable, Equatable, Sendable {
     }
 }
 
-/// Relay to device: the connection is refused and will close.
+/// Relay to device: the connection is refused and will close. Like challenge and authenticate, it only ever gains optional properties, so a device on any later version can read why it was refused.
 public struct RefusedFrame: Codable, Equatable, Sendable {
     public var reason: RefusedReason
+    /// The version the relay speaks, sent only with unsupportedVersion. A device on an older version needs an update; a device on a newer one waits for the relay (protocol/docs/pairing.md, "Another protocol version"). Optional, because a relay from before OBJ-34 does not send it; the device then treats the relay as behind.
+    public var protocolVersion: Int?
 
-    public init(reason: RefusedReason) {
+    public init(reason: RefusedReason, protocolVersion: Int? = nil) {
         self.reason = reason
+        self.protocolVersion = protocolVersion
     }
 }
 
@@ -2119,6 +2127,17 @@ public struct TargetApp: Codable, Equatable, Sendable {
     }
 }
 
+/// Relay to sender: a command's target is offline because the relay refused it for an older protocol version, so it was dropped, never queued. The sender shows that Yumi on the target needs an update instead of that it is offline (OBJ-34).
+public struct TargetNeedsUpdateFrame: Codable, Equatable, Sendable {
+    public var messageId: String
+    public var to: String
+
+    public init(messageId: String, to: String) {
+        self.messageId = messageId
+        self.to = to
+    }
+}
+
 /// Relay to sender: a command's target is offline, so it was dropped, never queued (SPEC-08 r7).
 public struct TargetOfflineFrame: Codable, Equatable, Sendable {
     public var messageId: String
@@ -2462,6 +2481,9 @@ public struct UnpairParams: Codable, Equatable, Sendable {
         self.deviceId = deviceId
     }
 }
+
+/// A device the relay refused with unsupportedVersion tries again every 5 minutes and when the app starts, instead of reconnecting with backoff, keeping its keys and pairings (OBJ-34).
+public let UNSUPPORTED_VERSION_RETRY_SECONDS: Int = 300
 
 /// An error the user will see. Apps turn it into the SPEC-11 copy. Technical details go to the local log, not here.
 public struct UserError: Codable, Equatable, Sendable {

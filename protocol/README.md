@@ -55,7 +55,7 @@ The bridge envelope, relay frames, pairing, crypto, and cross-device message kin
 | `errors.json` | ErrorKind, UserError |
 | `messages.json` | Payload and every encrypted cross-device message kind, plus phone tool descriptions and argument schemas |
 | `rpc.json` | Every local RPC method and event (listed under `x-rpc`), with their params, results, and error data |
-| `bridge.json` | Envelope, EnvelopeType, Signature, SealedPayload, Key32, DeviceName, DevicePlatform, PairingOffer, PairRequest, PairAccept, BridgeFrame and one frame type per variant, RefusedReason, the expiry constants, and the pairing constants (`PairingOfferSeconds`, `PairingAnswerSeconds`) |
+| `bridge.json` | Envelope, EnvelopeType, Signature, SealedPayload, Key32, DeviceName, DevicePlatform, PairingOffer, PairRequest, PairAccept, BridgeFrame and one frame type per variant, RefusedReason, the expiry constants, the pairing constants (`PairingOfferSeconds`, `PairingAnswerSeconds`), and `UnsupportedVersionRetrySeconds` |
 
 ## Cross-device messages
 
@@ -229,6 +229,10 @@ Our generator accepts only the schema subset that maps faithfully to all three l
   Envelopes, `HelloResult`, and everything else keep the `ProtocolVersion` const.
 - Version 3 ([OBJ-29](../objectives/OBJ-29-protocol-mac-fixes.md)) fits the contracts to real macOS: `axPress` became `click`, the p1 vision `click` became `clickAt`, `AXRole` gained rows, cells, and scrollable containers, `Observation` gained `app`, `focused`, and `layer`, peers send a `PeerProtocolVersion` where the version is checked, `open_app` takes a `name`, `open_file` takes a `bundleId`, and keys gained `enter`.
 - Bridge messages carry it in the envelope, and devices send it when they authenticate with the relay.
+- The relay speaks one version and refuses any other with its own version in `refused`, so each device knows whether it or the relay needs an update ([docs/pairing.md](docs/pairing.md), "Another protocol version").
+  So from version 4 on, the handshake frames `challenge`, `authenticate`, and `refused` only ever gain optional properties, and the relay's signed auth text never changes.
+- A new version keeps every pairing, and devices keep their keys, so nobody pairs again after an update.
+  A version that changes a frame the relay holds without expiry (an unpair) says how held frames are carried over.
 - **Breaking changes bump the version:** removing or renaming a type, property, enum value, RPC method, or event; making an optional property required; tightening a rule so that values that used to validate no longer do.
 - **Not breaking:** adding an optional property, a new type, a new RPC method or event, or loosening a rule.
   These still need a regenerate and a commit.

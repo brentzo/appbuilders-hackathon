@@ -102,6 +102,7 @@
         { "$ref": "#/$defs/EnvelopeFrame" },
         { "$ref": "#/$defs/AckFrame" },
         { "$ref": "#/$defs/TargetOfflineFrame" },
+        { "$ref": "#/$defs/TargetNeedsUpdateFrame" },
         { "$ref": "#/$defs/ExpiredFrame" },
         { "$ref": "#/$defs/NotPairedFrame" },
         { "$ref": "#/$defs/PairRequestFrame" },
@@ -145,14 +146,20 @@
       }
     },
     "RefusedFrame": {
-      "description": "Relay to device: the connection is refused and will close.",
+      "description": "Relay to device: the connection is refused and will close. Like challenge and authenticate, it only ever gains optional properties, so a device on any later version can read why it was refused.",
       "type": "object",
       "additionalProperties": false,
       "required": ["frame", "reason"],
       "properties": {
         "frame": { "const": "refused" },
-        "reason": { "$ref": "#/$defs/RefusedReason" }
-      }
+        "reason": { "$ref": "#/$defs/RefusedReason" },
+        "protocolVersion": {
+          "description": "The version the relay speaks, sent only with unsupportedVersion. A device on an older version needs an update; a device on a newer one waits for the relay (protocol/docs/pairing.md, \"Another protocol version\"). Optional, because a relay from before OBJ-34 does not send it; the device then treats the relay as behind.",
+          "$ref": "common.json#/$defs/PeerProtocolVersion"
+        }
+      },
+      "if": { "properties": { "reason": { "not": { "const": "unsupportedVersion" } } } },
+      "then": { "properties": { "protocolVersion": false } }
     },
     "RefusedReason": {
       "type": "string",
@@ -185,6 +192,17 @@
       "required": ["frame", "messageId", "to"],
       "properties": {
         "frame": { "const": "targetOffline" },
+        "messageId": { "$ref": "common.json#/$defs/Uuid" },
+        "to": { "$ref": "common.json#/$defs/DeviceId" }
+      }
+    },
+    "TargetNeedsUpdateFrame": {
+      "description": "Relay to sender: a command's target is offline because the relay refused it for an older protocol version, so it was dropped, never queued. The sender shows that Yumi on the target needs an update instead of that it is offline (OBJ-34).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frame", "messageId", "to"],
+      "properties": {
+        "frame": { "const": "targetNeedsUpdate" },
         "messageId": { "$ref": "common.json#/$defs/Uuid" },
         "to": { "$ref": "common.json#/$defs/DeviceId" }
       }
@@ -289,6 +307,11 @@
       "description": "The relay keeps a pairRequest open for 30 seconds after it receives it, then closes it with pairExpired (SPEC-08 'Mac does not answer pairing'). The relay's clock alone decides, so a pairing never completes after the phone was told it failed.",
       "type": "integer",
       "const": 30
+    },
+    "UnsupportedVersionRetrySeconds": {
+      "description": "A device the relay refused with unsupportedVersion tries again every 5 minutes and when the app starts, instead of reconnecting with backoff, keeping its keys and pairings (OBJ-34).",
+      "type": "integer",
+      "const": 300
     },
     "CommandExpirySeconds": {
       "description": "Every command expires 2 minutes after it is sent (SPEC-08 r6, SPEC-09 r16), except an approval request.",

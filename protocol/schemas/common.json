@@ -10,7 +10,7 @@
       "const": 4
     },
     "PeerProtocolVersion": {
-      "description": "The version another side says it speaks, before it is checked: in hello, the relay's authenticate frame, and the pairing QR code. Any version validates, so the receiver's own check runs and answers with its structured error (a UserError for hello, unsupportedVersion from the relay, pairingVersionsDiffer on the phone) instead of a schema error. Everything else uses ProtocolVersion.",
+      "description": "The version another side says it speaks, before it is checked: in hello, the relay's authenticate frame, and the pairing QR code. Any version validates, so the receiver's own check runs and answers with its structured error (a UserError for hello, unsupportedVersion from the relay, pairingVersionsDiffer on the phone) instead of a schema error. The relay's refused frame also names its own version this way, so a device on any version can read it. Everything else uses ProtocolVersion.",
       "type": "integer",
       "minimum": 1
     },

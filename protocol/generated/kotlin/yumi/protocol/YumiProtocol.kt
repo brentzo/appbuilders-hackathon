@@ -943,11 +943,13 @@ data class Rect(
     val height: Double,
 )
 
-/** Relay to device: the connection is refused and will close. */
+/** Relay to device: the connection is refused and will close. Like challenge and authenticate, it only ever gains optional properties, so a device on any later version can read why it was refused. */
 @Serializable
 @SerialName("refused")
 data class RefusedFrame(
     val reason: RefusedReason,
+    /** The version the relay speaks, sent only with unsupportedVersion. A device on an older version needs an update; a device on a newer one waits for the relay (protocol/docs/pairing.md, "Another protocol version"). Optional, because a relay from before OBJ-34 does not send it; the device then treats the relay as behind. */
+    val protocolVersion: Long? = null,
 ) : BridgeFrame
 
 @Serializable
@@ -1285,6 +1287,14 @@ data class TargetApp(
     val name: String? = null,
 )
 
+/** Relay to sender: a command's target is offline because the relay refused it for an older protocol version, so it was dropped, never queued. The sender shows that Yumi on the target needs an update instead of that it is offline (OBJ-34). */
+@Serializable
+@SerialName("targetNeedsUpdate")
+data class TargetNeedsUpdateFrame(
+    val messageId: String,
+    val to: String,
+) : BridgeFrame
+
 /** Relay to sender: a command's target is offline, so it was dropped, never queued (SPEC-08 r7). */
 @Serializable
 @SerialName("targetOffline")
@@ -1478,6 +1488,9 @@ data class UnpairFrame(
 data class UnpairParams(
     val deviceId: String,
 )
+
+/** A device the relay refused with unsupportedVersion tries again every 5 minutes and when the app starts, instead of reconnecting with backoff, keeping its keys and pairings (OBJ-34). */
+const val UNSUPPORTED_VERSION_RETRY_SECONDS: Long = 300L
 
 /** An error the user will see. Apps turn it into the SPEC-11 copy. Technical details go to the local log, not here. */
 @Serializable

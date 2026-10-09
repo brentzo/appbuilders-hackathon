@@ -57,7 +57,19 @@ describe("BridgeFrame", () => {
     expect(validate("BridgeFrame", { ...auth, protocolVersion: 4 }).errors).toEqual([]);
     expect(validate("BridgeFrame", { ...auth, protocolVersion: 0 }).valid).toBe(false);
     expect(validate("BridgeFrame", { ...auth, protocolVersion: "4" }).valid).toBe(false);
-    expect(validate("BridgeFrame", { frame: "refused", reason: "unsupportedVersion" }).valid).toBe(true);
+  });
+
+  it("names the relay's own version when it refuses another one, so the device knows which side needs an update, and still reads an older relay's refusal (OBJ-34)", () => {
+    expect(validate("BridgeFrame", { frame: "refused", reason: "unsupportedVersion", protocolVersion: 5 }).errors).toEqual([]);
+    expect(validate("BridgeFrame", { frame: "refused", reason: "unsupportedVersion", protocolVersion: 3 }).errors).toEqual([]);
+    expect(validate("BridgeFrame", { frame: "refused", reason: "unsupportedVersion" }).errors).toEqual([]);
+    expect(validate("BridgeFrame", { frame: "refused", reason: "unsupportedVersion", protocolVersion: 0 }).valid).toBe(false);
+    expect(validate("BridgeFrame", { frame: "refused", reason: "badSignature", protocolVersion: 4 }).valid).toBe(false);
+  });
+
+  it("tells the sender at once that a command's target needs an update, not that it is offline (OBJ-34)", () => {
+    expect(validate("BridgeFrame", { frame: "targetNeedsUpdate", messageId: envelope.id, to: envelope.to }).errors).toEqual([]);
+    expect(validate("BridgeFrame", { frame: "targetNeedsUpdate", messageId: envelope.id }).valid).toBe(false);
   });
 
   it("tells the sender at once that a command's target is offline (SPEC-08 'Command to an offline device fails at once')", () => {
