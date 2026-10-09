@@ -29,9 +29,17 @@
     <string name="home_hint_listening">Listening…</string>
     <string name="home_mic_start">Start talking</string>
     <string name="home_mic_stop">Stop listening</string>
-    <string name="home_you_said">You said</string>
+    <string name="home_talk">Talk</string>
     <!-- The accessibility action for tapping the cat, which makes it hop. -->
     <string name="cat_pet">Pet Yumi</string>
+    <string name="home_stop">Stop</string>
+    <!-- The same words as the Mac menu panel where the meaning is the same. -->
+    <string name="home_state_ready">Ready</string>
+    <string name="home_state_listening">Listening</string>
+    <string name="home_state_needs_hand">Needs a hand</string>
+    <string name="home_main_task">Main task</string>
+    <string name="home_task_working">Working on your Mac</string>
+    <string name="home_task_waiting">Waiting for your Mac</string>
     <string name="home_stopped_title">Yumi isn\'t running in the background</string>
     <string name="home_stopped_body">You stopped it, so your Mac can\'t reach this phone until you start it again.</string>
     <string name="home_stopped_action">Start again</string>

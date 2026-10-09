@@ -11,7 +11,17 @@ import android.os.Build
 import ai.yumi.android.voice.wakeword.WakeWordConfig
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import ai.yumi.android.design.YumiMotion
+import ai.yumi.android.design.YumiSpace
+import ai.yumi.android.ui.components.YumiButton
+import ai.yumi.android.ui.components.YumiCard
+import ai.yumi.android.ui.theme.Yumi
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -22,9 +32,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -40,6 +49,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 private enum class Step(val title: Int, val body: Int) {
     Microphone(R.string.onboarding_mic_title, R.string.onboarding_mic_body),
@@ -86,37 +96,46 @@ fun OnboardingScreen(
     val battery = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { next() }
 
     val step = steps[index]
-    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(
-            Modifier
-                .fillMaxSize()
-                .safeDrawingPadding()
-                .padding(horizontal = 32.dp, vertical = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            if (steps.size > 1) {
-                Text(
-                    stringResource(R.string.onboarding_step, index + 1, steps.size),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Spacer(Modifier.weight(1f))
-            LocalCatRenderer.current.Cat(
-                if (step == Step.Microphone) CatState.Listening else CatState.Idle,
-                Modifier.size(168.dp),
+    val colors = Yumi.colors
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(colors.paper)
+            .safeDrawingPadding()
+            .padding(horizontal = YumiSpace.xl, vertical = YumiSpace.xl),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        if (steps.size > 1) {
+            Text(
+                stringResource(R.string.onboarding_step, index + 1, steps.size),
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.muted,
             )
-            Spacer(Modifier.height(40.dp))
-            AnimatedContent(targetState = step, label = "step") { shown ->
+        }
+        Spacer(Modifier.weight(1f))
+        LocalCatRenderer.current.Cat(
+            if (step == Step.Microphone) CatState.Listening else CatState.Idle,
+            Modifier.size(200.dp),
+        )
+        Spacer(Modifier.height(YumiSpace.xl))
+        YumiCard(Modifier.widthIn(max = 400.dp)) {
+            AnimatedContent(
+                targetState = step,
+                transitionSpec = {
+                    fadeIn(tween(YumiMotion.PANEL_MS, easing = YumiMotion.easing)) togetherWith
+                        fadeOut(tween(YumiMotion.AVOID_FADE_MS))
+                },
+                label = "step",
+            ) { shown ->
                 Column(
-                    Modifier.fillMaxWidth(),
+                    Modifier.fillMaxWidth().padding(YumiSpace.s),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(YumiSpace.s),
                 ) {
                     Text(
                         stringResource(shown.title),
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onBackground,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = colors.brand,
                         textAlign = TextAlign.Center,
                     )
                     Text(
@@ -127,29 +146,33 @@ fun OnboardingScreen(
                             stringResource(shown.body)
                         },
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = colors.muted,
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.widthIn(max = 360.dp),
                     )
                 }
             }
-            Spacer(Modifier.weight(1f))
-            Button(
-                onClick = {
-                    when (step) {
-                        Step.Microphone -> askMic()
-                        Step.Notifications -> askNotifications()
-                        Step.Battery -> battery.launch(SystemSettings.ignoreBatteryOptimizationsIntent(context))
-                    }
-                },
-                modifier = Modifier.fillMaxWidth().widthIn(max = 360.dp).height(52.dp),
-            ) {
-                Text(stringResource(R.string.onboarding_allow), style = MaterialTheme.typography.titleMedium)
-            }
-            Spacer(Modifier.height(8.dp))
-            TextButton(onClick = next, modifier = Modifier.fillMaxWidth().widthIn(max = 360.dp).height(52.dp)) {
-                Text(stringResource(R.string.onboarding_not_now), style = MaterialTheme.typography.titleMedium)
-            }
+        }
+        Spacer(Modifier.weight(1f))
+        YumiButton(
+            onClick = {
+                when (step) {
+                    Step.Microphone -> askMic()
+                    Step.Notifications -> askNotifications()
+                    Step.Battery -> battery.launch(SystemSettings.ignoreBatteryOptimizationsIntent(context))
+                }
+            },
+            large = true,
+            modifier = Modifier.fillMaxWidth().widthIn(max = 400.dp),
+        ) {
+            Text(stringResource(R.string.onboarding_allow), style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp))
+        }
+        Spacer(Modifier.height(YumiSpace.s))
+        TextButton(
+            onClick = next,
+            modifier = Modifier.fillMaxWidth().widthIn(max = 400.dp).height(52.dp),
+            colors = ButtonDefaults.textButtonColors(contentColor = colors.muted),
+        ) {
+            Text(stringResource(R.string.onboarding_not_now), style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp))
         }
     }
 }

@@ -9,6 +9,7 @@ import ai.yumi.android.errors.PresentedError
 import ai.yumi.android.permissions.PermissionCoordinator
 import ai.yumi.android.service.YumiServiceController
 import ai.yumi.android.system.SystemSettings
+import ai.yumi.android.ui.components.YumiButton
 import ai.yumi.android.ui.components.isGranted
 import ai.yumi.android.ui.components.rememberPermissionAsker
 import ai.yumi.android.ui.components.rememberResumeCount
@@ -18,14 +19,17 @@ import ai.yumi.android.ui.onboarding.OnboardingScreen
 import ai.yumi.android.ui.settings.SettingsActions
 import ai.yumi.android.ui.settings.SettingsScreen
 import ai.yumi.android.ui.settings.SettingsState
+import ai.yumi.android.ui.theme.Yumi
 import android.Manifest
 import android.os.Build
+import ai.yumi.android.design.YumiRadius
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -228,8 +232,11 @@ private fun PermissionRequestHost(
                 onDismissRequest = { coordinator.onAnswered(false) },
                 title = { Text(stringResource(R.string.permission_dialog_title)) },
                 text = { Text(current.error.text) },
-                confirmButton = { TextButton(onClick = ask) { Text(allow.label) } },
-                dismissButton = { TextButton(onClick = { coordinator.onAnswered(false) }) { Text(notNow.label) } },
+                confirmButton = { YumiButton(onClick = ask) { Text(allow.label) } },
+                dismissButton = { YumiButton(onClick = { coordinator.onAnswered(false) }, primary = false) { Text(notNow.label) } },
+                containerColor = Yumi.colors.surface,
+                titleContentColor = Yumi.colors.brand,
+                textContentColor = Yumi.colors.ink,
             )
         }
     }
@@ -247,11 +254,20 @@ private fun TypeGoalDialog(onSend: (String) -> Unit, onDismiss: () -> Unit) {
                 onValueChange = { text = it },
                 placeholder = { Text(stringResource(R.string.type_hint)) },
                 minLines = 2,
+                shape = RoundedCornerShape(YumiRadius.field),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = Yumi.colors.line,
+                    focusedBorderColor = Yumi.colors.accent,
+                    unfocusedPlaceholderColor = Yumi.colors.faint,
+                    focusedPlaceholderColor = Yumi.colors.faint,
+                ),
             )
         },
         confirmButton = {
-            TextButton(onClick = { onSend(text) }, enabled = text.isNotBlank()) { Text(stringResource(R.string.type_send)) }
+            YumiButton(onClick = { onSend(text) }, enabled = text.isNotBlank()) { Text(stringResource(R.string.type_send)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.type_cancel)) } },
+        dismissButton = { YumiButton(onClick = onDismiss, primary = false) { Text(stringResource(R.string.type_cancel)) } },
+        containerColor = Yumi.colors.surface,
+        titleContentColor = Yumi.colors.brand,
     )
 }
