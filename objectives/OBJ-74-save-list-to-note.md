@@ -5,7 +5,7 @@ product: harness
 assignee: Brent
 touches: [mac, protocol]
 specs: [SPEC-02, SPEC-01]
-status: in-progress
+status: done
 priority: p0
 depends-on: []
 integrates-with: [OBJ-17, OBJ-36, OBJ-50]
@@ -52,7 +52,7 @@ It also shows the cats working in Notes during the demo.
 
 - [x] Saying yes to the note leaves a new note in Notes with the full list.
 - [x] In Auto mode, asking for a list leaves a new note in Notes with the full list, with no question and no button.
-- [ ] "Save to Notes" on a card whose list is not in a note leaves a new note with the full list.
+- [x] "Save to Notes" on a card whose list is not in a note leaves a new note with the full list.
 - [x] The card shows the full list.
 
 ## Expected outcomes
@@ -65,20 +65,20 @@ It also shows the cats working in Notes during the demo.
 
 ## Outcome
 
-- **Result:** Built and verified live except one expectation, so it stays in progress until "Save to Notes" is run live or the lead accepts the tests for it. Brent confirmed both live Notes runs on 2026-10-10: with Auto mode off, he answered "Yes" and got a new note with the full list; with Auto mode on, the note was written with no question. One expectation was not run live (see "Not verified").
+- **Result:** Done. Brent confirmed both live Notes runs on 2026-10-10: with Auto mode off, he answered "Yes" and got a new note with the full list; with Auto mode on, the note was written with no question. He accepted the last expectation ("Save to Notes") on the harness and Mac tests, with no live run.
 - **Delivered:**
   - Protocol (still version 4): `Speak.list` (`FoundList`: title, items, optional `more`, `inNote`) and the app-to-harness method `saveListToNote` (`TaskRef` to `SubmitGoalResult`) in `protocol/schemas/rpc.json`, with examples and a test.
   - Harness: `harness/src/planner/list-note.ts` (list goals, the offer, the title, the list, the note subtask and its fixed script `scriptedNoteAction`, the `NOTE_TEXT` placeholder); the offer and `confirmWithNote` in `harness/src/confirm/`; the `list_to_note` task column (migration 10), set by a yes to the offer or by Auto mode; the note phase and the list on the summary in `harness/src/scheduler/run-task.ts`; `TaskControl.saveListToNote` and its RPC handler; in `harness/src/gui/gui-act.ts`, the scripted note steps, the placeholder expansion, and a wait for a window that is briefly unreadable after any action.
   - Mac: the full list, "Save to Notes", and "save it" on the summary card (`mac/Yumi/Summary/`, wired in `mac/Yumi/Harness/HarnessLink.swift`); hands-free answers that wait up to 8 s for the first word and ignore short blips (`mac/Yumi/Voice/SpeechEndpoint.swift`); the confirmation and question cards stay answerable by "Hey Yumi" or the shortcut after a silent listen (`GoalConfirmation.swift`, `TaskQuestions.swift`).
   - Spec: SPEC-02 r13 and its Decisions updated with Brent's Auto mode decision.
-- **Commits:** `24e0e68 docs(objectives): start OBJ-74`, `5ac6611 feat(protocol): send a task's found list with its summary and add saveListToNote`, `32b7113 feat(harness): offer to put a list in a new note and send the full list with the summary`, `418f8c4 feat(mac): show a task's full list on the summary card with save to notes`, `9797525 docs(objectives): record OBJ-74 progress before its live check`, `e285998 fix(mac): keep listening for an answer and keep its card answerable when nothing is heard`, `3df29fe fix(harness): wait for an opened app's window and never say it tried a few times when it could not read one`, `400d956 docs(spec-02): in Auto mode put a found list into a new note automatically`, `068108f feat(harness): put a list in a new note automatically in Auto mode and shorten the offer`, `124d145 fix(harness): write the list note with a fixed script and wait for a window that is briefly unreadable`, `6375b03 fix(harness): read a yes to "Want it in a note too?" as yes to the note`.
+- **Commits:** on main as `a66faae docs(objectives): start OBJ-74`, `c5cfb15 feat(protocol): send a task's found list with its summary and add saveListToNote`, `9f088a6 feat(harness): offer to put a list in a new note and send the full list with the summary`, `05109b2 feat(mac): show a task's full list on the summary card with save to notes`, `dc84854 docs(objectives): record OBJ-74 progress before its live check`, `ffdd432 fix(mac): keep listening for an answer and keep its card answerable when nothing is heard`, `70bf19f fix(harness): wait for an opened app's window and never say it tried a few times when it could not read one`, `5391353 docs(spec-02): in Auto mode put a found list into a new note automatically`, `9857869 feat(harness): put a list in a new note automatically in Auto mode and shorten the offer`, `54f10f9 fix(harness): write the list note with a fixed script and wait for a window that is briefly unreadable`, `c3887d7 fix(harness): read a yes to "Want it in a note too?" as yes to the note`, and the orchestrator's `7337549 fix(harness): use the one-argument localVoice in the OBJ-74 list-note test`; then this objective's outcome commit.
 - **Expectations:**
   - Saying yes to the note leaves a new note in Notes with the full list: Brent's live run with Auto mode off, 2026-10-10; also `harness/test/list-note.test.ts` ("offers the note, and "yes" leaves the full list in a new note after the listing") and `harness/test/gui-act.test.ts` ("writes the note with a fixed script and no model").
   - In Auto mode, asking for a list leaves a new note with the full list, with no question and no button: Brent's live run with Auto mode on, 2026-10-10; also `list-note.test.ts` ("In Auto mode there is no offer and no button").
   - The card shows the full list: seen in Brent's live runs (screenshot of the 102-item Downloads list); also `mac/YumiTests/TaskSummaryTests.swift`, with snapshots in light and dark.
-  - "Save to Notes" on a card whose list is not in a note leaves a new note: tests only (`list-note.test.ts` ""Save to Notes" on a list that is not in a note starts a short task that writes the note", `TaskSummaryTests`). Not run live; see below.
+  - "Save to Notes" on a card whose list is not in a note leaves a new note: accepted by Brent on 2026-10-10 on the harness and Mac tests, with no live run (`harness/test/list-note.test.ts` ""Save to Notes" on a list that is not in a note starts a short task that writes the note", and `mac/YumiTests/TaskSummaryTests.swift` for the button and "save it").
   - `python3 scripts/verify.py` passes on the branch (protocol, harness, bridge, Mac, Android, docs). The Swift and Kotlin compile checks did not run because Docker was not running.
-- **Not verified:** "Save to Notes" (and "save it") live. Steps for Brent: with Auto mode off, say "List the files in my Downloads folder", answer "no thanks", then press "Save to Notes" on the card (or say "Hey Yumi, save it"); a new note with the full list should appear and Yumi should say "Done. I put the full list in a new note called Files in your Downloads folder."
+- **Not verified:** "Save to Notes" and "save it" were not run live; Brent accepted them on the tests. To check live: with Auto mode off, say "List the files in my Downloads folder", answer "no thanks", then press "Save to Notes" (or say "Hey Yumi, save it"); a new note with the full list should appear.
 - **Decisions and deviations:**
   - Brent changed SPEC-02 r13 on 2026-10-10: in Auto mode the list goes into a new note automatically ("The goal why we're building this is to literally automate things."). "Save to Notes" shows only on a card whose list is not in a note, in any mode.
   - The offer is "Want it in a note too?", shorter than the objective's example, so the turn is quicker.
