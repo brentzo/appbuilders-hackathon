@@ -5,7 +5,7 @@ product: models
 assignee: Jepoy
 touches: [mac, android]
 specs: [SPEC-01]
-status: in-progress
+status: blocked
 priority: p0
 depends-on: []
 integrates-with: []
@@ -69,4 +69,6 @@ Android Whisper is p1 in SPEC-01 and SPEC-10, so its phone-specific benchmark is
 
 ## Outcome
 
-_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._
+Blocked: the team has not provided consented Taglish and English recordings or Mac access for the WhisperKit and whisper.cpp runs, latency and memory measurements, model-size verification, and model choice.
+The benchmark runner and its local-server test are complete, and Android p1 work is split into OBJ-28.
+Unblock when the team provides the approved recording corpus and access to the Mac.
