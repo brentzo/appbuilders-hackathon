@@ -21,6 +21,7 @@ enum class ErrorButton(val label: String) {
     TypeInstead("Type instead"),
     Allow("Allow"),
     PairNow("Pair now"),
+    ScanAgain("Scan again"),
     ShowWhatIDid("Show what I did"),
 }
 
@@ -30,7 +31,8 @@ data class ErrorCopy(val text: String, val buttons: List<ErrorButton>)
  * The SPEC-11 error copy, the single place it lives in code (SPEC-11 requirement 7).
  * `ErrorCopySpecTest` fails if this drifts from the table in specs/11-user-facing-errors.md.
  *
- * Placeholders: `{device}` is the other device, `{last action}` is the last thing Yumi did.
+ * Placeholders: `{device}` is the other device, `{last action}` is the last thing Yumi did,
+ * and `{permission}` is the plain name of a permission, such as "location".
  */
 object ErrorCopyTable {
     val copy: Map<ErrorKind, ErrorCopy> = mapOf(
@@ -87,7 +89,7 @@ object ErrorCopyTable {
             listOf(ErrorButton.OpenSettings, ErrorButton.TypeInstead),
         ),
         ErrorKind.PermissionMissingAndroid to ErrorCopy(
-            "I need permission to use your location for this.",
+            "I need permission to use your {permission} for this.",
             listOf(ErrorButton.Allow, ErrorButton.NotNow),
         ),
         ErrorKind.AccessibilityServiceOffAndroid to ErrorCopy(
@@ -113,6 +115,22 @@ object ErrorCopyTable {
         ErrorKind.UnpairedDevice to ErrorCopy(
             "Your phone isn't paired with your Mac yet.",
             listOf(ErrorButton.PairNow),
+        ),
+        ErrorKind.PairingCodeExpired to ErrorCopy(
+            "That pairing code expired. Codes only last a few minutes to keep your devices safe. Show a new code on your Mac and scan it again.",
+            listOf(ErrorButton.ScanAgain, ErrorButton.Cancel),
+        ),
+        ErrorKind.NotAPairingCode to ErrorCopy(
+            "That doesn't look like a Yumi pairing code. On your Mac, open Yumi and show the pairing code, then scan it again.",
+            listOf(ErrorButton.ScanAgain, ErrorButton.Cancel),
+        ),
+        ErrorKind.PairingVersionsDiffer to ErrorCopy(
+            "Yumi on your phone and your Mac are different versions, so they can't pair yet. Update Yumi on both, then try again.",
+            listOf(ErrorButton.Okay),
+        ),
+        ErrorKind.MacDidntAnswerPairing to ErrorCopy(
+            "Your Mac didn't answer, so pairing didn't finish. Make sure Yumi is open on your Mac and showing a new code, then scan it again.",
+            listOf(ErrorButton.ScanAgain, ErrorButton.Cancel),
         ),
         ErrorKind.Unexpected to ErrorCopy(
             "Something went wrong and I stopped to be safe. Here's the last thing I did: {last action}.",

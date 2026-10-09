@@ -80,6 +80,15 @@ class ErrorPresenterTest {
         val shown = presenter.present(IllegalStateException("boom"))
 
         assertEquals("Something went wrong and I stopped to be safe.", shown.text)
+        assertEquals(listOf("Try again", "Stop"), shown.buttons.map { it.label })
+    }
+
+    @Test
+    fun permissionCopyNamesThePermission() {
+        val shown = presenter.present(ErrorKind.PermissionMissingAndroid, permission = "camera")
+
+        assertEquals("I need permission to use your camera for this.", shown.text)
+        assertEquals(listOf("Allow", "Not now"), shown.buttons.map { it.label })
     }
 
     @Test

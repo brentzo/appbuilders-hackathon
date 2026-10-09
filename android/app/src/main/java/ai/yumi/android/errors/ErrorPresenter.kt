@@ -53,14 +53,16 @@ class ErrorPresenter(
      *
      * @param lastAction fills `{last action}` in the Unexpected copy.
      * @param alternatives the request-specific buttons for Unsupported request.
+     * @param permission fills `{permission}` with a plain name, such as "location".
      */
     fun present(
         kind: ErrorKind,
         lastAction: String? = null,
         alternatives: List<String> = emptyList(),
+        permission: String? = null,
     ): PresentedError {
         log.record(kind, null)
-        return build(kind, lastAction, alternatives)
+        return build(kind, lastAction, alternatives, permission)
     }
 
     /** The button whose label the user said, if any (SPEC-11 requirement 9). */
@@ -69,11 +71,20 @@ class ErrorPresenter(
         return error.buttons.firstOrNull { normalize(it.label) == said }
     }
 
-    private fun build(kind: ErrorKind, lastAction: String?, alternatives: List<String>): PresentedError {
+    private fun build(
+        kind: ErrorKind,
+        lastAction: String?,
+        alternatives: List<String>,
+        permission: String? = null,
+    ): PresentedError {
         val copy = ErrorCopyTable.of(kind)
-        val text = fill(copy.text, lastAction)
+        val text = fill(copy.text, lastAction, permission)
+        val nothingDoneYet = copy.text.contains(LAST_ACTION) && lastAction.isNullOrBlank()
         val buttons = copy.buttons.flatMap { button ->
-            if (button == ErrorButton.Alternatives) {
+            if (button == ErrorButton.ShowWhatIDid && nothingDoneYet) {
+                // There is nothing to show yet (SPEC-11, "Unexpected" notes).
+                emptyList()
+            } else if (button == ErrorButton.Alternatives) {
                 alternatives.map { PresentedButton(ErrorButton.Alternatives, it) }
             } else {
                 listOf(PresentedButton(button, button.label))
@@ -82,10 +93,11 @@ class ErrorPresenter(
         return PresentedError(kind, text, firstSentence(text), buttons)
     }
 
-    private fun fill(template: String, lastAction: String?): String {
+    private fun fill(template: String, lastAction: String?, permission: String?): String {
         val withDevice = SENTENCE_START_DEVICE.replace(template) { match ->
             match.groupValues[1] + otherDevice.replaceFirstChar { it.uppercase() }
         }.replace(DEVICE, otherDevice)
+            .replace(PERMISSION, permission ?: GENERIC_PERMISSION)
         if (!withDevice.contains(LAST_ACTION)) return withDevice
         val action = lastAction?.trim()?.trimEnd('.')
         return if (action.isNullOrEmpty()) {
@@ -107,6 +119,10 @@ class ErrorPresenter(
     private companion object {
         const val DEVICE = "{device}"
         const val LAST_ACTION = "{last action}"
+        const val PERMISSION = "{permission}"
+
+        /** Only if a caller forgets the name: still a full sentence, never a raw placeholder. */
+        const val GENERIC_PERMISSION = "phone's features"
         const val LAST_ACTION_SENTENCE = "Here's the last thing I did:"
         val SENTENCE_START_DEVICE = Regex("""(^|[.!?]\s+)\{device\}""")
         val SENTENCE_END = Regex("""[.!?](\s|$)""")

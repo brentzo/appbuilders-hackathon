@@ -28,6 +28,7 @@ Where a next step exists, it is a button, not a sentence telling them to go find
 9. Every button can also be triggered by voice, by saying its label.
 10. Errors are shown on the origin device ([SPEC-09](09-cross-device-routing.md)).
 11. Long copy: Yumi speaks the first sentence, and the full text is shown on screen.
+12. `{permission}` is the plain name of what the permission lets Yumi use, for example "location", "camera", or "contacts".
 12. "Type instead" opens a text box that accepts a goal the same way as speech.
 
 ## Error copy
@@ -47,7 +48,7 @@ Where a next step exists, it is a button, not a sentence telling them to go find
 | Screen permission missing (Mac) | "I need permission to see your screen before I can help with this." | Open settings, Not now |
 | Accessibility permission missing (Mac) | "I need permission to control your Mac before I can help with this." | Open settings, Not now |
 | Microphone permission missing | "I need permission to use the microphone so I can hear you." | Open settings, Type instead |
-| Permission missing (Android) | "I need permission to use your location for this." | Allow, Not now |
+| Permission missing (Android) | "I need permission to use your {permission} for this." | Allow, Not now |
 | Accessibility service off (Android, p1) | "I need you to turn on my accessibility access before I can use other apps on your phone." | Open settings, Not now |
 | Phone too hot or battery low (p1) | "Your phone is getting hot, so I paused to let it cool down." | Keep going, Stop |
 | Language not supported on this phone | "I can only understand English on this phone for now. Try saying it in English, or say it to your Mac." | Try again, Type instead |
@@ -65,6 +66,7 @@ Notes:
 - "Keep going" gives the subtask another 25 steps, once. A second breach marks it failed.
 - "Show what I did" opens the action log ([SPEC-07](07-safety.md)) at that task.
 - "Unexpected" never claims nothing changed, because a step may have run halfway.
+- "Unexpected" before Yumi has done anything in the task drops the second sentence and "Show what I did": "Something went wrong and I stopped to be safe." with Try again, Stop.
 
 ## Scenarios
 
@@ -96,6 +98,16 @@ Feature: User-facing errors
     Then the user sees "Something went wrong and I stopped to be safe. Here's the last thing I did: Clicked Export in Keynote."
     And the task is paused, not left half-running
 
+  Scenario: Unexpected error before any action
+    Given an error with no known type is thrown before Yumi has done anything in the task
+    Then the user sees "Something went wrong and I stopped to be safe."
+    And the buttons are "Try again" and "Stop"
+
+  Scenario: Permission copy names the permission
+    Given pairing needs the camera and the camera is not allowed
+    Then the user sees "I need permission to use your camera for this."
+    And the buttons are "Allow" and "Not now"
+
   Scenario: Missing screen permission
     Given the Mac has not granted Screen Recording permission
     When a task needs a screenshot
@@ -110,3 +122,5 @@ Feature: User-facing errors
 ## Decisions
 
 - **Pairing failures** have their own copy, shown on the phone: expired code, not a Yumi code, different versions, and no answer from the Mac. The Mac silently drops a bad pairing request, so the phone shows "Mac didn't answer pairing" after waiting 30 seconds, which also covers a code that was already used. Decided 2026-10-09.
+- **Android permission copy** is one row with a `{permission}` placeholder instead of one row per permission, so new tools only add a plain name. Decided 2026-10-09.
+- **"Unexpected" with nothing done yet** drops "Here's the last thing I did" and the "Show what I did" button, instead of showing a blank. Decided 2026-10-09.

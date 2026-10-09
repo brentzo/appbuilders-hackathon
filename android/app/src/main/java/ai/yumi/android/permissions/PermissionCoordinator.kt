@@ -13,9 +13,13 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /** A permission a tool asks for the first time it needs it (SPEC-10 requirement 6). */
-enum class ToolPermission(val manifestPermission: String, val errorKind: ErrorKind) {
-    // SPEC-11 "Permission missing (Android)" names location, so location is the only one with copy today.
-    Location(Manifest.permission.ACCESS_COARSE_LOCATION, ErrorKind.PermissionMissingAndroid),
+enum class ToolPermission(
+    val manifestPermission: String,
+    val errorKind: ErrorKind,
+    /** Fills `{permission}` in the SPEC-11 copy: "I need permission to use your location for this." */
+    val plainName: String,
+) {
+    Location(Manifest.permission.ACCESS_COARSE_LOCATION, ErrorKind.PermissionMissingAndroid, "location"),
 }
 
 /** A pending permission request, shown by the activity. */
@@ -61,7 +65,7 @@ class PermissionCoordinator(
             val deferred = CompletableDeferred<Boolean>()
             answer = deferred
             val inBackground = !environment.isAppInForeground()
-            val error = presenter.present(permission.errorKind)
+            val error = presenter.present(permission.errorKind, permission = permission.plainName)
             if (inBackground) environment.postBackgroundRequest(permission, error.text)
             _request.value = PermissionRequest(permission, error, postedAsNotification = inBackground)
             try {

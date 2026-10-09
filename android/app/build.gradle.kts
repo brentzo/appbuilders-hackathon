@@ -38,6 +38,8 @@ android {
         unitTests.all {
             // The error copy test compares the code with the table in SPEC-11.
             it.systemProperty("yumi.specsDir", rootProject.file("../specs").absolutePath)
+            // Declared as an input so editing a spec reruns the test instead of reusing a cached pass.
+            it.inputs.dir(rootProject.file("../specs")).withPropertyName("specs")
         }
     }
 }

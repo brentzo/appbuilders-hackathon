@@ -126,6 +126,7 @@ If Yumi stops when the phone is locked, open Yumi's app settings from Yumi's Set
 ## Decisions
 
 - **Part B model:** Qwen3.5-4B, fixed (SPEC-10 requirement 9). 9B (~6 GB plus context) was too tight on 12 GB of real RAM, and 4B scores about the same on phone tasks (AndroidWorld 58.6 vs 57.8). Decided 2026-10-09.
+- **Android SDK:** stay on compile and target SDK 36 with AGP 8.13. Newer AndroidX releases need SDK 37 and AGP 9, which adds disk use and upgrade risk for no feature we need. Decided 2026-10-09.
 
 ## Specs
 

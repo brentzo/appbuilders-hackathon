@@ -28,6 +28,10 @@ enum class ErrorKind(val specName: String) {
     DidntCatchSpeech("Didn't catch speech"),
     ModelFailedToLoad("Model failed to load"),
     UnpairedDevice("Unpaired device"),
+    PairingCodeExpired("Pairing code expired"),
+    NotAPairingCode("Not a pairing code"),
+    PairingVersionsDiffer("Pairing versions differ"),
+    MacDidntAnswerPairing("Mac didn't answer pairing"),
     Unexpected("Unexpected"),
 }
 
