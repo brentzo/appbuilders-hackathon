@@ -22,6 +22,8 @@ final class HarnessLink {
     let overlay: CursorOverlay
     /// Reads and acts on other apps' windows for the harness (OBJ-44).
     let gui: GuiExecutor
+    /// Arranges the task's windows with the user's yes, and puts them back (OBJ-20).
+    let tiler: WindowTiler
     /// Helper subtasks shown as chips, by subtask id.
     private var helperSubtasks: Set<String> = []
 
@@ -31,6 +33,15 @@ final class HarnessLink {
         supervisor = HarnessSupervisor(launcher: launcher)
         client = HarnessClient(socketPath: socketPath)
         gui = GuiExecutor(overlay: overlay)
+        let tilingPanel = TilingPanel()
+        let tilingVoice = TilingVoice()
+        tiler = WindowTiler(
+            demoMode: { model.settings.demoModeEnabled },
+            taskArea: { TaskDisplay.area(overlay) },
+            ask: { taskId, answer in tilingPanel.show(taskId: taskId, on: TaskDisplay.screen(overlay), answer: answer) },
+            dismissQuestion: { tilingPanel.dismiss(taskId: $0) },
+            say: { tilingVoice.say($0) }
+        )
         client.appMethods = AppMethodServer(gui: gui)
         usesMock = launcher.isMock
         model.mockHarnessName = launcher.isMock ? launcher.displayName : nil
@@ -44,7 +55,10 @@ final class HarnessLink {
             model.harnessReady = state == .connected
             // Without a harness no task is running, so no cursor may stay (SPEC-04 r9).
             if state != .connected { overlay.fadeAll() }
-            if state == .connected { PhoneLink.shared.refreshDevices() }
+            if state == .connected {
+                PhoneLink.shared.refreshDevices()
+                restoreFinishedTilings()
+            }
             log.notice("Status line: \(self.model.status.menuTitle, privacy: .public)")
         }
         eventsTask = Task { [weak self, client] in
@@ -67,6 +81,7 @@ final class HarnessLink {
         switch event {
         case .taskStatusChanged(let change):
             taskStatuses[change.taskId] = change.status
+            tiler.taskStatusChanged(change.taskId, change.status)
             model.taskStatus = Self.appStatus(for: Array(taskStatuses.values))
             if let subtaskId = change.subtaskId, let status = change.subtaskStatus,
                Self.finishedSubtask.contains(status), helperSubtasks.remove(subtaskId) != nil {
@@ -87,12 +102,28 @@ final class HarnessLink {
         case .userError(let error):
             log.notice("The harness reported \(error.kind.rawValue, privacy: .public)")
             onUserError?(error)
+        case .tilingSuggested(let suggestion):
+            tiler.suggest(suggestion)
         case .bridgeStateChanged(let change):
             PhoneLink.shared.update(connection: PhoneLink.Connection(change.state))
         default:
             // goalRestated, questionAsked, speak (voice and confirmation), approvalCancelled,
-            // interruptedTaskFound, waitingForWindow and tilingSuggested are consumed in later objectives.
+            // interruptedTaskFound and waitingForWindow are consumed in later objectives.
             log.info("Not handled yet: \(event.name, privacy: .public)")
+        }
+    }
+
+    /// Windows tiled for a task that ended while Yumi or the harness was down go back now.
+    private func restoreFinishedTilings() {
+        guard tiler.state.hasSavedLayout else { return }
+        Task {
+            do {
+                let list = try await client.call(.listTasks, ListTasksParams(limit: 50), returning: TaskList.self)
+                let active = list.tasks.filter { !WindowTiler.finished.contains($0.status) }.map(\.id)
+                tiler.restoreLayouts(exceptActive: Set(active))
+            } catch {
+                log.error("Could not list tasks to restore tiled windows: \(String(describing: error), privacy: .public)")
+            }
         }
     }
 

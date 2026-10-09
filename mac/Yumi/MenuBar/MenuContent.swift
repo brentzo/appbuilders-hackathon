@@ -24,6 +24,13 @@ struct MenuContent: View {
             }
         }
 
+        if harness.tiler.state.hasSavedLayout {
+            // Windows go back on their own when the task ends; this is the user's way out before that.
+            Button("Put windows back") {
+                harness.tiler.restoreAll()
+            }
+        }
+
         if model.mockHarnessName != nil {
             // Debug aid: plays scripts that start on submitGoal, until voice intake exists (OBJ-15).
             Button("Send sample goal to the mock") {

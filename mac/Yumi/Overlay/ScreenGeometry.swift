@@ -23,4 +23,9 @@ enum ScreenGeometry {
     static func appKitRect(fromGlobalTopLeft rect: CGRect) -> CGRect {
         CGRect(x: rect.minX, y: mainDisplayHeight - rect.maxY, width: rect.width, height: rect.height)
     }
+
+    /// An AppKit rectangle, such as a screen's visible frame, in global top-left coordinates.
+    static func globalTopLeftRect(fromAppKit rect: CGRect) -> CGRect {
+        CGRect(x: rect.minX, y: mainDisplayHeight - rect.maxY, width: rect.width, height: rect.height)
+    }
 }
