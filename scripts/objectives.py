@@ -213,7 +213,8 @@ def render(objs, prods):
 
 def check_markdown(problems):
     for path in glob.glob(os.path.join(ROOT, "**", "*.md"), recursive=True):
-        if "/node_modules/" in path or "/build/" in path or "/.git/" in path:
+        # Split on the OS separator so the skip list also works on Windows paths.
+        if {"node_modules", "build", ".git"} & set(os.path.normpath(path).split(os.sep)):
             continue
         text = read(path)
         if EM_DASH in text:
