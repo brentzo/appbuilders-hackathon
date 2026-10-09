@@ -116,7 +116,7 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-56](OBJ-56-unclassified-action-approval-contract.md) | Approval contract for unclassified risky actions | protocol | Jepoy | 07 | 01 | 36, 38, 40 | todo |
 | [OBJ-57](OBJ-57-route-classified-gui-deletes-through-strict-delete.md) | Route classified GUI delete asks through strict delete | harness | Brent | 07 | 37, 38 | 36, 40 | todo |
 | [OBJ-58](OBJ-58-mac-hey-yumi-recognizer.md) | "Hey Yumi" on the Mac with the on-device recognizer | mac | Brent | 01 | - | 16 | done |
-| [OBJ-59](OBJ-59-android-hey-yumi-vosk.md) | "Hey Yumi" on Android with Vosk | android | Brent | 01, 10 | - | 12, 24 | todo |
+| [OBJ-59](OBJ-59-android-hey-yumi-vosk.md) | "Hey Yumi" on Android with Vosk | android | Brent | 01, 10 | - | 12, 24 | in-progress |
 <!-- generated:objectives-index:end -->
 
 ## Priority and blocking
