@@ -152,7 +152,7 @@ describe("SPEC-07 Strict delete", () => {
     expect(downloads()).toEqual(INVOICES.slice().sort());
     expect(run!.harness.store.getApproval(cards()[0]!.id)).toMatchObject({ approval: { id: cards()[0]!.id } });
     expect(run!.harness.store.getApproval(cards()[0]!.id)!.approval.decision).toBeUndefined();
-    expect(logger.entries.some((e) => e.event === "approval.deleteNeedsTap")).toBe(true);
+    expect(logger.entries.some((e) => e.event === "approval.needsTap")).toBe(true);
 
     answers[1]!.resolve(decided(false, "tap"));
     await until(ended(task.id));
