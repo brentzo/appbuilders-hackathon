@@ -567,6 +567,7 @@ public enum ErrorKind: String, Codable, Equatable, Sendable, CaseIterable {
     case cannotPauseOtherDevice
     case noReply
     case commandExpired
+    case stepFailed
     case stuckOnScreen
     case taskTookTooLong
     case unsupportedRequest
@@ -2015,15 +2016,18 @@ public struct UserError: Codable, Equatable, Sendable {
     public var lastAction: String?
     /// Fills {permission} in the Android permission copy with a plain name, for example location or camera.
     public var permission: String?
+    /// Fills {step} in the stepFailed copy: the title of the subtask that could not finish, as the user would say it (SPEC-11 r14).
+    public var step: String?
     /// For taskTookTooLong: what was finished.
     public var finishedSoFar: String?
 
-    public init(kind: ErrorKind, taskId: String? = nil, device: String? = nil, lastAction: String? = nil, permission: String? = nil, finishedSoFar: String? = nil) {
+    public init(kind: ErrorKind, taskId: String? = nil, device: String? = nil, lastAction: String? = nil, permission: String? = nil, step: String? = nil, finishedSoFar: String? = nil) {
         self.kind = kind
         self.taskId = taskId
         self.device = device
         self.lastAction = lastAction
         self.permission = permission
+        self.step = step
         self.finishedSoFar = finishedSoFar
     }
 }

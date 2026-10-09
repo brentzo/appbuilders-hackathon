@@ -9,8 +9,8 @@ struct UserErrorCopy: Equatable, Sendable {
     /// Where the copy comes from: the SPEC-11 "Failure" column, or the SPEC-07 requirement.
     /// Never shown to the user.
     let source: Source
-    /// What the user hears and sees. `{device}`, `{last action}` and `{permission}` are filled in
-    /// by `ErrorPresenter`.
+    /// What the user hears and sees. `{device}`, `{last action}`, `{permission}` and `{step}` are
+    /// filled in by `ErrorPresenter`.
     let message: String
     /// Exactly as the spec lists them.
     let buttons: [String]
@@ -36,6 +36,8 @@ struct UserErrorCopy: Equatable, Sendable {
             row("No reply", "{device} stopped answering while working on this. It might have gone to sleep.", ["Wait", "Cancel"])
         case .commandExpired:
             row("Command expired", "That request waited too long, so I didn't run it in case it's no longer what you want.", ["Run it now", "Cancel"])
+        case .stepFailed:
+            row("Couldn't finish a step", "I couldn't finish this step: {step}. I stopped there before anything else ran on top of it. I can try it again, skip it and keep going, or stop.", ["Try again", "Skip this step", "Stop"])
         case .stuckOnScreen:
             row("Stuck on screen", "I'm stuck. I tried a few times but couldn't find what I need on this screen. Can you show me, or should I stop?", ["I'll show you", "Skip this step", "Stop"])
         case .taskTookTooLong:

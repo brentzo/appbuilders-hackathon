@@ -15,6 +15,7 @@ enum class ErrorKind(val specName: String) {
     CantPauseOtherDevice("Can't pause the other device"),
     NoReply("No reply"),
     CommandExpired("Command expired"),
+    StepFailed("Couldn't finish a step"),
     StuckOnScreen("Stuck on screen"),
     TaskTookTooLong("Task took too long"),
     UnsupportedRequest("Unsupported request"),

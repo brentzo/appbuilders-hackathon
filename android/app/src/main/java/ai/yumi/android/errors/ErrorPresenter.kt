@@ -54,15 +54,17 @@ class ErrorPresenter(
      * @param lastAction fills `{last action}` in the Unexpected copy.
      * @param alternatives the request-specific buttons for Unsupported request.
      * @param permission fills `{permission}` with a plain name, such as "location".
+     * @param step fills `{step}` with the title of the step that could not finish.
      */
     fun present(
         kind: ErrorKind,
         lastAction: String? = null,
         alternatives: List<String> = emptyList(),
         permission: String? = null,
+        step: String? = null,
     ): PresentedError {
         log.record(kind, null)
-        return build(kind, lastAction, alternatives, permission)
+        return build(kind, lastAction, alternatives, permission, step)
     }
 
     /** The button whose label the user said, if any (SPEC-11 requirement 9). */
@@ -76,9 +78,10 @@ class ErrorPresenter(
         lastAction: String?,
         alternatives: List<String>,
         permission: String? = null,
+        step: String? = null,
     ): PresentedError {
         val copy = ErrorCopyTable.of(kind)
-        val text = fill(copy.text, lastAction, permission)
+        val text = fill(copy.text, lastAction, permission, step)
         val nothingDoneYet = copy.text.contains(LAST_ACTION) && lastAction.isNullOrBlank()
         val buttons = copy.buttons.flatMap { button ->
             if (button == ErrorButton.ShowWhatIDid && nothingDoneYet) {
@@ -93,11 +96,14 @@ class ErrorPresenter(
         return PresentedError(kind, text, firstSentence(text), buttons)
     }
 
-    private fun fill(template: String, lastAction: String?, permission: String?): String {
+    private fun fill(template: String, lastAction: String?, permission: String?, step: String?): String {
+        val stepName = step?.trim()?.trimEnd('.')
         val withDevice = SENTENCE_START_DEVICE.replace(template) { match ->
             match.groupValues[1] + otherDevice.replaceFirstChar { it.uppercase() }
         }.replace(DEVICE, otherDevice)
             .replace(PERMISSION, permission ?: GENERIC_PERMISSION)
+            // Without a step name, "I couldn't finish this step." is still a full sentence.
+            .let { if (stepName.isNullOrEmpty()) it.replace(STEP_WITH_COLON, "") else it.replace(STEP, stepName) }
         if (!withDevice.contains(LAST_ACTION)) return withDevice
         val action = lastAction?.trim()?.trimEnd('.')
         return if (action.isNullOrEmpty()) {
@@ -120,6 +126,8 @@ class ErrorPresenter(
         const val DEVICE = "{device}"
         const val LAST_ACTION = "{last action}"
         const val PERMISSION = "{permission}"
+        const val STEP = "{step}"
+        const val STEP_WITH_COLON = ": {step}"
 
         /** Only if a caller forgets the name: still a full sentence, never a raw placeholder. */
         const val GENERIC_PERMISSION = "phone's features"

@@ -36,6 +36,13 @@ struct ErrorPresenterTests {
         #expect(ErrorPresenter.present(UserError(kind: .androidPermissionMissing)).kind == .unexpected)
     }
 
+    @Test func stepFailedCopyNamesTheStep() {
+        let presented = ErrorPresenter.present(UserError(kind: .stepFailed, step: "Export the deck as a PDF"))
+        #expect(presented.message == "I couldn't finish this step: Export the deck as a PDF. I stopped there before anything else ran on top of it. I can try it again, skip it and keep going, or stop.")
+        #expect(presented.buttons.map(\.label) == ["Try again", "Skip this step", "Stop"])
+        #expect(ErrorPresenter.present(UserError(kind: .stepFailed)).message.hasPrefix("I couldn't finish this step. I stopped there"))
+    }
+
     @Test func otherDeviceIsYourPhone() {
         #expect(ErrorPresenter.present(UserError(kind: .otherDeviceOffline, device: "phone-ana")).message
             == "I can't reach your phone right now. It might be asleep or off the internet. I can run this as soon as it's back.")

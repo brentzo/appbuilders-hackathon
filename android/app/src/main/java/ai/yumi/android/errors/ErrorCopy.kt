@@ -32,7 +32,7 @@ data class ErrorCopy(val text: String, val buttons: List<ErrorButton>)
  * `ErrorCopySpecTest` fails if this drifts from the table in specs/11-user-facing-errors.md.
  *
  * Placeholders: `{device}` is the other device, `{last action}` is the last thing Yumi did,
- * and `{permission}` is the plain name of a permission, such as "location".
+ * `{permission}` is the plain name of a permission, such as "location", and `{step}` is the step that could not finish.
  */
 object ErrorCopyTable {
     val copy: Map<ErrorKind, ErrorCopy> = mapOf(
@@ -63,6 +63,11 @@ object ErrorCopyTable {
         ErrorKind.CommandExpired to ErrorCopy(
             "That request waited too long, so I didn't run it in case it's no longer what you want.",
             listOf(ErrorButton.RunNow, ErrorButton.Cancel),
+        ),
+        ErrorKind.StepFailed to ErrorCopy(
+            "I couldn't finish this step: {step}. I stopped there before anything else ran on top of it. " +
+                "I can try it again, skip it and keep going, or stop.",
+            listOf(ErrorButton.TryAgain, ErrorButton.SkipThisStep, ErrorButton.Stop),
         ),
         ErrorKind.StuckOnScreen to ErrorCopy(
             "I'm stuck. I tried a few times but couldn't find what I need on this screen. Can you show me, or should I stop?",

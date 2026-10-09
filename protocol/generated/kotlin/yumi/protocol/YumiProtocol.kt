@@ -305,6 +305,7 @@ enum class ErrorKind {
     @SerialName("cannotPauseOtherDevice") CannotPauseOtherDevice,
     @SerialName("noReply") NoReply,
     @SerialName("commandExpired") CommandExpired,
+    @SerialName("stepFailed") StepFailed,
     @SerialName("stuckOnScreen") StuckOnScreen,
     @SerialName("taskTookTooLong") TaskTookTooLong,
     @SerialName("unsupportedRequest") UnsupportedRequest,
@@ -1233,6 +1234,8 @@ data class UserError(
     val lastAction: String? = null,
     /** Fills {permission} in the Android permission copy with a plain name, for example location or camera. */
     val permission: String? = null,
+    /** Fills {step} in the stepFailed copy: the title of the subtask that could not finish, as the user would say it (SPEC-11 r14). */
+    val step: String? = null,
     /** For taskTookTooLong: what was finished. */
     val finishedSoFar: String? = null,
 )

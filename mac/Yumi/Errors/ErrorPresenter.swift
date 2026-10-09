@@ -49,13 +49,13 @@ enum ErrorPresenter {
         }
         return PresentedError(
             kind: error.kind,
-            message: fill(copy.message, lastAction: error.lastAction, permission: error.permission),
+            message: fill(copy.message, lastAction: error.lastAction, permission: error.permission, step: error.step),
             detail: error.kind == .taskTookTooLong ? error.finishedSoFar : nil,
             buttons: copy.buttons.compactMap { button(for: $0, error: error) }
         )
     }
 
-    private static func fill(_ template: String, lastAction: String?, permission: String?) -> String {
+    private static func fill(_ template: String, lastAction: String?, permission: String?, step: String?) -> String {
         var text = template
         if text.hasPrefix("{device}") {
             text = otherDevice.prefix(1).uppercased() + otherDevice.dropFirst() + text.dropFirst("{device}".count)
@@ -66,6 +66,12 @@ enum ErrorPresenter {
         }
         if let permission {
             text = text.replacingOccurrences(of: "{permission}", with: permission)
+        }
+        if let step = step?.trimmingCharacters(in: .whitespaces.union(CharacterSet(charactersIn: "."))), !step.isEmpty {
+            text = text.replacingOccurrences(of: "{step}", with: step)
+        } else {
+            // Without a step name, "I couldn't finish this step." is still a full sentence.
+            text = text.replacingOccurrences(of: ": {step}", with: "")
         }
         return text
     }

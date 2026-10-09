@@ -29,7 +29,8 @@ Where a next step exists, it is a button, not a sentence telling them to go find
 10. Errors are shown on the origin device ([SPEC-09](09-cross-device-routing.md)).
 11. Long copy: Yumi speaks the first sentence, and the full text is shown on screen.
 12. `{permission}` is the plain name of what the permission lets Yumi use, for example "location", "camera", or "contacts".
-12. "Type instead" opens a text box that accepts a goal the same way as speech.
+13. "Type instead" opens a text box that accepts a goal the same way as speech.
+14. `{step}` is the title of the subtask that could not finish, as the user would say it, for example "Export the deck as a PDF".
 
 ## Error copy
 
@@ -42,6 +43,7 @@ Where a next step exists, it is a button, not a sentence telling them to go find
 | Can't pause the other device | "I can't reach {device} to pause it. Use the stop shortcut on {device}." | Try again |
 | No reply | "{device} stopped answering while working on this. It might have gone to sleep." | Wait, Cancel |
 | Command expired | "That request waited too long, so I didn't run it in case it's no longer what you want." | Run it now, Cancel |
+| Couldn't finish a step | "I couldn't finish this step: {step}. I stopped there before anything else ran on top of it. I can try it again, skip it and keep going, or stop." | Try again, Skip this step, Stop |
 | Stuck on screen | "I'm stuck. I tried a few times but couldn't find what I need on this screen. Can you show me, or should I stop?" | I'll show you, Skip this step, Stop |
 | Task took too long | "This is taking longer than it should, so I stopped. Here's what I finished so far." | Keep going, Stop |
 | Unsupported request | "I can't do that on {device}. Here's what I can do instead." | Depends on the request, Cancel |
@@ -124,3 +126,4 @@ Feature: User-facing errors
 - **Pairing failures** have their own copy, shown on the phone: expired code, not a Yumi code, different versions, and no answer from the Mac. The Mac silently drops a bad pairing request, so the phone shows "Mac didn't answer pairing" after waiting 30 seconds, which also covers a code that was already used. Decided 2026-10-09.
 - **Android permission copy** is one row with a `{permission}` placeholder instead of one row per permission, so new tools only add a plain name. Decided 2026-10-09.
 - **"Unexpected" with nothing done yet** drops "Here's the last thing I did" and the "Show what I did" button, instead of showing a blank. Decided 2026-10-09.
+- **Couldn't finish a step** has its own row with a `{step}` placeholder (requirement 14), so a subtask that fails tells the user which step stopped and offers to retry it, skip it, or stop. The duplicate requirement number 12 is fixed. Decided 2026-10-09.

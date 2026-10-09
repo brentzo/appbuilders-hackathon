@@ -39,4 +39,11 @@ describe("ErrorKind", () => {
     expect(validate("UserError", { kind: "ECONNRESET" }).valid).toBe(false);
     expect(validate("UserError", { kind: "unexpected", message: "TypeError: x is undefined" }).valid).toBe(false);
   });
+
+  it("carries the step that could not finish as plain, bounded text", () => {
+    expect(validate("UserError", { kind: "stepFailed", step: "Export the deck as a PDF" }).valid).toBe(true);
+    expect(validate("UserError", { kind: "stepFailed" }).valid).toBe(true);
+    expect(validate("UserError", { kind: "stepFailed", step: "" }).valid).toBe(false);
+    expect(validate("UserError", { kind: "stepFailed", step: "x".repeat(201) }).valid).toBe(false);
+  });
 });

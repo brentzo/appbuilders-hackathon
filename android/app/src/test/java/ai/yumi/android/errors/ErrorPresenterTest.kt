@@ -92,6 +92,27 @@ class ErrorPresenterTest {
     }
 
     @Test
+    fun stepFailedCopyNamesTheStep() {
+        val shown = presenter.present(ErrorKind.StepFailed, step = "Export the deck as a PDF")
+
+        assertEquals(
+            "I couldn't finish this step: Export the deck as a PDF. I stopped there before anything else ran on top of it. " +
+                "I can try it again, skip it and keep going, or stop.",
+            shown.text,
+        )
+        assertEquals("I couldn't finish this step: Export the deck as a PDF.", shown.spoken)
+        assertEquals(listOf("Try again", "Skip this step", "Stop"), shown.buttons.map { it.label })
+    }
+
+    @Test
+    fun stepFailedWithNoStepIsStillAFullSentence() {
+        val shown = presenter.present(ErrorKind.StepFailed)
+
+        assertFalse(shown.text.contains("{"))
+        assertEquals("I couldn't finish this step.", shown.spoken)
+    }
+
+    @Test
     fun spokenTextIsTheFirstSentence() {
         val shown = presenter.present(ErrorKind.LanguageNotSupported)
 

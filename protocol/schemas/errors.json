@@ -15,6 +15,7 @@
         "cannotPauseOtherDevice",
         "noReply",
         "commandExpired",
+        "stepFailed",
         "stuckOnScreen",
         "taskTookTooLong",
         "unsupportedRequest",
@@ -43,6 +44,7 @@
         "cannotPauseOtherDevice": "Can't pause the other device",
         "noReply": "No reply",
         "commandExpired": "Command expired",
+        "stepFailed": "Couldn't finish a step",
         "stuckOnScreen": "Stuck on screen",
         "taskTookTooLong": "Task took too long",
         "unsupportedRequest": "Unsupported request",
@@ -74,6 +76,7 @@
         "device": { "description": "Fills {device} in the copy: the other device.", "$ref": "common.json#/$defs/DeviceId" },
         "lastAction": { "description": "Fills {last action} in the Unexpected copy, from the action log. Absent when nothing has run yet; the copy then drops that sentence and the Show what I did button.", "type": "string", "maxLength": 200 },
         "permission": { "description": "Fills {permission} in the Android permission copy with a plain name, for example location or camera.", "type": "string", "minLength": 1, "maxLength": 40 },
+        "step": { "description": "Fills {step} in the stepFailed copy: the title of the subtask that could not finish, as the user would say it (SPEC-11 r14).", "type": "string", "minLength": 1, "maxLength": 200 },
         "finishedSoFar": { "description": "For taskTookTooLong: what was finished.", "type": "string", "maxLength": 500 }
       }
     }
