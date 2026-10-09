@@ -69,6 +69,7 @@ final class WindowCoordinator {
         window.title = title
         window.styleMask = [.titled, .closable]
         window.isReleasedWhenClosed = false
+        window.applyYumiStyle()
         window.center()
         return window
     }

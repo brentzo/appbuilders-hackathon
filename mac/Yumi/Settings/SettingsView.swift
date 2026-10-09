@@ -42,7 +42,9 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
         .frame(width: 460)
+        .yumiWindow()
         .fixedSize(horizontal: false, vertical: true)
     }
 }

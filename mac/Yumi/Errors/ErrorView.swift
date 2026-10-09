@@ -11,37 +11,41 @@ struct ErrorView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack(alignment: .top, spacing: 14) {
-                Image(systemName: "cat.fill")
-                    .font(.system(size: 28))
-                    .foregroundStyle(.tint)
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: YumiSpace.xl) {
+            HStack(alignment: .top, spacing: YumiSpace.l) {
+                // Trouble is hush lavender, never red (SPEC-11, design README).
+                YumiBadge(size: 44, hush: true)
+                VStack(alignment: .leading, spacing: YumiSpace.s) {
                     Text(error.message)
-                        .font(.body)
+                        .font(YumiFont.body)
+                        .foregroundStyle(YumiColor.ink)
                         .fixedSize(horizontal: false, vertical: true)
                     if let detail = error.detail {
                         Text(detail)
-                            .foregroundStyle(.secondary)
+                            .font(YumiFont.body)
+                            .foregroundStyle(YumiColor.muted)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
+                .padding(.top, YumiSpace.xs)
             }
 
-            HStack(spacing: 10) {
+            HStack(spacing: YumiSpace.s) {
                 Spacer()
                 ForEach(error.buttons.reversed(), id: \.label) { button in
                     let available = button.action != .notAvailableYet
+                    let isPrimary = button.label == primaryLabel
                     Button(button.label) { perform(button.action) }
-                        .keyboardShortcut(button.label == primaryLabel ? .defaultAction : nil)
+                        .buttonStyle(YumiButtonStyle(primary: isPrimary))
+                        .keyboardShortcut(isPrimary ? .defaultAction : nil)
                         .disabled(!available)
                         .help(available ? "" : "Not available yet")
                 }
             }
         }
-        .padding(20)
+        .padding(YumiSpace.xl)
         .frame(width: 440)
+        .yumiWindow()
         // Esc always closes the error, even when every button waits on a later objective.
         .onExitCommand { perform(.dismiss) }
         .fixedSize(horizontal: false, vertical: true)

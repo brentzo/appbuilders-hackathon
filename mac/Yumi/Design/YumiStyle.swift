@@ -20,6 +20,20 @@ struct YumiSecondaryButtonStyle: ButtonStyle {
     }
 }
 
+/// Primary or secondary, picked at run time (for example the default button of an error).
+struct YumiButtonStyle: ButtonStyle {
+    let primary: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        YumiButtonBody(
+            configuration: configuration,
+            fill: primary ? YumiColor.accent : YumiColor.surfaceRaised,
+            text: primary ? YumiColor.onAccent : YumiColor.ink,
+            border: primary ? nil : YumiColor.line
+        )
+    }
+}
+
 private struct YumiButtonBody: View {
     let configuration: ButtonStyleConfiguration
     let fill: Color

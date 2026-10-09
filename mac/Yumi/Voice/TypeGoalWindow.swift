@@ -11,9 +11,10 @@ struct TypeGoalView: View {
     private var trimmed: String { goal.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: YumiSpace.m) {
             Text("What should I do?")
-                .font(.headline)
+                .font(YumiFont.headline)
+                .foregroundStyle(YumiColor.brand)
             TextField("For example: export my Keynote deck as a PDF", text: $goal, axis: .vertical)
                 .lineLimit(2...4)
                 .textFieldStyle(.roundedBorder)
@@ -22,14 +23,17 @@ struct TypeGoalView: View {
             HStack {
                 Spacer()
                 Button("Cancel", action: cancel)
+                    .buttonStyle(YumiSecondaryButtonStyle())
                     .keyboardShortcut(.cancelAction)
                 Button("Send") { send(trimmed) }
+                    .buttonStyle(YumiPrimaryButtonStyle())
                     .keyboardShortcut(.defaultAction)
                     .disabled(trimmed.isEmpty)
             }
         }
-        .padding(20)
+        .padding(YumiSpace.xl)
         .frame(width: 400)
+        .yumiWindow()
         .onAppear { focused = true }
     }
 }
@@ -56,6 +60,7 @@ enum TypeGoalWindow {
         created.title = "Type your goal"
         created.styleMask = [.titled, .closable]
         created.isReleasedWhenClosed = false
+        created.applyYumiStyle()
         created.center()
         NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: created, queue: .main) { _ in
             MainActor.assumeIsolated { TypeGoalWindow.window = nil }

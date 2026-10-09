@@ -9,51 +9,60 @@ struct PairingView: View {
     let close: () -> Void
 
     var body: some View {
-        VStack(spacing: 18) {
+        VStack(spacing: YumiSpace.l) {
             if let device = phone.pairedDevice {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 44))
-                    .foregroundStyle(.green)
-                    .accessibilityHidden(true)
+                YumiBadge(size: 64)
                 Text("Paired with \(device.name)")
-                    .font(.title3.weight(.semibold))
+                    .font(YumiFont.headline)
+                    .foregroundStyle(YumiColor.brand)
                 Button("Done", action: close)
+                    .buttonStyle(YumiPrimaryButtonStyle())
                     .keyboardShortcut(.defaultAction)
             } else if let code = phone.pairingCode {
                 Text("Scan this code with Yumi on your phone")
-                    .font(.title3.weight(.semibold))
+                    .font(YumiFont.headline)
+                    .foregroundStyle(YumiColor.brand)
                     .multilineTextAlignment(.center)
+                // Always light behind the code, in dark mode too, so every phone camera reads it.
                 QRCodeImage(payload: code.payload)
                     .frame(width: 220, height: 220)
-                    .padding(12)
-                    .background(.white, in: RoundedRectangle(cornerRadius: 12))
+                    .padding(YumiSpace.m)
+                    .background(Self.codeBackground, in: RoundedRectangle(cornerRadius: YumiRadius.panel, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: YumiRadius.panel, style: .continuous).strokeBorder(YumiColor.line))
                     .accessibilityLabel("Pairing code")
                 TimelineView(.periodic(from: .now, by: 1)) { context in
-                    if context.date < code.expiresAt {
-                        Text("The code works for \(Self.remaining(until: code.expiresAt, from: context.date)).")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Text("This code expired.")
-                            .foregroundStyle(.secondary)
+                    Group {
+                        if context.date < code.expiresAt {
+                            Text("The code works for \(Self.remaining(until: code.expiresAt, from: context.date)).")
+                                .monospacedDigit()
+                        } else {
+                            Text("This code expired.")
+                        }
                     }
+                    .font(YumiFont.body)
+                    .foregroundStyle(YumiColor.muted)
                 }
-                HStack {
+                HStack(spacing: YumiSpace.s) {
                     Button("Cancel") {
                         phone.cancelPairing()
                         close()
                     }
+                    .buttonStyle(YumiSecondaryButtonStyle())
                     .keyboardShortcut(.cancelAction)
                     Button("New code") { phone.startPairing() }
+                        .buttonStyle(YumiSecondaryButtonStyle())
                 }
             } else {
                 ProgressView()
                     .controlSize(.large)
                 Text("Getting a pairing code…")
-                    .foregroundStyle(.secondary)
+                    .font(YumiFont.body)
+                    .foregroundStyle(YumiColor.muted)
             }
         }
-        .padding(28)
+        .padding(YumiSpace.xxl)
         .frame(width: 360)
+        .yumiWindow()
         .fixedSize(horizontal: false, vertical: true)
         .task {
             if phone.pairedDevice == nil, phone.pairingCode == nil { phone.startPairing() }
@@ -65,6 +74,9 @@ struct PairingView: View {
             }
         }
     }
+
+    /// The paper of the light theme, fixed.
+    static let codeBackground = Color(red: 0xFF / 255, green: 0xFD / 255, blue: 0xF6 / 255)
 
     static func remaining(until end: Date, from now: Date) -> String {
         let seconds = max(0, Int(end.timeIntervalSince(now).rounded()))
@@ -119,6 +131,7 @@ enum PairingWindow {
         created.title = "Pair your phone"
         created.styleMask = [.titled, .closable]
         created.isReleasedWhenClosed = false
+        created.applyYumiStyle()
         created.center()
         NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: created, queue: .main) { _ in
             MainActor.assumeIsolated {
