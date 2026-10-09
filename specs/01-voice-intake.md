@@ -19,7 +19,7 @@ Yumi transcribes it on the device, repeats it back in its own words, and waits f
 1. All speech-to-text runs on the device. Audio never leaves the device it was recorded on.
 2. English commands may use the native on-device recognizer. It must be forced on-device, and must fail rather than fall back to a cloud service.
 3. Taglish and long dictation use Whisper on the Mac. On Android, Whisper comes with [SPEC-10](10-android-companion.md) Part B (p1). Until then the phone understands English only, and other languages get the "Language not supported on this phone" error from [SPEC-11](11-user-facing-errors.md).
-4. Before any work starts, Yumi repeats the goal back by voice and on screen. On Android in p0 there is no model to restate it, so the phone uses fixed templates ([SPEC-10](10-android-companion.md) requirement 8).
+4. Before any work starts, Yumi repeats the goal back by voice and on screen, unless Auto mode is on (requirement 14). On Android in p0 there is no model to restate it, so the phone uses fixed templates ([SPEC-10](10-android-companion.md) requirement 8).
 5. The user can confirm, correct, or cancel by voice or with a button.
 6. A correction replaces the goal and is repeated back again.
 7. The confirmed goal is stored on the task record as `confirmedGoal`, separate from the raw transcript.
@@ -34,6 +34,7 @@ Yumi transcribes it on the device, repeats it back in its own words, and waits f
     - **On:** Whisper transcribes every goal, with the native on-device recognizer as the fallback.
     - **Off:** the native on-device recognizer goes first, with Whisper as the fallback once it is loaded.
     - A fallback is used only when the first recognizer fails, never when it heard silence.
+14. On the Mac, an "Auto mode" setting, off by default, skips the repeat-back: the goal starts right away, Yumi shows what it heard on screen and says a short acknowledgement such as "On it." Approvals for sends and deletes ([SPEC-07](07-safety.md)) still always ask.
 
 ## Scenarios
 
@@ -205,6 +206,7 @@ Work this needs:
 - **Android in p0 has no Whisper.** It uses Android's on-device recognizer, English only, and shows an error for other languages. Whisper on the phone is p1, with SPEC-10 Part B. This follows SPEC-10 where the two specs disagreed. Decided 2026-10-09.
 - **The phone's repeat-back in p0 uses fixed templates,** defined in SPEC-10 requirement 8. Decided 2026-10-09.
 - **The Mac picks its recognizer with an "I speak Taglish" setting** (requirement 13). Whisper handles Tagalog and English mixed, and the native recognizer is faster for English commands, so the user who speaks Taglish says so once instead of Yumi guessing per goal. Decided 2026-10-09.
+- **Confirming a goal is a setting.** Confirmation stays on by default; "Auto mode" (requirement 14) skips the repeat-back for users who find it slows them down. Safety approvals are unaffected. Decided 2026-10-10 by Brent.
 
 ## Open questions
 

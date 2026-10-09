@@ -36,6 +36,8 @@ All of it is drawn by the harness on a transparent overlay; the model only choos
 17. If the user has "Reduce motion" turned on, leaps, pounces, and arcs become straight glides, including the way into and out of the island.
 18. The same cat appears in the Android app.
 19. Cursors spawn from the camera notch "island": a pill grows out of the notch, the cat drops out of it and leaps to its spot. When a task finishes, its ghosts leap back into the island within 1 second. A display without a notch uses a pill at the top center, just under the menu bar.
+20. Yumi speaks with a natural, warm, playful voice that fits the cat, made by a neural voice model running on the device. It is never the robotic system voice, and no speech is sent anywhere.
+21. Yumi's cats never cover what the user is pointing at. When the user's pointer comes near a cat that is idle, thinking, or paused, the cat scoots out of the way with an ears-back pose, like a cat that does not want to be petted, and drifts back after the pointer leaves. A cat that is in the middle of an action cannot move, so it fades until the user can see through it. With "Reduce motion" on, every cat fades instead of moving.
 
 ## Scenarios
 
@@ -162,6 +164,8 @@ First draft, to be replaced by the real design.
 - Ghost littermates are the same cat with its fur, markings, and lines recolored in the ghost's own color, such as mint or sky. The coral cheeks stay. This answers the open question about how ghost colors combine with the cat. Decided 2026-10-09 by Patrick.
 - Moves ease in and out on a symmetric curve, cubic-bezier(0.65, 0, 0.35, 1), with an arc, and take 350 to 700 ms by distance (requirement 2, design tokens `moveMinMs`, `moveMaxMs`, `moveFarPt`). With Reduce Motion on they are straight glides. This replaces the earlier "about 300 ms" and answers the open question on animation timing. Decided 2026-10-09 by Patrick.
 - Cursors spawn from the camera notch "island" (requirement 19): a pill grows from the notch, the cat drops out and leaps to its spot, and on finish ghosts leap back in within 1 second. Displays without a notch use a pill at the top center under the menu bar. Decided 2026-10-09 by Patrick.
+- Yumi's voice is a neural voice model on the device (Kokoro is the planned model, already named in the Mac README), not `AVSpeechSynthesizer`'s system voice, which sounded robotic in testing (requirement 20). Decided 2026-10-10 by Brent.
+- Cats avoid the user's pointer instead of covering content: idle, thinking, and paused cats scoot away, acting cats fade (requirement 21). Decided 2026-10-10 by Brent.
 
 ## Open questions
 

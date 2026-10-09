@@ -64,6 +64,8 @@ Deleting is allowed only with a strict confirmation, screen content can never gi
 19. `p1` The user can open the action log from the Mac menu bar and the phone app.
 20. `p1` Text typed into password fields is never logged, and screenshots are deleted after 7 days.
 21. `p1` After a crash, a step that asks for approval and has no recorded outcome is never retried automatically. Yumi asks the user whether it happened.
+22. A "Debug mode" setting, on by default in Debug builds and off in release builds, writes detailed logs on the device: transcripts, the user's answers, every model request and reply, plans, and each step's observation and decision. They never leave the device and are deleted after 7 days. Text typed into password fields is never in them (requirement 20).
+23. In Debug mode, the user can expand any cursor or helper chip to see what it is doing and why: its subtask, what it sees, and the model's last decision.
 
 ## Scenarios
 
@@ -246,6 +248,7 @@ Until it is reviewed, objectives may build against it but must not treat it as f
 - System Settings leaves the risky-app list: every action there is blocked, matching the table. Yumi never needs it; the user grants permissions. Decided 2026-10-09.
 - The shell and installer apps in requirement 3 are written into the spec, since they are how "no shell" is enforced. Decided 2026-10-09.
 - Risky apps get a short per-app list of safe click labels, which are allowed. Other unlisted clicks in a risky app still ask. Mail starts with "New Message" and "Attach", so demo task 2 in [SPEC-05](05-mac-gui-control.md) asks only before Send. The list lives with the permission table in code, and a label is added only with a change to this spec. Brent chose this over allowing every unlisted click in risky apps. Decided 2026-10-09.
+- Debug mode keeps full local logs and shows each worker's reasoning (requirements 22 and 23), so failures can be diagnosed on the device without guessing. Everything runs locally, so the logs stay local too. Decided 2026-10-10 by Brent.
 
 ## Open questions
 
