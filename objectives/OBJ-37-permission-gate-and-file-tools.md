@@ -5,7 +5,7 @@ product: harness
 assignee: Brent
 touches: []
 specs: [SPEC-07]
-status: in-progress
+status: done
 priority: p0
 depends-on: [OBJ-03]
 integrates-with: []
@@ -43,22 +43,22 @@ The approval flow that runs when the gate says "ask" is [OBJ-38](OBJ-38-approval
 
 ## Tasks
 
-- [ ] **OBJ-37.1** One gate function, `checkAction(recordedAction, context) -> PermissionLevel`. Every action from every lane goes through it before it runs, including typed tools and phone tools. It reads only the resolved action and the real file system, never model text, and stores the level on the `RecordedAction`.
-- [ ] **OBJ-37.2** Encode the SPEC-07 r1 permission table as data in one file, with the secret locations from r2 (`~/.ssh`, `~/.gnupg`, `~/.aws`, `~/Library/Keychains`, and browser profile folders). Write one test per row.
-- [ ] **OBJ-37.3** Risk from the action itself (SPEC-07 r6). Element labels: "Send", "Delete", and "Move to Trash" ask; "Empty Trash", "Buy", "Pay", "Install", "Quit", and "Force Quit" are blocked. Key combos per app: Return in Messages, Command-Return and Command-Shift-D in Mail, and Command-Delete in Finder ask; Command-Shift-Delete in Finder is blocked; Command-Q and Command-Option-Escape are blocked in every app. Anything the gate cannot classify asks, but only for key presses and for clicks in the risky apps (Mail, Messages, WhatsApp, Finder, System Settings); other clicks are allowed. How unlisted clicks in risky apps are handled during the Mail demo is still open in SPEC-07; settle it before building this task.
-- [ ] **OBJ-37.4** Typed file tools: `read_file`, `list_dir`, `write_new_file`, `copy`, and `move`, each with only its schema arguments. Resolve symlinks and `..` before the check. Anything outside the home folder, in `~/Library`, a dotfile, or a secret location is blocked. Replace the test-only file tools from [OBJ-05](OBJ-05-planner-and-scheduler.md) with these.
-- [ ] **OBJ-37.5** No-replace: `write_new_file`, `copy`, and `move` never replace a file, and a taken name gets a numbered name ("Report.pdf" becomes "Report 2.pdf") (SPEC-07 r4). There is no edit tool in p0.
-- [ ] **OBJ-37.6** `move_to_trash` checks: exact paths only, with wildcard characters rejected before anything else runs (SPEC-07 r8); the home folder, Desktop, Documents, Downloads, the Library folders themselves, app bundles, dotfiles, and anything outside the home folder blocked (r9); folders expanded and every file counted; and a `FileSummary` (folder, count, first 5 names, all paths) built from the real file list (r10). The level is always "ask".
-- [ ] **OBJ-37.7** Screen content is data (SPEC-07 r16): make it structural. Approvals come only from the approval card or the user's own reply, subtasks only from the planner, whose input never includes screen text, and levels only from the rule table.
-- [ ] **OBJ-37.8** Tests on the real file system in a temporary home folder, not mocks: every table row, every label and key from r6, each strict-delete rule, symlinks into secret locations, and a shell command from the model.
+- [x] **OBJ-37.1** One gate function, `checkAction(recordedAction, context) -> PermissionLevel`. Every action from every lane goes through it before it runs, including typed tools and phone tools. It reads only the resolved action and the real file system, never model text, and stores the level on the `RecordedAction`.
+- [x] **OBJ-37.2** Encode the SPEC-07 r1 permission table as data in one file, with the secret locations from r2 (`~/.ssh`, `~/.gnupg`, `~/.aws`, `~/Library/Keychains`, and browser profile folders). Write one test per row.
+- [x] **OBJ-37.3** Risk from the action itself (SPEC-07 r6). Element labels: "Send", "Delete", and "Move to Trash" ask; "Empty Trash", "Buy", "Pay", "Install", "Quit", and "Force Quit" are blocked. Key combos per app: Return in Messages, Command-Return and Command-Shift-D in Mail, and Command-Delete in Finder ask; Command-Shift-Delete in Finder is blocked; Command-Q and Command-Option-Escape are blocked in every app. Anything the gate cannot classify asks, but only for key presses and for clicks in the risky apps (Mail, Messages, WhatsApp, Finder, System Settings); other clicks are allowed. How unlisted clicks in risky apps are handled during the Mail demo is still open in SPEC-07; settle it before building this task.
+- [x] **OBJ-37.4** Typed file tools: `read_file`, `list_dir`, `write_new_file`, `copy`, and `move`, each with only its schema arguments. Resolve symlinks and `..` before the check. Anything outside the home folder, in `~/Library`, a dotfile, or a secret location is blocked. The orchestrator replaces the test-only file tools from [OBJ-05](OBJ-05-planner-and-scheduler.md) with these after both branches merge.
+- [x] **OBJ-37.5** No-replace: `write_new_file`, `copy`, and `move` never replace a file, and a taken name gets a numbered name ("Report.pdf" becomes "Report 2.pdf") (SPEC-07 r4). There is no edit tool in p0.
+- [x] **OBJ-37.6** `move_to_trash` checks: exact paths only, with wildcard characters rejected before anything else runs (SPEC-07 r8); the home folder, Desktop, Documents, Downloads, the Library folders themselves, app bundles, dotfiles, and anything outside the home folder blocked (r9); folders expanded and every file counted; and a `FileSummary` (folder, count, first 5 names, all paths) built from the real file list (r10). The level is always "ask".
+- [x] **OBJ-37.7** Screen content is data (SPEC-07 r16): make it structural. Approvals come only from the approval card or the user's own reply, subtasks only from the planner, whose input never includes screen text, and levels only from the rule table.
+- [x] **OBJ-37.8** Tests on the real file system in a temporary home folder, not mocks: every table row, every label and key from r6, each strict-delete rule, symlinks into secret locations, and a shell command from the model.
 
 ## Expectations
 
-- [ ] SPEC-07 "Permission levels" scenarios pass: "Reading and writing need no approval" (the gate part; the log is [OBJ-38](OBJ-38-approvals-pause-and-action-log.md)), "Model asks for a shell command", "Blocked action is refused even with a yes", "Copy never replaces a file", "Secret folders cannot be read".
-- [ ] SPEC-07 "Strict delete" scenarios pass: "Protected folder cannot be deleted", "Wildcards are rejected", "Emptying the Trash is blocked", "Quitting an app is blocked".
-- [ ] SPEC-07 scenario "Web page tries to give orders" passes.
-- [ ] Nothing in the harness can run a shell command or AppleScript.
-- [ ] The level is decided only by the gate, never by the model.
+- [x] SPEC-07 "Permission levels" scenarios pass: "Reading and writing need no approval" (the gate part; the log is [OBJ-38](OBJ-38-approvals-pause-and-action-log.md)), "Model asks for a shell command", "Blocked action is refused even with a yes", "Copy never replaces a file", "Secret folders cannot be read".
+- [x] SPEC-07 "Strict delete" scenarios pass: "Protected folder cannot be deleted", "Wildcards are rejected", "Emptying the Trash is blocked", "Quitting an app is blocked".
+- [x] SPEC-07 scenario "Web page tries to give orders" passes.
+- [x] Nothing in the harness can run a shell command or AppleScript.
+- [x] The level is decided only by the gate, never by the model.
 
 ## Expected outcomes
 
@@ -73,4 +73,54 @@ The approval flow that runs when the gate says "ask" is [OBJ-38](OBJ-38-approval
 
 ## Outcome
 
-_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._
+- **Result:** Done.
+- **Delivered:**
+  - `harness/src/safety/gate.ts`: `checkAction(action, { home, app })`, the one gate. It returns a `GateDecision` with the `level`, the `rule` that decided it, the `RecordedAction` with the level stored on it, the `FileSummary` for a delete, and the resolved paths for an allowed file tool.
+  - `harness/src/safety/rules.ts`: the SPEC-07 table as data: one rule id per level reason, the secret locations (r2, with the Safari, Chrome, Chromium, Firefox, Brave, Edge, Arc, Opera, and Vivaldi profile folders), protected folders, packages, script and installer extensions, shell and installer apps, the r6 labels and key combos, the risky apps with their safe labels, and the phone tool stand-in.
+  - `harness/src/safety/paths.ts`: resolution through `..` and every symlink, one component at a time so a dangling link is followed too, and the home, `~/Library`, dotfile, and secret checks, compared without regard to case or Unicode form.
+  - `harness/src/safety/trash.ts`: the `move_to_trash` checks (r8, r9) and the `FileSummary` from the real file list (r10).
+  - `harness/src/tools/file-tools.ts`: `read_file`, `list_dir`, `write_new_file`, `copy`, and `move`, registered with `registerFileTools(registry, { home, logger })`. Their argument schemas come from the protocol's call types. Each handler runs the gate itself, so a direct call is refused too.
+  - Tests: `harness/test/permission-gate.test.ts`, `file-tools.test.ts`, `strict-delete.test.ts`, and `safety-helpers.ts` (a temporary home laid out like a Mac's).
+  - `harness/README.md`: layout rows and a Safety section.
+- **Commits:**
+  - `4d993e7 docs(objectives): start OBJ-37`
+  - `7ad4996 test(harness): wait for the relay to give up before checking no error was sent`
+  - `05d8ddf feat(harness): add the permission gate, typed file tools, and strict delete checks`
+  - `docs(objectives): finish OBJ-37` (this Outcome)
+- **Expectations:**
+  - "Permission levels": `test/permission-gate.test.ts`, "Feature: Permission levels", has "Scenario: Reading and writing need no approval (the gate part)", "Scenario: Blocked action is refused even with a yes", and "Scenario: Secret folders cannot be read". "Scenario: Model asks for a shell command" runs a worker step against the mock model server: both shell replies are refused as `invalidOutput`, the gate blocks the action and the tool call, and the file is still there. "Scenario: Copy never replaces a file" is in `test/file-tools.test.ts` and runs the real copy: the new file is `Report 2.pdf` and the original is unchanged.
+  - "Strict delete": `test/strict-delete.test.ts` has "Scenario: Protected folder cannot be deleted" and "Scenario: Wildcards are rejected", each checking that nothing in the temporary home changed. `test/permission-gate.test.ts` has "Scenario: Emptying the Trash is blocked" and "Scenario: Quitting an app is blocked".
+  - "Web page tries to give orders": `test/permission-gate.test.ts`, "Scenario: Web page tries to give orders". A Safari page shows the text as a link; a model that obeys it asks to trash `~/Documents`, which the step does not offer, so the reply is refused and the retry continues the user's task. Where `move_to_trash` is offered, Documents is blocked and files only ask; nothing is deleted. No model output can add a subtask, approve, or carry a level (schema checks in the same file).
+  - No shell or AppleScript: "nothing in the harness can run a shell command or AppleScript" scans `src/` and `scripts/` for `child_process`, `osascript`, exec and spawn calls, `eval`, and `new Function`, and finds none. Shell apps (Terminal, iTerm, Script Editor, Automator) are blocked to open, to open files with, and to act in.
+  - Level only from the gate: every decision's level is `RULE[rule]` from the table; the gate takes only the action, its resolved element, the app the Mac app reported, and the home folder, and drops anything else a caller passes ("ignores anything a caller passes besides the action and its element").
+  - OBJ-37.3 with Brent's decision: one test per r6 label and key combo, one per risky app, and the tests `"New Message" in Mail is allowed`, `"Attach" in Mail is allowed`, and `another unlisted Mail click still asks`.
+  - `python3 scripts/verify.py` passes: docs, protocol, harness (typecheck, lint, format, and 221 tests), Mac, and Android. The harness suite passed 20 runs in a row.
+- **Not verified:**
+  - The gate is not yet called by the step loop, because the loop that runs actions does not exist yet ([OBJ-36](OBJ-36-gui-act-sub-agent.md) and [OBJ-38](OBJ-38-approvals-pause-and-action-log.md)). The file tools call it themselves.
+  - Label and key matching was tested with labels written by hand, not read from real Mail, Finder, or Messages windows. When OBJ-39 reads real trees, check that Mail's Send button and "New Message" and "Attach" really carry those labels.
+  - Swapping OBJ-05's test-only file tools for these is left to the orchestrator after both branches merge, as briefed.
+- **Decisions and deviations:**
+  - Unlisted clicks in risky apps: Brent chose option (a) on 2026-10-09 (SPEC-07 Decisions). Mail's safe labels are exactly "New Message" and "Attach"; a safe label matches only as the whole label and only in its own app.
+  - OBJ-37.4's last sentence now says the orchestrator does the OBJ-05 swap, as the orchestrator briefed, so the objective can be done without it.
+  - `checkAction` returns a `GateDecision` rather than a bare `PermissionLevel`, so OBJ-38 also gets the rule, the record, and the delete summary from one call. Only the gate builds one.
+  - Labels match as the word or the word followed by a space, ignoring case and a trailing ellipsis, so "Quit Keynote" and "Empty Trash…" match and "Sending Options" does not. "Delete Slide" in Keynote therefore asks. When several rules match, blocked wins.
+  - Rules added because they are other ways to do what the table already blocks: Command-Option-Shift-Escape (force quit) in every app; Finder's "Delete Immediately", Command-Option-Delete, and Command-Option-Shift-Delete (r7: nothing is deleted permanently).
+  - Shell and installer apps (Terminal, iTerm, Script Editor, Automator, Installer) are blocked to open, to open a file with, and to act in, as "shell commands" and "installing software" by another route. Opening any script, installer, app bundle, or executable file is blocked, because Yumi cannot tell whether a file was downloaded.
+  - A click whose app the Mac app did not report asks, because the gate cannot tell whether it is a risky app. A vision click (`clickAt`, p1) has no label, so it asks in risky apps and is allowed elsewhere.
+  - `move` never moves the home folder, Desktop, Documents, Downloads, or Library itself. Copying or moving a folder that contains dotfiles (such as `.DS_Store`) is allowed; the dotfile rule applies to the path named.
+  - Moves never copy or delete data: a file gets its new name as a hard link and then loses the old one, and a folder is renamed onto an empty folder that holds the new name. Moving between disks is refused. The OBJ-04 source scan now lists `tools/file-tools.ts` next to the RPC server for this.
+  - Delete summaries: a document package (`.key`, `.pages`, `.numbers`, and others in `PACKAGE_EXTENSIONS`) counts as one file, an empty folder is listed as one entry, a link is listed as itself, and a folder with an app bundle inside is blocked. `folder` is the shared parent of the requested paths. A path with nothing at it is blocked as `missingPath`.
+  - `read_file` returns at most 64 KB of text and says when a file is not text. `list_dir` leaves out dotfiles. A taken name is numbered on the last extension only.
+  - Phone tools (`set_alarm`, `set_timer`, `open_app`) are allowed, as a stand-in in `PHONE_TOOL_LEVELS` until SPEC-09 and SPEC-10 give their levels.
+  - Unrelated flaky test fixed: `test/nonfunctional.test.ts`, "does not tell the user the bridge is down when no phone is paired", failed about one run in six because the bridge client starts offline. It now waits for the relay to give up.
+- **Questions for Brent:**
+  - SPEC-07 r1 allows reading files in the home folder, but OBJ-37.4 blocks every file tool in `~/Library` and on dotfiles, including reads. The gate follows the objective, which is stricter. Should SPEC-07 r1 say so?
+  - SPEC-07 r6 makes every unlisted key press ask, in every app, so Tab, Escape, and Command-S in Keynote ask. Is that intended, or should there be a short list of safe keys like the safe labels?
+  - The table blocks "changing system settings", but r6 puts System Settings on the risky-app list, where unlisted clicks ask. The gate follows r6. Should clicks there be blocked instead?
+  - Should the shell and installer apps above be written into SPEC-07, since they are an interpretation of the table?
+- **For the next objectives:**
+  - OBJ-36 and OBJ-38: call `checkAction({ action, element }, { home: os.homedir(), app: observation.app })` on every action before it runs, and run it only when `level` is `allowed`. Store `decision.recorded` as the step's action. For `ask`, `decision.rule` is `send`, `delete`, or `unclassified`, and a delete carries `decision.files`. For `blocked`, never ask: show the r5 card. `missingPath` and `notATypedAction` are blocked too, but the r5 "keep your Mac safe" copy may not fit them; OBJ-38 should decide their copy.
+  - OBJ-38: run `checkTrash(paths, home)` again right before trashing and compare `allPaths` (r12). It does not hash file contents, so a changed file is not caught yet.
+  - Register the file tools with `registerFileTools(registry, { home, logger })`. They return plain text for the model and log only the tool, the rule, or the error code.
+  - A new label, key, safe label, or secret location is one line in `src/safety/rules.ts`, plus a test, and needs a SPEC-07 change first.
+  - Tests: `test/safety-helpers.ts` has `tempHome()`, `tool`, `click`, `key`, `gui`, and `element`. The temporary home sits under `/var`, a link to `/private/var` on macOS, so compare tool paths with `realpathSync(home)`.

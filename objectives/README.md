@@ -94,7 +94,7 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-34](OBJ-34-protocol-version-upgrade-recovery.md) | Define protocol version upgrade recovery | protocol | Jepoy | 08, 11 | 31 | 21, 23, 30 | todo |
 | [OBJ-35](OBJ-35-mac-stop-and-take-over.md) | Stop and take over on the Mac | mac | Patrick | 06 | 17, 39 | 38 | todo |
 | [OBJ-36](OBJ-36-gui-act-sub-agent.md) | gui_act sub-agent | harness | Brent | 05, 02, 11 | 06, 07, 37 | 26, 39 | todo |
-| [OBJ-37](OBJ-37-permission-gate-and-file-tools.md) | Permission gate and typed file tools | harness | Brent | 07 | 03 | - | in-progress |
+| [OBJ-37](OBJ-37-permission-gate-and-file-tools.md) | Permission gate and typed file tools | harness | Brent | 07 | 03 | - | done |
 | [OBJ-38](OBJ-38-approvals-pause-and-action-log.md) | Approvals, pause, and action log in the harness | harness | Brent | 07, 06 | 06, 37 | 35, 39, 40 | todo |
 | [OBJ-39](OBJ-39-mac-gui-execution.md) | Mac GUI execution | mac | Patrick | 05, 11 | 14, 18 | 26, 36 | in-progress |
 | [OBJ-40](OBJ-40-mac-approval-cards.md) | Approval and blocked-action cards on the Mac | mac | Patrick | 07, 11 | 17 | 38 | todo |
