@@ -90,6 +90,30 @@ struct HarnessClientTests {
         _ = try await client.call(.setDebugMode, SetDebugModeParams(enabled: true), returning: Empty.self)
     }
 
+    /// The question card's answer is a valid `answerQuestion`: the mock checks params against the protocol.
+    @Test func answersAQuestion() async throws {
+        let mock = try await MockHarnessProcess.start()
+        defer { mock.stop() }
+        let client = HarnessClient(socketPath: mock.socketPath, timing: Self.patient)
+        client.start()
+        defer { client.stop() }
+        try await wait(for: client, toBe: .connected, answeredBy: mock)
+
+        let questions = TaskQuestions(
+            speech: TaskQuestionTests.FakeSpeech(), listen: { nil }, presenter: TaskQuestionTests.FakePanel(),
+            send: { params in _ = try await client.call(.answerQuestion, params, returning: Empty.self) }
+        )
+        var failure: Error?
+        questions.failed = { failure = $0 }
+        let question = QuestionAsked(taskId: "d608891a-0000-4000-8000-000000000001", subtaskId: "5b1d3c2e-0000-4000-8000-000000000002", question: "Which file?")
+        await questions.asked(question)
+        let panel = try #require(questions.presenterForTests as? TaskQuestionTests.FakePanel)
+        panel.choose?(.answer("~/Yumi smoke test/Q3 Report.key"))
+        for _ in 0..<100 where questions.sent == 0 && failure == nil { try await Task.sleep(for: .milliseconds(20)) }
+        #expect(failure == nil)
+        #expect(questions.sent == 1)
+    }
+
     @Test func reconnectsAfterTheHarnessIsKilled() async throws {
         var mock = try await MockHarnessProcess.start()
         // Reads `mock` when the test ends, so it stops whichever mock is running then, even if the

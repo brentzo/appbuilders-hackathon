@@ -28,6 +28,8 @@ final class HarnessLink {
     let speech: SpeechOutput
     /// The finished task's summary, said and shown (SPEC-02 r9).
     let summary: TaskSummary
+    /// A worker's questions to the user, said and shown with a box to answer (OBJ-36.9).
+    let questions: TaskQuestions
     /// The repeat-back panel and the answers to it (OBJ-17).
     let confirmation: GoalConfirmation
     /// What Yumi heard and "On it.", in Auto mode (OBJ-50).
@@ -74,6 +76,10 @@ final class HarnessLink {
             speech: speech, listen: { await confirmation.listener.listenForReply() }, presenter: ApprovalPanel(), overlay: overlay
         )
         client.appMethods = AppMethodServer(gui: gui, approvals: approvals)
+        questions = TaskQuestions(
+            speech: speech, listen: { await confirmation.listener.listenForReply() }, presenter: QuestionPanel(),
+            send: { [client] params in _ = try await client.call(.answerQuestion, params, returning: Empty.self) }
+        )
         pause = PauseController(
             speech: speech, listen: { await confirmation.listener.listenForReply() }, panel: PausedPanel(), overlay: overlay,
             keystrokes: gui.keystrokes, approvals: approvals, tasks: HarnessTaskControl(client: client)
@@ -86,6 +92,8 @@ final class HarnessLink {
         overlay.start()
         gui.onUserError = { [weak self] error in self?.onUserError?(error) }
         gui.onWindowWork = { [weak self] in self?.uiLaneStarted = true }
+        questions.cancel = { [weak self] taskId in self?.cancelTask(taskId) }
+        questions.failed = { [weak self] error in self?.report(error, from: "answerQuestion") }
         approvals.isStopped = { [pause] in pause.isStopped }
         gui.actionsAllowed = { [weak self] in
             guard let self else { return true }
@@ -143,6 +151,7 @@ final class HarnessLink {
             confirmation.taskStatusChanged(change.taskId, change.status)
             autoMode.taskStatusChanged(change.taskId, change.status)
             pause.taskStatusChanged(change.taskId, change.status)
+            questions.taskStatusChanged(change.taskId, change.status)
             model.taskStatus = Self.appStatus(for: Array(taskStatuses.values))
             if let subtaskId = change.subtaskId, let status = change.subtaskStatus, Self.finishedSubtask.contains(status) {
                 overlay.subtaskEnded(subtaskId)
@@ -180,10 +189,12 @@ final class HarnessLink {
             tiler.suggest(suggestion)
         case .bridgeStateChanged(let change):
             PhoneLink.shared.update(connection: PhoneLink.Connection(change.state))
+        case .questionAsked(let question):
+            Task { await questions.asked(question) }
         case .workerThought(let thought):
             overlay.receive(thought)
         default:
-            // questionAsked, interruptedTaskFound, waitingForWindow and modelStateChanged (OBJ-46) are consumed in later objectives.
+            // interruptedTaskFound, waitingForWindow and modelStateChanged (OBJ-46) are consumed in later objectives.
             log.info("Not handled yet: \(event.name, privacy: .public)")
         }
     }
