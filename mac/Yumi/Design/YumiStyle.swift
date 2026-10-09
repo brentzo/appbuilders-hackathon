@@ -61,11 +61,15 @@ private struct YumiButtonBody: View {
 
 extension View {
     /// A floating card: surface on a hairline, with the panel radius. The panel adds the shadow.
+    /// The user can drag the card by any bare part of it.
     func yumiCard() -> some View {
         let shape = RoundedRectangle(cornerRadius: YumiRadius.panel, style: .continuous)
-        return background(YumiColor.surface, in: shape)
-            .overlay(shape.strokeBorder(YumiColor.line))
-            .padding(1)
+        return background {
+            shape.fill(YumiColor.surface)
+                .overlay(WindowDragArea().clipShape(shape))
+        }
+        .overlay(shape.strokeBorder(YumiColor.line).allowsHitTesting(false))
+        .padding(1)
     }
 
     /// A recessed well inside a card or window, for lists such as files or permissions.
@@ -79,7 +83,26 @@ extension View {
     func yumiWindow() -> some View {
         foregroundStyle(YumiColor.ink)
             .tint(YumiColor.accent)
-            .background(YumiColor.paper)
+            .background { YumiColor.paper.overlay(WindowDragArea()) }
+    }
+}
+
+/// Drags its window from a bare part of SwiftUI content. `isMovableByWindowBackground` alone does
+/// not work there, because a hosting view never lets a mouse-down move its window. Put it behind
+/// the content: buttons and fields in front of it still get their clicks.
+struct WindowDragArea: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView { DragView() }
+    func updateNSView(_ nsView: NSView, context: Context) {}
+
+    private final class DragView: NSView {
+        override var mouseDownCanMoveWindow: Bool { true }
+
+        /// Cards never activate Yumi, so the first click on one must already drag it.
+        override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+        override func mouseDown(with event: NSEvent) {
+            window?.performDrag(with: event)
+        }
     }
 }
 

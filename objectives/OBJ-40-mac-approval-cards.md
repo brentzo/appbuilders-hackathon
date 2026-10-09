@@ -56,6 +56,7 @@ Until OBJ-38 exists, drive the cards from the mock harness in [OBJ-01](OBJ-01-ta
 - [ ] **OBJ-40.8** Check the cards in light and dark mode, on every display and scale, with long file names and long recipient lists. Test every card against the mock harness, then against the real harness when [OBJ-38](OBJ-38-approvals-pause-and-action-log.md) is done.
 - [ ] **OBJ-40.9** "Show what I did" on the "Unexpected" error opens a window with that task's action log, read from `getTask`'s `actionLog`, oldest first, times in am/pm (SPEC-11 Decisions, gap G13). Opening the log from the menu bar stays p1.
 - [x] **OBJ-40.10** Show an `action` approval's harness-authored summary for an unclassified risky click or key press and return a tap-only decision; do not allow voice to approve it (SPEC-07 r6).
+- [x] **OBJ-40.11** Let the user drag every floating card, and Yumi's windows, by any bare part of it, while its buttons and fields still take clicks (`WindowDragArea` in `mac/Yumi/Design/YumiStyle.swift`, used by `yumiCard()` and `yumiWindow()`).
 
 ## Expectations
 
@@ -65,6 +66,7 @@ Until OBJ-38 exists, drive the cards from the mock harness in [OBJ-01](OBJ-01-ta
 - [ ] A card closes when its approval is cancelled, and a tap after that does nothing.
 - [ ] `moveToTrash` only ever moves files to the Trash.
 - [ ] The real Mac card displays the `action` summary and cannot approve it by voice.
+- [ ] Every card (repeat-back, approval, question, paused, summary, tiling, voice warning) moves when dragged by a bare part, and its buttons still work.
 
 ## Expected outcomes
 
