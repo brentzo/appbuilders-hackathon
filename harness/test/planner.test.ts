@@ -442,6 +442,8 @@ describe("a goal that asks for information gets the answer (SPEC-02 r9, Brent's 
     run = await startWithMac({ dir: dir.path, home, logger, model: server, lanes: { helper: fileHelperLane({ home }) } });
     const task = run.startTask("List the files in my Downloads folder");
     await until(() => ["done", "failed"].includes(run!.harness.store.getTask(task.id)!.status));
+    // The summary is spoken after the task is stored as done, so wait for it to reach the mock Mac.
+    await until(() => run!.mac.events.some((e) => e.event === "speak"));
     const spoken = run.mac.events.filter((e) => e.event === "speak").map((e) => (e.payload as { text: string }).text);
     return { task: run.harness.store.getTask(task.id)!, summaryRequests, spoken };
   }
