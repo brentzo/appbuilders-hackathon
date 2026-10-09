@@ -3,8 +3,10 @@ package ai.yumi.android
 import ai.yumi.android.errors.ErrorPresenter
 import ai.yumi.android.permissions.AndroidPermissionEnvironment
 import ai.yumi.android.permissions.PermissionCoordinator
-import ai.yumi.android.service.BridgeConnection
-import ai.yumi.android.service.UnpairedBridgeConnection
+import ai.yumi.android.bridge.BridgeCrypto
+import ai.yumi.android.bridge.DeviceKeyStore
+import ai.yumi.android.bridge.PrefsBridgeStore
+import ai.yumi.android.bridge.RelayBridge
 import ai.yumi.android.service.WakeWordDetector
 import ai.yumi.android.service.YumiStatus
 import ai.yumi.android.settings.SettingsStore
@@ -21,7 +23,13 @@ import ai.yumi.android.voice.wakeword.WakeWordConfig
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.net.ConnectivityManager
+import android.net.Network
+import android.os.Build
+import android.provider.Settings
 import android.util.Log
+import com.goterl.lazysodium.LazySodiumAndroid
+import com.goterl.lazysodium.SodiumAndroid
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -38,7 +46,16 @@ class AppGraph(context: Context) {
     val settings = SettingsStore(context, appScope)
     val errors = ErrorPresenter()
 
-    val bridge: BridgeConnection = UnpairedBridgeConnection()
+    private val crypto = BridgeCrypto(LazySodiumAndroid(SodiumAndroid()))
+    private val deviceKeys = DeviceKeyStore(context, crypto)
+    val bridge = RelayBridge(
+        crypto = crypto,
+        keys = deviceKeys::keys,
+        store = PrefsBridgeStore(context),
+        deviceName = deviceName(context),
+        allowLoopback = BuildConfig.DEBUG,
+        log = { Log.i("YumiBridge", it) },
+    )
     val goals = LastGoal()
     val microphone = MicrophoneOwner()
     val wakeWordConfig = WakeWordConfig.Current
@@ -66,10 +83,24 @@ class AppGraph(context: Context) {
     val testTool = TestPermissionTool(permissions)
 
     init {
+        // Reconnect at once when Android moves to another network, for example from Wi-Fi to mobile data.
+        context.getSystemService(ConnectivityManager::class.java).registerDefaultNetworkCallback(
+            object : ConnectivityManager.NetworkCallback() {
+                private var current: Network? = null
+                override fun onAvailable(network: Network) {
+                    if (current != null && current != network) bridge.networkChanged()
+                    current = network
+                }
+            },
+        )
         Log.i(
             "Yumi",
-            "Stand-ins in use: placeholder cat (OBJ-10), no bridge (OBJ-23), " +
+            "Stand-ins in use: placeholder cat (OBJ-10), " +
                 "wake word ${WakeWordChoice.Current} instead of OBJ-12's Hey Yumi model, temporary protocol types (OBJ-01)",
         )
     }
 }
+
+/** The phone's name as the user set it, shown on the Mac as "Paired with <name>". */
+private fun deviceName(context: Context): String =
+    Settings.Global.getString(context.contentResolver, Settings.Global.DEVICE_NAME)?.takeIf { it.isNotBlank() } ?: Build.MODEL

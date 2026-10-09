@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-    <application>
+    <application
+        android:networkSecurityConfig="@xml/network_security_config"
+        tools:ignore="UnusedAttribute">
         <!-- Debug builds only: lets adb run the test tool while the app is in the background. -->
         <receiver
             android:name=".debug.TestToolReceiver"
@@ -9,6 +11,17 @@
             tools:ignore="ExportedReceiver">
             <intent-filter>
                 <action android:name="ai.yumi.android.debug.RUN_TEST_TOOL" />
+            </intent-filter>
+        </receiver>
+        <!-- Debug builds only: drives the bridge from adb for the local relay stand-in (OBJ-23, OBJ-67, OBJ-69). -->
+        <receiver
+            android:name=".debug.BridgeTestReceiver"
+            android:exported="true"
+            tools:ignore="ExportedReceiver">
+            <intent-filter>
+                <action android:name="ai.yumi.android.debug.PAIR" />
+                <action android:name="ai.yumi.android.debug.GOAL" />
+                <action android:name="ai.yumi.android.debug.UNPAIR" />
             </intent-filter>
         </receiver>
     </application>

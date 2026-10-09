@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -44,6 +45,11 @@ android {
         buildConfig = true
     }
 
+    sourceSets {
+        // The protocol's generated Kotlin types (protocol/README.md, "Using the types"). Never hand-write them here.
+        getByName("main").java.srcDir(rootProject.file("../protocol/generated/kotlin"))
+    }
+
     testOptions {
         unitTests.all {
             // The error copy test compares the code with the table in SPEC-11.
@@ -52,6 +58,9 @@ android {
             it.inputs.dir(rootProject.file("../specs")).withPropertyName("specs")
             // The wake word parity test runs the real models from the app's assets.
             it.systemProperty("yumi.assetsDir", file("src/main/assets").absolutePath)
+            // The bridge crypto test reproduces the protocol's cross-language vectors.
+            it.systemProperty("yumi.protocolDir", rootProject.file("../protocol").absolutePath)
+            it.inputs.dir(rootProject.file("../protocol/vectors")).withPropertyName("protocolVectors")
         }
     }
 }
@@ -83,7 +92,18 @@ dependencies {
     implementation(libs.vosk.android)
     implementation(libs.jna) { artifact { type = "aar" } }
 
+    // lazysodium-android asks for the JNA jar; the app already has JNA as an AAR with its Android native libraries.
+    implementation(libs.lazysodium.android) { exclude(group = "net.java.dev.jna", module = "jna") }
+    implementation(libs.okhttp)
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
+    implementation(libs.zxing.core)
+
     testImplementation(libs.junit)
+    testImplementation(libs.lazysodium.java)
+    testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.onnxruntime.jvm)
     testImplementation(libs.kotlinx.coroutines.test)
 }
@@ -93,6 +113,8 @@ dependencies {
 configurations.configureEach {
     if (name.endsWith("UnitTestRuntimeClasspath")) {
         exclude(group = "com.microsoft.onnxruntime", module = "onnxruntime-android")
+        // Same for lazysodium: the desktop build carries libsodium for the computer running the tests.
+        exclude(group = "com.goterl", module = "lazysodium-android")
     }
 }
 

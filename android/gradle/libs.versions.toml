@@ -15,6 +15,14 @@ onnxruntime = "1.28.0"
 # wants the AAR, so JNA is declared on its own at the version Vosk's POM names.
 vosk = "0.3.75"
 jna = "5.18.1"
+# The bridge (OBJ-23): libsodium through lazysodium (protocol/docs/crypto.md), the relay over OkHttp's WebSocket,
+# and the pairing QR code read on the device with CameraX and ZXing (no Google Play services, no network).
+lazysodium = "5.2.0"
+# 5.x needs compile SDK 37 (README Decisions keep us on 36), so the 4.x line.
+okhttp = "4.12.0"
+serialization = "1.11.0"
+camerax = "1.6.2"
+zxing = "3.5.4"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -36,6 +44,16 @@ junit = { group = "junit", name = "junit", version.ref = "junit" }
 onnxruntime-android = { group = "com.microsoft.onnxruntime", name = "onnxruntime-android", version.ref = "onnxruntime" }
 vosk-android = { group = "com.alphacephei", name = "vosk-android", version.ref = "vosk" }
 jna = { group = "net.java.dev.jna", name = "jna", version.ref = "jna" }
+lazysodium-android = { group = "com.goterl", name = "lazysodium-android", version.ref = "lazysodium" }
+# The desktop build of the same lazysodium, so unit tests check the crypto against the protocol's vectors on the JVM.
+lazysodium-java = { group = "com.goterl", name = "lazysodium-java", version.ref = "lazysodium" }
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+okhttp-mockwebserver = { group = "com.squareup.okhttp3", name = "mockwebserver", version.ref = "okhttp" }
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "serialization" }
+androidx-camera-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "camerax" }
+androidx-camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "camerax" }
+androidx-camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
+zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
 # The desktop build of the same ONNX Runtime version, so unit tests run the real models on the JVM.
 onnxruntime-jvm = { group = "com.microsoft.onnxruntime", name = "onnxruntime", version.ref = "onnxruntime" }
 
@@ -43,3 +61,4 @@ onnxruntime-jvm = { group = "com.microsoft.onnxruntime", name = "onnxruntime", v
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
