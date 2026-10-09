@@ -32,11 +32,11 @@ struct TakeOverStartTests {
         #expect(TakeOverWatcher.drags.isSubset(of: Set(TakeOverWatcher.watched)))
     }
 
-    @Test func windowWorkMarksTheUILaneAsStarted() throws {
+    @Test func windowWorkMarksTheUILaneAsStarted() async throws {
         let gui = GuiExecutor(overlay: nil, isTrusted: { false })
         var started = 0
         gui.onWindowWork = { started += 1 }
-        _ = try? gui.observeWindow(ObserveWindowParams(target: Target(bundleId: "com.apple.finder", windowId: 1)))
+        _ = try? await gui.observeWindow(ObserveWindowParams(target: Target(bundleId: "com.apple.finder", windowId: 1)))
         #expect(started == 1)
     }
 }

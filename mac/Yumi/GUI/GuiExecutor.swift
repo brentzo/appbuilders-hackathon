@@ -43,11 +43,31 @@ final class GuiExecutor {
 
     // MARK: observeWindow (OBJ-39.2)
 
-    func observeWindow(_ params: ObserveWindowParams) throws -> YumiProtocol.Observation {
+    func observeWindow(_ params: ObserveWindowParams) async throws -> YumiProtocol.Observation {
         onWindowWork?()
-        return try reporting {
+        return try await reporting {
             try requireAccessibility()
-            let snapshot = try WindowReader.observe(params.target)
+            var snapshot = try WindowReader.observe(params.target)
+            if snapshot.needsVision, let windowId = snapshot.windowId, let frame = snapshot.observation.windowFrame {
+                let windowFrame = CGRect(x: frame.x, y: frame.y, width: frame.width, height: frame.height)
+                let captured: VisionCapture.Captured
+                do {
+                    captured = try await VisionCapture.capture(
+                        bundleId: params.target.bundleId,
+                        windowId: windowId,
+                        windowFrame: windowFrame
+                    )
+                } catch VisionCapture.Failure.screenPermissionMissing {
+                    throw GuiFailure.screenPermissionMissing
+                }
+                snapshot.observation.screenshotPath = captured.path
+                snapshot.screenshot = ScreenshotGeometry(
+                    imageWidth: captured.image.width,
+                    imageHeight: captured.image.height,
+                    windowFrame: windowFrame,
+                    path: captured.path
+                )
+            }
             snapshots[Self.key(params.target)] = snapshot
             return snapshot.observation
         }
@@ -90,10 +110,10 @@ final class GuiExecutor {
                 return try await press(key.combo, params)
             case .tool(let tool):
                 return await run(tool.call)
+            case .clickAt(let point):
+                return try await clickAt(point, params)
             case .ask, .finish:
                 return Self.result(.invalidOutput, "The harness handles ask and finish, not the Mac app.")
-            case .clickAt:
-                return Self.result(.invalidOutput, "Clicking at coordinates is not available yet.")
             }
         }
     }
@@ -126,6 +146,66 @@ final class GuiExecutor {
         } catch let error as PopUpChoiceFailure {
             return Self.result(.error, error.observation)
         }
+    }
+
+    /// A vision click (SPEC-05 r12): the model answered with pixel coordinates in the screenshot it
+    /// saw, so convert them to a global screen point with the captured image size and window frame,
+    /// then move the real mouse there and click. The window must not have moved since the screenshot
+    /// (SPEC-05 r13); the harness checks this too, right before it sends the action.
+    private func clickAt(_ point: ClickAtAction, _ params: ExecuteActionParams) async throws -> ExecuteActionResult {
+        try requireAccessibility()
+        guard let snapshot = snapshots[Self.key(params.target)], let shot = snapshot.screenshot else {
+            return Self.result(.error, "There is no screenshot of this window to click in.")
+        }
+        guard point.x <= shot.imageWidth, point.y <= shot.imageHeight, shot.windowFrame.width > 0, shot.windowFrame.height > 0 else {
+            return Self.result(.error, "That point is outside the window.")
+        }
+        let appNode = WindowReader.appNode(try WindowReader.runningApp(params.target.bundleId))
+        guard let window = WindowReader.window(of: appNode, windowId: params.target.windowId), let current = window.info().frame else {
+            throw GuiFailure.windowNotFound
+        }
+        guard Self.sameRect(current, shot.windowFrame) else {
+            return Self.result(.error, "The window moved before the click, so it was not clicked. Looking again.")
+        }
+        let global = Self.screenPoint(
+            imageX: point.x,
+            imageY: point.y,
+            imageWidth: shot.imageWidth,
+            imageHeight: shot.imageHeight,
+            windowFrame: shot.windowFrame
+        )
+        try await activate(params.target)
+        await moveCursor(params.cursorId, toTopLeft: global)
+        guard actionsAllowed() else { return Self.notAllowed }
+        Self.clickMouse(at: global)
+        return Self.result(.ok, "Clicked at \(point.x), \(point.y).")
+    }
+
+    /// The global top-left screen point for a pixel in a screenshot of `windowFrame`, at the captured
+    /// image's own scale (SPEC-05 r12). The image may be larger than the frame in points (a Retina
+    /// display), and the frame's origin may be negative on a display left of or above the main one.
+    static func screenPoint(imageX: Int, imageY: Int, imageWidth: Int, imageHeight: Int, windowFrame: CGRect) -> CGPoint {
+        let scaleX = CGFloat(imageWidth) / windowFrame.width
+        let scaleY = CGFloat(imageHeight) / windowFrame.height
+        return CGPoint(x: windowFrame.minX + CGFloat(imageX) / scaleX, y: windowFrame.minY + CGFloat(imageY) / scaleY)
+    }
+
+    /// Moves the real mouse to a global top-left point and clicks the left button there. A vision
+    /// click moves the real mouse, which is why only the main lane is offered it (SPEC-03 r7).
+    private static func clickMouse(at point: CGPoint) {
+        CGWarpMouseCursorPosition(point)
+        let source = CGEventSource(stateID: .hidSystemState)
+        CGEvent(mouseEventSource: source, mouseType: .leftMouseDown, mouseCursorPosition: point, mouseButton: .left)?
+            .post(tap: .cghidEventTap)
+        CGEvent(mouseEventSource: source, mouseType: .leftMouseUp, mouseCursorPosition: point, mouseButton: .left)?
+            .post(tap: .cghidEventTap)
+    }
+
+    /// Whether two window frames are the same, within half a point: an accessibility frame can shift
+    /// by a fraction without the window having moved.
+    static func sameRect(_ a: CGRect, _ b: CGRect) -> Bool {
+        abs(a.minX - b.minX) < 0.5 && abs(a.minY - b.minY) < 0.5
+            && abs(a.width - b.width) < 0.5 && abs(a.height - b.height) < 0.5
     }
 
     private func click(_ kept: KeptElement<LiveNode>) throws -> String {
@@ -323,30 +403,30 @@ final class GuiExecutor {
         }
     }
 
-    /// Shows the Accessibility error to the user (at most once a minute while a task keeps
-    /// trying), then passes every failure on to the caller as a structured kind.
+    /// Shows the permission error to the user (at most once a minute while a task keeps trying),
+    /// then passes the failure on to the caller as a structured kind.
     private func reporting<T>(_ body: () async throws -> T) async throws -> T {
         do {
             return try await body()
-        } catch GuiFailure.accessibilityMissing {
-            showPermissionError()
-            throw GuiFailure.accessibilityMissing
+        } catch let failure as GuiFailure where failure.isPermission {
+            showPermissionError(failure.userError)
+            throw failure
         }
     }
 
     private func reporting<T>(_ body: () throws -> T) throws -> T {
         do {
             return try body()
-        } catch GuiFailure.accessibilityMissing {
-            showPermissionError()
-            throw GuiFailure.accessibilityMissing
+        } catch let failure as GuiFailure where failure.isPermission {
+            showPermissionError(failure.userError)
+            throw failure
         }
     }
 
-    private func showPermissionError() {
+    private func showPermissionError(_ error: UserError) {
         if let last = lastPermissionPrompt, Date().timeIntervalSince(last) < 60 { return }
         lastPermissionPrompt = Date()
-        onUserError?(GuiFailure.accessibilityMissing.userError)
+        onUserError?(error)
     }
 
     private func check(_ error: AXError, _ kept: KeptElement<LiveNode>) throws {

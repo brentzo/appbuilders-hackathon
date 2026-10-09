@@ -7,19 +7,36 @@ import YumiProtocol
 /// act on an element by its number later (OBJ-39.1, OBJ-39.2).
 @MainActor
 struct WindowSnapshot {
-    let observation: YumiProtocol.Observation
+    var observation: YumiProtocol.Observation
     /// Element `n` is at index `n - 1`.
     let elements: [KeptElement<LiveNode>]
     let app: NSRunningApplication
+    /// The window's `CGWindowID`, so a screenshot can be taken of this exact window.
+    let windowId: Int?
+    /// The window's content has no actionable element (only its chrome and menu bar), so the model
+    /// needs a screenshot and a vision click (SPEC-05 r1.3, r12).
+    let needsVision: Bool
+    /// Set once a screenshot was captured: what the vision coordinates are measured against.
+    var screenshot: ScreenshotGeometry?
 
     func element(_ number: Int) -> KeptElement<LiveNode>? {
         elements.indices.contains(number - 1) ? elements[number - 1] : nil
     }
 }
 
+/// What a captured screenshot needs for coordinate conversion: the image the model saw, and the
+/// window frame in global top-left points at the moment it was taken.
+struct ScreenshotGeometry {
+    let imageWidth: Int
+    let imageHeight: Int
+    let windowFrame: CGRect
+    let path: String
+}
+
 /// Why a GUI method could not run. `userError` is what the harness and the user get (SPEC-11).
 enum GuiFailure: Error, Equatable {
     case accessibilityMissing
+    case screenPermissionMissing
     case appNotRunning
     case windowNotFound
     /// `setValue` or typing into a password field (SPEC-05 r7).
@@ -30,8 +47,17 @@ enum GuiFailure: Error, Equatable {
     var userError: UserError {
         switch self {
         case .accessibilityMissing: UserError(kind: .accessibilityPermissionMissing)
+        case .screenPermissionMissing: UserError(kind: .screenPermissionMissing)
         case .appNotRunning, .windowNotFound: UserError(kind: .stuckOnScreen)
         case .secureField, .notMainLane: UserError(kind: .blockedAction)
+        }
+    }
+
+    /// A missing permission the user can grant, which the app shows with an "Open settings" button.
+    var isPermission: Bool {
+        switch self {
+        case .accessibilityMissing, .screenPermissionMissing: true
+        default: false
         }
     }
 }
@@ -138,6 +164,8 @@ enum WindowReader {
             layer.defaultButton = layerNode.element(kAXDefaultButtonAttribute).flatMap { number(of: $0, in: elements) }
             layer.cancelButton = layerNode.element(kAXCancelButtonAttribute).flatMap { number(of: $0, in: elements) }
         }
+        let needsVision = layer.kind != .menu && !elements.contains(where: isContentActionable)
+        let frame = windowInfo.frame
         let observation = YumiProtocol.Observation(
             app: nonEmpty(app.localizedName),
             windowTitle: windowInfo.title ?? "",
@@ -145,11 +173,38 @@ enum WindowReader {
             layer: layer,
             elements: elements.enumerated().map { index, kept in
                 TreeElement(n: index + 1, role: kept.role, label: kept.label, value: kept.value, enabled: kept.enabled)
-            }
+            },
+            screenshotPath: nil,
+            windowFrame: frame.map { Frame(x: Double($0.minX), y: Double($0.minY), width: Double($0.width), height: Double($0.height)) }
         )
         // Counts only: labels and values are screen data and stay out of the log.
-        log.info("Observed \(target.bundleId, privacy: .public): \(elements.count) elements, layer \(layer.kind.rawValue, privacy: .public)")
-        return WindowSnapshot(observation: observation, elements: elements, app: app)
+        log.info("Observed \(target.bundleId, privacy: .public): \(elements.count) elements, layer \(layer.kind.rawValue, privacy: .public)\(needsVision ? ", no content, needs vision" : "", privacy: .public)")
+        return WindowSnapshot(
+            observation: observation,
+            elements: elements,
+            app: app,
+            windowId: target.windowId ?? WindowService.windowId(of: window.element).map(Int.init),
+            needsVision: needsVision,
+            screenshot: nil
+        )
+    }
+
+    /// Whether an element is real content the model can act on: not a menu bar item and not the
+    /// window's own close, minimize, or zoom button. A window whose only kept elements are those has
+    /// no content in its accessibility tree, so the model must see a screenshot (Spotify, 2026-10-10).
+    static func isContentActionable(_ kept: KeptElement<LiveNode>) -> Bool {
+        isContentActionable(role: kept.role, subrole: kept.subrole)
+    }
+
+    /// Whether a role and subrole are real content the model can act on: not a menu bar item and not
+    /// the window's own close, minimize, or zoom button. A window whose only kept elements are those
+    /// has no content in its accessibility tree, so the model must see a screenshot (Spotify, 2026-10-10).
+    static func isContentActionable(role: AXRole, subrole: String?) -> Bool {
+        if let subrole, AppCapabilityProbe.windowChromeSubroles.contains(subrole) { return false }
+        switch role {
+        case .menuBarItem, .menuItem: return false
+        default: return true
+        }
     }
 
     /// Resolves a path built by the tree reader, against the target's window, its menu bar, or the

@@ -7,6 +7,8 @@ struct KeptElement<Node> {
     var label: String
     var value: String?
     var enabled: Bool
+    /// The macOS subrole (`kAXSubroleAttribute`): `AXCloseButton` and friends for window chrome.
+    var subrole: String?
     /// The element's accessibility path (`ElementPath`). Stays on the Mac side.
     var path: String
     var frame: CGRect?
@@ -58,6 +60,7 @@ struct TreeTrimmer<Node: TreeNode> {
                 // Never read for a secure text field, not even to drop it afterwards.
                 value: role == .secureTextField ? nil : Self.value(of: node, role: role),
                 enabled: info.enabled,
+                subrole: info.subrole,
                 path: path,
                 frame: info.frame,
                 node: node

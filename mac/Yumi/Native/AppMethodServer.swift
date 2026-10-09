@@ -37,7 +37,7 @@ final class AppMethodServer {
             switch method {
             case .observeWindow:
                 guard let gui else { return .notServed }
-                return try encode(try gui.observeWindow(try decode(ObserveWindowParams.self, params)))
+                return try encode(try await gui.observeWindow(try decode(ObserveWindowParams.self, params)))
             case .executeAction:
                 guard let gui else { return .notServed }
                 return try encode(try await gui.executeAction(try decode(ExecuteActionParams.self, params)))

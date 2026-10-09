@@ -25,6 +25,12 @@ enum AppCapabilityProbe {
         "AXComboBox", "AXMenuButton", "AXRadioButton",
     ]
 
+    /// The window's own buttons. They are in the window but are chrome, not content: every window has
+    /// them, so counting them would make every app look background-capable (Spotify, 2026-10-10).
+    static let windowChromeSubroles: Set<String> = [
+        "AXCloseButton", "AXMinimizeButton", "AXZoomButton", "AXFullScreenButton",
+    ]
+
     static func probe(bundleId: String) async throws -> AppCapability {
         guard AXIsProcessTrusted() else { throw Failure.accessibilityMissing }
         guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId) else {
@@ -75,8 +81,9 @@ enum AppCapabilityProbe {
     private static func containsActionable(_ element: AXUIElement, depth: Int, budget: inout Int) -> Bool {
         budget -= 1
         guard budget > 0, depth < 25 else { return false }
-        if let role = WindowService.string(element, kAXRoleAttribute), depth > 0, actionableRoles.contains(role) {
-            return true
+        if depth > 0, let role = WindowService.string(element, kAXRoleAttribute), actionableRoles.contains(role) {
+            let subrole = WindowService.string(element, kAXSubroleAttribute)
+            if !(subrole.map(windowChromeSubroles.contains) ?? false) { return true }
         }
         var value: CFTypeRef?
         guard AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &value) == .success,

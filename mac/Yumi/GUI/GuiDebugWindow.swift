@@ -111,7 +111,7 @@ final class GuiDebugModel: ObservableObject {
             try? await Task.sleep(for: delay)
         }
         do {
-            let observation = try executor.observeWindow(ObserveWindowParams(target: target))
+            let observation = try await executor.observeWindow(ObserveWindowParams(target: target))
             let paths = executor.lastSnapshot(of: target)?.elements.map(\.path) ?? []
             rows = observation.elements.enumerated().map { index, element in
                 Row(element: element, path: paths.indices.contains(index) ? paths[index] : "")
