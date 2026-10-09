@@ -373,7 +373,7 @@ One file a day, in local time, with lines like these:
 
 A goal that asks for a list ends its repeat-back with "Want it in a note too?" instead of "Should I go ahead?" (SPEC-02 r13, [OBJ-74](../objectives/OBJ-74-save-list-to-note.md)).
 
-- "Yes, in a note" (or any yes that mentions a note) goes ahead with the note; a plain yes or Go ahead goes ahead without it. Other answers go to the model with a fifth answer, `confirmWithNote`. The choice is kept on the task (`list_to_note`, harness-only).
+- The question is about the note, so a yes ("yes", "sure", "yes, in a note") goes ahead with the note; "no", "no thanks", "just list them", or the Go ahead button goes ahead without it. Other answers go to the model with a fifth answer, `confirmWithNote`. The choice is kept on the task (`list_to_note`, harness-only).
 - Once the listing is done, `runPlan` adds one main-lane subtask in Notes (`src/planner/list-note.ts`): press cmd+n, then type the note in one `type` action. The worker types the placeholder `NOTE_TEXT`, and `gui_act` types the list the harness found in its place, title first, so the model never writes the list out.
 - The summary is the answer's first sentence, then "I put the full list in a new note called {title}."
 - In Auto mode there is no question: the task is marked for a note when it starts, and the note is written whenever the task finds a list (SPEC-02 r13, Brent's decision 2026-10-10).

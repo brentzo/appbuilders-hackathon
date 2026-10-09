@@ -28,8 +28,8 @@ import { reviseGoalWords } from "./revision.ts";
  * - Change it (the button): the app listens again, and the next spoken answer is the correction.
  * - Unclear: asked once more (the same repeat-back again); after that, Yumi waits for a button.
  * - A goal that asks for a list ends its repeat-back with "Want it in a note too?" instead of
- *   "Should I go ahead?" (SPEC-02 r13, OBJ-74). "Yes, in a note" goes ahead with the note, which the task store
- *   keeps; a plain yes, or Go ahead, goes ahead without it.
+ *   "Should I go ahead?" (SPEC-02 r13, OBJ-74). A yes answers that question, so it goes ahead with the note, which
+ *   the task store keeps; "no", "no thanks", or the Go ahead button goes ahead without it.
  *
  * Auto mode (SPEC-01 r14, OBJ-50): a goal sent with `autoMode` skips all of this. The task is created straight in
  * planning with the transcript, trimmed, as its `confirmedGoal`, and its work starts at once. A list it finds goes
@@ -250,7 +250,7 @@ export class GoalConfirmation {
       logger.info("confirm.answer", { taskId, kind: "correction", by: "changeIt", answerChars: reply.text.length });
       return "correction";
     }
-    const fixed = fixedReply(reply.text) ?? (question.offersNote ? noteReply(reply.text) : undefined);
+    const fixed = (question.offersNote ? noteReply(reply.text) : undefined) ?? fixedReply(reply.text);
     if (fixed) {
       logger.info("confirm.answer", { taskId, kind: fixed, by: "fixed", answerChars: reply.text.length });
       return fixed;

@@ -61,12 +61,28 @@ describe("the offer and the answer", () => {
     expect(repeatBack(GOAL, false)).toBe(`You want me to ${GOAL}. Should I go ahead?`);
   });
 
-  it('reads "yes, in a note" as yes with the note, and an answer that turns the note down as yes without it', () => {
-    for (const yes of ["yes, in a note", "Yes please, put it in a note.", "in a new note", "sure, save it in Notes"])
+  it("reads a yes as yes to the note, since that is the question, and an answer that turns the note down as yes without it", () => {
+    // Brent's live run, 2026-10-10 (task e11a8346): he answered "Yes." and got no note.
+    for (const yes of [
+      "Yes.",
+      "yes please",
+      "yes, in a note",
+      "Yes please, put it in a note.",
+      "in a new note",
+      "sure, save it in Notes",
+    ])
       expect(noteReply(yes)).toBe("confirmWithNote");
-    for (const no of ["no note, just list them", "yes, without a note", "don't put it in a note"])
+    for (const no of [
+      "No.",
+      "no thanks",
+      "just list them",
+      "no note, just list them",
+      "yes, without a note",
+      "don't put it in a note",
+    ])
       expect(noteReply(no)).toBe("confirm");
-    for (const other of ["yes", "go ahead", "never mind the note", "cancel the note"]) expect(noteReply(other)).toBeUndefined();
+    for (const other of ["never mind the note", "cancel the note", "cancel", "only the PDFs"])
+      expect(noteReply(other)).toBeUndefined();
   });
 
   it("lets the model answer confirmWithNote only when the note was offered", () => {
@@ -90,6 +106,7 @@ describe("the list and the note", () => {
     expect(listTitle("List the files in your Downloads folder")).toBe("Files in your Downloads folder");
     expect(listTitle("Show me all of the PDFs in your Desktop folder.")).toBe("PDFs in your Desktop folder");
     expect(listTitle("Count the photos")).toBe("Count the photos");
+    expect(listTitle("List the files in your downloads folder")).toBe("Files in your Downloads folder");
   });
 
   it("holds every name the listing found, folders marked, and how many more there were", () => {
@@ -294,7 +311,7 @@ async function start(): Promise<Harness> {
 }
 
 describe("SPEC-02 r13 lists in a new note", () => {
-  it('offers the note, and "yes, in a note" leaves the full list in a new note after the listing', async () => {
+  it('offers the note, and "yes" leaves the full list in a new note after the listing', async () => {
     const purposes = scriptedModel();
     const h = await start();
     const client = await app(h);
@@ -306,7 +323,8 @@ describe("SPEC-02 r13 lists in a new note", () => {
     await until(() => client.named("goalRestated").length === 1);
     expect(client.named("goalRestated")[0]).toEqual({ taskId, text: OFFER });
 
-    await client.call("replyToConfirmation", { taskId, reply: { kind: "spoken", text: "yes, in a note" } });
+    // Brent's answer in task e11a8346, which got no note before.
+    await client.call("replyToConfirmation", { taskId, reply: { kind: "spoken", text: "Yes." } });
     await until(() => h.store.getTask(taskId)?.status === "done");
     expect(h.store.wantsListInNote(taskId)).toBe(true);
     // The note subtask comes after the listing, with the list from list_dir's real output.
@@ -333,7 +351,7 @@ describe("SPEC-02 r13 lists in a new note", () => {
     client.close();
   });
 
-  it("a plain yes lists without the note, and sends the full list for the card", async () => {
+  it('"no thanks" lists without the note, and sends the full list for the card', async () => {
     const purposes = scriptedModel();
     const h = await start();
     const client = await app(h);
@@ -343,7 +361,7 @@ describe("SPEC-02 r13 lists in a new note", () => {
     });
     const taskId = (submitted.result as { taskId: string }).taskId;
     await until(() => client.named("goalRestated").length === 1);
-    await client.call("replyToConfirmation", { taskId, reply: { kind: "spoken", text: "yes" } });
+    await client.call("replyToConfirmation", { taskId, reply: { kind: "spoken", text: "no thanks" } });
     await until(() => client.named("speak").length === 1);
     expect(h.store.wantsListInNote(taskId)).toBe(false);
     expect(h.store.listSubtasks(taskId)).toHaveLength(1);
@@ -436,7 +454,7 @@ describe("SPEC-02 r13 lists in a new note", () => {
     });
     const taskId = (submitted.result as { taskId: string }).taskId;
     await until(() => client.named("goalRestated").length === 1);
-    await client.call("replyToConfirmation", { taskId, reply: { kind: "spoken", text: "yes" } });
+    await client.call("replyToConfirmation", { taskId, reply: { kind: "spoken", text: "no thanks" } });
     await until(() => client.named("speak").length === 1);
     expect(client.named("speak")[0]).toMatchObject({ taskId, list: { inNote: false } });
 
