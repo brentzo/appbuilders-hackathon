@@ -177,6 +177,16 @@ describe("mock Mac app capability answers", () => {
 });
 
 describe("mock Mac app approvals and the Trash", () => {
+  it("returns a tap decision for a generic action approval", async () => {
+    const harness = await harnessWithMockMacApp();
+    const params = exampleOf("ShowApprovalCardParams.action");
+    expect(await harness.request("showApprovalCard", params)).toEqual({
+      approved: true,
+      method: "tap",
+      decidedAt: new Date(Date.parse((params as { approval: { requestedAt: string } }).approval.requestedAt) + 1_000).toISOString(),
+    });
+  });
+
   it("answers moveToTrash for the exact paths it was given, and moves nothing", async () => {
     const harness = await harnessWithMockMacApp();
     const paths = ["/Users/ana/Downloads/a.pdf", "/Users/ana/Downloads/b.pdf"];

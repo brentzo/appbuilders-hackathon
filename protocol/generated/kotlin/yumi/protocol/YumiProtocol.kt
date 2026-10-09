@@ -68,7 +68,7 @@ data class AppCapability(
     val probedAt: String,
 )
 
-/** One approval request, and the decision once the user answered. */
+/** One approval request, and the decision once the user answered. For an unclassified risky action, text is a safe summary built by the harness from the resolved action, never model text (SPEC-07 r6). */
 @Serializable
 data class Approval(
     val id: String,
@@ -77,7 +77,7 @@ data class Approval(
     /** Send: read from the real To and Cc fields (SPEC-07 r13). */
     val recipients: List<String>? = null,
     val files: FileSummary? = null,
-    /** What the user hears and sees. */
+    /** What the user hears and sees. For kind action, the harness builds a safe summary from the resolved action, never from model text (SPEC-07 r6). */
     val text: String,
     val requestedAt: String,
     /** 5 minutes after the request; then the task pauses. */
@@ -107,10 +107,11 @@ data class ApprovalDecision(
 @Serializable
 enum class ApprovalKind {
     @SerialName("send") Send,
-    @SerialName("delete") Delete;
+    @SerialName("delete") Delete,
+    @SerialName("action") Action;
 }
 
-/** A delete is approved only by a tap or click (SPEC-07 r11). A send may be approved by voice (SPEC-07 r15). */
+/** Deletes and unclassified actions are approved only by a tap or click. A send may be approved by voice (SPEC-07 r11, r15). */
 @Serializable
 enum class ApprovalMethod {
     @SerialName("tap") Tap,
@@ -129,6 +130,7 @@ data class ApprovalRequestPayload(
     val approvalKind: ApprovalKind,
     val recipients: List<String>? = null,
     val files: FileSummary? = null,
+    /** For an unclassified risky action, the harness-built summary of the resolved action (SPEC-07 r6). */
     val text: String,
     val requestedAt: String,
     val expiresAt: String,

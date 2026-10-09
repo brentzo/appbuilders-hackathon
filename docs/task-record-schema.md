@@ -248,10 +248,10 @@ The approval text is built by the harness from real data, never from model text.
 struct Approval: Codable {
     let id: UUID
     let stepId: UUID
-    let kind: ApprovalKind           // send or delete
+      let kind: ApprovalKind           // send, delete, or an unclassified risky action
     var recipients: [String]?        // send: read from the real To and Cc fields
     var files: FileSummary?          // delete: built from the real file list
-    var text: String                 // what the user hears and sees
+      var text: String                 // for action, a safe summary built from the resolved action by the harness
     var requestedAt: Date
     var expiresAt: Date              // 5 minutes, then the task pauses (SPEC-09 r10)
     var decision: ApprovalDecision?
@@ -264,16 +264,18 @@ struct FileSummary: Codable {
     var allPaths: [String]           // the exact list the approval covers, checked again right before acting
 }
 
-enum ApprovalKind: String, Codable { case send, delete }
+  enum ApprovalKind: String, Codable { case send, delete, action }
 
 struct ApprovalDecision: Codable {
     var approved: Bool
-    var method: ApprovalMethod       // a delete is only approved by a tap (SPEC-07 r11)
+      var method: ApprovalMethod       // delete and action approvals require a tap (SPEC-07 r11, r6)
     var decidedAt: Date
 }
 
-enum ApprovalMethod: String, Codable { case tap, voice }
+  enum ApprovalMethod: String, Codable { case tap, voice }
 ```
+
+  An `action` approval carries a harness-authored summary of the resolved action and can be approved only by a tap.
 
 Pausing cancels every pending approval (SPEC-06 r5).
 An approval covers its exact list once; if the recipients or files changed, Yumi asks again.

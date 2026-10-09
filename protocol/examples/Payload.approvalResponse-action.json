@@ -1,0 +1,9 @@
+{
+  "kind": "approvalResponse",
+  "approvalId": "4d5e6f7a-8b9c-4d0e-9f2a-3b4c5d6e7f80",
+  "decision": {
+    "approved": true,
+    "method": "tap",
+    "decidedAt": "2026-10-09T15:43:00+08:00"
+  }
+}

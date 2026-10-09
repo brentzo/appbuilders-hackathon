@@ -84,7 +84,7 @@ public struct AppCapability: Codable, Equatable, Sendable {
     }
 }
 
-/// One approval request, and the decision once the user answered.
+/// One approval request, and the decision once the user answered. For an unclassified risky action, text is a safe summary built by the harness from the resolved action, never model text (SPEC-07 r6).
 public struct Approval: Codable, Equatable, Sendable {
     public var id: String
     public var stepId: String
@@ -92,7 +92,7 @@ public struct Approval: Codable, Equatable, Sendable {
     /// Send: read from the real To and Cc fields (SPEC-07 r13).
     public var recipients: [String]?
     public var files: FileSummary?
-    /// What the user hears and sees.
+    /// What the user hears and sees. For kind action, the harness builds a safe summary from the resolved action, never from model text (SPEC-07 r6).
     public var text: String
     public var requestedAt: String
     /// 5 minutes after the request; then the task pauses.
@@ -144,9 +144,10 @@ public struct ApprovalDecision: Codable, Equatable, Sendable {
 public enum ApprovalKind: String, Codable, Equatable, Sendable, CaseIterable {
     case send
     case delete
+    case action
 }
 
-/// A delete is approved only by a tap or click (SPEC-07 r11). A send may be approved by voice (SPEC-07 r15).
+/// Deletes and unclassified actions are approved only by a tap or click. A send may be approved by voice (SPEC-07 r11, r15).
 public enum ApprovalMethod: String, Codable, Equatable, Sendable, CaseIterable {
     case tap
     case voice
@@ -162,6 +163,7 @@ public struct ApprovalRequestPayload: Codable, Equatable, Sendable {
     public var approvalKind: ApprovalKind
     public var recipients: [String]?
     public var files: FileSummary?
+    /// For an unclassified risky action, the harness-built summary of the resolved action (SPEC-07 r6).
     public var text: String
     public var requestedAt: String
     public var expiresAt: String

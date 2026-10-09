@@ -75,7 +75,7 @@ Goals that wait for an offline device stay on the origin device ([SPEC-09 r15](.
 | `progress` | event | 2 minutes | Executing device reports changes and at least a 30-second heartbeat |
 | `goalFinished` | event | 2 minutes | Executing device returns final status and spoken summary |
 | `approvalRequest` | command | 5 minutes | Executing device asks for approval on the origin device |
-| `approvalResponse` | result | 2 minutes | Origin returns the decision; delete approvals require a tap |
+| `approvalResponse` | result | 2 minutes | Origin returns the decision; delete and unclassified-action approvals require a tap |
 | `approvalCancelled` | event | 2 minutes | Executing device reports that pause cancelled the pending approval |
 | `pause`, `resume`, `cancel` | command | 2 minutes | Either device controls a delegated goal |
 | `pauseConfirmed`, `cancelConfirmed` | result | 2 minutes | Executing device confirms the control action |
@@ -86,7 +86,10 @@ Goals that wait for an offline device stay on the origin device ([SPEC-09 r15](.
 `validateMessagePayload(payload, envelopeType)` rejects unknown kinds and a kind carried under the wrong envelope type.
 `getMessageExpiryKind(payload, envelopeType)` selects the matching generated expiry constant.
 `validateMessageExpiry(payload, envelopeType, expiresAt, now)` rejects stale messages and expiries too far in the future.
-`isApprovalDecisionAllowed(approvalKind, decision)` is the receiver-side guard against approving a delete by voice.
+`ApprovalKind` is `send`, `delete`, or `action` for one unclassified risky click or key press.
+For `action`, the harness builds the safe summary from the resolved action, never from model text.
+`isApprovalDecisionAllowed(approvalKind, decision)` is the receiver-side guard against approving a delete or `action` by voice.
+The action approval's `text` is the safe summary the harness built from the resolved click or key press, never model text.
 The `toolResult` schema rejects free-text failures; failures use `ErrorKind`.
 
 Individual payload examples live in `examples/Payload.*.json` and `examples/PhoneTool*.json`.
@@ -334,7 +337,7 @@ A sheet usually has no `AXTitle`.
 | [OBJ-34](../objectives/OBJ-34-protocol-version-upgrade-recovery.md) | Define protocol version upgrade recovery | Jepoy | in-progress |
 | [OBJ-45](../objectives/OBJ-45-pause-scope-and-model-readiness-contracts.md) | Pause scope and model readiness contracts | Jepoy | in-progress |
 | [OBJ-48](../objectives/OBJ-48-unpair-without-device-clocks.md) | Bind unpair to the pairing instead of device clocks | Jepoy | todo |
-| [OBJ-56](../objectives/OBJ-56-unclassified-action-approval-contract.md) | Approval contract for unclassified risky actions | Jepoy | todo |
+| [OBJ-56](../objectives/OBJ-56-unclassified-action-approval-contract.md) | Approval contract for unclassified risky actions | Jepoy | blocked |
 | [OBJ-60](../objectives/OBJ-60-goal-revision-contract.md) | Contract for changing the goal mid-task | Jepoy | in-progress |
 | [OBJ-64](../objectives/OBJ-64-cross-device-local-rpc-contract.md) | Local RPC for cross-device routing on the Mac | Jepoy | todo |
 <!-- generated:product-objectives:end -->

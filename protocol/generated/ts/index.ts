@@ -42,7 +42,7 @@ export interface AppCapability {
   probedAt: Timestamp;
 }
 
-/** One approval request, and the decision once the user answered. */
+/** One approval request, and the decision once the user answered. For an unclassified risky action, text is a safe summary built by the harness from the resolved action, never model text (SPEC-07 r6). */
 export interface Approval {
   id: Uuid;
   stepId: Uuid;
@@ -50,7 +50,7 @@ export interface Approval {
   /** Send: read from the real To and Cc fields (SPEC-07 r13). */
   recipients?: string[];
   files?: FileSummary;
-  /** What the user hears and sees. */
+  /** What the user hears and sees. For kind action, the harness builds a safe summary from the resolved action, never from model text (SPEC-07 r6). */
   text: string;
   requestedAt: Timestamp;
   /** 5 minutes after the request; then the task pauses. */
@@ -74,10 +74,10 @@ export interface ApprovalDecision {
   decidedAt: Timestamp;
 }
 
-export type ApprovalKind = "send" | "delete";
-export const approvalKindValues: readonly ApprovalKind[] = ["send", "delete"];
+export type ApprovalKind = "send" | "delete" | "action";
+export const approvalKindValues: readonly ApprovalKind[] = ["send", "delete", "action"];
 
-/** A delete is approved only by a tap or click (SPEC-07 r11). A send may be approved by voice (SPEC-07 r15). */
+/** Deletes and unclassified actions are approved only by a tap or click. A send may be approved by voice (SPEC-07 r11, r15). */
 export type ApprovalMethod = "tap" | "voice";
 export const approvalMethodValues: readonly ApprovalMethod[] = ["tap", "voice"];
 
@@ -93,6 +93,7 @@ export interface ApprovalRequestPayload {
   approvalKind: ApprovalKind;
   recipients?: string[];
   files?: FileSummary;
+  /** For an unclassified risky action, the harness-built summary of the resolved action (SPEC-07 r6). */
   text: string;
   requestedAt: Timestamp;
   expiresAt: Timestamp;

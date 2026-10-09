@@ -25,7 +25,7 @@ Where a next step exists, it is a button, not a sentence telling them to go find
 6. Tests use the same error objects the real code throws, not simplified mocks.
 7. The copy lives in one file in code. A test checks that the table below matches it.
 8. `{device}` is filled with the other device, from the user's point of view: "your Mac" on the phone, "your phone" on the Mac.
-9. Every button can also be triggered by voice, by saying its label, except "Delete" on a delete card, which only a tap approves ([SPEC-07](07-safety.md) requirement 11).
+9. Every button can also be triggered by voice, by saying its label, except approval buttons on delete cards and unclassified-action cards, which only a tap approves ([SPEC-07](07-safety.md) requirements 6 and 11).
 10. Errors are shown on the origin device ([SPEC-09](09-cross-device-routing.md)).
 11. Long copy: Yumi speaks the first sentence, and the full text is shown on screen.
 12. `{permission}` is the plain name of what the permission lets Yumi use, for example "location", "camera", or "contacts".
@@ -141,6 +141,7 @@ Feature: User-facing errors
 - **Couldn't finish a step** has its own row with a `{step}` placeholder (requirement 14), so a subtask that fails tells the user which step stopped and offers to retry it, skip it, or stop. The duplicate requirement number 12 is fixed. Decided 2026-10-09.
 - **Speech recognition not set up on this phone** has its own row, separate from "Language not supported on this phone". It covers a phone with no on-device recognizer or without the offline English pack, where telling the user to speak English would be wrong; the fix is downloading the pack. "Language not supported on this phone" stays for speech in another language. Decided 2026-10-09.
 - **Voice on a delete card:** "Delete" is the one button that cannot be said, because a delete is approved only by a tap (SPEC-07 requirement 11). Requirement 9 names the exception. Decided 2026-10-10, closing gap G3.
+- **Voice on unclassified-action approvals:** SPEC-11 requirement 9 generally allows button labels by voice, while SPEC-07 requirement 6 makes approval of an unclassified risky action tap-only. SPEC-07 wins for these cards: a voice reply cannot approve the action. Requirement 9 names the exception. Decided 2026-10-10 by the lead.
 - **The blocked-action message** stays in [SPEC-07](07-safety.md) requirement 5 instead of becoming a row here, so its copy lives in one place. The Mac's copy test reads it from there, the same way it reads this table, and the phone never shows it in p0, since it does not control apps. Decided 2026-10-10, closing gap G5's SPEC-11 part.
 - **"Show what I did"** opens the action log of the task in the error, read from `getTask`'s `actionLog`. That view is p0, because the button is; only opening the log from the menu bar is p1 (SPEC-07 requirement 19). Decided 2026-10-10, closing gap G13.
 - **Voice didn't load (Mac)** has its own row. Yumi stays quiet instead of falling back to the robotic system voice ([SPEC-04](04-cursor-presence.md) requirement 20), so the copy is shown in a panel that does not take focus rather than spoken, and "Try again" loads the voice again. Decided 2026-10-10 by Brent.

@@ -105,10 +105,10 @@ export function validateMessageExpiry(
   return { valid: true, kind };
 }
 
-/** An approved delete must have a tap decision, even if an app fails to enforce the payload schema. */
+/** An approved delete or unclassified action must have a tap decision, even if an app fails to enforce the payload schema. */
 export function isApprovalDecisionAllowed(approvalKind: ApprovalKind, decision: ApprovalDecision): boolean {
   if (!validate("ApprovalDecision", decision).valid) return false;
-  return approvalKind !== "delete" || !decision.approved || decision.method === "tap";
+  return approvalKind === "send" || !decision.approved || decision.method === "tap";
 }
 
 /** Returns the structured ErrorKind from a failed tool result, never a user-facing free-text error. */

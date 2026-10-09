@@ -5,10 +5,10 @@ product: protocol
 assignee: Jepoy
 touches: []
 specs: [SPEC-07]
-status: todo
+status: blocked
 priority: p0
 depends-on: [OBJ-01]
-integrates-with: [OBJ-36, OBJ-38, OBJ-40]
+integrates-with: [OBJ-23, OBJ-36, OBJ-38, OBJ-40]
 tags: [objective, p0, protocol, safety, approval]
 ---
 
@@ -42,18 +42,20 @@ This objective adds the shared contract that lets the harness and Mac app repres
 
 ## Tasks
 
-- [ ] **OBJ-56.1** Agree with the harness and Mac owners on the safe action description and approval methods for one unclassified click or key press, using only the resolved action and SPEC-07 r6. Record any required copy or behavior decision in the appropriate spec before changing the contract.
-- [ ] **OBJ-56.2** Extend the approval schema and generated TypeScript, Swift, and Kotlin types to represent the agreed generic action approval while preserving the send and delete constraints.
-- [ ] **OBJ-56.3** Add valid examples and tests for the generic action approval and its decision, and reject malformed contract data.
-- [ ] **OBJ-56.4** Document how the harness and Mac app use the generated contract in `protocol/README.md`.
-- [ ] **OBJ-56.5** Extend the mock Mac app and its scripted responses to exercise the agreed generic approval decision end to end.
+- [x] **OBJ-56.1** Agree with the harness and Mac owners on the safe action description and approval methods for one unclassified click or key press, using only the resolved action and SPEC-07 r6. Record any required copy or behavior decision in the appropriate spec before changing the contract.
+- [x] **OBJ-56.2** Extend the approval schema and generated TypeScript, Swift, and Kotlin types to represent the agreed generic action approval while preserving the send and delete constraints.
+- [x] **OBJ-56.3** Add valid examples and tests for the generic action approval and its decision, and reject malformed contract data.
+- [x] **OBJ-56.4** Document how the harness and Mac app use the generated contract in `protocol/README.md`.
+- [x] **OBJ-56.5** Extend the mock Mac app and its scripted responses to exercise the agreed generic approval decision end to end.
+
+The existing consumer tickets now carry the missing integration work: [OBJ-38.11](OBJ-38-approvals-pause-and-action-log.md) builds and rechecks the harness approval, [OBJ-40.10](OBJ-40-mac-approval-cards.md) presents it on the Mac, and [OBJ-23.12](OBJ-23-android-bridge-client.md) handles it when the phone is the origin device.
 
 ## Expectations
 
-- [ ] The contract can represent one unclassified risky GUI action using the agreed safe description and approval methods; the harness remains responsible for building that description from the resolved action, not model text.
-- [ ] Existing send and delete approval examples remain valid, and their distinct safeguards remain enforced.
-- [ ] Generated TypeScript, Swift, and Kotlin types compile and are current.
-- [ ] The generated mock Mac app validates and returns a scripted generic approval decision.
+- [x] The contract can represent one unclassified risky GUI action using the agreed safe description and approval methods; the harness remains responsible for building that description from the resolved action, not model text.
+- [x] Existing send and delete approval examples remain valid, and their distinct safeguards remain enforced.
+- [x] Generated TypeScript, Swift, and Kotlin types compile and are current.
+- [x] The generated mock Mac app validates and returns a scripted generic approval decision.
 
 ## Expected outcomes
 
@@ -63,8 +65,12 @@ This objective adds the shared contract that lets the harness and Mac app repres
 
 - Choosing action permission levels, which remain in [SPEC-07](../specs/07-safety.md) and [OBJ-37](OBJ-37-permission-gate-and-file-tools.md).
 - Wiring generic approvals into the Harness flow: [OBJ-38](OBJ-38-approvals-pause-and-action-log.md) and [OBJ-36](OBJ-36-gui-act-sub-agent.md).
-- Presenting generic approvals in the Mac UI: [OBJ-40](OBJ-40-mac-approval-cards.md).
+- Presenting generic approvals on the Mac and phone: [OBJ-40.10](OBJ-40-mac-approval-cards.md) and [OBJ-23.12](OBJ-23-android-bridge-client.md).
 
 ## Outcome
 
-_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._
+**Blocked:** The required repository gate cannot pass in this environment.
+`py -3 scripts/verify.py` reports 193 harness test failures because the Mac harness tries to create Unix domain sockets on Windows and gets `EACCES`.
+It also skips Android checks because no Android SDK is installed, and cannot run the Mac app checks because Xcode is unavailable.
+The protocol tests, generated type checks, Swift and Kotlin round-trips, bridge checks, and OBJ-56 expectations pass.
+Brent must provide a Mac verification environment with Xcode and an Android SDK before this work can be committed or pushed.

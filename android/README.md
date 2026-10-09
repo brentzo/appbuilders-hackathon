@@ -25,7 +25,7 @@ The bridge and the Rive cat are stand-ins until their objectives land.
 - **Voice:** mic button, "Hey Yumi" wake word ([SPEC-01](../specs/01-voice-intake.md)), and Android's on-device recognizer, English only. Speaking replies.
 - **Phone-only goals:** a fixed rule, no model. Set alarm, set timer, and open app run through intents. Everything else is delegated to the Mac.
 - **Phone tools for the Mac:** `set_alarm`, `set_timer`, `open_app`.
-- **Delegated goals:** send the confirmed goal to the Mac, show "Working on your Mac" with the current subtask and Stop, ask for risky-action approvals, and speak the result.
+- **Delegated goals:** send the confirmed goal to the Mac, show "Working on your Mac" with the current subtask and Stop, ask for risky-action approvals, and speak the result. Tap-only generic action approvals for unclassified risky GUI actions are tracked in [OBJ-23.12](../objectives/OBJ-23-android-bridge-client.md).
 - **Bridge client:** pairing by QR scan, encrypted and signed messages, connection state, at-most-once execution ([SPEC-08](../specs/08-device-bridge.md)).
 
 ### Part B (p1)

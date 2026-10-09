@@ -58,11 +58,13 @@ After this objective, the phone and Mac can exchange messages in both directions
 - [ ] **OBJ-23.9** Unpair from settings. Sign a stable UUID with the unpair fields, retry the same frame until the relay acknowledges durable receipt, and have the phone atomically record and ACK that UUID on receipt. Duplicate deliveries are idempotent; re-pairing clears receipt state.
 - [ ] **OBJ-23.10** End-to-end test with the Mac from [OBJ-21](OBJ-21-mac-bridge-client-and-pairing.md) (or a test client until it is ready): a test `ping` command each way, with the phone app in the background.
 - [ ] **OBJ-23.11** Debug-only bridge test hooks for [OBJ-30](OBJ-30-live-cross-device-bridge-acceptance.md), the phone's side of the Mac's in [OBJ-49](OBJ-49-mac-bridge-test-support.md) task 3: send the last command again with the same id, hold the next incoming command before anything checks it, send one envelope signed by a throwaway key, and authenticate with another protocol version until the next restart.
+- [ ] **OBJ-23.12** On the origin phone, receive a cross-device `approvalRequest` of kind `action`, show its harness-authored summary, and return tap-only approval; a voice answer never approves it (SPEC-07 r6, SPEC-09 r10).
 
 ## Expectations
 
 - [ ] SPEC-08 scenarios pass from the phone side: "Pair the phone with the Mac", "Unpair a device", "Pairing code expired", "Mac does not answer pairing", "Mac answers pairing too late", "Message from an unknown device is dropped", "Result survives a short reconnect", "Expired command is not run", "Duplicate delivery runs once", "Device needs an update", "Command to a device that needs an update", "Devices reconnect after an update".
 - [ ] A command from the Mac reaches the backgrounded phone within 2 seconds on a normal connection.
+- [ ] When the phone is the origin device, an `action` approval arrives over the bridge and only a tap sends an approved response.
 - [ ] Keys never appear in files or logs.
 
 ## Expected outcomes

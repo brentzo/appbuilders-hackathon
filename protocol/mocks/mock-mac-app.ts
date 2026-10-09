@@ -16,6 +16,8 @@ import {
   type ProbeAppCapabilityParams,
   type ResolveAppParams,
   type ResolveAppResult,
+  type ShowApprovalCardParams,
+  type ApprovalDecision,
   type WindowInfo,
   type WindowList,
 } from "../generated/ts/index.ts";
@@ -94,6 +96,13 @@ function windowAnswers(): Record<string, Handler> {
 
 /** Methods whose answer depends on the params. Every other method answers with its example result. */
 const ANSWERS: Record<string, Handler> = {
+  showApprovalCard: (params): ApprovalDecision => {
+    const { approval } = params as ShowApprovalCardParams;
+    if (approval.kind === "action") {
+      return { approved: true, method: "tap", decidedAt: new Date(Date.parse(approval.requestedAt) + 1_000).toISOString() };
+    }
+    return exampleOf("ApprovalDecision.tapped") as ApprovalDecision;
+  },
   probeAppCapability: (params) => {
     const { bundleId } = params as ProbeAppCapabilityParams;
     const app = INSTALLED_APPS.get(bundleId);

@@ -233,6 +233,7 @@ Yumi speaks with a neural voice made on this Mac ([OBJ-51](../objectives/OBJ-51-
 ### Approval cards and the Trash
 
 Sending and deleting ask every time ([OBJ-40](../objectives/OBJ-40-mac-approval-cards.md)).
+The protocol contract defines tap-only `action` approvals for unclassified risky clicks and key presses; Mac card support is tracked in [OBJ-40.10](../objectives/OBJ-40-mac-approval-cards.md) and is not implemented yet.
 
 - `showApprovalCard` shows the harness's `Approval` text as is, with "Send" and "Don't send", or "Delete" and "Don't delete" plus the folder, the first 5 names, and "and N more".
   Yumi says the first sentence and the card waits; the cursor shows "waiting for the user".

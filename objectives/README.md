@@ -113,7 +113,7 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-53](OBJ-53-mac-thoughts-panel.md) | Expand a cursor to see what it is thinking | mac | Brent | 07 | 52 | - | in-progress |
 | [OBJ-54](OBJ-54-mac-cats-avoid-pointer.md) | Cats avoid the user's pointer | mac | Brent | 04 | - | - | in-progress |
 | [OBJ-55](OBJ-55-voice-stop-keyword-models.md) | Voice stop keyword models | models | Jepoy | 06 | - | 35 | todo |
-| [OBJ-56](OBJ-56-unclassified-action-approval-contract.md) | Approval contract for unclassified risky actions | protocol | Jepoy | 07 | 01 | 36, 38, 40 | todo |
+| [OBJ-56](OBJ-56-unclassified-action-approval-contract.md) | Approval contract for unclassified risky actions | protocol | Jepoy | 07 | 01 | 23, 36, 38, 40 | blocked |
 | [OBJ-57](OBJ-57-route-classified-gui-deletes-through-strict-delete.md) | Route classified GUI delete asks through strict delete | harness | Brent | 07 | 37, 38 | 36, 40 | todo |
 | [OBJ-58](OBJ-58-mac-hey-yumi-recognizer.md) | "Hey Yumi" on the Mac with the on-device recognizer | mac | Brent | 01 | - | 16 | done |
 | [OBJ-59](OBJ-59-android-hey-yumi-vosk.md) | "Hey Yumi" on Android with Vosk | android | Brent | 01, 10 | - | 12, 24 | done |
@@ -305,4 +305,5 @@ Decided 2026-10-09.
 
 - **SPEC-01 vs SPEC-10:** SPEC-10 wins. Android in p0 has no Whisper; it uses the on-device English recognizer and shows "Language not supported on this phone" for other languages. Whisper on the phone moved to p1 in SPEC-01. OBJ-24 already follows this.
 - **SPEC-08 vs SPEC-09:** SPEC-09 wins. The VPS never queues commands, every command expires after 2 minutes, and goals waiting for an offline device are held on the origin device. The VPS only holds results and events through short reconnects. SPEC-08, the bridge docs, OBJ-02, OBJ-13, OBJ-21, and OBJ-23 are updated.
+- **SPEC-07 vs SPEC-11:** SPEC-07 requirement 6 wins for unclassified risky-action approvals. Their harness-authored summaries cannot be approved by voice; only a tap can approve them. SPEC-11 requirement 9 now names this exception, alongside the existing delete exception.
 - **Phone confirmation without a model:** SPEC-10 requirement 8 adds fixed templates. Phone-only goals fill a sentence from the rule's fields; other goals echo the transcript and ask to send it to the Mac; replies are matched against fixed yes and no lists, and anything else is a correction. A phone-only goal the rule cannot parse is delegated to the Mac.

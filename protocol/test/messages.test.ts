@@ -45,6 +45,21 @@ describe("cross-device message payloads", () => {
     expect(isApprovalDecisionAllowed("delete", payload.decision)).toBe(false);
   });
 
+  it("accepts a generic action request and rejects voice approval", () => {
+    const { recipients: _recipients, ...withoutRecipients } = approvalRequest;
+    const request = {
+      ...withoutRecipients,
+      approvalKind: "action",
+      text: "I'm about to click Save in Finder. Should I allow it?",
+    };
+    const voice = { approved: true, method: "voice" as const, decidedAt: now.toISOString() };
+    const tap = { approved: true, method: "tap" as const, decidedAt: now.toISOString() };
+    expect(validateMessagePayload(request, "command").valid).toBe(true);
+    expect(validateMessagePayload({ ...request, recipients: ["ana@example.com"] }, "command").valid).toBe(false);
+    expect(isApprovalDecisionAllowed("action", voice)).toBe(false);
+    expect(isApprovalDecisionAllowed("action", tap)).toBe(true);
+  });
+
   it("uses the five-minute expiry for approval requests and two minutes for other commands", () => {
     expect(getMessageExpiryKind(approvalRequest, "command")).toBe("approvalRequest");
     expect(getMessageExpiryKind(delegateGoal, "command")).toBe("command");

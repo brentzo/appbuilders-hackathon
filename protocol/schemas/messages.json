@@ -177,7 +177,7 @@
         "approvalKind": { "$ref": "approval.json#/$defs/ApprovalKind" },
         "recipients": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
         "files": { "$ref": "approval.json#/$defs/FileSummary" },
-        "text": { "type": "string", "minLength": 1 },
+        "text": { "description": "For an unclassified risky action, the harness-built summary of the resolved action (SPEC-07 r6).", "type": "string", "minLength": 1 },
         "requestedAt": { "$ref": "common.json#/$defs/Timestamp" },
         "expiresAt": { "$ref": "common.json#/$defs/Timestamp" }
       },
@@ -189,6 +189,10 @@
         {
           "if": { "properties": { "approvalKind": { "const": "delete" } } },
           "then": { "required": ["files"], "properties": { "recipients": false } }
+        },
+        {
+          "if": { "properties": { "approvalKind": { "const": "action" } } },
+          "then": { "properties": { "recipients": false, "files": false } }
         }
       ]
     },

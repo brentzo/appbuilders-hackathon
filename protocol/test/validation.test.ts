@@ -334,6 +334,28 @@ describe("Approval", () => {
     expect(validate("Approval", deleteApproval(tapped)).valid).toBe(true);
   });
 
+  const actionApproval = (decision?: unknown) => ({
+    id: "3f1c2a9e-8b7d-4c6e-9a1f-2d3e4f5a6b7c",
+    stepId: "8a7b6c5d-4e3f-4a1b-9c8d-7e6f5a4b3c2d",
+    kind: "action",
+    text: "I'm about to click Save in Finder. Should I allow it?",
+    requestedAt: "2026-10-09T15:42:00+08:00",
+    expiresAt: "2026-10-09T15:47:00+08:00",
+    ...(decision ? { decision } : {}),
+  });
+
+  it("accepts a harness-authored generic action summary with tap approval", () => {
+    const tapped = { approved: true, method: "tap", decidedAt: "2026-10-09T15:43:00+08:00" };
+    expect(validate("Approval", actionApproval(tapped)).valid).toBe(true);
+  });
+
+  it("rejects voice approval and send/delete-only details for a generic action", () => {
+    const spoken = { approved: true, method: "voice", decidedAt: "2026-10-09T15:43:00+08:00" };
+    expect(validate("Approval", actionApproval(spoken)).valid).toBe(false);
+    expect(validate("Approval", { ...actionApproval(), recipients: ["ana@example.com"] }).valid).toBe(false);
+    expect(validate("Approval", { ...actionApproval(), files: deleteApproval().files }).valid).toBe(false);
+  });
+
   it("rejects a delete approved by voice (SPEC-07 'Saying yes is not enough to delete')", () => {
     const spoken = { approved: true, method: "voice", decidedAt: "2026-10-09T15:43:00+08:00" };
     expect(validate("Approval", deleteApproval(spoken)).valid).toBe(false);

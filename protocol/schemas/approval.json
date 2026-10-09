@@ -5,7 +5,7 @@
   "description": "A risky action waiting for the user on the origin device (SPEC-07, SPEC-09 r10). The text is built by the harness from real data, never from model text.",
   "$defs": {
     "Approval": {
-      "description": "One approval request, and the decision once the user answered.",
+      "description": "One approval request, and the decision once the user answered. For an unclassified risky action, text is a safe summary built by the harness from the resolved action, never model text (SPEC-07 r6).",
       "type": "object",
       "additionalProperties": false,
       "required": ["id", "stepId", "kind", "text", "requestedAt", "expiresAt"],
@@ -20,7 +20,7 @@
           "items": { "type": "string", "minLength": 1 }
         },
         "files": { "$ref": "#/$defs/FileSummary" },
-        "text": { "description": "What the user hears and sees.", "type": "string", "minLength": 1 },
+        "text": { "description": "What the user hears and sees. For kind action, the harness builds a safe summary from the resolved action, never from model text (SPEC-07 r6).", "type": "string", "minLength": 1 },
         "requestedAt": { "$ref": "common.json#/$defs/Timestamp" },
         "expiresAt": { "description": "5 minutes after the request; then the task pauses.", "$ref": "common.json#/$defs/Timestamp" },
         "decision": { "$ref": "#/$defs/ApprovalDecision" }
@@ -43,12 +43,26 @@
               }
             }
           }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "action" } } },
+          "then": {
+            "properties": {
+              "recipients": false,
+              "files": false,
+              "decision": {
+                "type": "object",
+                "if": { "properties": { "approved": { "const": true } } },
+                "then": { "properties": { "method": { "const": "tap" } } }
+              }
+            }
+          }
         }
       ]
     },
     "ApprovalKind": {
       "type": "string",
-      "enum": ["send", "delete"]
+      "enum": ["send", "delete", "action"]
     },
     "FileSummary": {
       "description": "Delete: built from the real file list (SPEC-07 r10).",
@@ -79,7 +93,7 @@
       }
     },
     "ApprovalMethod": {
-      "description": "A delete is approved only by a tap or click (SPEC-07 r11). A send may be approved by voice (SPEC-07 r15).",
+      "description": "Deletes and unclassified actions are approved only by a tap or click. A send may be approved by voice (SPEC-07 r11, r15).",
       "type": "string",
       "enum": ["tap", "voice"]
     }
