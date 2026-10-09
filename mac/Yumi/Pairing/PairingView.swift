@@ -72,8 +72,8 @@ struct PairingView: View {
     }
 }
 
-/// A sharp QR code: generated at module size 1, then drawn without smoothing.
-private struct QRCodeImage: View {
+/// A sharp QR code for the pairing window.
+struct QRCodeImage: View {
     let payload: String
 
     var body: some View {
@@ -94,7 +94,8 @@ private struct QRCodeImage: View {
         let filter = CIFilter.qrCodeGenerator()
         filter.message = Data(payload.utf8)
         filter.correctionLevel = "M"
-        guard let output = filter.outputImage,
+        // Scaled up here, with whole-pixel modules: SwiftUI smooths a small image however it is drawn.
+        guard let output = filter.outputImage?.transformed(by: CGAffineTransform(scaleX: 16, y: 16)),
               let cgImage = CIContext().createCGImage(output, from: output.extent) else { return nil }
         return NSImage(cgImage: cgImage, size: output.extent.size)
     }
@@ -105,11 +106,12 @@ private struct QRCodeImage: View {
 enum PairingWindow {
     private static var window: NSWindow?
 
-    static func show(phone: PhoneLink = .shared) {
+    @discardableResult
+    static func show(phone: PhoneLink = .shared) -> NSWindow {
         if let window {
             NSApp.activate()
             window.makeKeyAndOrderFront(nil)
-            return
+            return window
         }
         let created = NSWindow(contentViewController: NSHostingController(rootView: PairingView(phone: phone) {
             PairingWindow.window?.close()
@@ -127,5 +129,6 @@ enum PairingWindow {
         window = created
         NSApp.activate()
         created.makeKeyAndOrderFront(nil)
+        return created
     }
 }

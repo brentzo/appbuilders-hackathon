@@ -1,3 +1,4 @@
+import CoreImage
 import Foundation
 import Testing
 import YumiProtocol
@@ -71,6 +72,15 @@ struct AppMethodServerTests {
         #expect(PhoneMenuItems.statusLine(connection: .connected, device: phone) == "Ana's Pixel: connected")
         #expect(PhoneMenuItems.statusLine(connection: .reconnecting, device: phone) == "Ana's Pixel: reconnecting…")
         #expect(PhoneMenuItems.statusLine(connection: nil, device: phone) == "Ana's Pixel: offline")
+    }
+
+    @Test func pairingQRCodeDecodesToThePayload() throws {
+        let image = try #require(QRCodeImage.render("yumi-pair:abc123"))
+        let cg = try #require(image.cgImage(forProposedRect: nil, context: nil, hints: nil))
+        let scaled = CIImage(cgImage: cg).transformed(by: CGAffineTransform(scaleX: 10, y: 10))
+        let detector = try #require(CIDetector(ofType: CIDetectorTypeQRCode, context: nil, options: nil))
+        let found = detector.features(in: scaled).compactMap { ($0 as? CIQRCodeFeature)?.messageString }
+        #expect(found == ["yumi-pair:abc123"])
     }
 
     private func json(_ object: [String: Any]) -> Data {

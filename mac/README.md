@@ -137,7 +137,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 ```
 
 - `-YumiAppearance light|dark` forces the app's appearance.
-- `-YumiOpen settings|onboarding|error:<ErrorKind>` opens that window at launch.
+- `-YumiOpen settings|onboarding|pairing|pairing-code|error:<ErrorKind>` opens that window at launch (`pairing-code` shows a sample pairing code).
   An error window uses the sample last action "Clicked Export in Keynote".
 - `-YumiPermissions mixed|granted` pretends permissions are in that state, without asking macOS.
 - `-YumiStatus startingUp|ready|listening|working|paused` sets the menu's status line.

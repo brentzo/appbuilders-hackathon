@@ -8,7 +8,7 @@ import YumiProtocol
 ///
 /// - `-YumiAppearance light|dark` forces the app's appearance without changing the system's.
 /// - `-YumiStatus startingUp|ready|listening|working|paused` sets the menu's status line.
-/// - `-YumiOpen settings|onboarding|error:<ErrorKind>` opens a window at launch instead of the
+/// - `-YumiOpen settings|onboarding|pairing|pairing-code|error:<ErrorKind>` opens a window at launch instead of the
 ///   usual onboarding check. An error uses the sample last action "Clicked Export in Keynote".
 /// - `-YumiPermissions mixed|granted` pretends permissions are in that state, without asking macOS.
 ///   `mixed` has the microphone allowed and the other two missing.
@@ -51,6 +51,10 @@ enum DebugLaunchOptions {
         switch LaunchArguments.string("YumiOpen") {
         case "settings": opened = ("settings", app.windows.showSettings())
         case "onboarding": opened = ("onboarding", app.windows.showOnboarding())
+        case "pairing": opened = ("pairing", PairingWindow.show())
+        case "pairing-code":
+            PhoneLink.shared.showSampleCode(.init(payload: "yumi-pair:sample", expiresAt: Date().addingTimeInterval(300)))
+            opened = ("pairing-code", PairingWindow.show())
         case let value? where value.hasPrefix("error:"):
             let name = String(value.dropFirst("error:".count))
             opened = ErrorKind(rawValue: name).map {

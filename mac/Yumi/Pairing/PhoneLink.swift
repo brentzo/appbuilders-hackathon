@@ -65,6 +65,15 @@ final class PhoneLink {
         pairingCode = nil
     }
 
+    #if DEBUG
+    /// For UI snapshots only: shows a code without asking the harness, as if not paired.
+    func showSampleCode(_ code: PairingCode) {
+        calls = nil
+        devices = []
+        pairingCode = code
+    }
+    #endif
+
     func unpair(_ device: Device) {
         guard let calls else { return }
         Task {
