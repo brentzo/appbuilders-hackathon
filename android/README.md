@@ -69,7 +69,7 @@ Status: empty scaffold, nothing built yet.
 <!-- generated:product-objectives:start -->
 | ID | Objective | Assignee | Status |
 |---|---|---|---|
-| [OBJ-22](../objectives/OBJ-22-android-app-shell.md) | Android app shell and foreground service | Brent | todo |
+| [OBJ-22](../objectives/OBJ-22-android-app-shell.md) | Android app shell and foreground service | Brent | in-progress |
 | [OBJ-23](../objectives/OBJ-23-android-bridge-client.md) | Android bridge client and pairing | Brent | todo |
 | [OBJ-24](../objectives/OBJ-24-android-voice-intake.md) | Android voice intake and wake word | Brent | todo |
 <!-- generated:product-objectives:end -->

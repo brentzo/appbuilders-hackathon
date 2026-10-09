@@ -5,7 +5,7 @@ product: android
 assignee: Brent
 touches: [character]
 specs: [SPEC-10, SPEC-08, SPEC-01]
-status: todo
+status: in-progress
 priority: p0
 depends-on: []
 integrates-with: [OBJ-10]
