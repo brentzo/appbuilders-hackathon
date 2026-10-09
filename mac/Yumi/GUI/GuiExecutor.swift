@@ -75,7 +75,13 @@ final class GuiExecutor {
             case .click(let click):
                 return try await onElement(click.element, params) { kept in try self.click(kept) }
             case .setValue(let set):
-                return try await onElement(set.element, params) { kept in try self.setValue(set.text, on: kept, params: params) }
+                return try await onElement(set.element, params) { kept in
+                    // A pop-up's value is one of its items: choose it by title.
+                    if kept.role == .popUpButton || kept.role == .menuButton {
+                        return try await self.choose(set.text, in: kept, target: params.target)
+                    }
+                    return try self.setValue(set.text, on: kept, params: params)
+                }
             case .scroll(let scroll):
                 return try await onElement(scroll.element, params) { kept in try self.scroll(kept, scroll.direction) }
             case .type(let text):
@@ -95,7 +101,7 @@ final class GuiExecutor {
     /// Resolves the number, checks it is still the element the harness resolved, moves the cursor
     /// there, then acts.
     private func onElement(
-        _ number: Int, _ params: ExecuteActionParams, perform: (KeptElement<LiveNode>) throws -> String
+        _ number: Int, _ params: ExecuteActionParams, perform: (KeptElement<LiveNode>) async throws -> String
     ) async throws -> ExecuteActionResult {
         try requireAccessibility()
         guard let kept = snapshots[Self.key(params.target)]?.element(number) else {
@@ -107,16 +113,18 @@ final class GuiExecutor {
         guard let frame = kept.node.frame ?? kept.frame else {
             return Self.result(.error, "Element \(number) is no longer on screen.")
         }
-        if kept.role == .menuBarItem || kept.role == .menuItem {
-            // A menu only opens in the active app.
+        if [.menuBarItem, .menuItem, .popUpButton, .menuButton].contains(kept.role) {
+            // A menu only opens in the active app, a pop-up's menu too.
             try await activate(params.target)
         }
         await moveCursor(params.cursorId, toTopLeft: CGPoint(x: frame.midX, y: frame.midY))
         guard actionsAllowed() else { return Self.notAllowed }
         do {
-            return Self.result(.ok, try perform(kept))
+            return Self.result(.ok, try await perform(kept))
         } catch let error as AXFailure {
             return Self.result(.error, Self.describe(error.code, kept))
+        } catch let error as PopUpChoiceFailure {
+            return Self.result(.error, error.observation)
         }
     }
 
@@ -145,6 +153,34 @@ final class GuiExecutor {
         _ = AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, kCFBooleanTrue)
         try check(AXUIElementSetAttributeValue(element, kAXValueAttribute as CFString, text as CFString), kept)
         return "Set the text of \(Self.name(kept))."
+    }
+
+    /// Chooses the item titled `title` in a pop-up button's menu: opens the menu if it is closed,
+    /// presses the item, or closes the menu again and says which items there are. Some apps hang the
+    /// open menu off the application instead of the pop-up, so both are looked at.
+    private func choose(_ title: String, in kept: KeptElement<LiveNode>, target: Target) async throws -> String {
+        let app = WindowReader.appNode(try WindowReader.runningApp(target.bundleId))
+        func openMenu() -> LiveNode? {
+            (PopUpMenus.openMenu(of: kept.node, path: kept.path) ?? PopUpMenus.appMenu(of: app))?.menu
+        }
+        var menu = openMenu()
+        if menu == nil {
+            try check(AXUIElementPerformAction(kept.node.element, kAXPressAction as CFString), kept)
+            for _ in 0..<10 where menu == nil {
+                try? await Task.sleep(for: .milliseconds(50))
+                menu = openMenu()
+            }
+        }
+        guard let menu else {
+            throw PopUpChoiceFailure(observation: "\(Self.capitalized(Self.name(kept))) did not open a menu to choose from.")
+        }
+        guard let item = PopUpMenus.item(titled: title, in: menu) else {
+            _ = AXUIElementPerformAction(menu.element, kAXCancelAction as CFString)
+            throw PopUpChoiceFailure(observation: PopUpMenus.notFound(title, in: menu, owner: Self.name(kept)))
+        }
+        let chosen = item.info().title ?? title
+        try check(AXUIElementPerformAction(item.element, kAXPressAction as CFString), kept)
+        return "Chose \"\(TreeTrimmer<LiveNode>.clip(chosen, to: 80))\" in \(Self.name(kept))."
     }
 
     private func scroll(_ kept: KeptElement<LiveNode>, _ direction: ScrollDirection) throws -> String {
@@ -360,4 +396,9 @@ final class GuiExecutor {
 /// An accessibility call the other app refused.
 nonisolated struct AXFailure: Error {
     let code: AXError
+}
+
+/// A pop-up had no item to choose by that title. `observation` is for the model's next step.
+nonisolated struct PopUpChoiceFailure: Error {
+    let observation: String
 }

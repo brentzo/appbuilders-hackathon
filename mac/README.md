@@ -119,10 +119,13 @@ The harness calls `observeWindow`, `executeAction`, and `readFieldValues`; `Yumi
 
 - The trimmed tree keeps visible, actionable elements and the containers that scroll, numbered from 1, at most 200.
   An open menu is read instead of the window, followed by any open submenu.
+  So is the open menu of a pop-up button, combo box, or menu button, such as "Where:" in a save panel, whether it hangs off the button or off the app (`PopUpMenus`); a closed pop-up has no children, so nothing changes until it opens.
   A sheet is read instead of the window.
   Otherwise the window comes first and the app's menu bar items last.
 - Each element has an accessibility path such as `AXWindow/AXSheet[0]/AXButton[2]`; it never leaves the Mac except as `ResolvedElement.path`.
 - A password field is listed with no value, never read, and never filled.
+- `setValue` on a pop-up button or menu button chooses the item with that title (ignoring case and a trailing "…"): it opens the menu, presses the item, or closes the menu again and answers with the items there are.
+- Pop-up buttons, like menus, first bring their app to the front, since a menu only opens in the active app.
 - `type` and `key` run only for the main cursor, and every event carries the tag `0x59554D49` ("YUMI") in `kCGEventSourceUserData`.
 - `open_app`, `open_file`, `open_url`, and `reveal_in_finder` go through `NSWorkspace`. There is no shell or AppleScript anywhere in `Yumi/GUI/`.
 - `resolveApp` (`Yumi/Native/AppResolver.swift`) turns the app name a plan uses into the installed app's bundle id, without launching it, so the harness's router can probe it.

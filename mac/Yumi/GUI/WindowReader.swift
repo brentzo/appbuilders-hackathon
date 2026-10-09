@@ -42,6 +42,8 @@ enum GuiFailure: Error, Equatable {
 /// - An open menu: only its items, then the items of any open submenu, so "Export To" then
 ///   "PDF…" in Keynote works. A menu bar item whose menu is open reports `AXSelected`, and so
 ///   does a menu item whose submenu is open.
+/// - An open pop-up button, combo box, or menu button menu, such as "Where:" in a save panel: only
+///   its items, so the next step can click one (`PopUpMenus`).
 /// - A sheet: only the sheet.
 /// - Otherwise the window (a dialog when its subrole says so), then the app's menu bar items,
 ///   so the model can open a menu.
@@ -92,6 +94,7 @@ enum WindowReader {
         var elements: [KeptElement<LiveNode>] = []
         var layer = Layer(kind: .window)
         var layerNode = window
+        var popUp: PopUpMenus.Found<LiveNode>?
 
         if let menu = openMenu(of: appNode) {
             layer = Layer(kind: .menu, title: menu.title)
@@ -106,6 +109,7 @@ enum WindowReader {
             var trimmer = TreeTrimmer<LiveNode>(limit: limit)
             trimmer.walk(sheet, path: path, clip: sheet.frame)
             elements = trimmer.kept
+            popUp = trimmer.openMenu
         } else {
             let isDialog = windowInfo.subrole == kAXDialogSubrole || windowInfo.subrole == kAXSystemDialogSubrole
             layer = Layer(kind: isDialog ? .dialog : .window, title: isDialog ? nonEmpty(windowInfo.title) : nil)
@@ -116,6 +120,17 @@ enum WindowReader {
             var trimmer = TreeTrimmer<LiveNode>(limit: max(0, limit - bar.kept.count))
             trimmer.walk(window, path: ElementPath.windowRoot, clip: windowInfo.frame)
             elements = trimmer.kept + bar.kept
+            popUp = trimmer.openMenu
+        }
+        // A pop-up's open menu covers what is under it, like any menu: read only its items.
+        if layer.kind != .menu, let open = popUp ?? PopUpMenus.appMenu(of: appNode) {
+            let owner = open.owner.map { node in
+                TreeTrimmer<LiveNode>.label(of: node.info(), node: node, role: TreeTrimmer<LiveNode>.role(of: node.info()) ?? .popUpButton)
+            }
+            layer = Layer(kind: .menu, title: owner.flatMap(nonEmpty))
+            var items = TreeTrimmer<LiveNode>(limit: limit)
+            walkItems(of: open.menu, path: open.path, into: &items)
+            elements = items.kept
         }
 
         let focused = appNode.element(kAXFocusedUIElementAttribute).flatMap { number(of: $0, in: elements) }
@@ -137,7 +152,8 @@ enum WindowReader {
         return WindowSnapshot(observation: observation, elements: elements, app: app)
     }
 
-    /// Resolves a path built by the tree reader, against the target's window or menu bar.
+    /// Resolves a path built by the tree reader, against the target's window, its menu bar, or the
+    /// app itself (a menu that hangs off the app).
     static func resolve(_ path: String, in target: Target) throws -> LiveNode? {
         try requireAccessibility()
         let app = appNode(try runningApp(target.bundleId))
@@ -145,6 +161,8 @@ enum WindowReader {
         let rootNode: LiveNode?
         if root == ElementPath.menuBarRoot {
             rootNode = app.element(kAXMenuBarAttribute).map(LiveNode.init)
+        } else if root == ElementPath.appRoot {
+            rootNode = app
         } else {
             rootNode = window(of: app, windowId: target.windowId)
         }
@@ -193,7 +211,7 @@ enum WindowReader {
     }
 
     /// Walks the menu items (or menu bar items) directly under `node`, keeping their paths.
-    private static func walkItems(of node: LiveNode, path: String, into trimmer: inout TreeTrimmer<LiveNode>) {
+    static func walkItems<Node: TreeNode>(of node: Node, path: String, into trimmer: inout TreeTrimmer<Node>) {
         var counts: [String: Int] = [:]
         for child in node.children() {
             let role = child.info().role

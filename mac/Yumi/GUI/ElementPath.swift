@@ -8,6 +8,8 @@
 enum ElementPath {
     static let windowRoot = "AXWindow"
     static let menuBarRoot = "AXMenuBar"
+    /// A menu that hangs off the application, such as some apps' open pop-up menus.
+    static let appRoot = "AXApplication"
 
     static func appending(_ role: String, index: Int, to path: String) -> String {
         "\(path)/\(role)[\(index)]"
@@ -21,7 +23,7 @@ enum ElementPath {
     /// The root and the steps under it, or nil when the path is not one this app built.
     static func parse(_ path: String) -> (root: String, steps: [Step])? {
         let parts = path.split(separator: "/", omittingEmptySubsequences: false).map(String.init)
-        guard let root = parts.first, root == windowRoot || root == menuBarRoot else { return nil }
+        guard let root = parts.first, root == windowRoot || root == menuBarRoot || root == appRoot else { return nil }
         var steps: [Step] = []
         for part in parts.dropFirst() {
             guard part.hasSuffix("]"), let open = part.lastIndex(of: "[") else { return nil }

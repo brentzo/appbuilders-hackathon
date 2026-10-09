@@ -28,6 +28,8 @@ struct TreeTrimmer<Node: TreeNode> {
     var limit = TreeTrimmer.defaultLimit
     private(set) var kept: [KeptElement<Node>] = []
     private(set) var visited = 0
+    /// The menu of a pop-up button, combo box, or menu button that is open, noted on the way.
+    private(set) var openMenu: PopUpMenus.Found<Node>?
 
     init(limit: Int = TreeTrimmer.defaultLimit) {
         self.limit = limit
@@ -60,6 +62,9 @@ struct TreeTrimmer<Node: TreeNode> {
                 frame: info.frame,
                 node: node
             ))
+            if openMenu == nil, role == .popUpButton || role == .comboBox || role == .menuButton {
+                openMenu = PopUpMenus.openMenu(of: node, path: path)
+            }
         }
         guard Self.walksChildren(of: role) else { return }
         var childClip = clip
