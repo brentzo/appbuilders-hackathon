@@ -18,7 +18,7 @@ export interface Field {
 }
 
 export interface Variant {
-  /** The discriminator value, for example "axPress". */
+  /** The discriminator value, for example "click". */
   value: string;
   /** The struct that holds the variant's other fields. */
   struct: string;

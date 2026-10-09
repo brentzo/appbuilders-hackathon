@@ -2,8 +2,18 @@ import { describe, expect, it } from "vitest";
 import { validate } from "../src/index.ts";
 
 describe("ModelAction", () => {
-  it("accepts a press on a numbered element", () => {
-    expect(validate("ModelAction", { kind: "axPress", element: 3 }).valid).toBe(true);
+  it("accepts a click on a numbered element", () => {
+    expect(validate("ModelAction", { kind: "click", element: 3 }).valid).toBe(true);
+  });
+
+  it("rejects the v2 name axPress (OBJ-29: the model says click)", () => {
+    expect(validate("ModelAction", { kind: "axPress", element: 3 }).valid).toBe(false);
+  });
+
+  it("clicks at coordinates only with clickAt (p1 vision, SPEC-05 r12)", () => {
+    expect(validate("ModelAction", { kind: "clickAt", x: 412, y: 96 }).valid).toBe(true);
+    expect(validate("ModelAction", { kind: "click", x: 412, y: 96 }).valid).toBe(false);
+    expect(validate("ModelAction", { kind: "clickAt", element: 3 }).valid).toBe(false);
   });
 
   it("rejects fields that belong to another variant", () => {
@@ -11,7 +21,7 @@ describe("ModelAction", () => {
   });
 
   it("rejects an element given as a path instead of a number", () => {
-    expect(validate("ModelAction", { kind: "axPress", element: "AXWindow/AXMenuBar/AXMenuItem[Export]" }).valid).toBe(
+    expect(validate("ModelAction", { kind: "click", element: "AXWindow/AXMenuBar/AXMenuItem[Export]" }).valid).toBe(
       false,
     );
   });
@@ -25,15 +35,25 @@ describe("ModelAction", () => {
 
 describe("AXRole", () => {
   it("accepts all documented actionable roles", () => {
-    for (const role of ["button", "menuItem", "menuBarItem", "textField", "secureTextField", "textArea", "link", "checkbox", "radioButton", "popUpButton"]) {
+    const roles = [
+      ...["button", "menuItem", "menuBarItem", "textField", "secureTextField", "textArea", "link", "checkbox", "radioButton", "popUpButton"],
+      ...["comboBox", "menuButton", "disclosureTriangle", "row", "cell", "scrollArea", "table", "list", "outline"],
+    ];
+    for (const role of roles) {
       expect(validate("TreeElement", { n: 1, role, label: "Control", enabled: true }).valid, role).toBe(true);
+    }
+  });
+
+  it("rejects raw macOS role and subrole names, which the Mac app maps first", () => {
+    for (const role of ["AXButton", "AXRow", "searchField", "tab", "tabGroup", "sheet", "staticText"]) {
+      expect(validate("TreeElement", { n: 1, role, label: "Control", enabled: true }).valid, role).toBe(false);
     }
   });
 });
 
 describe("KeyAction", () => {
   it("accepts punctuation and named keys", () => {
-    for (const combo of ["cmd+,", "cmd+/", "cmd+shift+d", "return", "cmd+delete", "cmd+shift+delete", "escape", "f5"]) {
+    for (const combo of ["cmd+,", "cmd+/", "cmd+shift+d", "return", "enter", "cmd+enter", "cmd+delete", "cmd+shift+delete", "escape", "f5"]) {
       expect(validate("ModelAction", { kind: "key", combo }).valid, combo).toBe(true);
     }
   });
@@ -42,22 +62,69 @@ describe("KeyAction", () => {
     expect(validate("ModelAction", { kind: "key", combo: "hyper+a" }).valid).toBe(false);
     expect(validate("ModelAction", { kind: "key", combo: "hello world" }).valid).toBe(false);
   });
+
+  it("accepts only the canonical form; the harness normalizes aliases first", () => {
+    for (const combo of ["Cmd+S", "command+s", "esc", "backspace", "Enter", "cmd+Return"]) {
+      expect(validate("ModelAction", { kind: "key", combo }).valid, combo).toBe(false);
+    }
+  });
 });
 
 describe("RecordedAction", () => {
   const element = (role: string) => ({ path: "AXWindow/AXTextField[To]", role, label: "To" });
 
   it("always carries the resolved element for element actions (SPEC-07 r6 reads its label)", () => {
-    expect(validate("RecordedAction", { action: { kind: "axPress", element: 2 }, permission: "allowed" }).valid).toBe(false);
+    expect(validate("RecordedAction", { action: { kind: "click", element: 2 }, permission: "allowed" }).valid).toBe(false);
     expect(
-      validate("RecordedAction", { action: { kind: "axPress", element: 2 }, element: element("button"), permission: "ask" }).valid,
+      validate("RecordedAction", { action: { kind: "click", element: 2 }, element: element("button"), permission: "ask" }).valid,
     ).toBe(true);
+  });
+
+  it("never carries an element for actions that have none", () => {
+    const finish = { kind: "finish", status: "done", note: "ok" };
+    expect(validate("RecordedAction", { action: finish, element: element("button"), permission: "allowed" }).valid).toBe(false);
+    expect(validate("RecordedAction", { action: { kind: "key", combo: "enter" }, element: element("button"), permission: "allowed" }).valid).toBe(false);
+  });
+
+  it("records the focused element for a type action when there is one", () => {
+    const type = { kind: "type", text: "Q3 report" };
+    expect(validate("RecordedAction", { action: type, permission: "allowed" }).valid).toBe(true);
+    expect(validate("RecordedAction", { action: type, element: element("textField"), permission: "allowed" }).valid).toBe(true);
+  });
+
+  it("never types into a focused secure text field (SPEC-05 r7)", () => {
+    const type = { kind: "type", text: "hunter2" };
+    expect(validate("RecordedAction", { action: type, element: element("secureTextField"), permission: "allowed" }).valid).toBe(false);
   });
 
   it("never sets a value in a secure text field (SPEC-05 r7)", () => {
     const fill = { kind: "setValue", element: 2, text: "hunter2" };
     expect(validate("RecordedAction", { action: fill, element: element("secureTextField"), permission: "allowed" }).valid).toBe(false);
     expect(validate("RecordedAction", { action: fill, element: element("textField"), permission: "allowed" }).valid).toBe(true);
+  });
+});
+
+describe("open_app", () => {
+  const open = (args: object) => validate("ToolCall", { tool: "open_app", ...args }).valid;
+
+  it("takes a bundle id or a name", () => {
+    expect(open({ bundleId: "com.apple.Notes" })).toBe(true);
+    expect(open({ name: "Notes" })).toBe(true);
+  });
+
+  it("takes exactly one of them", () => {
+    expect(open({})).toBe(false);
+    expect(open({ bundleId: "com.apple.Notes", name: "Notes" })).toBe(false);
+    expect(open({ name: "" })).toBe(false);
+  });
+});
+
+describe("open_file", () => {
+  it("opens in the default app, or in the app given by bundleId", () => {
+    expect(validate("ToolCall", { tool: "open_file", path: "~/Downloads/Q3 Report.pdf" }).valid).toBe(true);
+    expect(validate("ToolCall", { tool: "open_file", path: "~/Downloads/Q3 Report.pdf", bundleId: "com.apple.mail" }).valid).toBe(true);
+    expect(validate("ToolCall", { tool: "open_file", path: "~/Downloads/Q3 Report.pdf", bundleId: "" }).valid).toBe(false);
+    expect(validate("ToolCall", { tool: "open_file", path: "~/Downloads/Q3 Report.pdf", app: "Mail" }).valid).toBe(false);
   });
 });
 
@@ -85,7 +152,7 @@ describe("move_to_trash", () => {
 });
 
 describe("WorkerOutput", () => {
-  const press = { kind: "axPress", element: 1 };
+  const press = { kind: "click", element: 1 };
 
   it("holds exactly one action", () => {
     expect(validate("WorkerOutput", { action: press }).valid).toBe(true);
@@ -199,5 +266,34 @@ describe("Observation", () => {
       elements: [{ n: 1, role: "secureTextField", label: "Password", value: "hunter2", enabled: true }],
     };
     expect(validate("Observation", withSecret).valid).toBe(false);
+  });
+
+  it("names the app, the focused element, and the front layer", () => {
+    const sheet = {
+      ...observation(6),
+      app: "Keynote",
+      focused: 6,
+      layer: { kind: "sheet", defaultButton: 6, cancelButton: 5 },
+    };
+    expect(validate("Observation", sheet).errors).toEqual([]);
+    expect(validate("Observation", { ...sheet, layer: { kind: "dialog", title: "Export Your Presentation" } }).valid).toBe(true);
+  });
+
+  it("rejects an unknown layer, a focus that is not an element number, and an empty app name", () => {
+    expect(validate("Observation", { ...observation(1), layer: { kind: "popover" } }).valid).toBe(false);
+    expect(validate("Observation", { ...observation(1), layer: { kind: "sheet", title: "" } }).valid).toBe(false);
+    expect(validate("Observation", { ...observation(1), layer: { kind: "sheet", defaultButton: 0 } }).valid).toBe(false);
+    expect(validate("Observation", { ...observation(1), focused: 0 }).valid).toBe(false);
+    expect(validate("Observation", { ...observation(1), focused: "AXTextField[Search]" }).valid).toBe(false);
+    expect(validate("Observation", { ...observation(1), app: "" }).valid).toBe(false);
+  });
+});
+
+describe("Path", () => {
+  const open = (path: string) => validate("ToolCall", { tool: "open_file", path }).valid;
+
+  it("accepts a document package, which is a folder (OBJ-29)", () => {
+    expect(open("~/Documents/Q3 Report.key")).toBe(true);
+    expect(open("~/Documents/Q3 Report.key/")).toBe(true);
   });
 });

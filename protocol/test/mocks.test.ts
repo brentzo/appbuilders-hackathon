@@ -3,10 +3,11 @@ import { createServer, connect, type Server, type Socket } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { PROTOCOL_VERSION } from "../generated/ts/index.ts";
 import { exampleOf } from "../mocks/examples.ts";
 import { connectMockMacApp } from "../mocks/mock-mac-app.ts";
 import { loadScript, SCRIPT_DIR, startMockHarness } from "../mocks/mock-harness.ts";
-import { loadRpcContract, RpcPeer, RpcRemoteError } from "../src/index.ts";
+import { loadRpcContract, RpcPeer, RpcRemoteError, validate } from "../src/index.ts";
 
 const contract = loadRpcContract();
 const methods = (direction: "appToHarness" | "harnessToApp") =>
@@ -68,6 +69,20 @@ describe("mock harness", () => {
     expect((error as RpcRemoteError).error.data).toEqual({ kind: "bridgeDown" });
   });
 
+  it("answers a hello from another protocol version with a UserError, not a contract error", async () => {
+    const other = PROTOCOL_VERSION + 1;
+    expect(validate("HelloParams", { protocolVersion: other }).valid).toBe(true);
+    expect(validate("HelloParams", { protocolVersion: 0 }).valid).toBe(false);
+    const path = socketPath();
+    const harness = await startMockHarness({ socketPath: path, quiet: true });
+    cleanups.push(() => harness.close());
+    const app = await appClient(path);
+    const error = await app.request("hello", { protocolVersion: other }).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(RpcRemoteError);
+    expect((error as RpcRemoteError).error.code).toBe(-32000);
+    expect((error as RpcRemoteError).error.data).toEqual({ kind: "unexpected" });
+  });
+
   it("rejects params that break the contract", async () => {
     const path = socketPath();
     const harness = await startMockHarness({ socketPath: path, quiet: true });
@@ -91,7 +106,7 @@ describe("mock Mac app", () => {
     const path = socketPath();
     const harnessSide = new Promise<RpcPeer>((resolve) => {
       const server: Server = createServer((socket) => {
-        resolve(new RpcPeer({ role: "harness", socket, handlers: { hello: () => ({ protocolVersion: 2 }) } }));
+        resolve(new RpcPeer({ role: "harness", socket, handlers: { hello: () => ({ protocolVersion: PROTOCOL_VERSION }) } }));
       });
       server.listen(path);
       cleanups.push(() => new Promise<void>((r) => server.close(() => r())));

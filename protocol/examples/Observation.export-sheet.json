@@ -1,0 +1,52 @@
+{
+  "app": "Keynote",
+  "windowTitle": "Q3 Report.key",
+  "focused": 6,
+  "layer": {
+    "kind": "sheet",
+    "defaultButton": 6,
+    "cancelButton": 5
+  },
+  "elements": [
+    {
+      "n": 1,
+      "role": "radioButton",
+      "label": "PDF",
+      "value": "on",
+      "enabled": true
+    },
+    {
+      "n": 2,
+      "role": "radioButton",
+      "label": "PowerPoint",
+      "value": "off",
+      "enabled": true
+    },
+    {
+      "n": 3,
+      "role": "popUpButton",
+      "label": "Image Quality",
+      "value": "Better",
+      "enabled": true
+    },
+    {
+      "n": 4,
+      "role": "checkbox",
+      "label": "Require password to open",
+      "value": "off",
+      "enabled": true
+    },
+    {
+      "n": 5,
+      "role": "button",
+      "label": "Cancel",
+      "enabled": true
+    },
+    {
+      "n": 6,
+      "role": "button",
+      "label": "Next…",
+      "enabled": true
+    }
+  ]
+}

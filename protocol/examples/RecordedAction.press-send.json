@@ -1,6 +1,6 @@
 {
   "action": {
-    "kind": "axPress",
+    "kind": "click",
     "element": 7
   },
   "element": {

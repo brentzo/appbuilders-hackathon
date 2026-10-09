@@ -7,7 +7,7 @@
         "kind": "tool",
         "call": {
           "tool": "open_app",
-          "bundleId": "com.apple.iWork.Keynote"
+          "name": "Keynote"
         }
       },
       "observation": "Keynote is in front.",
@@ -15,7 +15,7 @@
     },
     {
       "action": {
-        "kind": "axPress",
+        "kind": "click",
         "element": 1
       },
       "observation": "The File menu opened.",
@@ -23,17 +23,21 @@
     }
   ],
   "observation": {
+    "app": "Keynote",
     "windowTitle": "Q3 Report.key",
+    "layer": {
+      "kind": "menu"
+    },
     "elements": [
       {
         "n": 1,
-        "role": "menuItem",
+        "role": "menuBarItem",
         "label": "File",
         "enabled": true
       },
       {
         "n": 2,
-        "role": "menuItem",
+        "role": "menuBarItem",
         "label": "Edit",
         "enabled": true
       },

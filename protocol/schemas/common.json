@@ -7,7 +7,7 @@
     "ProtocolVersion": {
       "description": "Version of these schemas. Bump it on every breaking change; see protocol/README.md.",
       "type": "integer",
-      "const": 2
+      "const": 3
     },
     "Uuid": {
       "description": "A UUID in its canonical text form.",
@@ -26,7 +26,7 @@
       "format": "date-time"
     },
     "Path": {
-      "description": "An exact file path, absolute or starting with ~/. The wildcard characters * and ? are rejected (SPEC-07 r8); brackets and braces are allowed because they are common in real file names.",
+      "description": "An exact file path, absolute or starting with ~/. The wildcard characters * and ? are rejected (SPEC-07 r8); brackets and braces are allowed because they are common in real file names. Mac volumes are case-insensitive by default, so name clash checks (SPEC-07 r4) and checks for a file Yumi did not create compare names case-insensitively: Report.pdf and report.pdf are the same file. Documents such as .key, .pages, and .numbers can be packages, which are folders, so every file tool must handle a folder at a path that looks like a file.",
       "type": "string",
       "minLength": 1,
       "maxLength": 1024,

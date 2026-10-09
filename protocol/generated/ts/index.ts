@@ -91,15 +91,9 @@ export interface AuthenticateFrame {
   signature: Signature;
 }
 
-/** Press an element through the accessibility API. */
-export interface AxPressAction {
-  kind: "axPress";
-  element: ElementNumber;
-}
-
-/** Actionable roles kept in the trimmed tree (SPEC-05 r2). Secure text fields are listed so Yumi can ask the user to type there, but their value is never read (SPEC-05 r7). */
-export type AXRole = "button" | "menuItem" | "menuBarItem" | "textField" | "secureTextField" | "textArea" | "link" | "checkbox" | "radioButton" | "popUpButton";
-export const aXRoleValues: readonly AXRole[] = ["button", "menuItem", "menuBarItem", "textField", "secureTextField", "textArea", "link", "checkbox", "radioButton", "popUpButton"];
+/** Actionable roles kept in the trimmed tree (SPEC-05 r2), mapped by the Mac app from kAXRoleAttribute and kAXSubroleAttribute (AXRoleConstants.h). Each role is the macOS role without the AX prefix, lower camel case: AXButton is button, AXMenuItem is menuItem, AXMenuBarItem is menuBarItem, AXTextField is textField, AXTextArea is textArea, AXLink is link, AXCheckBox is checkbox, AXRadioButton is radioButton, AXPopUpButton is popUpButton, AXComboBox is comboBox, AXMenuButton is menuButton, AXDisclosureTriangle is disclosureTriangle, AXRow is row, AXCell is cell, AXScrollArea is scrollArea, AXTable is table, AXList is list, and AXOutline is outline. The subrole wins where it matters: an AXTextField with subrole AXSecureTextField (kAXSecureTextFieldSubrole) is a secureTextField, and a search field (subrole AXSearchField) is a textField. A tab is an AXRadioButton inside an AXTabGroup, so it is a radioButton. Rows (subroles AXTableRow and AXOutlineRow) live in a table, outline, or list; the model clicks a row to select it and scrolls the container. Secure text fields are listed so Yumi can ask the user to type there, but their value is never read (SPEC-05 r7). */
+export type AXRole = "button" | "menuItem" | "menuBarItem" | "textField" | "secureTextField" | "textArea" | "link" | "checkbox" | "radioButton" | "popUpButton" | "comboBox" | "menuButton" | "disclosureTriangle" | "row" | "cell" | "scrollArea" | "table" | "list" | "outline";
+export const aXRoleValues: readonly AXRole[] = ["button", "menuItem", "menuBarItem", "textField", "secureTextField", "textArea", "link", "checkbox", "radioButton", "popUpButton", "comboBox", "menuButton", "disclosureTriangle", "row", "cell", "scrollArea", "table", "list", "outline"];
 
 /** One WebSocket text frame between a device and the relay. Each frame says who sends it. See protocol/docs/pairing.md. */
 export type BridgeFrame =
@@ -138,9 +132,15 @@ export interface ChallengeFrame {
   nonce: Key32;
 }
 
-/** p1 vision fallback only: click at coordinates in the screenshot the model saw (SPEC-05 r12). */
+/** Click an element through the accessibility API (SPEC-05 r1). On a row or cell (AXRow, AXCell) the Mac app selects it by setting kAXSelectedAttribute (AXSelected) to true, because rows usually do not support AXPress. On every other role it performs kAXPressAction (AXPress). */
 export interface ClickAction {
   kind: "click";
+  element: ElementNumber;
+}
+
+/** p1 vision fallback only: click at coordinates in the screenshot the model saw (SPEC-05 r12). Elements in the tree are clicked with click instead. */
+export interface ClickAtAction {
+  kind: "clickAt";
   x: number;
   y: number;
 }
@@ -296,8 +296,10 @@ export interface GoalRestated {
   text: string;
 }
 
+/** The app's version. Any version validates here, so the harness's own check runs and a different version gets a UserError, not a contract error. */
 export interface HelloParams {
-  protocolVersion: ProtocolVersion;
+  /** The version the app speaks. The harness refuses one that differs from ProtocolVersion with a UserError. */
+  protocolVersion: number;
 }
 
 /** The harness's version. The app refuses to continue if it differs. */
@@ -311,13 +313,28 @@ export type Key32 = string;
 /** Press a key combination, for example cmd+shift+e. Main lane only. Risk comes from a per-app list (SPEC-07 r6). */
 export interface KeyAction {
   kind: "key";
-  /** Modifiers joined with +, then one key: a letter, digit, punctuation, f1-f19, or a named key. */
+  /** Modifiers joined with +, then one key: a letter, digit, punctuation, f1-f19, or a named key, all lower case as written here. return is the main Return key (kVK_Return) and enter is the keypad Enter key (kVK_ANSI_KeypadEnter), which some Mac apps treat differently. The harness normalizes common aliases before validating, for example Cmd+S to cmd+s, esc to escape, and backspace to delete; the schema accepts only the canonical form. */
   combo: string;
 }
 
 /** How a subtask runs (SPEC-03). */
 export type Lane = "helper" | "ghost" | "main";
 export const laneValues: readonly Lane[] = ["helper", "ghost", "main"];
+
+/** The front layer of the target window. defaultButton and cancelButton come from kAXDefaultButtonAttribute and kAXCancelButtonAttribute (AXDefaultButton, AXCancelButton) and are absent when the layer has none or the button is not in the tree. */
+export interface Layer {
+  kind: LayerKind;
+  /** The layer's title. Often absent: a sheet usually has no AXTitle on macOS. */
+  title?: string;
+  /** The element number of the default button, the one Return presses. */
+  defaultButton?: ElementNumber;
+  /** The element number of the cancel button, the one Escape presses. */
+  cancelButton?: ElementNumber;
+}
+
+/** window: nothing covers the window. sheet: an AXSheet (kAXSheetRole) attached to the window. dialog: a window with subrole AXDialog or AXSystemDialog (kAXDialogSubrole, kAXSystemDialogSubrole). alert: an alert; macOS has no alert role or subrole in AXRoleConstants.h, so the Mac app reports an alert as sheet or dialog unless it can tell. menu: an open AXMenu (kAXMenuRole). */
+export type LayerKind = "window" | "sheet" | "dialog" | "alert" | "menu";
+export const layerKindValues: readonly LayerKind[] = ["window", "sheet", "dialog", "alert", "menu"];
 
 /** List a folder. Blocked for secret locations. */
 export interface ListDirCall {
@@ -343,7 +360,7 @@ export interface LoadSecretResult {
 
 /** Exactly one action chosen by the model. Element actions refer to the element's short number from the trimmed tree (SPEC-05 r2). */
 export type ModelAction =
-  | AxPressAction
+  | ClickAction
   | SetValueAction
   | TypeTextAction
   | KeyAction
@@ -351,7 +368,7 @@ export type ModelAction =
   | ToolAction
   | AskAction
   | FinishAction
-  | ClickAction;
+  | ClickAtAction;
 
 /** Move a file. A taken name gets a number instead of replacing (SPEC-07 r4). */
 export interface MoveCall {
@@ -390,7 +407,13 @@ export interface NotPairedFrame {
 
 /** One look at the target window. */
 export interface Observation {
+  /** The app's name as the user sees it, for example Keynote. */
+  app?: string;
   windowTitle: string;
+  /** The element number with keyboard focus, read from kAXFocusedUIElementAttribute (AXFocusedUIElement). Absent when the focused element is not in the tree. The harness refuses a type action when this element is a secureTextField (SPEC-05 r7). */
+  focused?: ElementNumber;
+  /** What is in front in the target window: the window itself, or a sheet, dialog, alert, or open menu over it. That is where the model should act next (SPEC-05 r15). */
+  layer?: Layer;
   /** Visible, actionable elements only, numbered from 1, at most 200 (SPEC-05 r2). */
   elements: TreeElement[];
   /** p1 vision fallback only. */
@@ -401,16 +424,21 @@ export interface ObserveWindowParams {
   target: Target;
 }
 
-/** Open or bring forward an app. Allowed. */
+/** Open or bring forward an app, by exactly one of bundleId or name. Allowed. Apple's bundle ids are inconsistent (com.apple.mail, com.apple.Notes), so the model should usually give the name. */
 export interface OpenAppCall {
   tool: "open_app";
-  bundleId: string;
+  /** For example com.apple.iWork.Keynote. */
+  bundleId?: string;
+  /** The app's name as the user sees it, for example Keynote. The Mac app resolves it through Launch Services. */
+  name?: string;
 }
 
-/** Open a file in its default app. Allowed. */
+/** Open a file, or a document package such as a .key or .pages folder, in its default app or in the app given by bundleId. Allowed. Opening a file with Mail is meant to start a new message with it attached; that is not verified on a real Mac yet (OBJ-29). */
 export interface OpenFileCall {
   tool: "open_file";
   path: Path;
+  /** Open with this app instead of the default, for example com.apple.mail. */
+  bundleId?: string;
 }
 
 export interface OpenNewWindowParams {
@@ -487,7 +515,7 @@ export interface PairRequestFrame {
   sealed: SealedPayload;
 }
 
-/** An exact file path, absolute or starting with ~/. The wildcard characters * and ? are rejected (SPEC-07 r8); brackets and braces are allowed because they are common in real file names. */
+/** An exact file path, absolute or starting with ~/. The wildcard characters * and ? are rejected (SPEC-07 r8); brackets and braces are allowed because they are common in real file names. Mac volumes are case-insensitive by default, so name clash checks (SPEC-07 r4) and checks for a file Yumi did not create compare names case-insensitively: Report.pdf and report.pdf are the same file. Documents such as .key, .pages, and .numbers can be packages, which are folders, so every file tool must handle a folder at a path that looks like a file. */
 export type Path = string;
 
 /** Pause one task, or every task when taskId is absent (SPEC-06 r1). */
@@ -523,7 +551,7 @@ export interface ProbeAppCapabilityParams {
 }
 
 /** Version of these schemas. Bump it on every breaking change; see protocol/README.md. */
-export const PROTOCOL_VERSION = 2;
+export const PROTOCOL_VERSION = 3;
 export type ProtocolVersion = typeof PROTOCOL_VERSION;
 
 /** The model asked the user something (a ModelAction ask). The task waits for answerQuestion. */
@@ -557,7 +585,7 @@ export interface ReadyFrame {
 /** A model action after the harness resolved its element and decided its permission level. */
 export interface RecordedAction {
   action: ModelAction;
-  /** Required for element actions, whose risk is read from the element's label (SPEC-07 r6). */
+  /** Required for element actions (click, setValue, scroll), whose risk is read from the element's label (SPEC-07 r6). For a type action, the focused element the text goes into (Observation.focused), present whenever the observation had one. Never a secureTextField for setValue or type (SPEC-05 r7). Absent for every other action. */
   element?: ResolvedElement;
   permission: PermissionLevel;
 }
@@ -627,7 +655,7 @@ export interface ScreenPoint {
   y: number;
 }
 
-/** Scroll inside an element. */
+/** Scroll inside an element, usually the container that scrolls: a scrollArea, table, list, or outline. */
 export interface ScrollAction {
   kind: "scroll";
   element: ElementNumber;
@@ -912,7 +940,7 @@ export interface TreeElement {
   enabled: boolean;
 }
 
-/** Type text with the real keyboard. Main lane only (SPEC-03 r7). */
+/** Type text with the real keyboard into the focused element. Main lane only (SPEC-03 r7). Refused when the focused element is a secureTextField (SPEC-05 r7): the harness looks up Observation.focused in the elements it sent, and RecordedAction rejects a type action whose element is a secure text field. */
 export interface TypeTextAction {
   kind: "type";
   text: string;

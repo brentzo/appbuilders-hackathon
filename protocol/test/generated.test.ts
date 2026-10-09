@@ -16,12 +16,12 @@ describe("generated types", () => {
 
   it("turn a discriminated union into a real sum type in every language", () => {
     const out = generateAll(loadSchemaFiles());
-    expect(out.get("ts/index.ts")).toContain("export type ModelAction =\n  | AxPressAction\n  | SetValueAction");
-    expect(out.get("ts/index.ts")).toContain('  kind: "axPress";');
+    expect(out.get("ts/index.ts")).toContain("export type ModelAction =\n  | ClickAction\n  | SetValueAction");
+    expect(out.get("ts/index.ts")).toContain('  kind: "click";');
     expect(out.get("swift/YumiProtocol.swift")).toContain("public enum ModelAction: Codable, Equatable, Sendable {");
-    expect(out.get("swift/YumiProtocol.swift")).toContain("    case axPress(AxPressAction)");
+    expect(out.get("swift/YumiProtocol.swift")).toContain("    case click(ClickAction)");
     expect(out.get("kotlin/yumi/protocol/YumiProtocol.kt")).toContain('@JsonClassDiscriminator("kind")\nsealed interface ModelAction');
-    expect(out.get("kotlin/yumi/protocol/YumiProtocol.kt")).toContain('@SerialName("axPress")\ndata class AxPressAction(');
+    expect(out.get("kotlin/yumi/protocol/YumiProtocol.kt")).toContain('@SerialName("click")\ndata class ClickAction(');
   });
 
   it("rename types that clash with names every Swift or Kotlin file already sees", () => {

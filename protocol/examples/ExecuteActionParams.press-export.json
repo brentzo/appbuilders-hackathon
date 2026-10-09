@@ -2,7 +2,7 @@
   "stepId": "3c4d5e6f-7a8b-4c9d-8e1f-2a3b4c5d6e7f",
   "target": { "bundleId": "com.apple.iWork.Keynote", "windowId": 4182 },
   "action": {
-    "action": { "kind": "axPress", "element": 4 },
+    "action": { "kind": "click", "element": 4 },
     "element": {
       "path": "AXApplication/AXMenuBar/AXMenuBarItem[File]/AXMenu/AXMenuItem[Export To]",
       "role": "menuItem",

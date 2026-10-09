@@ -40,23 +40,32 @@
       ]
     },
     "OpenAppCall": {
-      "description": "Open or bring forward an app. Allowed.",
+      "description": "Open or bring forward an app, by exactly one of bundleId or name. Allowed. Apple's bundle ids are inconsistent (com.apple.mail, com.apple.Notes), so the model should usually give the name.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["tool", "bundleId"],
+      "required": ["tool"],
       "properties": {
         "tool": { "const": "open_app" },
-        "bundleId": { "type": "string", "minLength": 1 }
-      }
+        "bundleId": { "description": "For example com.apple.iWork.Keynote.", "type": "string", "minLength": 1 },
+        "name": { "description": "The app's name as the user sees it, for example Keynote. The Mac app resolves it through Launch Services.", "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        {
+          "if": { "required": ["bundleId"] },
+          "then": { "not": { "required": ["name"] } },
+          "else": { "required": ["name"] }
+        }
+      ]
     },
     "OpenFileCall": {
-      "description": "Open a file in its default app. Allowed.",
+      "description": "Open a file, or a document package such as a .key or .pages folder, in its default app or in the app given by bundleId. Allowed. Opening a file with Mail is meant to start a new message with it attached; that is not verified on a real Mac yet (OBJ-29).",
       "type": "object",
       "additionalProperties": false,
       "required": ["tool", "path"],
       "properties": {
         "tool": { "const": "open_file" },
-        "path": { "$ref": "common.json#/$defs/Path" }
+        "path": { "$ref": "common.json#/$defs/Path" },
+        "bundleId": { "description": "Open with this app instead of the default, for example com.apple.mail.", "type": "string", "minLength": 1 }
       }
     },
     "OpenUrlCall": {

@@ -1,15 +1,19 @@
 {
+  "app": "Keynote",
   "windowTitle": "Q3 Report.key",
+  "layer": {
+    "kind": "menu"
+  },
   "elements": [
     {
       "n": 1,
-      "role": "menuItem",
+      "role": "menuBarItem",
       "label": "File",
       "enabled": true
     },
     {
       "n": 2,
-      "role": "menuItem",
+      "role": "menuBarItem",
       "label": "Edit",
       "enabled": true
     },

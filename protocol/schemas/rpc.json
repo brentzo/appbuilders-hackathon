@@ -56,10 +56,17 @@
       "properties": {}
     },
     "HelloParams": {
+      "description": "The app's version. Any version validates here, so the harness's own check runs and a different version gets a UserError, not a contract error.",
       "type": "object",
       "additionalProperties": false,
       "required": ["protocolVersion"],
-      "properties": { "protocolVersion": { "$ref": "common.json#/$defs/ProtocolVersion" } }
+      "properties": {
+        "protocolVersion": {
+          "description": "The version the app speaks. The harness refuses one that differs from ProtocolVersion with a UserError.",
+          "type": "integer",
+          "minimum": 1
+        }
+      }
     },
     "HelloResult": {
       "description": "The harness's version. The app refuses to continue if it differs.",

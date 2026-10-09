@@ -3,6 +3,7 @@
 // Run: npm run mock:mac -- [--socket <path>] [--fail method=kind,...]
 import { connect, type Socket } from "node:net";
 import { pathToFileURL } from "node:url";
+import { PROTOCOL_VERSION } from "../generated/ts/index.ts";
 import { loadRpcContract, RpcFailure, RpcPeer, type Handler } from "../src/index.ts";
 import { exampleOf } from "./examples.ts";
 import { defaultSocketPath, readArgs, readFailures } from "./socket.ts";
@@ -50,7 +51,7 @@ export async function connectMockMacApp(options: MockMacAppOptions = {}): Promis
       options.onEvent?.(event, payload);
     },
   });
-  await peer.request("hello", { protocolVersion: 2 });
+  await peer.request("hello", { protocolVersion: PROTOCOL_VERSION });
   log(`connected to ${socketPath}`);
   return { peer, close: () => peer.close() };
 }

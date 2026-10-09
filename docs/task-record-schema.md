@@ -121,14 +121,25 @@ Each step starts with a fresh, short context:
 
 ```swift
 struct Observation: Codable {
+    var app: String?                 // the app's name, e.g. Keynote
     var windowTitle: String
+    var focused: Int?                // element number with keyboard focus, absent when not in the tree
+    var layer: Layer?                // what is in front: the window, or a sheet, dialog, alert, or menu
     var elements: [TreeElement]      // trimmed tree, at most 200 (SPEC-05 r2)
     var screenshotPath: String?      // p1 only, for the vision fallback
 }
 
+struct Layer: Codable {
+    let kind: LayerKind              // window, sheet, dialog, alert, menu
+    var title: String?               // a sheet usually has none
+    var defaultButton: Int?          // element number of AXDefaultButton
+    var cancelButton: Int?           // element number of AXCancelButton
+}
+
 struct TreeElement: Codable {
     let n: Int                       // short number the model answers with
-    let role: AXRole                 // button, menuItem, menuBarItem, textField, secureTextField, textArea, link, checkbox, radioButton, popUpButton
+    let role: AXRole                 // button, menuItem, menuBarItem, textField, secureTextField, textArea, link, checkbox, radioButton, popUpButton,
+                                     // comboBox, menuButton, disclosureTriangle, row, cell, scrollArea, table, list, outline
     let label: String
     var value: String?               // never set for secure text fields
     var enabled: Bool
@@ -137,6 +148,7 @@ struct TreeElement: Codable {
 
 The trimmed tree holds visible, actionable elements only, and skips empty layout groups.
 Secure text fields are listed so Yumi can ask the user to type there, but their value is never read (SPEC-05 r7).
+How macOS roles and subroles map to `AXRole` (a password field is an `AXTextField` with subrole `AXSecureTextField`, a tab is an `AXRadioButton`) is in [protocol/README.md](../protocol/README.md), "How macOS roles map".
 A step has no effect when the trimmed tree and the window title are the same before and after the action (SPEC-05 r6).
 
 ## Actions
@@ -147,20 +159,20 @@ The harness resolves it into a `RecordedAction` before running it, so the risk c
 
 ```swift
 enum ModelAction: Codable {
-    case axPress(element: Int)
+    case click(element: Int)         // AXPress, or selects a row or cell
     case setValue(element: Int, text: String)
-    case type(text: String)          // main lane only
+    case type(text: String)          // main lane only, refused when the focused element is a secure text field
     case key(combo: String)          // main lane only
     case scroll(element: Int, direction: ScrollDirection)
     case tool(ToolCall)              // typed tools only, see below
     case ask(question: String)       // pauses for the user
     case finish(status: FinishStatus, note: String)  // ends this gui_act attempt: done or stuck; the harness sets partial and blocked
-    case click(x: Int, y: Int)       // p1 vision fallback only
+    case clickAt(x: Int, y: Int)     // p1 vision fallback only
 }
 
 struct RecordedAction: Codable {
     let action: ModelAction
-    var element: ResolvedElement?    // for element actions
+    var element: ResolvedElement?    // for element actions, and the focused element for type
     var permission: PermissionLevel  // decided by the harness, never the model (SPEC-07 r1)
 }
 
@@ -182,8 +194,8 @@ Every tool has its own argument schema, so the harness can check every call.
 
 | Tool | Arguments | Level |
 |---|---|---|
-| `open_app` | `bundleId` | Allowed |
-| `open_file` | `path` | Allowed |
+| `open_app` | exactly one of `bundleId` or `name` (resolved through Launch Services) | Allowed |
+| `open_file` | `path`, optional `bundleId` to open it with that app | Allowed |
 | `open_url` | `url` | Allowed |
 | `reveal_in_finder` | `path` | Allowed |
 | `read_file` | `path` | Allowed, blocked for secret locations |

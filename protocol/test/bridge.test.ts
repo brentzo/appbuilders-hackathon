@@ -7,7 +7,7 @@ const envelope = {
   to: "a1b2c3d4e5f60718293a4b5c6d7e8f90",
   type: "command",
   expiresAt: "2026-10-09T15:44:00+08:00",
-  protocolVersion: 2,
+  protocolVersion: 3,
   signature: `${"A".repeat(86)}==`,
   payload: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
 };
@@ -33,7 +33,7 @@ describe("Envelope", () => {
   });
 
   it("rejects another protocol version", () => {
-    expect(validate("Envelope", { ...envelope, protocolVersion: 3 }).valid).toBe(false);
+    expect(validate("Envelope", { ...envelope, protocolVersion: 2 }).valid).toBe(false);
   });
 });
 
@@ -46,7 +46,7 @@ describe("BridgeFrame", () => {
 
   it("authenticates a device by its signing key and a signed challenge", () => {
     expect(validate("BridgeFrame", { frame: "challenge", nonce: key }).valid).toBe(true);
-    const auth = { frame: "authenticate", deviceId: envelope.from, signingPublicKey: key, protocolVersion: 2, signature: envelope.signature };
+    const auth = { frame: "authenticate", deviceId: envelope.from, signingPublicKey: key, protocolVersion: 3, signature: envelope.signature };
     expect(validate("BridgeFrame", auth).errors).toEqual([]);
     expect(validate("BridgeFrame", { ...auth, signature: undefined }).valid).toBe(false);
   });
@@ -75,7 +75,7 @@ describe("BridgeFrame", () => {
 
 describe("Pairing", () => {
   const offer = {
-    protocolVersion: 2,
+    protocolVersion: 3,
     deviceId: envelope.from,
     deviceName: "Jepoy's MacBook Pro",
     platform: "mac",

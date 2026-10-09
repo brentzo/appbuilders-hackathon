@@ -9,7 +9,7 @@
       "type": "object",
       "discriminator": { "propertyName": "kind" },
       "oneOf": [
-        { "$ref": "#/$defs/AxPressAction" },
+        { "$ref": "#/$defs/ClickAction" },
         { "$ref": "#/$defs/SetValueAction" },
         { "$ref": "#/$defs/TypeTextAction" },
         { "$ref": "#/$defs/KeyAction" },
@@ -17,7 +17,7 @@
         { "$ref": "#/$defs/ToolAction" },
         { "$ref": "#/$defs/AskAction" },
         { "$ref": "#/$defs/FinishAction" },
-        { "$ref": "#/$defs/ClickAction" }
+        { "$ref": "#/$defs/ClickAtAction" }
       ]
     },
     "ElementNumber": {
@@ -26,13 +26,13 @@
       "minimum": 1,
       "maximum": 200
     },
-    "AxPressAction": {
-      "description": "Press an element through the accessibility API.",
+    "ClickAction": {
+      "description": "Click an element through the accessibility API (SPEC-05 r1). On a row or cell (AXRow, AXCell) the Mac app selects it by setting kAXSelectedAttribute (AXSelected) to true, because rows usually do not support AXPress. On every other role it performs kAXPressAction (AXPress).",
       "type": "object",
       "additionalProperties": false,
       "required": ["kind", "element"],
       "properties": {
-        "kind": { "const": "axPress" },
+        "kind": { "const": "click" },
         "element": { "$ref": "#/$defs/ElementNumber" }
       }
     },
@@ -48,7 +48,7 @@
       }
     },
     "TypeTextAction": {
-      "description": "Type text with the real keyboard. Main lane only (SPEC-03 r7).",
+      "description": "Type text with the real keyboard into the focused element. Main lane only (SPEC-03 r7). Refused when the focused element is a secureTextField (SPEC-05 r7): the harness looks up Observation.focused in the elements it sent, and RecordedAction rejects a type action whose element is a secure text field.",
       "type": "object",
       "additionalProperties": false,
       "required": ["kind", "text"],
@@ -65,14 +65,14 @@
       "properties": {
         "kind": { "const": "key" },
         "combo": {
-          "description": "Modifiers joined with +, then one key: a letter, digit, punctuation, f1-f19, or a named key.",
+          "description": "Modifiers joined with +, then one key: a letter, digit, punctuation, f1-f19, or a named key, all lower case as written here. return is the main Return key (kVK_Return) and enter is the keypad Enter key (kVK_ANSI_KeypadEnter), which some Mac apps treat differently. The harness normalizes common aliases before validating, for example Cmd+S to cmd+s, esc to escape, and backspace to delete; the schema accepts only the canonical form.",
           "type": "string",
-          "pattern": "^(?:(?:cmd|ctrl|opt|shift|fn)\\+)*(?:[a-z0-9]|[-=\\[\\];',./\\\\`]|f(?:[1-9]|1[0-9])|return|tab|space|escape|delete|forwardDelete|up|down|left|right|home|end|pageUp|pageDown)$"
+          "pattern": "^(?:(?:cmd|ctrl|opt|shift|fn)\\+)*(?:[a-z0-9]|[-=\\[\\];',./\\\\`]|f(?:[1-9]|1[0-9])|return|enter|tab|space|escape|delete|forwardDelete|up|down|left|right|home|end|pageUp|pageDown)$"
         }
       }
     },
     "ScrollAction": {
-      "description": "Scroll inside an element.",
+      "description": "Scroll inside an element, usually the container that scrolls: a scrollArea, table, list, or outline.",
       "type": "object",
       "additionalProperties": false,
       "required": ["kind", "element", "direction"],
@@ -121,21 +121,41 @@
       "type": "string",
       "enum": ["done", "stuck"]
     },
-    "ClickAction": {
-      "description": "p1 vision fallback only: click at coordinates in the screenshot the model saw (SPEC-05 r12).",
+    "ClickAtAction": {
+      "description": "p1 vision fallback only: click at coordinates in the screenshot the model saw (SPEC-05 r12). Elements in the tree are clicked with click instead.",
       "type": "object",
       "additionalProperties": false,
       "required": ["kind", "x", "y"],
       "properties": {
-        "kind": { "const": "click" },
+        "kind": { "const": "clickAt" },
         "x": { "type": "integer", "minimum": 0 },
         "y": { "type": "integer", "minimum": 0 }
       }
     },
     "AXRole": {
-      "description": "Actionable roles kept in the trimmed tree (SPEC-05 r2). Secure text fields are listed so Yumi can ask the user to type there, but their value is never read (SPEC-05 r7).",
+      "description": "Actionable roles kept in the trimmed tree (SPEC-05 r2), mapped by the Mac app from kAXRoleAttribute and kAXSubroleAttribute (AXRoleConstants.h). Each role is the macOS role without the AX prefix, lower camel case: AXButton is button, AXMenuItem is menuItem, AXMenuBarItem is menuBarItem, AXTextField is textField, AXTextArea is textArea, AXLink is link, AXCheckBox is checkbox, AXRadioButton is radioButton, AXPopUpButton is popUpButton, AXComboBox is comboBox, AXMenuButton is menuButton, AXDisclosureTriangle is disclosureTriangle, AXRow is row, AXCell is cell, AXScrollArea is scrollArea, AXTable is table, AXList is list, and AXOutline is outline. The subrole wins where it matters: an AXTextField with subrole AXSecureTextField (kAXSecureTextFieldSubrole) is a secureTextField, and a search field (subrole AXSearchField) is a textField. A tab is an AXRadioButton inside an AXTabGroup, so it is a radioButton. Rows (subroles AXTableRow and AXOutlineRow) live in a table, outline, or list; the model clicks a row to select it and scrolls the container. Secure text fields are listed so Yumi can ask the user to type there, but their value is never read (SPEC-05 r7).",
       "type": "string",
-      "enum": ["button", "menuItem", "menuBarItem", "textField", "secureTextField", "textArea", "link", "checkbox", "radioButton", "popUpButton"]
+      "enum": [
+        "button",
+        "menuItem",
+        "menuBarItem",
+        "textField",
+        "secureTextField",
+        "textArea",
+        "link",
+        "checkbox",
+        "radioButton",
+        "popUpButton",
+        "comboBox",
+        "menuButton",
+        "disclosureTriangle",
+        "row",
+        "cell",
+        "scrollArea",
+        "table",
+        "list",
+        "outline"
+      ]
     },
     "ResolvedElement": {
       "description": "The real element behind an element number, resolved by the harness before acting.",
@@ -155,17 +175,23 @@
       "required": ["action", "permission"],
       "properties": {
         "action": { "$ref": "#/$defs/ModelAction" },
-        "element": { "description": "Required for element actions, whose risk is read from the element's label (SPEC-07 r6).", "$ref": "#/$defs/ResolvedElement" },
+        "element": {
+          "description": "Required for element actions (click, setValue, scroll), whose risk is read from the element's label (SPEC-07 r6). For a type action, the focused element the text goes into (Observation.focused), present whenever the observation had one. Never a secureTextField for setValue or type (SPEC-05 r7). Absent for every other action.",
+          "$ref": "#/$defs/ResolvedElement"
+        },
         "permission": { "$ref": "common.json#/$defs/PermissionLevel" }
       },
       "allOf": [
         {
-          "if": { "properties": { "action": { "type": "object", "properties": { "kind": { "enum": ["axPress", "setValue", "scroll"] } } } } },
-          "then": { "required": ["element"] },
+          "if": { "properties": { "action": { "type": "object", "properties": { "kind": { "enum": ["click", "setValue", "scroll"] } } } } },
+          "then": { "required": ["element"] }
+        },
+        {
+          "if": { "properties": { "action": { "type": "object", "properties": { "kind": { "enum": ["click", "setValue", "scroll", "type"] } } } } },
           "else": { "properties": { "element": false } }
         },
         {
-          "if": { "properties": { "action": { "type": "object", "properties": { "kind": { "const": "setValue" } } } } },
+          "if": { "properties": { "action": { "type": "object", "properties": { "kind": { "enum": ["setValue", "type"] } } } } },
           "then": { "properties": { "element": { "type": "object", "properties": { "role": { "not": { "const": "secureTextField" } } } } } }
         }
       ]

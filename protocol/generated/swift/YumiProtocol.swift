@@ -154,16 +154,7 @@ public struct AuthenticateFrame: Codable, Equatable, Sendable {
     }
 }
 
-/// Press an element through the accessibility API.
-public struct AxPressAction: Codable, Equatable, Sendable {
-    public var element: Int
-
-    public init(element: Int) {
-        self.element = element
-    }
-}
-
-/// Actionable roles kept in the trimmed tree (SPEC-05 r2). Secure text fields are listed so Yumi can ask the user to type there, but their value is never read (SPEC-05 r7).
+/// Actionable roles kept in the trimmed tree (SPEC-05 r2), mapped by the Mac app from kAXRoleAttribute and kAXSubroleAttribute (AXRoleConstants.h). Each role is the macOS role without the AX prefix, lower camel case: AXButton is button, AXMenuItem is menuItem, AXMenuBarItem is menuBarItem, AXTextField is textField, AXTextArea is textArea, AXLink is link, AXCheckBox is checkbox, AXRadioButton is radioButton, AXPopUpButton is popUpButton, AXComboBox is comboBox, AXMenuButton is menuButton, AXDisclosureTriangle is disclosureTriangle, AXRow is row, AXCell is cell, AXScrollArea is scrollArea, AXTable is table, AXList is list, and AXOutline is outline. The subrole wins where it matters: an AXTextField with subrole AXSecureTextField (kAXSecureTextFieldSubrole) is a secureTextField, and a search field (subrole AXSearchField) is a textField. A tab is an AXRadioButton inside an AXTabGroup, so it is a radioButton. Rows (subroles AXTableRow and AXOutlineRow) live in a table, outline, or list; the model clicks a row to select it and scrolls the container. Secure text fields are listed so Yumi can ask the user to type there, but their value is never read (SPEC-05 r7).
 public enum AXRole: String, Codable, Equatable, Sendable, CaseIterable {
     case button
     case menuItem
@@ -175,6 +166,15 @@ public enum AXRole: String, Codable, Equatable, Sendable, CaseIterable {
     case checkbox
     case radioButton
     case popUpButton
+    case comboBox
+    case menuButton
+    case disclosureTriangle
+    case row
+    case cell
+    case scrollArea
+    case table
+    case list
+    case outline
 }
 
 /// One WebSocket text frame between a device and the relay. Each frame says who sends it. See protocol/docs/pairing.md.
@@ -296,8 +296,17 @@ public struct ChallengeFrame: Codable, Equatable, Sendable {
     }
 }
 
-/// p1 vision fallback only: click at coordinates in the screenshot the model saw (SPEC-05 r12).
+/// Click an element through the accessibility API (SPEC-05 r1). On a row or cell (AXRow, AXCell) the Mac app selects it by setting kAXSelectedAttribute (AXSelected) to true, because rows usually do not support AXPress. On every other role it performs kAXPressAction (AXPress).
 public struct ClickAction: Codable, Equatable, Sendable {
+    public var element: Int
+
+    public init(element: Int) {
+        self.element = element
+    }
+}
+
+/// p1 vision fallback only: click at coordinates in the screenshot the model saw (SPEC-05 r12). Elements in the tree are clicked with click instead.
+public struct ClickAtAction: Codable, Equatable, Sendable {
     public var x: Int
     public var y: Int
 
@@ -656,7 +665,9 @@ public struct GoalRestated: Codable, Equatable, Sendable {
     }
 }
 
+/// The app's version. Any version validates here, so the harness's own check runs and a different version gets a UserError, not a contract error.
 public struct HelloParams: Codable, Equatable, Sendable {
+    /// The version the app speaks. The harness refuses one that differs from ProtocolVersion with a UserError.
     public var protocolVersion: Int
 
     public init(protocolVersion: Int) {
@@ -675,7 +686,7 @@ public struct HelloResult: Codable, Equatable, Sendable {
 
 /// Press a key combination, for example cmd+shift+e. Main lane only. Risk comes from a per-app list (SPEC-07 r6).
 public struct KeyAction: Codable, Equatable, Sendable {
-    /// Modifiers joined with +, then one key: a letter, digit, punctuation, f1-f19, or a named key.
+    /// Modifiers joined with +, then one key: a letter, digit, punctuation, f1-f19, or a named key, all lower case as written here. return is the main Return key (kVK_Return) and enter is the keypad Enter key (kVK_ANSI_KeypadEnter), which some Mac apps treat differently. The harness normalizes common aliases before validating, for example Cmd+S to cmd+s, esc to escape, and backspace to delete; the schema accepts only the canonical form.
     public var combo: String
 
     public init(combo: String) {
@@ -688,6 +699,33 @@ public enum Lane: String, Codable, Equatable, Sendable, CaseIterable {
     case helper
     case ghost
     case main
+}
+
+/// The front layer of the target window. defaultButton and cancelButton come from kAXDefaultButtonAttribute and kAXCancelButtonAttribute (AXDefaultButton, AXCancelButton) and are absent when the layer has none or the button is not in the tree.
+public struct Layer: Codable, Equatable, Sendable {
+    public var kind: LayerKind
+    /// The layer's title. Often absent: a sheet usually has no AXTitle on macOS.
+    public var title: String?
+    /// The element number of the default button, the one Return presses.
+    public var defaultButton: Int?
+    /// The element number of the cancel button, the one Escape presses.
+    public var cancelButton: Int?
+
+    public init(kind: LayerKind, title: String? = nil, defaultButton: Int? = nil, cancelButton: Int? = nil) {
+        self.kind = kind
+        self.title = title
+        self.defaultButton = defaultButton
+        self.cancelButton = cancelButton
+    }
+}
+
+/// window: nothing covers the window. sheet: an AXSheet (kAXSheetRole) attached to the window. dialog: a window with subrole AXDialog or AXSystemDialog (kAXDialogSubrole, kAXSystemDialogSubrole). alert: an alert; macOS has no alert role or subrole in AXRoleConstants.h, so the Mac app reports an alert as sheet or dialog unless it can tell. menu: an open AXMenu (kAXMenuRole).
+public enum LayerKind: String, Codable, Equatable, Sendable, CaseIterable {
+    case window
+    case sheet
+    case dialog
+    case alert
+    case menu
 }
 
 /// List a folder. Blocked for secret locations.
@@ -730,7 +768,7 @@ public struct LoadSecretResult: Codable, Equatable, Sendable {
 
 /// Exactly one action chosen by the model. Element actions refer to the element's short number from the trimmed tree (SPEC-05 r2).
 public enum ModelAction: Codable, Equatable, Sendable {
-    case axPress(AxPressAction)
+    case click(ClickAction)
     case setValue(SetValueAction)
     case `type`(TypeTextAction)
     case key(KeyAction)
@@ -738,7 +776,7 @@ public enum ModelAction: Codable, Equatable, Sendable {
     case tool(ToolAction)
     case ask(AskAction)
     case finish(FinishAction)
-    case click(ClickAction)
+    case clickAt(ClickAtAction)
 
     private enum DiscriminatorKey: String, CodingKey {
         case discriminator = "kind"
@@ -748,7 +786,7 @@ public enum ModelAction: Codable, Equatable, Sendable {
         let container = try decoder.container(keyedBy: DiscriminatorKey.self)
         let value = try container.decode(String.self, forKey: .discriminator)
         switch value {
-        case "axPress": self = .axPress(try AxPressAction(from: decoder))
+        case "click": self = .click(try ClickAction(from: decoder))
         case "setValue": self = .setValue(try SetValueAction(from: decoder))
         case "type": self = .`type`(try TypeTextAction(from: decoder))
         case "key": self = .key(try KeyAction(from: decoder))
@@ -756,7 +794,7 @@ public enum ModelAction: Codable, Equatable, Sendable {
         case "tool": self = .tool(try ToolAction(from: decoder))
         case "ask": self = .ask(try AskAction(from: decoder))
         case "finish": self = .finish(try FinishAction(from: decoder))
-        case "click": self = .click(try ClickAction(from: decoder))
+        case "clickAt": self = .clickAt(try ClickAtAction(from: decoder))
         default:
             throw DecodingError.dataCorruptedError(forKey: .discriminator, in: container, debugDescription: "Unknown ModelAction kind: \(value)")
         }
@@ -765,8 +803,8 @@ public enum ModelAction: Codable, Equatable, Sendable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: DiscriminatorKey.self)
         switch self {
-        case .axPress(let value):
-            try container.encode("axPress", forKey: .discriminator)
+        case .click(let value):
+            try container.encode("click", forKey: .discriminator)
             try value.encode(to: encoder)
         case .setValue(let value):
             try container.encode("setValue", forKey: .discriminator)
@@ -789,8 +827,8 @@ public enum ModelAction: Codable, Equatable, Sendable {
         case .finish(let value):
             try container.encode("finish", forKey: .discriminator)
             try value.encode(to: encoder)
-        case .click(let value):
-            try container.encode("click", forKey: .discriminator)
+        case .clickAt(let value):
+            try container.encode("clickAt", forKey: .discriminator)
             try value.encode(to: encoder)
         }
     }
@@ -856,14 +894,23 @@ public struct NotPairedFrame: Codable, Equatable, Sendable {
 
 /// One look at the target window.
 public struct Observation: Codable, Equatable, Sendable {
+    /// The app's name as the user sees it, for example Keynote.
+    public var app: String?
     public var windowTitle: String
+    /// The element number with keyboard focus, read from kAXFocusedUIElementAttribute (AXFocusedUIElement). Absent when the focused element is not in the tree. The harness refuses a type action when this element is a secureTextField (SPEC-05 r7).
+    public var focused: Int?
+    /// What is in front in the target window: the window itself, or a sheet, dialog, alert, or open menu over it. That is where the model should act next (SPEC-05 r15).
+    public var layer: Layer?
     /// Visible, actionable elements only, numbered from 1, at most 200 (SPEC-05 r2).
     public var elements: [TreeElement]
     /// p1 vision fallback only.
     public var screenshotPath: String?
 
-    public init(windowTitle: String, elements: [TreeElement], screenshotPath: String? = nil) {
+    public init(app: String? = nil, windowTitle: String, focused: Int? = nil, layer: Layer? = nil, elements: [TreeElement], screenshotPath: String? = nil) {
+        self.app = app
         self.windowTitle = windowTitle
+        self.focused = focused
+        self.layer = layer
         self.elements = elements
         self.screenshotPath = screenshotPath
     }
@@ -877,21 +924,28 @@ public struct ObserveWindowParams: Codable, Equatable, Sendable {
     }
 }
 
-/// Open or bring forward an app. Allowed.
+/// Open or bring forward an app, by exactly one of bundleId or name. Allowed. Apple's bundle ids are inconsistent (com.apple.mail, com.apple.Notes), so the model should usually give the name.
 public struct OpenAppCall: Codable, Equatable, Sendable {
-    public var bundleId: String
+    /// For example com.apple.iWork.Keynote.
+    public var bundleId: String?
+    /// The app's name as the user sees it, for example Keynote. The Mac app resolves it through Launch Services.
+    public var name: String?
 
-    public init(bundleId: String) {
+    public init(bundleId: String? = nil, name: String? = nil) {
         self.bundleId = bundleId
+        self.name = name
     }
 }
 
-/// Open a file in its default app. Allowed.
+/// Open a file, or a document package such as a .key or .pages folder, in its default app or in the app given by bundleId. Allowed. Opening a file with Mail is meant to start a new message with it attached; that is not verified on a real Mac yet (OBJ-29).
 public struct OpenFileCall: Codable, Equatable, Sendable {
     public var path: String
+    /// Open with this app instead of the default, for example com.apple.mail.
+    public var bundleId: String?
 
-    public init(path: String) {
+    public init(path: String, bundleId: String? = nil) {
         self.path = path
+        self.bundleId = bundleId
     }
 }
 
@@ -1106,7 +1160,7 @@ public struct ProbeAppCapabilityParams: Codable, Equatable, Sendable {
 }
 
 /// Version of these schemas. Bump it on every breaking change; see protocol/README.md.
-public let PROTOCOL_VERSION: Int = 2
+public let PROTOCOL_VERSION: Int = 3
 
 /// The model asked the user something (a ModelAction ask). The task waits for answerQuestion.
 public struct QuestionAsked: Codable, Equatable, Sendable {
@@ -1159,7 +1213,7 @@ public struct ReadyFrame: Codable, Equatable, Sendable {
 /// A model action after the harness resolved its element and decided its permission level.
 public struct RecordedAction: Codable, Equatable, Sendable {
     public var action: ModelAction
-    /// Required for element actions, whose risk is read from the element's label (SPEC-07 r6).
+    /// Required for element actions (click, setValue, scroll), whose risk is read from the element's label (SPEC-07 r6). For a type action, the focused element the text goes into (Observation.focused), present whenever the observation had one. Never a secureTextField for setValue or type (SPEC-05 r7). Absent for every other action.
     public var element: ResolvedElement?
     public var permission: PermissionLevel
 
@@ -1284,7 +1338,7 @@ public struct ScreenPoint: Codable, Equatable, Sendable {
     }
 }
 
-/// Scroll inside an element.
+/// Scroll inside an element, usually the container that scrolls: a scrollArea, table, list, or outline.
 public struct ScrollAction: Codable, Equatable, Sendable {
     public var element: Int
     public var direction: ScrollDirection
@@ -1835,7 +1889,7 @@ public struct TreeElement: Codable, Equatable, Sendable {
     }
 }
 
-/// Type text with the real keyboard. Main lane only (SPEC-03 r7).
+/// Type text with the real keyboard into the focused element. Main lane only (SPEC-03 r7). Refused when the focused element is a secureTextField (SPEC-05 r7): the harness looks up Observation.focused in the elements it sent, and RecordedAction rejects a type action whose element is a secure text field.
 public struct TypeTextAction: Codable, Equatable, Sendable {
     public var text: String
 

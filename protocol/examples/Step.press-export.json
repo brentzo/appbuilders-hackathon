@@ -5,7 +5,7 @@
   "lane": "main",
   "action": {
     "action": {
-      "kind": "axPress",
+      "kind": "click",
       "element": 4
     },
     "element": {

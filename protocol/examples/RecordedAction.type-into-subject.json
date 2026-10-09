@@ -1,0 +1,12 @@
+{
+  "action": {
+    "kind": "type",
+    "text": "Q3 report"
+  },
+  "element": {
+    "path": "AXWindow/AXTextField[Subject]",
+    "role": "textField",
+    "label": "Subject"
+  },
+  "permission": "allowed"
+}

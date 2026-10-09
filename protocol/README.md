@@ -48,7 +48,7 @@ Cross-device message kinds are next ([OBJ-25](../objectives/OBJ-25-cross-device-
 | `task.json` | Task, TaskStatus, Subtask, SubtaskStatus, SubtaskResult, Target, Step, WindowLock, AppCapability |
 | `action.json` | ModelAction and its variants, AXRole, ResolvedElement, RecordedAction |
 | `tools.json` | ToolName, ToolCall and one call type per typed tool, PhoneToolCall |
-| `observation.json` | Observation, TreeElement |
+| `observation.json` | Observation, TreeElement, Layer, LayerKind |
 | `worker.json` | WorkerInput, StepSummary, WorkerOutput |
 | `approval.json` | Approval, ApprovalKind, FileSummary, ApprovalDecision, ApprovalMethod |
 | `action-log.json` | ActionLogEntry |
@@ -107,6 +107,7 @@ The harness and the Mac app talk JSON-RPC 2.0 over a Unix socket, one JSON messa
 
 - The harness listens, at `~/Library/Application Support/Yumi/harness.sock` on the Mac.
 - The Mac app connects and calls `hello` with its protocol version first.
+  `HelloParams` accepts any version, so a Mac app on another version gets the harness's `UserError` (code `-32000`), not a `-32602` contract error.
 - Either side calls the other's methods on the same connection; `x-rpc` in `schemas/rpc.json` says which side serves each method.
 - Events are JSON-RPC notifications, and only the harness sends them.
 - A method that fails answers with a JSON-RPC error (code `-32000`) whose `data` is a `UserError`.
@@ -186,13 +187,46 @@ Our generator accepts only the schema subset that maps faithfully to all three l
 ## Versioning
 
 - `ProtocolVersion` in `common.json` is the version of these schemas, generated as `PROTOCOL_VERSION` in every language.
-- The Mac app sends it in `hello`, and the harness refuses a different version.
+- The Mac app sends it in `hello`, and the harness refuses a different version with a `UserError`.
+  `HelloParams.protocolVersion` is any positive integer, not the `ProtocolVersion` const, so that check is reachable; `HelloResult` and every bridge type still use the const.
+- Version 3 ([OBJ-29](../objectives/OBJ-29-protocol-mac-fixes.md)) fits the contracts to real macOS: `axPress` became `click`, the p1 vision `click` became `clickAt`, `AXRole` gained rows, cells, and scrollable containers, `Observation` gained `app`, `focused`, and `layer`, `open_app` takes a `name`, `open_file` takes a `bundleId`, and keys gained `enter`.
 - Bridge messages carry it in the envelope, and devices send it when they authenticate with the relay.
 - **Breaking changes bump the version:** removing or renaming a type, property, enum value, RPC method, or event; making an optional property required; tightening a rule so that values that used to validate no longer do.
 - **Not breaking:** adding an optional property, a new type, a new RPC method or event, or loosening a rule.
   These still need a regenerate and a commit.
 - An objective that adds or changes an RPC method or event updates `schemas/rpc.json` in the same commit.
 - Products never hand-write a protocol type.
+
+## Rules the schemas cannot express
+
+Some rules need data from two messages, so JSON Schema cannot check them alone.
+The harness applies them, and the schemas describe them:
+
+- **No typing into a password field (SPEC-05 r7).** Before running a `type` action, the harness looks up `Observation.focused` in the elements it sent.
+  If that element is a `secureTextField`, it refuses the action.
+  It records the focused element as `RecordedAction.element`, and the schema rejects a `type` or `setValue` whose element is a `secureTextField`, so the Mac app never receives one.
+- **Element numbers point into the tree.** `focused`, `layer.defaultButton`, and `layer.cancelButton` must be numbers of elements in the same observation.
+- **Key aliases.** The harness normalizes common aliases before validating a `key` action (for example `Cmd+S` to `cmd+s`, `esc` to `escape`, `backspace` to `delete`). The schema accepts only the canonical, lower-case form.
+- **Case-insensitive names.** Mac volumes are case-insensitive by default, so name clash checks (SPEC-07 r4) and checks for a file Yumi did not create compare names case-insensitively.
+- **Packages are folders.** Documents such as `.key` and `.pages` can be packages, so file tools handle a folder at a path that looks like a file.
+
+## How macOS roles map
+
+The Mac app maps `kAXRoleAttribute` and `kAXSubroleAttribute` (`AXRoleConstants.h` in the macOS SDK) to `AXRole`:
+
+| macOS | `AXRole` |
+|---|---|
+| `AXButton`, `AXMenuItem`, `AXMenuBarItem`, `AXTextArea`, `AXLink`, `AXCheckBox`, `AXPopUpButton`, `AXComboBox`, `AXMenuButton`, `AXDisclosureTriangle` | The name without `AX`, lower camel case (`checkbox` for `AXCheckBox`) |
+| `AXTextField` | `textField`, including a search field (subrole `AXSearchField`) |
+| `AXTextField` with subrole `AXSecureTextField` | `secureTextField`; its value is never read |
+| `AXRadioButton`, including a tab inside an `AXTabGroup` | `radioButton` |
+| `AXRow` (subroles `AXTableRow`, `AXOutlineRow`), `AXCell` | `row`, `cell`; `click` selects them by setting `AXSelected`, because rows usually do not support `AXPress` |
+| `AXScrollArea`, `AXTable`, `AXList`, `AXOutline` | `scrollArea`, `table`, `list`, `outline`, so the model can scroll the thing that scrolls |
+
+`Observation.layer` is `sheet` for an `AXSheet`, `dialog` for a window with subrole `AXDialog` or `AXSystemDialog`, and `menu` for an open `AXMenu`.
+macOS has no alert role or subrole, so `alert` is reported only when the Mac app can tell; otherwise an alert is a `sheet` or `dialog`.
+A sheet usually has no `AXTitle`.
+`defaultButton` and `cancelButton` come from `AXDefaultButton` and `AXCancelButton`, and `focused` from `AXFocusedUIElement`.
 
 ## Bridge crypto
 

@@ -92,7 +92,7 @@ describe("sealEnvelope and openEnvelope", () => {
     const changes = [
       { from: stranger.deviceId },
       { to: stranger.deviceId },
-      { protocolVersion: 3 as 2 },
+      { protocolVersion: 4 as 3 },
       { id: "0e9a3f5c-6b1d-4e2f-8a7b-9c0d1e2f3a4b" },
       { type: "result" as const },
       { expiresAt: "2026-10-09T07:43:00.000Z" },

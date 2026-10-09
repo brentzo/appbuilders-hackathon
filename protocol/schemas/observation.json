@@ -10,7 +10,16 @@
       "additionalProperties": false,
       "required": ["windowTitle", "elements"],
       "properties": {
+        "app": { "description": "The app's name as the user sees it, for example Keynote.", "type": "string", "minLength": 1 },
         "windowTitle": { "type": "string" },
+        "focused": {
+          "description": "The element number with keyboard focus, read from kAXFocusedUIElementAttribute (AXFocusedUIElement). Absent when the focused element is not in the tree. The harness refuses a type action when this element is a secureTextField (SPEC-05 r7).",
+          "$ref": "action.json#/$defs/ElementNumber"
+        },
+        "layer": {
+          "description": "What is in front in the target window: the window itself, or a sheet, dialog, alert, or open menu over it. That is where the model should act next (SPEC-05 r15).",
+          "$ref": "#/$defs/Layer"
+        },
         "elements": {
           "description": "Visible, actionable elements only, numbered from 1, at most 200 (SPEC-05 r2).",
           "type": "array",
@@ -37,6 +46,23 @@
       },
       "if": { "properties": { "role": { "const": "secureTextField" } } },
       "then": { "properties": { "value": false } }
+    },
+    "Layer": {
+      "description": "The front layer of the target window. defaultButton and cancelButton come from kAXDefaultButtonAttribute and kAXCancelButtonAttribute (AXDefaultButton, AXCancelButton) and are absent when the layer has none or the button is not in the tree.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": { "$ref": "#/$defs/LayerKind" },
+        "title": { "description": "The layer's title. Often absent: a sheet usually has no AXTitle on macOS.", "type": "string", "minLength": 1 },
+        "defaultButton": { "description": "The element number of the default button, the one Return presses.", "$ref": "action.json#/$defs/ElementNumber" },
+        "cancelButton": { "description": "The element number of the cancel button, the one Escape presses.", "$ref": "action.json#/$defs/ElementNumber" }
+      }
+    },
+    "LayerKind": {
+      "description": "window: nothing covers the window. sheet: an AXSheet (kAXSheetRole) attached to the window. dialog: a window with subrole AXDialog or AXSystemDialog (kAXDialogSubrole, kAXSystemDialogSubrole). alert: an alert; macOS has no alert role or subrole in AXRoleConstants.h, so the Mac app reports an alert as sheet or dialog unless it can tell. menu: an open AXMenu (kAXMenuRole).",
+      "type": "string",
+      "enum": ["window", "sheet", "dialog", "alert", "menu"]
     }
   }
 }

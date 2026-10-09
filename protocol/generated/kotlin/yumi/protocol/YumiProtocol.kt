@@ -113,14 +113,7 @@ data class AuthenticateFrame(
     val signature: String,
 ) : BridgeFrame
 
-/** Press an element through the accessibility API. */
-@Serializable
-@SerialName("axPress")
-data class AxPressAction(
-    val element: Long,
-) : ModelAction
-
-/** Actionable roles kept in the trimmed tree (SPEC-05 r2). Secure text fields are listed so Yumi can ask the user to type there, but their value is never read (SPEC-05 r7). */
+/** Actionable roles kept in the trimmed tree (SPEC-05 r2), mapped by the Mac app from kAXRoleAttribute and kAXSubroleAttribute (AXRoleConstants.h). Each role is the macOS role without the AX prefix, lower camel case: AXButton is button, AXMenuItem is menuItem, AXMenuBarItem is menuBarItem, AXTextField is textField, AXTextArea is textArea, AXLink is link, AXCheckBox is checkbox, AXRadioButton is radioButton, AXPopUpButton is popUpButton, AXComboBox is comboBox, AXMenuButton is menuButton, AXDisclosureTriangle is disclosureTriangle, AXRow is row, AXCell is cell, AXScrollArea is scrollArea, AXTable is table, AXList is list, and AXOutline is outline. The subrole wins where it matters: an AXTextField with subrole AXSecureTextField (kAXSecureTextFieldSubrole) is a secureTextField, and a search field (subrole AXSearchField) is a textField. A tab is an AXRadioButton inside an AXTabGroup, so it is a radioButton. Rows (subroles AXTableRow and AXOutlineRow) live in a table, outline, or list; the model clicks a row to select it and scrolls the container. Secure text fields are listed so Yumi can ask the user to type there, but their value is never read (SPEC-05 r7). */
 @Serializable
 enum class AXRole {
     @SerialName("button") Button,
@@ -132,7 +125,16 @@ enum class AXRole {
     @SerialName("link") Link,
     @SerialName("checkbox") Checkbox,
     @SerialName("radioButton") RadioButton,
-    @SerialName("popUpButton") PopUpButton;
+    @SerialName("popUpButton") PopUpButton,
+    @SerialName("comboBox") ComboBox,
+    @SerialName("menuButton") MenuButton,
+    @SerialName("disclosureTriangle") DisclosureTriangle,
+    @SerialName("row") Row,
+    @SerialName("cell") Cell,
+    @SerialName("scrollArea") ScrollArea,
+    @SerialName("table") Table,
+    @SerialName("list") List,
+    @SerialName("outline") Outline;
 }
 
 /** One WebSocket text frame between a device and the relay. Each frame says who sends it. See protocol/docs/pairing.md. */
@@ -169,10 +171,17 @@ data class ChallengeFrame(
     val nonce: String,
 ) : BridgeFrame
 
-/** p1 vision fallback only: click at coordinates in the screenshot the model saw (SPEC-05 r12). */
+/** Click an element through the accessibility API (SPEC-05 r1). On a row or cell (AXRow, AXCell) the Mac app selects it by setting kAXSelectedAttribute (AXSelected) to true, because rows usually do not support AXPress. On every other role it performs kAXPressAction (AXPress). */
 @Serializable
 @SerialName("click")
 data class ClickAction(
+    val element: Long,
+) : ModelAction
+
+/** p1 vision fallback only: click at coordinates in the screenshot the model saw (SPEC-05 r12). Elements in the tree are clicked with click instead. */
+@Serializable
+@SerialName("clickAt")
+data class ClickAtAction(
     val x: Long,
     val y: Long,
 ) : ModelAction
@@ -381,8 +390,10 @@ data class GoalRestated(
     val text: String,
 )
 
+/** The app's version. Any version validates here, so the harness's own check runs and a different version gets a UserError, not a contract error. */
 @Serializable
 data class HelloParams(
+    /** The version the app speaks. The harness refuses one that differs from ProtocolVersion with a UserError. */
     val protocolVersion: Long,
 )
 
@@ -396,7 +407,7 @@ data class HelloResult(
 @Serializable
 @SerialName("key")
 data class KeyAction(
-    /** Modifiers joined with +, then one key: a letter, digit, punctuation, f1-f19, or a named key. */
+    /** Modifiers joined with +, then one key: a letter, digit, punctuation, f1-f19, or a named key, all lower case as written here. return is the main Return key (kVK_Return) and enter is the keypad Enter key (kVK_ANSI_KeypadEnter), which some Mac apps treat differently. The harness normalizes common aliases before validating, for example Cmd+S to cmd+s, esc to escape, and backspace to delete; the schema accepts only the canonical form. */
     val combo: String,
 ) : ModelAction
 
@@ -406,6 +417,28 @@ enum class Lane {
     @SerialName("helper") Helper,
     @SerialName("ghost") Ghost,
     @SerialName("main") Main;
+}
+
+/** The front layer of the target window. defaultButton and cancelButton come from kAXDefaultButtonAttribute and kAXCancelButtonAttribute (AXDefaultButton, AXCancelButton) and are absent when the layer has none or the button is not in the tree. */
+@Serializable
+data class Layer(
+    val kind: LayerKind,
+    /** The layer's title. Often absent: a sheet usually has no AXTitle on macOS. */
+    val title: String? = null,
+    /** The element number of the default button, the one Return presses. */
+    val defaultButton: Long? = null,
+    /** The element number of the cancel button, the one Escape presses. */
+    val cancelButton: Long? = null,
+)
+
+/** window: nothing covers the window. sheet: an AXSheet (kAXSheetRole) attached to the window. dialog: a window with subrole AXDialog or AXSystemDialog (kAXDialogSubrole, kAXSystemDialogSubrole). alert: an alert; macOS has no alert role or subrole in AXRoleConstants.h, so the Mac app reports an alert as sheet or dialog unless it can tell. menu: an open AXMenu (kAXMenuRole). */
+@Serializable
+enum class LayerKind {
+    @SerialName("window") Window,
+    @SerialName("sheet") Sheet,
+    @SerialName("dialog") Dialog,
+    @SerialName("alert") Alert,
+    @SerialName("menu") Menu;
 }
 
 /** List a folder. Blocked for secret locations. */
@@ -483,7 +516,13 @@ data class NotPairedFrame(
 /** One look at the target window. */
 @Serializable
 data class Observation(
+    /** The app's name as the user sees it, for example Keynote. */
+    val app: String? = null,
     val windowTitle: String,
+    /** The element number with keyboard focus, read from kAXFocusedUIElementAttribute (AXFocusedUIElement). Absent when the focused element is not in the tree. The harness refuses a type action when this element is a secureTextField (SPEC-05 r7). */
+    val focused: Long? = null,
+    /** What is in front in the target window: the window itself, or a sheet, dialog, alert, or open menu over it. That is where the model should act next (SPEC-05 r15). */
+    val layer: Layer? = null,
     /** Visible, actionable elements only, numbered from 1, at most 200 (SPEC-05 r2). */
     val elements: List<TreeElement>,
     /** p1 vision fallback only. */
@@ -495,18 +534,23 @@ data class ObserveWindowParams(
     val target: AppTarget,
 )
 
-/** Open or bring forward an app. Allowed. */
+/** Open or bring forward an app, by exactly one of bundleId or name. Allowed. Apple's bundle ids are inconsistent (com.apple.mail, com.apple.Notes), so the model should usually give the name. */
 @Serializable
 @SerialName("open_app")
 data class OpenAppCall(
-    val bundleId: String,
+    /** For example com.apple.iWork.Keynote. */
+    val bundleId: String? = null,
+    /** The app's name as the user sees it, for example Keynote. The Mac app resolves it through Launch Services. */
+    val name: String? = null,
 ) : ToolCall
 
-/** Open a file in its default app. Allowed. */
+/** Open a file, or a document package such as a .key or .pages folder, in its default app or in the app given by bundleId. Allowed. Opening a file with Mail is meant to start a new message with it attached; that is not verified on a real Mac yet (OBJ-29). */
 @Serializable
 @SerialName("open_file")
 data class OpenFileCall(
     val path: String,
+    /** Open with this app instead of the default, for example com.apple.mail. */
+    val bundleId: String? = null,
 ) : ToolCall
 
 @Serializable
@@ -633,7 +677,7 @@ data class ProbeAppCapabilityParams(
 )
 
 /** Version of these schemas. Bump it on every breaking change; see protocol/README.md. */
-const val PROTOCOL_VERSION: Long = 2L
+const val PROTOCOL_VERSION: Long = 3L
 
 /** The model asked the user something (a ModelAction ask). The task waits for answerQuestion. */
 @Serializable
@@ -671,7 +715,7 @@ data object ReadyFrame : BridgeFrame
 @Serializable
 data class RecordedAction(
     val action: ModelAction,
-    /** Required for element actions, whose risk is read from the element's label (SPEC-07 r6). */
+    /** Required for element actions (click, setValue, scroll), whose risk is read from the element's label (SPEC-07 r6). For a type action, the focused element the text goes into (Observation.focused), present whenever the observation had one. Never a secureTextField for setValue or type (SPEC-05 r7). Absent for every other action. */
     val element: ResolvedElement? = null,
     val permission: PermissionLevel,
 )
@@ -765,7 +809,7 @@ data class ScreenPoint(
     val y: Double,
 ) : CursorTarget
 
-/** Scroll inside an element. */
+/** Scroll inside an element, usually the container that scrolls: a scrollArea, table, list, or outline. */
 @Serializable
 @SerialName("scroll")
 data class ScrollAction(
@@ -1103,7 +1147,7 @@ data class TreeElement(
     val enabled: Boolean,
 )
 
-/** Type text with the real keyboard. Main lane only (SPEC-03 r7). */
+/** Type text with the real keyboard into the focused element. Main lane only (SPEC-03 r7). Refused when the focused element is a secureTextField (SPEC-05 r7): the harness looks up Observation.focused in the elements it sent, and RecordedAction rejects a type action whose element is a secure text field. */
 @Serializable
 @SerialName("type")
 data class TypeTextAction(

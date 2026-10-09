@@ -1,0 +1,49 @@
+{
+  "app": "Mail",
+  "windowTitle": "Inbox",
+  "focused": 2,
+  "layer": {
+    "kind": "window"
+  },
+  "elements": [
+    {
+      "n": 1,
+      "role": "textField",
+      "label": "Search",
+      "value": "",
+      "enabled": true
+    },
+    {
+      "n": 2,
+      "role": "table",
+      "label": "Messages",
+      "enabled": true
+    },
+    {
+      "n": 3,
+      "role": "row",
+      "label": "Ana Cruz, Q3 invoice, 9:41 am",
+      "value": "selected",
+      "enabled": true
+    },
+    {
+      "n": 4,
+      "role": "row",
+      "label": "Ben Reyes, Lunch on Friday?, 8:15 am",
+      "enabled": true
+    },
+    {
+      "n": 5,
+      "role": "disclosureTriangle",
+      "label": "Favorites",
+      "value": "expanded",
+      "enabled": true
+    },
+    {
+      "n": 6,
+      "role": "menuButton",
+      "label": "Filter",
+      "enabled": true
+    }
+  ]
+}
