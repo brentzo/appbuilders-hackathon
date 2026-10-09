@@ -95,7 +95,7 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-41](OBJ-41-gui-act-sub-agent.md) | gui_act sub-agent | harness | Brent | 05, 02, 11 | 06, 07, 42 | 26, 44 | todo |
 | [OBJ-42](OBJ-42-permission-gate-and-file-tools.md) | Permission gate and typed file tools | harness | Brent | 07 | 03 | - | todo |
 | [OBJ-43](OBJ-43-approvals-pause-and-action-log.md) | Approvals, pause, and action log in the harness | harness | Brent | 07, 06 | 06, 42 | 40, 44, 45 | todo |
-| [OBJ-44](OBJ-44-mac-gui-execution.md) | Mac GUI execution | mac | Patrick | 05, 11 | 14, 18 | 26, 41 | todo |
+| [OBJ-44](OBJ-44-mac-gui-execution.md) | Mac GUI execution | mac | Patrick | 05, 11 | 14, 18 | 26, 41 | in-progress |
 | [OBJ-45](OBJ-45-mac-approval-cards.md) | Approval and blocked-action cards on the Mac | mac | Patrick | 07, 11 | 17 | 43 | todo |
 <!-- generated:objectives-index:end -->
 
