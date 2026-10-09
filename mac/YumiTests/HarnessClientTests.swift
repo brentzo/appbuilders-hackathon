@@ -60,6 +60,19 @@ struct HarnessClientTests {
         }
     }
 
+    /// The mock checks params against the protocol, so a goal with Auto mode is a valid `submitGoal` (OBJ-50).
+    @Test func submitsAGoalWithAutoMode() async throws {
+        let mock = try await MockHarnessProcess.start()
+        defer { mock.stop() }
+        let client = HarnessClient(socketPath: mock.socketPath)
+        client.start()
+        defer { client.stop() }
+        try await wait(for: client, toBe: .connected)
+
+        let result = try await client.submitGoal(HarnessLink.submitGoalParams("rename the invoices", autoMode: true))
+        #expect(!result.taskId.isEmpty)
+    }
+
     @Test func reconnectsAfterTheHarnessIsKilled() async throws {
         var mock = try await MockHarnessProcess.start()
         // Reads `mock` when the test ends, so it stops whichever mock is running then, even if the

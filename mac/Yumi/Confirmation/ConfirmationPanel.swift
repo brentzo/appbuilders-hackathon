@@ -4,14 +4,23 @@ import YumiProtocol
 
 /// The repeat-back panel (OBJ-17.4): a small floating panel at the top of the display with the
 /// user's pointer. Like the tiling question, it never activates Yumi, so the user's app keeps focus.
+/// In Auto mode (OBJ-50) the same panel shows what Yumi heard, without buttons.
 @MainActor
-final class ConfirmationPanel: ConfirmationPresenting {
+final class ConfirmationPanel: ConfirmationPresenting, HeardPresenting {
     private var panel: NSPanel?
     private var taskId: String?
 
     func show(taskId: String, text: String, choose: @escaping (ConfirmationChoice) -> Void) {
+        present(ConfirmationView(text: text, choose: choose), for: taskId)
+    }
+
+    func showHeard(taskId: String, line: String, heard: String) {
+        present(HeardView(line: line, heard: heard), for: taskId)
+    }
+
+    private func present(_ view: some View, for taskId: String) {
         close()
-        let hosting = NSHostingView(rootView: ConfirmationView(text: text, choose: choose))
+        let hosting = NSHostingView(rootView: view)
         let size = hosting.fittingSize
         let panel = NSPanel(
             contentRect: NSRect(origin: .zero, size: size),
@@ -71,6 +80,30 @@ struct ConfirmationView: View {
                 Button(ConfirmationCopy.goAhead) { choose(.goAhead) }
                     .buttonStyle(YumiPrimaryButtonStyle())
             }
+        }
+        .padding(YumiSpace.l)
+        .yumiCard()
+    }
+}
+
+/// Auto mode's acknowledgement (OBJ-50.4): Yumi's line, and what it heard under it.
+struct HeardView: View {
+    let line: String
+    let heard: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: YumiSpace.m) {
+            YumiBadge(size: 32)
+            VStack(alignment: .leading, spacing: YumiSpace.xs) {
+                Text(line)
+                    .font(YumiFont.headline)
+                    .foregroundStyle(YumiColor.ink)
+                Text("“\(heard)”")
+                    .font(YumiFont.body)
+                    .foregroundStyle(YumiColor.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(width: 360, alignment: .leading)
         }
         .padding(YumiSpace.l)
         .yumiCard()

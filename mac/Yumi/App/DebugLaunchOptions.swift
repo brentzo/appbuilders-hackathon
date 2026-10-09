@@ -79,6 +79,12 @@ enum DebugLaunchOptions {
             opened = ("paused", sampleWindow(card(PausedView(text: PauseCopy.paused, resume: {}, cancel: {}))))
         case "tiling":
             opened = ("tiling", sampleWindow(card(TilingQuestionView { _ in })))
+        case "confirmation":
+            let restated = "You want me to rename the invoices in your Downloads folder by date. Should I go ahead?"
+            opened = ("confirmation", sampleWindow(card(ConfirmationView(text: restated) { _ in })))
+        case "heard":
+            let line = AutoModeCopy.acknowledgement
+            opened = ("heard", sampleWindow(card(HeardView(line: line, heard: "rename the invoices in Downloads by date"))))
         case "pairing-code":
             PhoneLink.shared.showSampleCode(.init(payload: "yumi-pair:sample", expiresAt: Date().addingTimeInterval(300)))
             opened = ("pairing-code", PairingWindow.show())

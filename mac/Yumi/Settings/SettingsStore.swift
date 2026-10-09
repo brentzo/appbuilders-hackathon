@@ -15,6 +15,7 @@ final class SettingsStore {
         static let wakeWordEnabled = "settings.wakeWordEnabled"
         static let pushToTalkShortcut = "settings.pushToTalkShortcut"
         static let speaksTaglish = "settings.speaksTaglish"
+        static let autoMode = "settings.autoMode"
         static let demoModeEnabled = "settings.demoModeEnabled"
         static let visibleCursorCap = "settings.visibleCursorCap"
     }
@@ -40,6 +41,11 @@ final class SettingsStore {
         set { update { $0.speaksTaglish = newValue } }
     }
 
+    var autoMode: Bool {
+        get { settings.autoMode }
+        set { update { $0.autoMode = newValue } }
+    }
+
     var demoModeEnabled: Bool {
         get { settings.demoModeEnabled }
         set { update { $0.demoModeEnabled = newValue } }
@@ -62,6 +68,7 @@ final class SettingsStore {
     private func save(_ settings: YumiSettings) {
         defaults.set(settings.wakeWordEnabled, forKey: Key.wakeWordEnabled)
         defaults.set(settings.speaksTaglish, forKey: Key.speaksTaglish)
+        defaults.set(settings.autoMode, forKey: Key.autoMode)
         defaults.set(settings.demoModeEnabled, forKey: Key.demoModeEnabled)
         defaults.set(settings.visibleCursorCap, forKey: Key.visibleCursorCap)
         do {
@@ -82,6 +89,7 @@ final class SettingsStore {
             wakeWordEnabled: defaults.object(forKey: Key.wakeWordEnabled) as? Bool ?? fallback.wakeWordEnabled,
             pushToTalkShortcut: shortcut,
             speaksTaglish: defaults.object(forKey: Key.speaksTaglish) as? Bool ?? fallback.speaksTaglish,
+            autoMode: defaults.object(forKey: Key.autoMode) as? Bool ?? fallback.autoMode,
             demoModeEnabled: defaults.object(forKey: Key.demoModeEnabled) as? Bool ?? fallback.demoModeEnabled,
             visibleCursorCap: clampCap(defaults.object(forKey: Key.visibleCursorCap) as? Int ?? fallback.visibleCursorCap)
         )

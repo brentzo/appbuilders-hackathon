@@ -22,6 +22,10 @@ struct SettingsView: View {
                     Text("I speak Taglish")
                     Text("Yumi understands Tagalog and English mixed. It takes a moment longer.")
                 }
+                Toggle(isOn: $store.autoMode) {
+                    Text("Auto mode")
+                    Text("Start right away, without repeating your goal back. Yumi still asks before sending or deleting anything.")
+                }
             }
 
             Section("Cursors") {

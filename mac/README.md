@@ -138,6 +138,13 @@ Before any work starts, Yumi repeats the goal back ([OBJ-17](../objectives/OBJ-1
 - While a goal waits for its answer and no task is confirmed, `executeAction` does nothing.
 - Everything Yumi says goes through `SpeechOutput` (`SystemSpeech`, the system voice), including the harness's `speak` events and the tiling question.
 
+With "Auto mode" on in Settings (off by default), the goal starts without the repeat-back ([OBJ-50](../objectives/OBJ-50-mac-auto-mode.md), SPEC-01 r14).
+
+- Every `submitGoal` carries `autoMode`, read from the setting when the goal is submitted.
+- Once the harness has started the task, `AutoModeAcknowledgement` shows "On it." and what Yumi heard in the repeat-back panel, without buttons, and says "On it.".
+  The panel closes after 3 seconds, or when the task ends.
+- Approvals for sends and deletes still show their cards, and the stop shortcut works as always.
+
 ### Voice intake
 
 Push-to-talk turns speech into a goal on the Mac ([OBJ-15](../objectives/OBJ-15-mac-voice-intake.md)).
@@ -239,7 +246,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 ```
 
 - `-YumiAppearance light|dark` forces the app's appearance.
-- `-YumiOpen settings|onboarding|pairing|pairing-code|type-goal|menu|menu-busy|approval-send|approval-delete|paused|tiling|chips|panels|error:<ErrorKind>` opens that window at launch (`pairing-code` shows a sample pairing code).
+- `-YumiOpen settings|onboarding|pairing|pairing-code|type-goal|menu|menu-busy|approval-send|approval-delete|paused|tiling|confirmation|heard|chips|panels|error:<ErrorKind>` opens that window at launch (`pairing-code` shows a sample pairing code).
 - `-YumiVoiceFile <path>` makes push-to-talk transcribe that recording instead of the microphone (Debug builds).
 - `-YumiReplyFile <path>` makes the spoken answer after a repeat-back, or the goal after the wake word, transcribe that recording (Debug builds).
 - `-YumiWakeWordFile <path>` feeds that recording to the wake word detector at real-time pace instead of the microphone, and `-YumiWakeWordLoop YES` repeats it (Debug builds).

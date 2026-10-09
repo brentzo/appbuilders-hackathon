@@ -28,6 +28,8 @@ final class HarnessLink {
     let speech: SpeechOutput
     /// The repeat-back panel and the answers to it (OBJ-17).
     let confirmation: GoalConfirmation
+    /// What Yumi heard and "On it.", in Auto mode (OBJ-50).
+    let autoMode: AutoModeAcknowledgement
     /// The send and delete cards, and the Trash (OBJ-40).
     let approvals: ApprovalCards
     /// Stop, take-over, and the paused panel (OBJ-35).
@@ -54,11 +56,13 @@ final class HarnessLink {
             say: { text in Task { await speech.speak(text) } }
         )
         tiler.carrier = CursorWindowCarrier(overlay: overlay)
+        let confirmationPanel = ConfirmationPanel()
         confirmation = GoalConfirmation(
-            speech: speech, listener: NoReplyListener(), presenter: ConfirmationPanel(), overlay: overlay
+            speech: speech, listener: NoReplyListener(), presenter: confirmationPanel, overlay: overlay
         ) { [client] taskId, reply in
             _ = try await client.call(.replyToConfirmation, ReplyToConfirmationParams(taskId: taskId, reply: reply), returning: Empty.self)
         }
+        autoMode = AutoModeAcknowledgement(speech: speech, presenter: confirmationPanel)
         let confirmation = self.confirmation
         approvals = ApprovalCards(
             speech: speech, listen: { await confirmation.listener.listenForReply() }, presenter: ApprovalPanel(), overlay: overlay
@@ -126,6 +130,7 @@ final class HarnessLink {
             taskStatuses[change.taskId] = change.status
             tiler.taskStatusChanged(change.taskId, change.status)
             confirmation.taskStatusChanged(change.taskId, change.status)
+            autoMode.taskStatusChanged(change.taskId, change.status)
             pause.taskStatusChanged(change.taskId, change.status)
             model.taskStatus = Self.appStatus(for: Array(taskStatuses.values))
             if let subtaskId = change.subtaskId, let status = change.subtaskStatus,
@@ -213,18 +218,26 @@ final class HarnessLink {
     }
 
     /// Sends a spoken or typed goal to the harness. The main cursor appears next to the pointer at
-    /// once (OBJ-17.3); the harness then restates the goal. Voice intake (OBJ-15) calls this.
+    /// once (OBJ-17.3); the harness then restates the goal, or in Auto mode starts it, and Yumi
+    /// shows what it heard and says "On it." (OBJ-50). Voice intake (OBJ-15) calls this.
     func submitGoal(_ transcript: String) {
         confirmation.goalSubmitted()
+        let autoMode = model.settings.autoMode
         Task {
             do {
-                let result = try await client.submitGoal(SubmitGoalParams(transcript: transcript, originDeviceId: "mac-local"))
-                log.notice("Goal submitted, task \(result.taskId, privacy: .public)")
+                let result = try await client.submitGoal(Self.submitGoalParams(transcript, autoMode: autoMode))
+                log.notice("Goal submitted, task \(result.taskId, privacy: .public), auto mode \(autoMode, privacy: .public)")
+                if autoMode { await self.autoMode.goalStarted(taskId: result.taskId, heard: transcript) }
             } catch {
                 overlay.fade(id: GoalConfirmation.mainCursorId)
                 report(error, from: "submitGoal")
             }
         }
+    }
+
+    /// Every goal says whether Auto mode is on (SPEC-01 r14), so the harness never guesses.
+    static func submitGoalParams(_ transcript: String, autoMode: Bool) -> SubmitGoalParams {
+        SubmitGoalParams(transcript: transcript, originDeviceId: "mac-local", autoMode: autoMode)
     }
 
     /// Debug aid for the mock: submits a fixed goal so scripts that play on `submitGoal`

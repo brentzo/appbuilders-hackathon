@@ -65,7 +65,7 @@ struct GoalConfirmationTests {
         let flow = confirmation(FakeListener(["yes"]), sent: sent)
 
         flow.goalSubmitted()
-        let spawned = try? #require(overlay.cursors[GoalConfirmation.mainCursorId])
+        let spawned = overlay.cursors[GoalConfirmation.mainCursorId]
         #expect(spawned?.kind == .main)
         // The harness's own spawn of the main cursor keeps it where it is.
         overlay.apply(.spawn(SpawnCursor(cursorId: "main", cursorKind: .main)))
