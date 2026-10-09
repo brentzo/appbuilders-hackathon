@@ -1,10 +1,11 @@
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { WorkerInput } from "@yumi/protocol/types";
 import { DEFAULT_MODEL_CONFIG, type ModelConfig } from "../src/config.ts";
 
-export const PROTOCOL_DIR = new URL("../../protocol/", import.meta.url).pathname;
+export const PROTOCOL_DIR = fileURLToPath(new URL("../../protocol/", import.meta.url));
 
 export function modelConfig(baseUrl: string, overrides: Partial<ModelConfig> = {}): ModelConfig {
   return { ...DEFAULT_MODEL_CONFIG, baseUrl, ...overrides };

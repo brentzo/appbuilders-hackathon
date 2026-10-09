@@ -75,7 +75,7 @@ describe("a worker step", () => {
     expect(JSON.stringify(schema)).not.toContain("uniqueItems");
   });
 
-  it("sends the screenshot as an image when the observation has one", async () => {
+  it.skipIf(process.platform === "win32")("sends the screenshot as an image when the observation has one", async () => {
     const dir = tempDir();
     try {
       const screenshot = join(dir.path, "screen.png");

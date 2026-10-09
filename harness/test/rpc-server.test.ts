@@ -54,7 +54,7 @@ async function rawClient(path: string) {
   };
 }
 
-describe("the local RPC server", () => {
+describe.skipIf(process.platform === "win32")("the local RPC server", () => {
   it("answers ping from a client on the socket", async () => {
     server = await HarnessRpcServer.start({ socketPath, logger });
     const client = await rawClient(socketPath);
@@ -129,7 +129,7 @@ describe("the local RPC server", () => {
   });
 });
 
-describe("with the protocol's mock Mac app (npm run mock:mac)", () => {
+describe.skipIf(process.platform === "win32")("with the protocol's mock Mac app (npm run mock:mac)", () => {
   let mock: ChildProcess | undefined;
   let output = "";
 

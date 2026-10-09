@@ -69,7 +69,7 @@ describe("the config", () => {
       YUMI_MODEL_TIMEOUT_MS: "5000",
       YUMI_MODEL_STRUCTURED_OUTPUT: "0",
     });
-    expect(config.socketPath).toBe("/tmp/yumi-test/harness.sock");
+    expect(config.socketPath).toBe(join("/tmp/yumi-test", "harness.sock"));
     expect(config.model).toMatchObject({
       baseUrl: "http://localhost:9000/v1",
       model: "mlx-community/Qwen3.5-4B-4bit",
