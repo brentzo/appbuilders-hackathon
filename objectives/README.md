@@ -132,6 +132,7 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-72](OBJ-72-mac-cross-device-routing.md) | Mac app side of cross-device routing | mac | Patrick | 09 | 14 | 64, 68, 70 | todo |
 | [OBJ-73](OBJ-73-live-cross-device-routing-acceptance.md) | Live cross-device routing acceptance | bridge | Jepoy | 09 | 30, 65, 66, 67, 68, 69, 70, 71, 72 | - | todo |
 | [OBJ-74](OBJ-74-save-list-to-note.md) | Save a list into a new note | harness | Brent | 02, 01 | - | 17, 36, 50 | todo |
+| [OBJ-75](OBJ-75-vision-fallback.md) | Vision fallback for apps without accessibility content | mac | Patrick | 05 | - | 36, 39 | todo |
 <!-- generated:objectives-index:end -->
 
 ## Priority and blocking
@@ -242,7 +243,7 @@ Workload:
 |---|---|---|
 | Brent | 03, 04, 05, 06, 07, 08, 09, 17, 22, 23, 24, 26, 29, 32, 36, 37, 38, 41, 42, 43, 47, 49, 50, 51, 52, 53, 54, 57, 58, 59, 61, 63, 65, 66, 67, 68, 69, 70, 71, 74 | 40 |
 | Jepoy | 01, 02, 11, 12, 13, 21, 25, 28, 30, 31, 33, 34, 45, 48, 55, 56, 60, 64, 73 | 19 |
-| Patrick | 10, 14, 15, 16, 18, 19, 20, 27, 35, 39, 40, 44, 46, 62, 72 | 15 |
+| Patrick | 10, 14, 15, 16, 18, 19, 20, 27, 35, 39, 40, 44, 46, 62, 72, 75 | 16 |
 <!-- generated:objectives-workload:end -->
 ## Suggested order
 
@@ -251,7 +252,7 @@ Waves come from hard dependencies only. Each person works their column top to bo
 <!-- generated:objectives-waves:start -->
 | Wave | Brent | Jepoy | Patrick |
 |---|---|---|---|
-| 1 | OBJ-22, OBJ-26, OBJ-32, OBJ-50, OBJ-51, OBJ-52, OBJ-54, OBJ-58, OBJ-59, OBJ-61, OBJ-74 | OBJ-01, OBJ-02, OBJ-11, OBJ-12, OBJ-28, OBJ-55 | OBJ-10 |
+| 1 | OBJ-22, OBJ-26, OBJ-32, OBJ-50, OBJ-51, OBJ-52, OBJ-54, OBJ-58, OBJ-59, OBJ-61, OBJ-74 | OBJ-01, OBJ-02, OBJ-11, OBJ-12, OBJ-28, OBJ-55 | OBJ-10, OBJ-75 |
 | 2 | OBJ-03, OBJ-24, OBJ-29, OBJ-53, OBJ-63 | OBJ-13, OBJ-21, OBJ-25, OBJ-31, OBJ-33, OBJ-45, OBJ-56, OBJ-60 | OBJ-14 |
 | 3 | OBJ-04, OBJ-23, OBJ-37, OBJ-41, OBJ-47, OBJ-49 | OBJ-34, OBJ-48, OBJ-64 | OBJ-15, OBJ-18, OBJ-27, OBJ-46, OBJ-72 |
 | 4 | OBJ-05, OBJ-07, OBJ-17, OBJ-42, OBJ-43, OBJ-65, OBJ-66 | - | OBJ-16, OBJ-19, OBJ-20, OBJ-39, OBJ-44 |

@@ -405,6 +405,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 | [OBJ-58](../objectives/OBJ-58-mac-hey-yumi-recognizer.md) | "Hey Yumi" on the Mac with the on-device recognizer | Brent | done |
 | [OBJ-62](../objectives/OBJ-62-mac-voice-interruption.md) | Mac listens for interruptions during a task | Patrick | todo |
 | [OBJ-72](../objectives/OBJ-72-mac-cross-device-routing.md) | Mac app side of cross-device routing | Patrick | todo |
+| [OBJ-75](../objectives/OBJ-75-vision-fallback.md) | Vision fallback for apps without accessibility content | Patrick | todo |
 <!-- generated:product-objectives:end -->
 
 Related: [OBJ-21](../objectives/OBJ-21-mac-bridge-client-and-pairing.md) (Jepoy's bridge client; its pairing screen and connection state are built here in OBJ-27).
