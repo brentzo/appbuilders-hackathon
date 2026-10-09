@@ -17,8 +17,9 @@ android {
         versionName = "0.1.0"
 
         ndk {
-            // Real phones are arm64. x86_64 keeps the emulator working. Each ONNX Runtime ABI adds about 35 MB.
-            abiFilters += listOf("arm64-v8a", "x86_64")
+            // Both phones and the Android emulator on Apple silicon are arm64.
+            // ONNX Runtime adds 34 to 41 MB per ABI, so the others are left out.
+            abiFilters += listOf("arm64-v8a")
         }
     }
 

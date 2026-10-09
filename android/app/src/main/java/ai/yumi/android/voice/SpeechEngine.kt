@@ -85,11 +85,22 @@ class OnDeviceSpeechEngine(context: Context) : SpeechEngine {
     }
 
     private inner class Listener(private val onEvent: (SpeechEvent) -> Unit) : RecognitionListener {
-        override fun onReadyForSpeech(params: Bundle?) = onEvent(SpeechEvent.Ready)
-        override fun onBeginningOfSpeech() = Unit
+        private var lastGuess: String? = null
+
+        override fun onReadyForSpeech(params: Bundle?) {
+            Log.i(TAG, "Microphone on")
+            onEvent(SpeechEvent.Ready)
+        }
+
+        override fun onBeginningOfSpeech() {
+            Log.i(TAG, "Speech started")
+        }
         override fun onRmsChanged(rmsdB: Float) = Unit
         override fun onBufferReceived(buffer: ByteArray?) = Unit
-        override fun onEndOfSpeech() = onEvent(SpeechEvent.EndOfSpeech)
+        override fun onEndOfSpeech() {
+            Log.i(TAG, "Speech ended, microphone off")
+            onEvent(SpeechEvent.EndOfSpeech)
+        }
 
         override fun onError(error: Int) {
             Log.i(TAG, "Recognizer error $error")
@@ -110,7 +121,9 @@ class OnDeviceSpeechEngine(context: Context) : SpeechEngine {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return
             val tag = results.getString(SpeechRecognizer.DETECTED_LANGUAGE) ?: return
             val confidence = results.getInt(SpeechRecognizer.LANGUAGE_DETECTION_CONFIDENCE_LEVEL)
-            Log.i(TAG, "Detected language $tag (confidence $confidence)")
+            val guess = "$tag ($confidence)"
+            if (guess != lastGuess) Log.i(TAG, "Detected language $guess")
+            lastGuess = guess
             onEvent(SpeechEvent.Language(tag, confidence))
         }
 

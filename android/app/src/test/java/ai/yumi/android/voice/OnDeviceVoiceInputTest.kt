@@ -144,10 +144,28 @@ class OnDeviceVoiceInputTest {
     }
 
     @Test
-    fun unsureLanguageGuessesAreIgnored() {
-        assertFalse(OnDeviceVoiceInput.isOtherLanguage("de-DE", SpeechRecognizer.LANGUAGE_DETECTION_CONFIDENCE_LEVEL_NOT_CONFIDENT))
-        assertFalse(OnDeviceVoiceInput.isOtherLanguage("en-GB", SpeechRecognizer.LANGUAGE_DETECTION_CONFIDENCE_LEVEL_HIGHLY_CONFIDENT))
-        assertTrue(OnDeviceVoiceInput.isOtherLanguage("tl", SpeechRecognizer.LANGUAGE_DETECTION_CONFIDENCE_LEVEL_CONFIDENT))
+    fun earlyWrongLanguageGuessesDoNotRejectEnglish() = runTest {
+        // The sequence the demo phone's recognizer reported for "set a timer for ten minutes".
+        val voice = voice()
+        voice.start()
+        runCurrent()
+        engine.send(SpeechEvent.Language("ar-eg", SpeechRecognizer.LANGUAGE_DETECTION_CONFIDENCE_LEVEL_CONFIDENT))
+        engine.send(SpeechEvent.Language("id-id", SpeechRecognizer.LANGUAGE_DETECTION_CONFIDENCE_LEVEL_NOT_CONFIDENT))
+        engine.send(SpeechEvent.Language("fil-ph", SpeechRecognizer.LANGUAGE_DETECTION_CONFIDENCE_LEVEL_NOT_CONFIDENT))
+        engine.send(SpeechEvent.Language("en-us", SpeechRecognizer.LANGUAGE_DETECTION_CONFIDENCE_LEVEL_HIGHLY_CONFIDENT))
+        engine.send(SpeechEvent.Results(listOf("Set a timer for 10 minutes")))
+        assertNull(voice.failure.value)
+        assertEquals(listOf("Set a timer for 10 minutes"), goals)
+    }
+
+    @Test
+    fun unsureLanguageGuessesAreIgnored() = runTest {
+        val voice = voice()
+        voice.start()
+        runCurrent()
+        engine.send(SpeechEvent.Language("de-de", SpeechRecognizer.LANGUAGE_DETECTION_CONFIDENCE_LEVEL_NOT_CONFIDENT))
+        engine.send(SpeechEvent.Results(listOf("open spotify")))
+        assertEquals(listOf("open spotify"), goals)
     }
 
     @Test

@@ -53,14 +53,15 @@ class OnDeviceVoiceInput(
 
     /** Increases with every session, so late events from an ended session are ignored. */
     private var session = 0
-    private var otherLanguage: String? = null
+    /** The recognizer's latest confident guess at the spoken language. Early guesses are often wrong. */
+    private var spokenLanguage: String? = null
     private var watchdog: Job? = null
 
     override fun start(trigger: VoiceTrigger) {
         if (phase != Phase.Idle) return
         _failure.value = null
         _partial.value = null
-        otherLanguage = null
+        spokenLanguage = null
         if (!microphoneAllowed()) return fail(ErrorKind.MicrophonePermissionMissing, "Microphone not allowed")
         if (!engine.isAvailable()) {
             return fail(ErrorKind.LanguageNotSupported, "This phone has no on-device speech recognizer")
@@ -110,16 +111,19 @@ class OnDeviceVoiceInput(
             SpeechEvent.EndOfSpeech -> if (phase != Phase.Idle) phase = Phase.Transcribing
             is SpeechEvent.Partial -> _partial.value = event.text.ifBlank { null }
             is SpeechEvent.Language -> {
-                if (isOtherLanguage(event.tag, event.confidence)) otherLanguage = event.tag
+                if (isConfident(event.confidence)) spokenLanguage = event.tag
             }
             is SpeechEvent.Results -> {
                 val text = event.texts.firstOrNull { it.isNotBlank() }?.trim()
+                val language = spokenLanguage
                 when {
-                    otherLanguage != null ->
-                        finish(YumiException(ErrorKind.LanguageNotSupported, "Spoken language was $otherLanguage"))
+                    language != null && !isEnglish(language) ->
+                        finish(YumiException(ErrorKind.LanguageNotSupported, "Spoken language was $language"))
                     text == null -> finish(YumiException(ErrorKind.DidntCatchSpeech, "Empty transcript"))
                     else -> {
                         finish(null)
+                        // Never log the transcript itself.
+                        log("Transcript handed to onGoal (${text.split(' ').size} words)")
                         goals.onGoal(text)
                     }
                 }
@@ -167,12 +171,13 @@ class OnDeviceVoiceInput(
         }
 
         /**
-         * True if the recognizer is confident the user spoke something other than English.
-         * Low-confidence guesses are ignored: short English commands are often misjudged.
+         * Low-confidence guesses are ignored. On the demo phone the recognizer guessed "ar-eg" as confident early in
+         * an English sentence, then settled on "en-us" as highly confident, so only the latest confident guess counts.
          */
         @SuppressLint("InlinedApi") // Language detection results only arrive on Android 14 and later.
-        fun isOtherLanguage(tag: String, confidence: Int): Boolean =
-            confidence >= SpeechRecognizer.LANGUAGE_DETECTION_CONFIDENCE_LEVEL_CONFIDENT &&
-                Locale.forLanguageTag(tag).language.let { it.isNotEmpty() && it != "en" }
+        fun isConfident(confidence: Int): Boolean =
+            confidence >= SpeechRecognizer.LANGUAGE_DETECTION_CONFIDENCE_LEVEL_CONFIDENT
+
+        fun isEnglish(tag: String): Boolean = Locale.forLanguageTag(tag).language.let { it.isEmpty() || it == "en" }
     }
 }
