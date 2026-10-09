@@ -5,8 +5,9 @@ import Foundation
 ///
 /// Like the mock, it runs `node --import tsx` directly, so the harness is one process the supervisor
 /// can stop and watch. The script path is absolute so the supervisor's leftover check finds
-/// "harness" in its command line. The harness reads its settings (model server, bridge URL, support
-/// folder) from the environment Yumi was started with.
+/// "harness" in its command line. The harness reads its settings (model server, bridge URL) from the
+/// environment Yumi was started with, and its support folder from `HarnessFolder`, so both agree on
+/// where the socket is.
 struct RealHarnessLauncher: HarnessLauncher {
     let displayName = "harness"
     let isMock = false
@@ -26,6 +27,11 @@ struct RealHarnessLauncher: HarnessLauncher {
         process.executableURL = node
         process.currentDirectoryURL = folder
         process.arguments = ["--import", "tsx", folder.appendingPathComponent("src/main.ts").path]
+        process.environment = Self.environment(ProcessInfo.processInfo.environment)
         return process
+    }
+
+    static func environment(_ inherited: [String: String], folder: URL = HarnessFolder.url) -> [String: String] {
+        inherited.merging([HarnessFolder.environmentKey: folder.path]) { _, ours in ours }
     }
 }

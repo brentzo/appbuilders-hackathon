@@ -41,10 +41,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var terminationSignal: DispatchSourceSignal?
     private let log = Logger(subsystem: "ph.appbuilders.yumi", category: "app")
 
-    /// True when the app is only hosting unit tests, so it should not open windows.
-    private var isHostingTests: Bool {
-        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
-    }
+    /// True when the app is only hosting unit tests, so it should not open windows or start the
+    /// harness.
+    private var isHostingTests: Bool { TestHost.isActive }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         log.info("Yumi launched")

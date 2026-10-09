@@ -13,6 +13,9 @@ final class HarnessSupervisor {
     }
 
     let launcher: HarnessLauncher
+    /// A test host never starts a harness, so tests cannot stop or replace the one a running Yumi
+    /// uses (see `start`).
+    private let isTestHost: Bool
     private(set) var state: State = .stopped {
         didSet { if state != oldValue { onStateChange?(state) } }
     }
@@ -31,15 +34,20 @@ final class HarnessSupervisor {
     static let healthyRun: TimeInterval = 30
 
     private var pidFile: URL {
-        URL(fileURLWithPath: HarnessSocket.defaultPath).deletingLastPathComponent()
-            .appendingPathComponent(launcher.isMock ? "mock-harness.pid" : "harness.pid")
+        HarnessFolder.url.appendingPathComponent(launcher.isMock ? "mock-harness.pid" : "harness.pid")
     }
 
-    init(launcher: HarnessLauncher) {
+    init(launcher: HarnessLauncher, isTestHost: Bool = TestHost.isActive) {
         self.launcher = launcher
+        self.isTestHost = isTestHost
     }
 
     func start() {
+        // Starting would stop the harness in the pid file, which may be the user's own Yumi's.
+        guard !isTestHost else {
+            log.notice("Not starting the \(self.launcher.displayName, privacy: .public): this process is a test host")
+            return
+        }
         stopping = false
         guard process == nil, restartTask == nil else { return }
         if launcher.isMock {

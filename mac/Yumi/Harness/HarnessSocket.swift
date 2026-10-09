@@ -1,9 +1,9 @@
 import Foundation
 
 enum HarnessSocket {
-    /// Where the harness listens on the Mac (protocol/README.md, "Local RPC").
+    /// Where the harness listens on the Mac (protocol/README.md, "Local RPC"): in the harness folder,
+    /// which is a temporary one when hosting tests.
     static var defaultPath: String {
-        FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support/Yumi/harness.sock").path
+        HarnessFolder.url.appendingPathComponent("harness.sock").path
     }
 }

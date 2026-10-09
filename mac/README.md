@@ -91,6 +91,9 @@ It finds `node` through your login shell, runs the harness with `node --import t
 Run `npm install` in `harness/` and `protocol/` first.
 With the mock, the menu says "Using the mock harness" so it is never demoed by accident.
 The status line says "Yumi is getting ready" until the harness answers `hello` and `ping`.
+The harness's socket, pid file, task store, and log live in its folder, `~/Library/Application Support/Yumi` (`HarnessFolder`), which Yumi passes to the harness as `YUMI_SUPPORT_DIR`.
+When Yumi starts, it stops a harness left in that folder's pid file by an earlier Yumi.
+The unit test host starts no harness and uses a temporary folder, so running the tests never stops or replaces the harness of a Yumi that is running.
 
 Launch arguments, in Debug and Release:
 
@@ -99,6 +102,7 @@ Launch arguments, in Debug and Release:
 - `-YumiSendSampleGoal YES` submits a sample goal once connected. The menu has the same action: "Send sample goal to the mock".
 - The menu's "Cursor debug" submenu, shown while the mock is in use, sends each cursor command by hand: spawn, move, move to the next display, three cursors at once, every state, label, a helper chip, and fade.
 - `YUMI_REPO_ROOT` (environment) points at another checkout of the repo.
+- `YUMI_SUPPORT_DIR` (environment) moves the harness folder, for Yumi and the harness together.
 
 What happens is logged under the subsystem `ph.appbuilders.yumi`, including the mock's own output:
 
