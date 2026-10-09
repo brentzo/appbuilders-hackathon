@@ -1,4 +1,5 @@
 import type { Subtask, UserError, Uuid } from "@yumi/protocol/types";
+import { DEFAULT_LIMITS } from "../config.ts";
 import { describeError } from "../log.ts";
 import { ProbeFailure } from "../router/index.ts";
 import type { LaneRunners, RouteSubtask } from "./lanes.ts";
@@ -8,6 +9,9 @@ import { runSubtask, type SubtaskRun, type SubtaskRunDeps } from "./subtask-runn
  * Runs a saved plan (OBJ-05.4): a subtask becomes ready when every subtask it depends on is done, and ready
  * subtasks run at the same time, up to the model server's parallel slots, each as its own request to the one model
  * (SPEC-02 r7). Each subtask is routed through `route` first: the lane router (OBJ-07) in the running harness. If a subtask fails, the others are stopped and the task fails: replanning is not part of OBJ-05.
+ *
+ * Starting a subtask starts an attempt, up to the attempt limit (SPEC-02 r8). A subtask a resume continues
+ * (`ScheduleOptions.continuing`) carries on with the attempt a pause or restart cut off, so it is not counted again.
  */
 
 export interface SchedulerDeps extends SubtaskRunDeps {
@@ -15,6 +19,14 @@ export interface SchedulerDeps extends SubtaskRunDeps {
   lanes: LaneRunners;
   /** How many subtasks run at once: `ModelConfig.parallelSlots`. */
   slots: number;
+}
+
+export interface ScheduleOptions {
+  /**
+   * Subtasks whose interrupted attempt this run continues (OBJ-06): they were running when the task was paused or
+   * the harness stopped, and went back to ready. Every other subtask that starts begins a new attempt.
+   */
+  continuing?: ReadonlySet<Uuid>;
 }
 
 export type ScheduleOutcome =
@@ -28,8 +40,10 @@ export async function runSchedule(
   confirmedGoal: string,
   deps: SchedulerDeps,
   signal?: AbortSignal,
+  options: ScheduleOptions = {},
 ): Promise<ScheduleOutcome> {
   const { store, logger } = deps;
+  const limits = deps.limits ?? DEFAULT_LIMITS;
   if (!Number.isInteger(deps.slots) || deps.slots < 1)
     throw new Error(`The scheduler needs at least one slot, got ${deps.slots}`);
   const stop = new AbortController();
@@ -61,6 +75,15 @@ export async function runSchedule(
   };
 
   const runOne = async (subtask: Subtask) => {
+    const continuing = options.continuing?.has(subtask.id) === true && subtask.attempts > 0;
+    if (!continuing && subtask.attempts >= limits.attemptsPerSubtask) {
+      // Its attempts are used up (SPEC-02 r8): fail it before routing, so nothing runs and no app is probed.
+      logger.warn("subtask.attemptLimit", { taskId, subtaskId: subtask.id, attempts: subtask.attempts });
+      store.setSubtaskStatus(subtask.id, "failed", {
+        result: { status: "stuck", files: [], note: `Stopped after ${subtask.attempts} attempts without finishing.` },
+      });
+      return fail(subtask.id, { kind: "stepFailed", taskId, step: subtask.title });
+    }
     let decision;
     try {
       decision = await deps.route(subtask);
@@ -78,7 +101,7 @@ export async function runSchedule(
       lane: decision.lane,
       routeReason: decision.reason,
       workerId: `${decision.lane}-${++workers}`,
-      attempts: subtask.attempts + 1,
+      attempts: continuing ? subtask.attempts : subtask.attempts + 1,
     });
     if (!runner) {
       logger.error("schedule.noLane", { taskId, subtaskId: subtask.id, lane: decision.lane });
@@ -87,7 +110,14 @@ export async function runSchedule(
       });
       return fail(subtask.id);
     }
-    logger.info("schedule.started", { taskId, subtaskId: subtask.id, lane: decision.lane, active: active.size });
+    logger.info("schedule.started", {
+      taskId,
+      subtaskId: subtask.id,
+      lane: decision.lane,
+      attempt: running.attempts,
+      continuing,
+      active: active.size,
+    });
     const run: SubtaskRun = await runSubtask(running, decision.lane, runner, confirmedGoal, deps, stopSignal);
     logger.info("schedule.finished", { taskId, subtaskId: subtask.id, outcome: run.outcome, status: run.result.status });
     if (run.outcome === "finished" && run.result.status === "done") {

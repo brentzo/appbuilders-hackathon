@@ -9,6 +9,7 @@ Owner: Brent.
 Status: the skeleton is built ([OBJ-03](../objectives/OBJ-03-harness-skeleton.md)): the forked agent loop, the local model client, the tool registry, output validation with one retry, the local RPC server with `hello`, `ping`, and events, and the log.
 The task store is built ([OBJ-04](../objectives/OBJ-04-task-store.md)): tasks, subtasks, steps, screenshots, and the action log in SQLite, kept forever, with the history methods and the `taskStatusChanged` event.
 The planner, scheduler, and task summary are built ([OBJ-05](../objectives/OBJ-05-planner-and-scheduler.md)), with every subtask running as a helper on test-only file tools until the lane router and the typed file tools land.
+Resume and limits are built ([OBJ-06](../objectives/OBJ-06-resume-and-limits.md)): startup recovery, `resumeTask` and `cancelTask`, and the step, attempt, and depth limits.
 
 ## Responsibilities
 
@@ -54,12 +55,13 @@ The planner, scheduler, and task summary are built ([OBJ-05](../objectives/OBJ-0
 | `src/schema/bundle.ts` | Turns a protocol type into one self-contained JSON Schema. |
 | `src/harness.ts` | Opens the task store, starts the RPC server with the history methods, and sends status changes as events. |
 | `src/planner/` | The planner prompt (`prompt.ts`), the plan checks (`check.ts`), `makePlan` with its one retry (`planner.ts`), and the spoken summary (`summary.ts`). |
-| `src/scheduler/` | `runTask` (`run-task.ts`), the scheduler (`scheduler.ts`), one subtask's step loop (`subtask-runner.ts`), the worker input (`worker-input.ts`), the structured result (`result.ts`), and the route and lane seams (`lanes.ts`). |
+| `src/scheduler/` | `runTask` and `continueTask` (`run-task.ts`), the scheduler (`scheduler.ts`), one subtask's step loop (`subtask-runner.ts`), the worker input (`worker-input.ts`), the structured result and what was finished so far (`result.ts`), the route and lane seams (`lanes.ts`), startup recovery (`recovery.ts`), and starting, resuming, and cancelling tasks (`task-control.ts`). |
 | `src/store/task-store.ts` | The task store: the only module with SQL. Tasks, subtasks, steps, screenshots, the action log, history queries, window locks, and app capabilities. |
 | `src/store/migrations.ts` | The database schema as ordered migrations, and the triggers that refuse deletes. |
 | `src/store/transitions.ts` | The allowed task and subtask status changes. |
 | `src/rpc/server.ts` | The local JSON-RPC server for the Mac app. |
 | `src/rpc/history.ts` | The `listTasks`, `searchTasks`, and `getTask` methods. |
+| `src/rpc/tasks.ts` | The `resumeTask` and `cancelTask` methods. |
 | `src/errors.ts` | Maps failures to the protocol's `UserError` kinds. Never builds user-facing text. |
 | `src/log.ts` | The local log file. |
 | `scripts/model-check.ts` | Checks the harness against the real model server. |
@@ -93,6 +95,9 @@ Environment variables, all optional:
 | `YUMI_MODEL_MAX_TOKENS` | `1024` | Most tokens per reply. |
 | `YUMI_MODEL_STRUCTURED_OUTPUT` | on | `0` stops sending `response_format`. Replies are validated either way. |
 | `YUMI_MODEL_PARALLEL_SLOTS` | `3` | How many subtasks run at the same time, each as its own request. Start the model server with `--max-num-seqs` set to the same number. |
+| `YUMI_STEPS_PER_SUBTASK` | `25` | Steps per subtask, across attempts and restarts, before it fails with `taskTookTooLong` (SPEC-02 r8). |
+| `YUMI_ATTEMPTS_PER_SUBTASK` | `3` | Attempts per subtask, from 1 to 3 (`Subtask.attempts` allows at most 3). |
+| `YUMI_SUBTASK_DEPTH` | `1` | How deep subtasks may nest. 1: only the planner makes subtasks. |
 
 Sampling uses the Qwen3.5 model card's instruct settings (temperature 0.7, top_p 0.8, top_k 20), with thinking off.
 
@@ -205,6 +210,8 @@ A harness refuses a database written by a newer harness.
   A subtask must be `running` to begin a step, and its previous step must have finished.
 - `finishStep` writes the action log line in the same transaction, for every outcome except `invalidOutput`, which ran nothing.
 - `listUnfinishedSteps` returns the steps a crash interrupted.
+- A subtask added with `parentSubtaskId` is refused with the rule `subtaskDepth` when it would nest deeper than the depth limit, which with the default of 1 is always.
+- `tasks.interrupted` marks a task a restart paused, until it leaves paused (`listInterruptedTasks`). It is not part of the protocol's `Task`.
 
 ### History
 
@@ -269,7 +276,32 @@ Only `allowed` may run without the user; asking and the Trash are [OBJ-38](../ob
 
 Only the helper lane has a runner so far: ghost and main come with [OBJ-36](../objectives/OBJ-36-gui-act-sub-agent.md), and a subtask routed there fails until then.
 The planner names the app a UI subtask works in (`targetApp`); file work names none and runs as a helper.
-Nothing calls `runTask` in the running harness yet: the confirmation flow that moves a task to `planning` will.
+Nothing calls `runTask` in the running harness yet: the confirmation flow that moves a task to `planning` will, through `harness.tasks.start`.
+
+## Resume and limits
+
+Resume never starts on its own: the user is always asked first ([SPEC-02](../specs/02-task-lifecycle.md) r4).
+
+- **Startup recovery** (`src/scheduler/recovery.ts`) runs when the harness starts, before the socket opens.
+  A step with no outcome is finished as `noEffect`, with an action log line such as "Started to create Note 4.md, but was interrupted before it finished".
+  A task that was planning, running, or waiting for the user is paused and marked interrupted.
+  The subtasks of every paused task that were running, waiting for approval, or queued go back to `ready`, keeping their attempts, and their window locks are released.
+- **Asking:** each time an app says hello, the harness sends one `interruptedTaskFound` per interrupted task, so the app asks "I was interrupted while working on your task. Want me to pick up where I left off?"
+  A task the user paused is not announced: `listTasks` returns it as `paused`, and the app shows Resume.
+- **`resumeTask`** sets a paused task back to `running` (or `planning` when it had no plan yet) and carries on in the background.
+  Done subtasks stay done, no recorded step runs again, and each cut-off subtask goes on from its next step, with a fresh observation first, as the same attempt.
+  A second resume while the task runs does nothing.
+- **`cancelTask`** stops the task's work if it runs, waits for the step in progress to get its outcome, fails every subtask that had started ("Cancelled before it finished."), and sets the task to `cancelled`.
+  Subtasks that never started stay as they are.
+  Cancelling a task that already ended does nothing.
+  OBJ-38 extends it to every lane and every command not yet run.
+- A request about an unknown task or a task that is not paused answers the `unexpected` kind, with the reason in the log as `task.refused`.
+- `startHarness` runs tasks only when given `work` (the model client, lanes, device id, home folder, and slots); without it, tasks can be cancelled but not started or resumed.
+  `src/main.ts` does not pass it yet, because the harness learns its device id only after pairing; OBJ-17 wires it with `runTask`.
+- **Limits** come from the configuration (`Limits` in `src/config.ts`):
+  - Steps per subtask (25): every step counts, across attempts and restarts. At the limit the subtask fails and the user gets `taskTookTooLong` with `finishedSoFar`: the titles of the finished subtasks, then what the stopped subtask did that worked, one line each, at most 500 characters.
+  - Attempts per subtask (3): starting a subtask starts an attempt; a resume carries on the attempt it cut off. A subtask whose attempts are used up fails before it is routed, with `stepFailed` naming it.
+  - Subtask depth (1): the task store refuses a subtask made from inside a subtask.
 
 ## Errors and the log
 

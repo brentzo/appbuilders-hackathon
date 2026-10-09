@@ -1,5 +1,5 @@
 import { basename, dirname } from "node:path";
-import type { PermissionLevel, ToolCall } from "@yumi/protocol/types";
+import type { PermissionLevel, RecordedAction, ToolCall } from "@yumi/protocol/types";
 
 /**
  * Plain-language action log lines for tool calls (SPEC-07 r17), built from the call and the real result, never from
@@ -37,4 +37,15 @@ export function describeNotRun(call: ToolCall, level: Exclude<PermissionLevel, "
   return level === "ask"
     ? `Did not ${what}, because it needs your approval first`
     : `Did not ${what}, because Yumi's safety rules do not allow it`;
+}
+
+/**
+ * A step a restart cut off (SPEC-02 r4): its action may or may not have happened. Tool calls name what they were
+ * doing; UI actions get a general line until the gui_act lanes describe their own (OBJ-36).
+ */
+export function describeInterrupted(recorded: RecordedAction): string {
+  const { action } = recorded;
+  if (action.kind !== "tool") return "Was interrupted in the middle of a step";
+  const what = describeToolRun(action.call, false).replace(/^Tried to /, "");
+  return `Started to ${what}, but was interrupted before it finished`;
 }

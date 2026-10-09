@@ -113,6 +113,13 @@ export const MIGRATIONS: readonly string[] = [
   `
   ALTER TABLE subtasks ADD COLUMN target_app TEXT;
   `,
+  // 5: resume and limits (OBJ-06). tasks.interrupted is 1 while a task that a restart paused waits for the user to
+  // say whether to pick up where it left off; it is 0 for every other task. subtasks.parent_subtask_id is the
+  // subtask that asked for this one, for the depth limit (SPEC-02 r8); NULL for a subtask the planner made.
+  `
+  ALTER TABLE tasks ADD COLUMN interrupted INTEGER NOT NULL DEFAULT 0 CHECK (interrupted IN (0, 1));
+  ALTER TABLE subtasks ADD COLUMN parent_subtask_id TEXT REFERENCES subtasks (id);
+  `,
 ];
 
 /** Thrown when the database was written by a newer harness, whose schema this one does not know. */

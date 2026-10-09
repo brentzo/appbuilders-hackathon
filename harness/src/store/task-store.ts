@@ -25,6 +25,7 @@ import type {
   Uuid,
   WindowLock,
 } from "@yumi/protocol/types";
+import { DEFAULT_LIMITS } from "../config.ts";
 import { describeError, type Logger } from "../log.ts";
 import { migrate } from "./migrations.ts";
 import {
@@ -60,6 +61,8 @@ export interface TaskStoreOptions {
   logger: Logger;
   /** The clock, for tests. */
   now?: () => Date;
+  /** How deep subtasks may nest (`Limits.subtaskDepth`): 1 means a subtask can never add one. */
+  maxSubtaskDepth?: number;
 }
 
 export interface NewTask {
@@ -75,6 +78,11 @@ export interface NewTask {
 export interface TaskStatusFields {
   confirmedGoal?: string;
   summary?: string;
+  /**
+   * Only with `paused`: a restart stopped the task, not the user, so the app asks whether to pick up where it left
+   * off. Kept until the task leaves paused; see `listInterruptedTasks`.
+   */
+  interrupted?: boolean;
 }
 
 export interface NewSubtask {
@@ -91,6 +99,11 @@ export interface NewSubtask {
   /** Defaults to pending. */
   status?: SubtaskStatus;
   target?: Target;
+  /**
+   * The running subtask that asked for this one. The store refuses it when it would nest deeper than
+   * `maxSubtaskDepth` (SPEC-02 r8), which with the default of 1 is always.
+   */
+  parentSubtaskId?: Uuid;
 }
 
 /** Subtask fields other than its status, set by the router and the workers. */
@@ -176,6 +189,7 @@ export class TaskStore {
   private readonly db: DatabaseSync;
   private readonly logger: Logger;
   private readonly now: () => Date;
+  private readonly maxSubtaskDepth: number;
   private readonly listeners = new Set<StatusListener>();
   private readonly statements = new Map<string, StatementSync>();
 
@@ -185,6 +199,7 @@ export class TaskStore {
     this.screenshotsDir = join(this.dir, SCREENSHOTS_DIR);
     this.logger = options.logger;
     this.now = options.now ?? (() => new Date());
+    this.maxSubtaskDepth = options.maxSubtaskDepth ?? DEFAULT_LIMITS.subtaskDepth;
     mkdirSync(this.dir, { recursive: true, mode: 0o700 });
     // Task records can hold private details, so only this user can read the file. SQLite gives the -wal and -shm
     // files the database file's permissions.
@@ -265,6 +280,22 @@ export class TaskStore {
     return row && taskFromRow(row);
   }
 
+  /** Tasks in any of these statuses, oldest first. */
+  listTasksByStatus(statuses: readonly TaskStatus[]): Task[] {
+    const rows = this.stmt("SELECT * FROM tasks WHERE status IN (SELECT value FROM json_each(?)) ORDER BY created_ms, rowid").all(
+      JSON.stringify(statuses),
+    ) as unknown as TaskRow[];
+    return rows.map(taskFromRow);
+  }
+
+  /** Paused tasks that a restart stopped, waiting for the user to say whether to pick up where they left off, oldest first. */
+  listInterruptedTasks(): Task[] {
+    const rows = this.stmt(
+      "SELECT * FROM tasks WHERE status = 'paused' AND interrupted = 1 ORDER BY created_ms, rowid",
+    ).all() as unknown as TaskRow[];
+    return rows.map(taskFromRow);
+  }
+
   /** Changes a task's status, with the fields that change with it. Refuses and logs a change the table does not allow. */
   setTaskStatus(id: Uuid, status: TaskStatus, fields: TaskStatusFields = {}): Task {
     const task = this.transaction(() => {
@@ -279,15 +310,21 @@ export class TaskStore {
         status,
         updatedAt: this.now().toISOString(),
       };
+      if (fields.interrupted && status !== "paused") {
+        throw this.refuse("interruptedNeedsPaused", `Task ${id} can only be marked interrupted when it is paused`);
+      }
       this.check("Task", next);
       this.stmt(
-        "UPDATE tasks SET status = $status, confirmed_goal = $confirmed, summary = $summary, updated_at = $updatedAt WHERE id = $id",
+        `UPDATE tasks SET status = $status, confirmed_goal = $confirmed, summary = $summary, updated_at = $updatedAt,
+           interrupted = $interrupted WHERE id = $id`,
       ).run({
         id,
         status: next.status,
         confirmed: next.confirmedGoal ?? null,
         summary: next.summary ?? null,
         updatedAt: next.updatedAt,
+        // Every status change clears it, so it only ever marks a task that a restart paused and nobody resumed yet.
+        interrupted: fields.interrupted ? 1 : 0,
       });
       return next;
     });
@@ -302,7 +339,8 @@ export class TaskStore {
     const subtask = this.newSubtask(input);
     const task = this.transaction(() => {
       const current = this.requireTask(input.taskId);
-      this.insertSubtasks(current, [subtask]);
+      if (input.parentSubtaskId !== undefined) this.checkDepth(input.parentSubtaskId, input.taskId);
+      this.insertSubtasks(current, [subtask], input.parentSubtaskId);
       return current;
     });
     this.emit({ taskId: task.id, status: task.status, subtaskId: subtask.id, subtaskStatus: subtask.status });
@@ -314,7 +352,10 @@ export class TaskStore {
    * planning to running, in one transaction, so a crash never leaves half a plan. The task must be planning and
    * have no subtasks yet. After the commit, emits one event for the task, then one per subtask.
    */
-  savePlan(taskId: Uuid, subtasks: readonly Omit<NewSubtask, "taskId">[]): { task: Task; subtasks: Subtask[] } {
+  savePlan(
+    taskId: Uuid,
+    subtasks: readonly Omit<NewSubtask, "taskId" | "parentSubtaskId">[],
+  ): { task: Task; subtasks: Subtask[] } {
     const created = subtasks.map((input) => this.newSubtask({ ...input, taskId }));
     const task = this.transaction(() => {
       const current = this.requireTask(taskId);
@@ -506,6 +547,15 @@ export class TaskStore {
   appendActionLog(entry: Omit<ActionLogEntry, "time">): ActionLogEntry {
     const time = this.now();
     return this.transaction(() => this.insertActionLog({ ...entry, time: time.toISOString() }, time, undefined));
+  }
+
+  /** The action log lines of one subtask's steps, oldest first. */
+  listSubtaskActionLog(subtaskId: Uuid): ActionLogEntry[] {
+    const rows = this.stmt(
+      `SELECT action_log.* FROM action_log JOIN steps ON steps.id = action_log.step_id
+       WHERE steps.subtask_id = ? ORDER BY action_log.id`,
+    ).all(subtaskId) as unknown as ActionLogRow[];
+    return rows.map(actionLogFromRow);
   }
 
   /** A task's action log, oldest first. */
@@ -707,16 +757,42 @@ export class TaskStore {
     return subtask;
   }
 
+  /**
+   * Refuses a subtask that would nest deeper than the depth limit (SPEC-02 r8). A subtask the planner made is at
+   * depth 1, so with the default limit of 1 no subtask can add another. Call inside a transaction.
+   */
+  private checkDepth(parentSubtaskId: Uuid, taskId: Uuid): void {
+    const parent = this.requireSubtask(parentSubtaskId);
+    if (parent.taskId !== taskId) {
+      throw this.refuse("parentInOtherTask", `Subtask ${parentSubtaskId} is not part of task ${taskId}`);
+    }
+    let depth = 2;
+    for (let id = this.parentOf(parentSubtaskId); id !== undefined; id = this.parentOf(id)) depth++;
+    if (depth > this.maxSubtaskDepth) {
+      throw this.refuse(
+        "subtaskDepth",
+        `Subtask ${parentSubtaskId} cannot add a subtask: depth ${depth} is over the limit of ${this.maxSubtaskDepth}`,
+      );
+    }
+  }
+
+  private parentOf(subtaskId: Uuid): Uuid | undefined {
+    const row = this.stmt("SELECT parent_subtask_id AS parent FROM subtasks WHERE id = ?").get(subtaskId) as
+      { parent: string | null } | undefined;
+    return row?.parent ?? undefined;
+  }
+
   /** Appends subtasks to a task's plan. Call inside a transaction. */
-  private insertSubtasks(task: Task, subtasks: readonly Subtask[]): void {
+  private insertSubtasks(task: Task, subtasks: readonly Subtask[], parentSubtaskId?: Uuid): void {
     const plan = [...task.plan];
     for (const subtask of subtasks) {
       this.stmt(
         `INSERT INTO subtasks (id, task_id, position, title, instruction, depends_on, proposed_lane, needs_keyboard, target_app,
-           target, status, attempts)
+           target, status, attempts, parent_subtask_id)
          VALUES ($id, $taskId, $position, $title, $instruction, $dependsOn, $proposedLane, $needsKeyboard, $targetApp, $target,
-           $status, 0)`,
+           $status, 0, $parent)`,
       ).run({
+        parent: parentSubtaskId ?? null,
         id: subtask.id,
         taskId: subtask.taskId,
         position: plan.length,

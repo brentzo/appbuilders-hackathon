@@ -22,12 +22,23 @@ export interface ModelConfig {
   parallelSlots: number;
 }
 
+/** The limits that stop runaway work (SPEC-02 r8, docs/task-record-schema.md "Limits"). */
+export interface Limits {
+  /** Steps per subtask, across all its attempts. Reaching it fails the subtask with `taskTookTooLong`. */
+  stepsPerSubtask: number;
+  /** Attempts per subtask: one `gui_act` call is one attempt. The protocol's `Subtask.attempts` allows at most 3. */
+  attemptsPerSubtask: number;
+  /** How deep subtasks may nest: 1 means only the planner makes subtasks, and a subtask can never make one. */
+  subtaskDepth: number;
+}
+
 export interface HarnessConfig {
   /** Where the socket, the log, and the task store live: the user's Application Support folder on the Mac. */
   supportDir: string;
   socketPath: string;
   logPath: string;
   model: ModelConfig;
+  limits: Limits;
 }
 
 export const DEFAULT_SUPPORT_DIR = join(homedir(), "Library", "Application Support", "Yumi");
@@ -45,10 +56,20 @@ export const DEFAULT_MODEL_CONFIG: ModelConfig = {
   parallelSlots: 3,
 };
 
+export const DEFAULT_LIMITS: Limits = {
+  stepsPerSubtask: 25,
+  attemptsPerSubtask: 3,
+  subtaskDepth: 1,
+};
+
+/** The most attempts a subtask can record (`Subtask.attempts` in protocol/schemas/task.json). */
+export const MAX_ATTEMPTS_PER_SUBTASK = 3;
+
 /**
  * Reads the configuration from environment variables, falling back to the defaults:
  * YUMI_SUPPORT_DIR, YUMI_MODEL_BASE_URL, YUMI_MODEL, YUMI_MODEL_TIMEOUT_MS, YUMI_MODEL_MAX_TOKENS,
- * YUMI_MODEL_STRUCTURED_OUTPUT ("0" turns schema-constrained decoding off), and YUMI_MODEL_PARALLEL_SLOTS.
+ * YUMI_MODEL_STRUCTURED_OUTPUT ("0" turns schema-constrained decoding off), YUMI_MODEL_PARALLEL_SLOTS, and the
+ * limits YUMI_STEPS_PER_SUBTASK, YUMI_ATTEMPTS_PER_SUBTASK (at most 3), and YUMI_SUBTASK_DEPTH.
  */
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): HarnessConfig {
   const supportDir = resolve(env["YUMI_SUPPORT_DIR"] || DEFAULT_SUPPORT_DIR);
@@ -65,13 +86,26 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): HarnessConfig 
       structuredOutput: env["YUMI_MODEL_STRUCTURED_OUTPUT"] !== "0",
       parallelSlots: positiveInteger(env, "YUMI_MODEL_PARALLEL_SLOTS", DEFAULT_MODEL_CONFIG.parallelSlots),
     },
+    limits: {
+      stepsPerSubtask: positiveInteger(env, "YUMI_STEPS_PER_SUBTASK", DEFAULT_LIMITS.stepsPerSubtask),
+      attemptsPerSubtask: positiveInteger(
+        env,
+        "YUMI_ATTEMPTS_PER_SUBTASK",
+        DEFAULT_LIMITS.attemptsPerSubtask,
+        MAX_ATTEMPTS_PER_SUBTASK,
+      ),
+      subtaskDepth: positiveInteger(env, "YUMI_SUBTASK_DEPTH", DEFAULT_LIMITS.subtaskDepth),
+    },
   };
 }
 
-function positiveInteger(env: NodeJS.ProcessEnv, name: string, fallback: number): number {
+function positiveInteger(env: NodeJS.ProcessEnv, name: string, fallback: number, max = Number.MAX_SAFE_INTEGER): number {
   const raw = env[name];
   if (!raw) return fallback;
   const value = Number(raw);
-  if (!Number.isInteger(value) || value <= 0) throw new Error(`${name} must be a positive integer, got "${raw}"`);
+  if (!Number.isInteger(value) || value <= 0 || value > max) {
+    const range = max === Number.MAX_SAFE_INTEGER ? "a positive integer" : `a whole number from 1 to ${max}`;
+    throw new Error(`${name} must be ${range}, got "${raw}"`);
+  }
   return value;
 }

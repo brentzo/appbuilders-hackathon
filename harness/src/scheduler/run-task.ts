@@ -1,7 +1,7 @@
 import type { DeviceId, Speak, Task, UserError, Uuid } from "@yumi/protocol/types";
 import { makePlan, subtasksFromPlan } from "../planner/planner.ts";
 import { summarizeTask } from "../planner/summary.ts";
-import { runSchedule, type SchedulerDeps } from "./scheduler.ts";
+import { runSchedule, type ScheduleOptions, type SchedulerDeps } from "./scheduler.ts";
 
 /**
  * Carries a confirmed task from planning to done (SPEC-02 r1, r7, r9): plan it, save the checked plan and move the
@@ -53,8 +53,43 @@ export async function runTask(taskId: Uuid, deps: RunTaskDeps, signal?: AbortSig
       break;
   }
   store.savePlan(taskId, subtasksFromPlan(planned.plan));
+  return runPlan(task, confirmedGoal, deps, signal);
+}
 
-  const scheduled = await runSchedule(taskId, confirmedGoal, deps, signal);
+/**
+ * Carries on with a resumed task whose plan is saved (OBJ-06.3): the task is running again, and its subtasks are
+ * where the pause or restart left them. Finished subtasks stay finished, and no recorded step runs again: each
+ * subtask that was cut off goes on from its next step, with a fresh observation, as part of the same attempt.
+ */
+export async function continueTask(taskId: Uuid, deps: RunTaskDeps, signal?: AbortSignal): Promise<RunTaskOutcome> {
+  const task = deps.store.getTask(taskId);
+  if (!task) throw new Error(`No task ${taskId}`);
+  if (task.status !== "running" || !task.confirmedGoal || task.plan.length === 0) {
+    throw new Error(`Task ${taskId} is ${task.status} with ${task.plan.length} subtasks, not running a saved plan`);
+  }
+  // A subtask is back at ready with attempts already counted only when a pause or restart cut its attempt off
+  // (running -> ready or needsApproval -> ready in src/store/transitions.ts).
+  const continuing = new Set(
+    deps.store
+      .listSubtasks(taskId)
+      .filter((s) => s.status === "ready" && s.attempts > 0)
+      .map((s) => s.id),
+  );
+  return runPlan(task, task.confirmedGoal, deps, signal, { continuing });
+}
+
+/** Runs a saved plan to the end: the schedule, then the summary, spoken on the device the user spoke to. */
+async function runPlan(
+  task: Task,
+  confirmedGoal: string,
+  deps: RunTaskDeps,
+  signal?: AbortSignal,
+  options: ScheduleOptions = {},
+): Promise<RunTaskOutcome> {
+  const { store, logger } = deps;
+  const taskId = task.id;
+  const model = { client: deps.client, logger };
+  const scheduled = await runSchedule(taskId, confirmedGoal, deps, signal, options);
   if (scheduled.outcome === "aborted") return { outcome: "aborted" };
   if (scheduled.outcome === "failed") {
     // Without its own error, the failure was a bug in the harness, not the subtask: "Unexpected" with the last action.

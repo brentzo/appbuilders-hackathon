@@ -9,6 +9,7 @@ import type {
   ToolCall,
   UserError,
 } from "@yumi/protocol/types";
+import { DEFAULT_LIMITS, type Limits } from "../config.ts";
 import { describeError, type Logger } from "../log.ts";
 import type { ModelClient } from "../model/client.ts";
 import { checkAction } from "../safety/gate.ts";
@@ -17,7 +18,7 @@ import { ACTION } from "../worker/actions.ts";
 import { runWorkerStep } from "../worker/step.ts";
 import { describeNotRun, describeToolRun } from "./describe.ts";
 import type { LaneRunner } from "./lanes.ts";
-import { buildSubtaskResult } from "./result.ts";
+import { buildSubtaskResult, finishedSoFar } from "./result.ts";
 import { buildWorkerInput } from "./worker-input.ts";
 
 /**
@@ -27,12 +28,6 @@ import { buildWorkerInput } from "./worker-input.ts";
  * `allowed` runs: approvals are OBJ-38, so an action that asks is recorded as not run, and the worker is told why.
  * The outcome carries the subtask's structured result (OBJ-05.6). The caller changes the subtask's status.
  */
-
-/**
- * A guard so a worker that never finishes cannot loop forever: SPEC-02 r8's 25 steps per subtask. OBJ-06 owns the
- * limits, their user-facing errors, and attempts; this only stops the loop.
- */
-export const MAX_STEPS_PER_SUBTASK = 25;
 
 /** Longest observation line a step can store (`Step.observation`). */
 const MAX_OBSERVATION = 300;
@@ -57,6 +52,8 @@ export interface SubtaskRunDeps {
   deviceId: DeviceId;
   /** The user's home folder, for the permission gate. Tests pass a temporary one. */
   home: string;
+  /** The limits from the configuration (SPEC-02 r8). Defaults to `DEFAULT_LIMITS`. */
+  limits?: Limits;
 }
 
 export async function runSubtask(
@@ -72,16 +69,19 @@ export async function runSubtask(
   const files: Path[] = [];
   const result = (status: ResultStatus, note: string) => buildSubtaskResult(status, note, files);
   const lastAction = () => store.listActionLog(subtask.taskId).at(-1)?.description;
+  const { stepsPerSubtask } = deps.limits ?? DEFAULT_LIMITS;
 
   for (;;) {
     if (signal.aborted) return { outcome: "aborted", result: result("partial", "Stopped before it finished.") };
+    // Every step of the subtask counts, across attempts and restarts (SPEC-05 r5), including steps a restart cut off.
     const steps = store.listSteps(subtask.id);
-    if (steps.length >= MAX_STEPS_PER_SUBTASK) {
-      logger.warn("subtask.stepGuard", { taskId: subtask.taskId, subtaskId: subtask.id, steps: steps.length });
+    if (steps.length >= stepsPerSubtask) {
+      logger.warn("subtask.stepLimit", { taskId: subtask.taskId, subtaskId: subtask.id, steps: steps.length });
+      const finished = describeFinished(store, subtask);
       return {
         outcome: "failed",
-        result: result("partial", `Stopped after ${MAX_STEPS_PER_SUBTASK} steps without finishing.`),
-        userError: { kind: "taskTookTooLong", taskId: subtask.taskId },
+        result: result("partial", `Stopped after ${steps.length} steps without finishing.`),
+        userError: { kind: "taskTookTooLong", taskId: subtask.taskId, ...(finished ? { finishedSoFar: finished } : {}) },
       };
     }
 
@@ -127,6 +127,22 @@ export async function runSubtask(
       files.push(path);
     }
   }
+}
+
+/**
+ * What the task finished before the step limit stopped this subtask (SPEC-11 "Task took too long"): the titles of
+ * its finished subtasks, then what this subtask's actions did that worked, from the action log.
+ */
+function describeFinished(store: TaskStore, subtask: Subtask): string | undefined {
+  const done = store
+    .listSubtasks(subtask.taskId)
+    .filter((s) => s.status === "done")
+    .map((s) => s.title);
+  const worked = store
+    .listSubtaskActionLog(subtask.id)
+    .filter((line) => line.outcome === "ok")
+    .map((line) => line.description);
+  return finishedSoFar([...done, ...worked]);
 }
 
 /**
