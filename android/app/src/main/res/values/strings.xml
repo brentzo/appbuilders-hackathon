@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- "Hey\u00A0Yumi" uses a non-breaking space so the wake word never splits across lines.
-         %1$s is the wake word phrase from WakeWordConfig, which is a stand-in until the "Hey Yumi" model exists. -->
+         %1$s is the wake word phrase from WakeWordConfig. It shows "Hey Yumi" while the model is still the "Hey Jarvis" stand-in. -->
     <string name="app_name">Yumi</string>
 
     <!-- Notification channels -->
@@ -98,5 +98,5 @@
     <string name="settings_test_tool_body">Runs a test tool that needs your location 5 seconds after you tap. Leave the app right away to see the notification.</string>
     <string name="settings_test_tool_run">Run test</string>
     <string name="settings_stand_ins">Stand-ins in this build</string>
-    <string name="settings_stand_ins_body">The Yumi mark instead of the animated cat, no Mac connection, and \"%1$s\" as the wake word until the \"Hey\u00A0Yumi\" model is ready.</string>
+    <string name="settings_stand_ins_body">The Yumi mark instead of the animated cat, no Mac connection, and a wake word model that hears \"Hey\u00A0Jarvis\" until the \"Hey\u00A0Yumi\" model is ready.</string>
 </resources>

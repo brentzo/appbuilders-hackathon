@@ -176,7 +176,7 @@ fun SettingsScreen(state: SettingsState, actions: SettingsActions) {
                     Hairline()
                     Row(
                         title = R.string.settings_stand_ins,
-                        body = stringResource(R.string.settings_stand_ins_body, state.wakePhrase),
+                        body = stringResource(R.string.settings_stand_ins_body),
                         trailing = null,
                     )
                 }

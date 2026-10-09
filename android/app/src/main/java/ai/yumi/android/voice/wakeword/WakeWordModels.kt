@@ -9,8 +9,9 @@ import java.nio.FloatBuffer
 /**
  * The wake word model in use, and the phrase the user says to it.
  *
- * STAND-IN until OBJ-12: openWakeWord's pre-trained "hey jarvis" model. To switch to "Hey Yumi", put
- * `hey_yumi.onnx` in `assets/wakeword/` and change [Current] to it. Nothing else changes.
+ * STAND-IN until OBJ-12: openWakeWord's pre-trained "hey jarvis" model. The screens already show "Hey Yumi",
+ * so for now the phrase on screen is not the one the model hears. To switch, put `hey_yumi.onnx` in
+ * `assets/wakeword/` and change [Current]'s model file to it. Nothing else changes.
  */
 data class WakeWordConfig(
     /** File name under `assets/wakeword/`. */
@@ -22,7 +23,7 @@ data class WakeWordConfig(
     val isStandIn: Boolean,
 ) {
     companion object {
-        val Current = WakeWordConfig(modelFile = "hey_jarvis_v0.1.onnx", phrase = "Hey Jarvis", isStandIn = true)
+        val Current = WakeWordConfig(modelFile = "hey_jarvis_v0.1.onnx", phrase = "Hey Yumi", isStandIn = true)
 
         const val ASSET_DIR = "wakeword"
         const val MELSPECTROGRAM_FILE = "melspectrogram.onnx"
