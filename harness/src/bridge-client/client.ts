@@ -261,14 +261,20 @@ export class BridgeClient {
       }
       this.db.prepare("DELETE FROM outbox WHERE message_id = ?").run(frame.messageId);
       this.db.prepare("DELETE FROM message_tasks WHERE message_id = ?").run(frame.messageId);
-    } else if (frame.frame === "targetOffline" || frame.frame === "expired" || frame.frame === "notPaired") {
+    } else if (
+      frame.frame === "targetOffline" ||
+      frame.frame === "targetNeedsUpdate" ||
+      frame.frame === "expired" ||
+      frame.frame === "notPaired"
+    ) {
       this.db.prepare("DELETE FROM outbox WHERE message_id = ?").run(frame.messageId);
       const task = this.db.prepare("SELECT task_id FROM message_tasks WHERE message_id = ?").get(frame.messageId) as
         { task_id: string } | undefined;
       this.db.prepare("DELETE FROM message_tasks WHERE message_id = ?").run(frame.messageId);
       this.options.rpc.notify("userError", {
+        // targetNeedsUpdate reads as offline until OBJ-42 adds its own kind (protocol/docs/pairing.md).
         kind:
-          frame.frame === "targetOffline"
+          frame.frame === "targetOffline" || frame.frame === "targetNeedsUpdate"
             ? "otherDeviceOffline"
             : frame.frame === "expired"
               ? "commandExpired"

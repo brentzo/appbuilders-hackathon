@@ -12,7 +12,7 @@ export class FakeRelay {
   readonly pendingRequests = new Map<string, BridgeFrame>();
   readonly clients = new Map<string, Device>();
   url = "";
-  nextNotice: "targetOffline" | "expired" | "notPaired" | undefined = undefined;
+  nextNotice: "targetOffline" | "targetNeedsUpdate" | "expired" | "notPaired" | undefined = undefined;
   holdNextEnvelope = false;
 
   async listen(): Promise<void> {

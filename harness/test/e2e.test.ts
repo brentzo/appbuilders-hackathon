@@ -217,6 +217,21 @@ describe("bridge client end-to-end", () => {
         )?.payload,
       ).toMatchObject({ kind: "commandExpired", taskId: expiredTaskId });
 
+      // Until OBJ-42 adds its own kind, a phone that needs an update reads as offline (protocol/docs/pairing.md).
+      const needsUpdateTaskId = randomUUID();
+      relay.nextNotice = "targetNeedsUpdate";
+      await client.sendMessage(phoneKeys.deviceId, "command", { action: "needs-update-check" }, undefined, needsUpdateTaskId);
+      await until(() =>
+        macRpc.events.some(
+          ({ event, payload }) => event === "userError" && (payload as { taskId?: string }).taskId === needsUpdateTaskId,
+        ),
+      );
+      expect(
+        macRpc.events.find(
+          ({ event, payload }) => event === "userError" && (payload as { taskId?: string }).taskId === needsUpdateTaskId,
+        )?.payload,
+      ).toMatchObject({ kind: "otherDeviceOffline", device: phoneKeys.deviceId, taskId: needsUpdateTaskId });
+
       relay.inject(offer.deviceId, { frame: "envelope", envelope: command });
       relay.inject(offer.deviceId, { frame: "envelope", envelope: command });
       const duplicateFrames: BridgeFrame[] = [];
