@@ -192,9 +192,10 @@ Every tool has its own argument schema, so the harness can check every call.
 | `copy` | `from`, `to` | Allowed, a taken name gets a number |
 | `move` | `from`, `to` | Allowed, a taken name gets a number |
 | `move_to_trash` | `paths` (exact, no wildcards) | Ask every time, tap only |
-| `phone` | `tool`, `args` | Depends on the phone tool (SPEC-09 r2) |
+| `phone` | `call`: one phone tool call (`set_alarm` with `time`, `set_timer` with `seconds`, `open_app` with `app`) | Depends on the phone tool (SPEC-09 r2) |
 
 SPEC-07 requirement 3 says `open`; it is split here into `open_app`, `open_file`, and `open_url` from SPEC-05.
+The phone call is a closed union of the p0 phone tools rather than free-form arguments, so the Mac brain can check every argument; p1 tools are added as new variants.
 
 ## Step
 
@@ -208,7 +209,7 @@ struct Step: Codable {
     let index: Int
     let lane: Lane
     var action: RecordedAction
-    var observation: String          // one line: what changed after the action
+    var observation: String?         // one line: what changed after the action; nil until it finished
     var outcome: StepOutcome?        // nil until the action finished
     var screenshotPath: String?      // p1, kept for debugging and the dashboard
     var startedAt: Date
