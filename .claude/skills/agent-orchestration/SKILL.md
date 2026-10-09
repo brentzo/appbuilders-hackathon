@@ -65,7 +65,7 @@ Use [brief-template.md](brief-template.md) and fill in:
 
 1. Read the worker's final report and the objective's Outcome.
 2. Review the diff against the objective's tasks and expectations. Check boundaries: no changes outside its product except allowed tables.
-3. Rebase onto local `main` and resolve conflicts (git-workflow skill). Run `python3 scripts/objectives.py index` and `check`, and the product's build and tests.
+3. Rebase onto local `main` and resolve conflicts (git-workflow skill). Run `python3 scripts/objectives.py index`, then `python3 scripts/verify.py`.
 4. Fast-forward local `main` to the rebased branch.
 5. Close the tab, remove the worktree, delete the branch.
 6. Tell the lead what landed, what was not verified, and that `main` is ready to push.

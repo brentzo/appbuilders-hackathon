@@ -15,7 +15,7 @@ Specs say what Yumi must do and are the source of truth for behavior; objectives
 - The template is [template.md](template.md). Copy it; do not invent sections.
 - The frontmatter is the source of truth for status, assignee, and dependencies.
 - The tables in `objectives/README.md` and in each product README sit between `<!-- generated:...:start -->` and `<!-- generated:...:end -->` markers. Never edit them by hand.
-- After any objective change, run `python3 scripts/objectives.py index`, then `python3 scripts/objectives.py check`. Commit only when the check passes.
+- After any objective change, run `python3 scripts/objectives.py index`, then `python3 scripts/objectives.py check`. Commit only when `python3 scripts/verify.py` passes.
 
 ## Frontmatter fields
 

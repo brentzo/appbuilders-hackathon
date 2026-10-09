@@ -56,4 +56,4 @@ Never mark a checkbox, an objective, or a task as done to look finished.
 ## Tools that check for you
 
 - `python3 scripts/objectives.py check` validates objective frontmatter, dependencies, status rules, generated tables, Markdown links, spec references, and the no-em-dash rule. Run it before committing documentation.
-- Each product's build and tests are documented in its README. Run them before claiming code works.
+- `python3 scripts/verify.py` runs each touched product's build and tests (documented in its README). Run it before claiming code works.

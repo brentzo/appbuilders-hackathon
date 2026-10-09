@@ -35,7 +35,7 @@ Keep useful work for review; remove the worktree and branch only after confirmin
 1. Read the final report and objective Outcome.
 2. Review the diff against the objective, product boundaries, and specs.
 3. Rebase onto the agreed current `main`; resolve conflicts with [git-workflow](../git-workflow/SKILL.md).
-4. Run the objective index/check and the product's documented build and tests.
+4. Run `python3 scripts/objectives.py index`, then `python3 scripts/verify.py`.
 5. Fast-forward local `main` only after review and verification. Push only when explicitly asked.
 6. Remove the worktree and branch only after the commits are safely integrated.
 7. Report what landed and what was or was not verified.

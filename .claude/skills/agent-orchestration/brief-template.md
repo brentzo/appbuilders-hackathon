@@ -28,7 +28,7 @@ Also read before starting: <extra reading>.
 
 ## How to finish
 
-Follow the objective-lifecycle skill: verify every expectation, write the Outcome section, set the status to done, run `python3 scripts/objectives.py index` and `check`, and commit.
+Follow the objective-lifecycle skill: verify every expectation, write the Outcome section, set the status to done, run `python3 scripts/objectives.py index`, then `python3 scripts/verify.py`, and commit only when it passes. Run `python3 scripts/verify.py` before every commit, not just the last one.
 If a spec or the objective is wrong or unclear, stop and say so instead of quietly changing behavior.
 
 End with a short report: what was done, the commits on the branch, anything not verified, and any questions for <lead>.

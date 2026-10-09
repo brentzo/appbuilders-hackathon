@@ -67,7 +67,7 @@ Run from `protocol/` after `npm install`.
 | `npm run vectors` | Rewrites `vectors/bridge-crypto-v2.json` from the reference crypto. The test suite fails if the file and the code disagree. |
 | `npm run typecheck` | Type-checks the package, including `test/types-check.ts`, which proves unions stay strict. |
 | `npm test` | Runs every test. |
-| `npm run verify` | Typecheck and tests. Run it before every commit that touches `protocol/`. |
+| `npm run verify` | Typecheck and tests. `python3 scripts/verify.py` at the repo root runs it, with the generated-types check, for every commit that touches `protocol/` or `specs/`. |
 | `npm run compile:swift` | Compiles the generated Swift in Docker (Swift 6 mode, warnings as errors) and round-trips every example through it. |
 | `npm run compile:kotlin` | Compiles the generated Kotlin in Docker (warnings as errors) and round-trips every example through it. |
 | `npm run mock:harness` | Starts the mock harness. See "Mocks". |
