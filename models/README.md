@@ -5,12 +5,12 @@ The apps load models; this product decides which ones, proves they are good enou
 
 Owner: Jepoy.
 
-Status: Whisper bake-off tooling is in progress; no model choice has been verified yet.
+Status: the Mac Whisper bake-off has a recommended model, pending Jepoy's confirmation ([RESULTS.md](whisper/RESULTS.md)).
 
 ## Responsibilities
 
 - **Whisper bake-off:** pick the Whisper option and runtime for the Mac and the phone using real Taglish recordings ([SPEC-01](../specs/01-voice-intake.md)).
-- **Mac Whisper benchmark (p0):** implemented by [OBJ-11](../objectives/OBJ-11-whisper-bake-off.md); the real recording run and model choice are pending Mac access and consented recordings.
+- **Mac Whisper benchmark (p0):** run in [OBJ-11](../objectives/OBJ-11-whisper-bake-off.md) on 30 real recordings. Results and the recommended model are in [whisper/RESULTS.md](whisper/RESULTS.md).
 - **Android Whisper benchmark (p1):** tracked separately in [OBJ-28](../objectives/OBJ-28-android-whisper-bake-off.md), after SPEC-10 Part B.
 - **Wake word:** train and test the "Hey Yumi" model with openWakeWord ([SPEC-01](../specs/01-voice-intake.md)).
 - **GUI smoke test (p0):** check that Qwen3.5-9B at 4-bit completes the 3 demo tasks from the trimmed accessibility tree ([SPEC-05](../specs/05-mac-gui-control.md), [OBJ-26](../objectives/OBJ-26-gui-smoke-test.md)).
@@ -24,7 +24,8 @@ Status: Whisper bake-off tooling is in progress; no model choice has been verifi
 |---|---|---|
 | Mac brain and GUI control | Qwen3.5-9B, 4-bit | ~6 GB. p0 works from the trimmed accessibility tree, not screenshots, so [OBJ-26](../objectives/OBJ-26-gui-smoke-test.md) decides whether it is good enough |
 | Android brain and app control (p1 only) | Qwen3.5-4B, 4-bit, fixed | ~2.7 GB. 9B was too tight on the 12 GB demo phone. Decided in [SPEC-10](../specs/10-android-companion.md). Part A (p0) has no model |
-| Speech to text | Whisper, size to be decided | Taglish and long dictation on the Mac (p0), Android (p1), and iPhone (p2, WhisperKit, [SPEC-12](../specs/12-iphone-companion.md)). The Android p0 recognizer is Android's on-device English recognizer |
+| Speech to text, Mac | Whisper large-v3-turbo on WhisperKit (`large-v3-v20240930_turbo_632MB`), Tagalog forced | 646 MB on disk, about 0.8 GiB loaded. Recommended by [OBJ-11](../objectives/OBJ-11-whisper-bake-off.md), pending Jepoy's confirmation. Handles English and Taglish |
+| Speech to text, Android and iPhone | Whisper, size to be decided | Android (p1, [OBJ-28](../objectives/OBJ-28-android-whisper-bake-off.md)) and iPhone (p2, WhisperKit, [SPEC-12](../specs/12-iphone-companion.md)). The Android p0 recognizer is Android's on-device English recognizer |
 | Wake word | openWakeWord, custom "Hey Yumi" | Trained once, runs fully on device |
 | Voice stop keywords (p1) | openWakeWord, custom | "stop", "teka", "tama na", "hinto" |
 

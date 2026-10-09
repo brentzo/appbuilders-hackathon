@@ -52,9 +52,20 @@ python3 models/whisper/benchmark.py \
 
 For whisper.cpp, set `--runtime whisper.cpp` and the `/inference` endpoint.
 The report stores per-clip references, transcripts, WER edit counts, and latency, plus Taglish and English totals.
+It gives two WERs: raw, and normalized, which first rewrites written forms into the spoken forms the references use (digits, clock times, "3pm", "github.com", and hyphens inside words), so only real word errors count.
+To score a saved report again after the scoring rules change, run `python3 models/whisper/benchmark.py --rescore <report.json> --output <report.json>`.
 An unused group appears with a sample count of zero and no WER or latency value.
 The report does not measure peak memory; record that separately while the Mac brain and wake-word model are loaded.
 Treat results as local until the transcripts are reviewed and consent to commit them is confirmed.
+
+Pass `--language tl` for Taglish.
+With auto-detect, small and medium translate Taglish into English instead of transcribing it, and whisper.cpp runs the encoder twice.
+WhisperKit's server ignores the request's `language` unless the server itself is started with `--language tl`.
+
+## Results
+
+The Mac results, the recommended model, and how it was chosen are in [RESULTS.md](RESULTS.md).
+Each run's report and the memory measurements (`memory.json`) are in `results/`, which stays out of git; a copy is in `~/Yumi recordings/whisper-results/` on Brent's Mac.
 
 ## Runtime references
 
