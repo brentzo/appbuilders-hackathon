@@ -5,10 +5,10 @@ product: bridge
 assignee: Jepoy
 touches: []
 specs: [SPEC-08]
-status: todo
+status: in-progress
 priority: p0
 depends-on: [OBJ-02]
-integrates-with: []
+integrates-with: [OBJ-31]
 tags: [objective, p0, bridge]
 ---
 
@@ -46,15 +46,15 @@ It never sees plaintext, which keeps the "local AI" claim honest.
 - [ ] **OBJ-13.4** Route each envelope to its `to` device if online. Only allow routing between paired devices, and answer anything else with `notPaired`.
 - [ ] **OBJ-13.5** Commands are never queued. If a command's target is offline, send the sender a `targetOffline` event at once. Hold results and events for a device that dropped off in SQLite until they expire, deliver them in order on reconnect, and delete each one after the receiver acknowledges it.
 - [ ] **OBJ-13.6** Expiry: never deliver an expired envelope. Send the sender an `expired` event for it (when the sender is online, or queued for it).
-- [ ] **OBJ-13.7** Unpairing, as in `pairing.md` "Unpairing": remove the pairing at once, delete every message held between the two devices, and hold the signed `unpair` frame until the other device acks it.
+- [ ] **OBJ-13.7** Unpairing, as in `pairing.md` "Unpairing": remove the pairing at once, delete every message held between the two devices, and hold the signed `unpair` frame until the other device acks it. The current frame has no correlatable acknowledgement id; finish ACK deletion against the contract in [OBJ-31](OBJ-31-unpair-delivery-ack-contract.md).
 - [ ] **OBJ-13.8** Logging: routing fields, connection events, and errors only. Never log payloads.
-- [ ] **OBJ-13.9** Deploy on Brent's VPS at `wss://yumibridge.studiokova.co`, behind the VPS's existing nginx, which handles TLS, in a Docker container on a current Node.js LTS image (see "Deployment" in `bridge/README.md`). Commit a `Dockerfile` and `docker-compose.yml` in `bridge/` that publish only `127.0.0.1:8787`, persist SQLite in a mounted `data/` folder, and restart unless stopped. Document the deploy steps, config, and how to read logs in `bridge/README.md`.
+- [ ] **OBJ-13.9** Package the relay in a Docker image and Compose service that binds only `127.0.0.1:8787`, persists SQLite in a mounted `data/` folder, and restarts unless stopped. Document configuration, deploy steps, and log access in `bridge/README.md`. The VPS rollout and live check are tracked in [OBJ-32](OBJ-32-production-bridge-deployment.md).
 - [ ] **OBJ-13.10** Tests: auth success and failure, routing, cross-group routing refused, offline notice for commands, result held through a short reconnect, expiry with sender notice, revocation.
 
 ## Expectations
 
 - [ ] SPEC-08 scenarios pass at the bridge level: "VPS cannot read messages", "Message from an unknown device is dropped" (bridge refuses it; the device-side check is in client objectives), "Command to an offline device fails at once", "Result survives a short reconnect", "Expired command is not run", "Unpair a device".
-- [ ] A test client with the protocol's test vectors can connect, send, and receive through the deployed bridge.
+- [ ] A test client using the protocol's test vectors can authenticate, pair, send, and receive through a local relay. Production endpoint acceptance is tracked in [OBJ-30](OBJ-30-live-cross-device-bridge-acceptance.md).
 - [ ] Database and logs contain no plaintext payloads.
 
 ## Expected outcomes
@@ -70,4 +70,4 @@ It never sees plaintext, which keeps the "local AI" claim honest.
 
 ## Outcome
 
-_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._
+In progress. The relay is being implemented against the protocol contract. Unpair acknowledgement correlation is tracked in OBJ-31, and production rollout is tracked in OBJ-32.
