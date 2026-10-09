@@ -229,7 +229,7 @@ Open items name their owner; resolved items stay listed so the history is easy t
 - **G13 "Show what I did" (SPEC-11):** The button is p0 and opens the action log, but opening the log from the menu bar is p1 (SPEC-07 r19). Resolved 2026-10-10 by Jepoy: the button opens that task's log from `getTask`'s `actionLog`, which is p0; the menu bar entry stays p1. Recorded in SPEC-11 Decisions, and built in [OBJ-40](OBJ-40-mac-approval-cards.md) task 9.
 - **G14 Orchestrator tools (SPEC-05 r9):** The limit is 8, but the spec does not name them. OBJ-36.2 proposes a list. Owner: Brent.
 - **G15 Screenshot retention (SPEC-07 r20 vs SPEC-02 r10):** SPEC-07 (p1) deletes screenshots after 7 days; SPEC-02 keeps them forever. Owner: Brent.
-- **G16 Stale pointers:** OBJ-01 (Jepoy), OBJ-03, OBJ-06, OBJ-07, and OBJ-09 (Brent), and OBJ-14 and OBJ-18 (Patrick) still say SPEC-05, SPEC-06, or SPEC-07 is "not finalized" or "not written yet" in Out of scope. Point them at OBJ-35 to OBJ-40. Owner: each objective's owner.
+- **G16 Stale pointers:** OBJ-03, OBJ-06, OBJ-07, and OBJ-09 (Brent), and OBJ-14 and OBJ-18 (Patrick) still say SPEC-05, SPEC-06, or SPEC-07 is "not finalized" or "not written yet" in Out of scope. Point them at OBJ-35 to OBJ-40. Owner: each objective's owner.
 
 ### Resolved conflicts between specs
 

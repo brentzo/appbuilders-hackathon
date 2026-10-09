@@ -99,7 +99,7 @@ It also defines every contract between people's work (harness and Mac app, harne
 
 - Bridge envelope and crypto: [OBJ-02](OBJ-02-bridge-envelope-and-crypto.md). Cross-device message kinds: [OBJ-25](OBJ-25-cross-device-messages.md).
 - Storing records in SQLite: [OBJ-04](OBJ-04-task-store.md).
-- Deciding permission levels at runtime and building approval text: harness objectives (not written yet for SPEC-07).
+- Deciding permission levels at runtime and building approval text: [OBJ-37](OBJ-37-permission-gate-and-file-tools.md) and [OBJ-38](OBJ-38-approvals-pause-and-action-log.md).
 
 ## Outcome
 
