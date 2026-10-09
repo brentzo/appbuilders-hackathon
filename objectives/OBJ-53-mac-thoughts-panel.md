@@ -84,12 +84,13 @@ It reads the reasoning data that [OBJ-52](OBJ-52-harness-debug-logs.md) adds.
   - `python3 scripts/verify.py` passed (docs and the Mac build and all Mac tests).
 - **Not verified:**
   - Clicks for real: that the transparent click panel takes a click over another app without activating Yumi, and that clicks right next to a bubble still reach the app underneath. Brent: in Settings check "Debug mode" is on, run `open -n mac/build/Build/Products/Debug/Yumi.app --args -YumiCursorDemo YES -YumiMockHarness YES` from the repo (after the orchestrator's go, with no other Yumi running), wait for "your turn: click my bubble" (about 46 seconds in), click a bubble (it opens), click the panel (it closes), and click just beside a bubble in a Finder window (Finder gets it).
-  - The live check with a real goal (OBJ-53.6, first expectation), because the model server and the live app belong to other agents now. Brent: with the model server up and Debug mode on, say "export my Keynote deck as a PDF", answer "yes", then click the main cat's bubble and a ghost's. Moving the mouse pauses the task (SPEC-06 r2), so read the panel, then press "Resume" and watch it update.
+  - The live check with a real goal (OBJ-53.6, first expectation), because the model server and the live app belong to other agents now. Brent: with the model server up and Debug mode on, say "export my Keynote deck as a PDF", answer "yes", then click the main cat's bubble and a ghost's. Reaching for a bubble no longer pauses the task (SPEC-06 r2, changed 2026-10-10), so the panel should update while the task runs.
   - Snapshots at 1x: only a 2x display was available; the text is rendered at the panel's own scale (`ThoughtsCard.render` is tested at 2x).
 - **Decisions and deviations:**
   - In Debug mode the main cat, which has no label, shows the title of its subtask in its bubble once a thought arrives, so there is something to click. Without a thought there is no bubble, and nothing to open.
   - Several panels can be open at once, so the main cat and a ghost can be compared.
-  - Reaching for a bubble during a running task pauses it, as SPEC-06 r2 says for any mouse movement; I did not change that. The panel stays readable while paused. Brent may want hovering over Yumi's bubbles not to count as taking over; that would be a SPEC-06 change.
+  - Reaching for a bubble during a running task used to pause it. Brent changed SPEC-06 r2 on 2026-10-10: pointer movement over, and clicks in, Yumi's own bubbles, panels, and chips never count, and small moves never count either.
+  - The main cat's subtask title in its bubble in Debug mode was confirmed by the orchestrator, 2026-10-10.
   - A cat stays put while the pointer is on its bubble or panel, instead of scooting (SPEC-04 r21), so it can be clicked.
   - The panels follow the system appearance; the existing bubble stays on light paper as before.
   - Helper chips still say "Helper working"; their panel shows the subtask title from the thought.

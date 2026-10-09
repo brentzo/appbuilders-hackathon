@@ -37,7 +37,7 @@ It keeps the screen usable and adds personality.
 - SPEC-04 requirements 2, 7, 11, 14, 17, and 21, "Cat behaviors", and the Decisions.
 - `mac/Yumi/Overlay/CursorMotion.swift`, `mac/Yumi/Overlay/OverlayCursor.swift`, `mac/Yumi/Overlay/CursorLayer.swift`, and `mac/Yumi/Overlay/CursorRoster.swift`.
 - [character/README.md](../character/README.md) and the design tokens in `character/design/`.
-- [SPEC-06](../specs/06-user-control.md) requirement 2: moving the pointer yourself is a take-over, so most cats will be paused while the user moves.
+- [SPEC-06](../specs/06-user-control.md) requirement 2: a deliberate pointer move (more than about 80 points within about half a second) is a take-over, so cats are often paused while the user moves; small moves and moves onto Yumi's own bubbles and chips are not (changed 2026-10-10).
 
 ## Tasks
 

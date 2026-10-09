@@ -17,16 +17,17 @@ They can stop, pause, take over, or resume at any time, by voice or by touching 
 ## Requirements
 
 1. Pressing Control-Option-Escape on the Mac, or choosing "Stop" in Yumi's menu bar menu, pauses every lane and checkpoints the task. Yumi then says "Paused. Say continue when you're ready, or cancel to stop for good."
-2. If the user moves their own mouse or types, every UI lane on the Mac pauses immediately. Helpers keep running. This pause is silent: Yumi shows the paused panel and says nothing.
-   - Clicks and typing in Yumi's own windows (approval cards and panels) never count as taking over.
+2. If the user takes over their own mouse or keyboard, every UI lane on the Mac pauses immediately. Helpers keep running. This pause is silent: Yumi shows the paused panel and says nothing.
+   - Taking over is a real click, a key press, a scroll, or a deliberate pointer move: more than about 80 points within about half a second. Small jiggles and trackpad bumps never count.
+   - Pointer movement over, and clicks and typing in, Yumi's own bubbles, thoughts panels, helper chips, cards, and windows never count as taking over.
    - While Yumi is waiting for the user and no UI lane is acting, the user's input never pauses anything. This covers a password field Yumi handed to the user ([SPEC-05](05-mac-gui-control.md) requirement 7).
-3. Yumi tags every mouse and keyboard event it sends. Tagged events never cause a pause, and untagged events always do.
+3. Yumi tags every mouse and keyboard event it sends. Tagged events never cause a pause; untagged events pause whenever they are a take-over (requirement 2).
 4. Pausing takes effect before the next action is sent, never after. Text is typed in short chunks, and the pause is checked between chunks.
 5. Pausing cancels every pending approval. After resuming, a risky action asks again ([SPEC-07](07-safety.md)).
 6. A paused task shows "Resume" and "Cancel" buttons. Saying "continue" or "resume" resumes it, and saying "cancel" cancels it.
 7. Resuming always re-captures the screen first, since the user may have changed things.
 8. Cancelling stops every lane, including helpers, and drops every queued subtask and every command not yet run. Nothing runs after "cancel".
-9. While macOS Secure Input is on (for example in a password field), Yumi cannot see the user's keystrokes. Mouse movement still pauses Yumi.
+9. While macOS Secure Input is on (for example in a password field), Yumi cannot see the user's keystrokes. A click or a deliberate mouse move still pauses Yumi.
 10. `p1` Saying "stop" pauses every lane on every device. It uses a fast keyword detector, not the full speech pipeline, and works while Yumi is talking. It also accepts "teka", "tama na", and "hinto".
 11. `p1` If the user touches the phone screen while Yumi is controlling it, phone UI control pauses immediately.
 12. `p1` A persistent notification action on Android stops everything.
@@ -52,11 +53,22 @@ Feature: User control on the Mac
 
   Scenario: User takes the mouse
     Given the main cursor is moving to a button
-    When the user moves their own mouse
+    When the user moves their own mouse across the screen
     Then every UI lane pauses before its next action
     And helpers keep running
     And Yumi says nothing
     And the paused panel shows "Resume" and "Cancel" buttons
+
+  Scenario: A small bump of the mouse is not taking over
+    Given the main cursor is moving to a button
+    When the user nudges their own mouse a few points
+    Then the task does not pause
+
+  Scenario: Reaching for a cat's bubble is not taking over
+    Given Debug mode is on and the main cursor is working
+    When the user moves their pointer onto a cat's bubble and clicks it
+    Then the cat's thoughts panel opens
+    And the task does not pause
 
   Scenario: Clicking Yumi's own card is not taking over
     Given Yumi is waiting for approval to send an email
@@ -77,7 +89,7 @@ Feature: User control on the Mac
 
   Scenario: Typing stops mid-sentence
     Given the main cursor is typing a long sentence
-    When the user moves their own mouse
+    When the user clicks with their own mouse
     Then typing stops before the next chunk is sent
 
   Scenario: Pause cancels a pending approval
@@ -151,4 +163,5 @@ Feature: User control on Android
 - Clicks and typing in Yumi's own windows (approval cards and panels) never count as taking over, so the user can answer a card with their own mouse without cancelling it. Decided 2026-10-09.
 - There is no take-over pause while Yumi is waiting for the user and no UI lane is acting, which also covers a password field Yumi hands to the user. Otherwise clicking into the field would pause the task Yumi is waiting on. Decided 2026-10-09.
 - "Paused. Say continue when you're ready, or cancel to stop for good." is spoken only after the stop shortcut and the menu bar "Stop". A mouse take-over pauses silently and shows the paused panel, because the user is busy with their own work and speech would interrupt. Decided 2026-10-09.
+- A take-over is a real click, a key press, a scroll, or a deliberate pointer move of more than about 80 points within about half a second, replacing the earlier "any mouse movement". Small jiggles and trackpad bumps never pause a task, and pointer movement over, and clicks in, Yumi's own bubbles, thoughts panels, helper chips, cards, and windows never count, so the user can reach for a cat's bubble mid-task (SPEC-07 requirement 23) without pausing it. The Mac logs which event triggered each take-over. Decided 2026-10-10 by Brent.
 - The paused panel keeps the "Resume" button, and both "continue" and "resume" work by voice, so the spoken line and the button label both work. Decided 2026-10-09.
