@@ -493,6 +493,50 @@ describe("SPEC-05 Mac GUI control", () => {
     expect(statuses.some((e) => e.status === "paused")).toBe(false);
   });
 
+  it("Scenario: Rows are selected by clicking (Mail, the message from Ana)", async () => {
+    // Given Mail shows a list of messages: the model clicks the row for Ana, the gate asks once (Mail is a risky
+    // app, SPEC-07 r6), the user taps, and the Mac app selects the row instead of pressing it open (SPEC-05 r2).
+    let selected: string | undefined;
+    const mail: FakeAppModel = {
+      bundleId: "com.apple.mail",
+      name: "Mail",
+      screen: () => ({
+        app: "Mail",
+        title: "Inbox",
+        elements: [
+          { role: "row", label: "Ana - Q3 Report", ...(selected === "Ana - Q3 Report" ? { value: "selected" } : {}) },
+          { role: "row", label: "Bob - Lunch" },
+          { role: "row", label: "Carol - Invoice" },
+        ],
+      }),
+      onElement: (action, element) => {
+        if (action.kind === "click") selected = element.label;
+        return undefined;
+      },
+    };
+    const fake = await connect(mail);
+    scriptModel((text, call) =>
+      call === 1
+        ? reply({ kind: "click", element: numberOf(text, "row", "Ana - Q3 Report")! })
+        : reply({ kind: "finish", status: "done", note: "Selected the message." }),
+    );
+    const { gate } = approvalsAnswering({ outcome: "approved", approval: {} as never });
+    const { subtask } = guiSubtask({ bundleId: "com.apple.mail", instruction: "Open the message from Ana." });
+
+    const run = ended(await act(subtask, { approvals: gate }));
+
+    // Then that message is selected, and nothing else was done.
+    expect(fake.executed).toHaveLength(1);
+    expect(fake.executed[0]!.element).toMatchObject({ role: "row", label: "Ana - Q3 Report" });
+    expect(harness.store.listSteps(subtask.id)[0]).toMatchObject({ outcome: "ok", action: { permission: "ask" } });
+    expect(harness.store.listSteps(subtask.id)[0]!.observation).toContain('Selected the row "Ana - Q3 Report".');
+    // The click asked as an unclassified risky action in Mail (SPEC-07 r6), and no other message was opened,
+    // moved, or deleted.
+    expect(selected).toBe("Ana - Q3 Report");
+    expect(harness.store.listActionLog(subtask.taskId).map((l) => l.description)).toEqual(["Clicked Ana - Q3 Report in Mail"]);
+    expect(run.result.status).toBe("done");
+  });
+
   it("asks with a file's plain name, never its path (task d608891a)", async () => {
     const fake = await connect(
       staticApp(KEYNOTE, { app: "Keynote", title: "Q3 Report.key", elements: [{ role: "button", label: "Play" }] }),
