@@ -159,29 +159,35 @@ enum WindowReader {
             elements = items.kept
         }
 
-        let focused = appNode.element(kAXFocusedUIElementAttribute).flatMap { number(of: $0, in: elements) }
-        if layer.kind != .menu {
-            layer.defaultButton = layerNode.element(kAXDefaultButtonAttribute).flatMap { number(of: $0, in: elements) }
-            layer.cancelButton = layerNode.element(kAXCancelButtonAttribute).flatMap { number(of: $0, in: elements) }
-        }
         let needsVision = layer.kind != .menu && !elements.contains(where: isContentActionable)
+        // A window whose content is not in the tree offers nothing worth pressing: the model gets the
+        // screenshot and a vision click only. Keeping the chrome and menu bar would give it useless
+        // numbers to press, and it pressed Close and Minimize (Brent's run, 2026-10-10). With no
+        // elements, the harness also drops click, setValue, and scroll from the schema, so clickAt is
+        // the only way to act in the window.
+        let shown = needsVision ? [] : elements
+        let focused = shown.isEmpty ? nil : appNode.element(kAXFocusedUIElementAttribute).flatMap { number(of: $0, in: shown) }
+        if layer.kind != .menu, !shown.isEmpty {
+            layer.defaultButton = layerNode.element(kAXDefaultButtonAttribute).flatMap { number(of: $0, in: shown) }
+            layer.cancelButton = layerNode.element(kAXCancelButtonAttribute).flatMap { number(of: $0, in: shown) }
+        }
         let frame = windowInfo.frame
         let observation = YumiProtocol.Observation(
             app: nonEmpty(app.localizedName),
             windowTitle: windowInfo.title ?? "",
             focused: focused,
             layer: layer,
-            elements: elements.enumerated().map { index, kept in
+            elements: shown.enumerated().map { index, kept in
                 TreeElement(n: index + 1, role: kept.role, label: kept.label, value: kept.value, enabled: kept.enabled)
             },
             screenshotPath: nil,
             windowFrame: frame.map { Frame(x: Double($0.minX), y: Double($0.minY), width: Double($0.width), height: Double($0.height)) }
         )
         // Counts only: labels and values are screen data and stay out of the log.
-        log.info("Observed \(target.bundleId, privacy: .public): \(elements.count) elements, layer \(layer.kind.rawValue, privacy: .public)\(needsVision ? ", no content, needs vision" : "", privacy: .public)")
+        log.info("Observed \(target.bundleId, privacy: .public): \(shown.count) elements, layer \(layer.kind.rawValue, privacy: .public)\(needsVision ? ", no content, needs vision" : "", privacy: .public)")
         return WindowSnapshot(
             observation: observation,
-            elements: elements,
+            elements: shown,
             app: app,
             windowId: target.windowId ?? WindowService.windowId(of: window.element).map(Int.init),
             needsVision: needsVision,

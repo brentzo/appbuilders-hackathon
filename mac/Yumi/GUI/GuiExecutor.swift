@@ -59,6 +59,11 @@ final class GuiExecutor {
                     )
                 } catch VisionCapture.Failure.screenPermissionMissing {
                     throw GuiFailure.screenPermissionMissing
+                } catch {
+                    // A window that cannot be captured (gone, minimized, or the capture itself failed)
+                    // is reported the way a missing window is, so the harness treats it as stuck on
+                    // screen rather than as an unexpected error.
+                    throw GuiFailure.windowNotFound
                 }
                 snapshot.observation.screenshotPath = captured.path
                 snapshot.screenshot = ScreenshotGeometry(
