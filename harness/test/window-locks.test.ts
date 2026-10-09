@@ -42,7 +42,7 @@ const KEYNOTE = "com.apple.Keynote";
 const WEZTERM = "com.github.wez.wezterm";
 
 // The end-to-end runs start the mock Mac app with npm; give a loaded machine room before calling it a hang.
-vi.setConfig({ testTimeout: 30_000 });
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const until = async (check: () => boolean, ms = 5_000) => {
