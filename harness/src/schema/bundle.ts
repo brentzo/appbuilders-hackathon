@@ -12,9 +12,10 @@ const types = indexTypes(files);
 
 /**
  * Keywords the model server's grammar compiler rejects. mlx-vlm 0.7.6 compiles `response_format` schemas with
- * llguidance 1.9.1, which fails the whole request with "Unimplemented keys: [\"uniqueItems\"]".
+ * llguidance 1.9.1, which fails the whole request with "Unimplemented keys: [\"uniqueItems\"]", and the same for the
+ * conditionals (`if`, `then`, `else`) protocol version 3 uses, for example on `OpenAppCall`.
  */
-const MODEL_UNSUPPORTED_KEYWORDS = new Set(["uniqueItems"]);
+const MODEL_UNSUPPORTED_KEYWORDS = new Set(["uniqueItems", "if", "then", "else"]);
 
 export interface BundleOptions {
   /**

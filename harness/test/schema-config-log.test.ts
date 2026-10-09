@@ -7,6 +7,7 @@ import { DEFAULT_SUPPORT_DIR, loadConfig } from "../src/config.ts";
 import { FileLogger } from "../src/log.ts";
 import { bundleType } from "../src/schema/bundle.ts";
 import { workerOutputSchemaFor } from "../src/worker/schema.ts";
+import { checkWorkerOutput } from "../src/worker/validate.ts";
 import { exampleWorkerInput, PROTOCOL_DIR, tempDir } from "./helpers.ts";
 
 function compile(schema: object) {
@@ -30,6 +31,17 @@ describe("the schema bundle", () => {
   it("drops uniqueItems for the model, which llguidance 1.9.1 rejects", () => {
     expect(JSON.stringify(bundleType("WorkerOutput"))).toContain("uniqueItems");
     expect(JSON.stringify(bundleType("WorkerOutput", { forModel: true }))).not.toContain("uniqueItems");
+  });
+
+  it("drops the conditionals for the model, which llguidance 1.9.1 also rejects, and validation still applies them", () => {
+    const full = JSON.stringify(bundleType("WorkerOutput"));
+    expect(full).toContain('"if"');
+    const forModel = JSON.stringify(bundleType("WorkerOutput", { forModel: true }));
+    for (const keyword of ["if", "then", "else"]) expect(forModel).not.toContain(`"${keyword}":`);
+    // OpenAppCall takes a bundle id or a name, not both: the grammar no longer says so, the validation does.
+    const both = { action: { kind: "tool", call: { tool: "open_app", bundleId: "com.apple.Notes", name: "Notes" } } };
+    expect(compile(workerOutputSchemaFor(exampleWorkerInput(), "main"))(both)).toBe(true);
+    expect(checkWorkerOutput(JSON.stringify(both), exampleWorkerInput(), "main").ok).toBe(false);
   });
 
   it("narrows the model schema to the step but still accepts the step's valid actions", () => {
