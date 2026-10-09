@@ -15,18 +15,19 @@ struct MenuPanel: View {
     let close: () -> Void
 
     var body: some View {
-        // The overlay is not observable, so the cursor rows re-read it while the panel is open.
-        TimelineView(.periodic(from: .now, by: 0.5)) { _ in
-            content(cursors: Self.sorted(harness.overlay.cursors.values))
-        }
-        .frame(width: 320)
+        // Reading the cursors here tracks them, so this runs on every cursor change, moves too.
+        // It only maps them to summaries without positions; the content below is equatable on
+        // those, so a move that changes nothing visible here re-renders nothing.
+        PanelContent(panel: self, cursors: CursorSummary.sorted(harness.overlay.cursors.values))
+            .equatable()
+            .frame(width: 320)
         .background(YumiColor.paper)
         .foregroundStyle(YumiColor.ink)
         .tint(YumiColor.accent)
         .onExitCommand(perform: close)
     }
 
-    private func content(cursors: [OverlayCursor]) -> some View {
+    fileprivate func content(cursors: [CursorSummary]) -> some View {
         let somethingRuns = model.status == .working || !cursors.isEmpty
         return VStack(alignment: .leading, spacing: 0) {
             MenuPanelHeader(status: model.status, mainCursor: cursors.first { $0.kind == .main })
@@ -109,13 +110,42 @@ struct MenuPanel: View {
         }
     }
 
+}
+
+/// What the panel shows of a cursor: everything but its position, which changes on every move.
+struct CursorSummary: Equatable, Identifiable {
+    let id: String
+    let kind: CursorKind
+    let label: String?
+    let state: CursorState
+    let palette: CatPalette
+
+    init(_ cursor: OverlayCursor) {
+        id = cursor.id
+        kind = cursor.kind
+        label = cursor.label
+        state = cursor.state
+        palette = cursor.palette
+    }
+
     /// The main cursor first, then ghosts by label.
-    static func sorted(_ cursors: some Sequence<OverlayCursor>) -> [OverlayCursor] {
-        cursors.sorted { a, b in
+    static func sorted(_ cursors: some Sequence<OverlayCursor>) -> [CursorSummary] {
+        cursors.map(CursorSummary.init).sorted { a, b in
             if (a.kind == .main) != (b.kind == .main) { return a.kind == .main }
             return (a.label ?? a.id) < (b.label ?? b.id)
         }
     }
+}
+
+/// The panel's content, rebuilt only when the cursor summaries change. The model's status and
+/// the other observable state still update it through their own tracking.
+private struct PanelContent: View, Equatable {
+    let panel: MenuPanel
+    let cursors: [CursorSummary]
+
+    var body: some View { panel.content(cursors: cursors) }
+
+    static func == (a: PanelContent, b: PanelContent) -> Bool { a.cursors == b.cursors }
 }
 
 // MARK: Header
@@ -123,7 +153,7 @@ struct MenuPanel: View {
 /// The cat in its live state, and the status line.
 private struct MenuPanelHeader: View {
     let status: AppStatus
-    let mainCursor: OverlayCursor?
+    let mainCursor: CursorSummary?
 
     var body: some View {
         HStack(spacing: YumiSpace.m) {
@@ -163,7 +193,7 @@ private struct MenuPanelHeader: View {
 
 /// One running cursor: its cat in its own coat, what it works on, and its state.
 private struct CursorRow: View {
-    let cursor: OverlayCursor
+    let cursor: CursorSummary
 
     var body: some View {
         HStack(spacing: YumiSpace.m) {
