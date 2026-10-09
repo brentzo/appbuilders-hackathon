@@ -46,24 +46,24 @@ struct PausedView: View {
     let cancel: () -> Void
 
     var body: some View {
-        HStack(spacing: 14) {
-            Image(systemName: "pause.circle.fill")
-                .font(.title2)
-                .foregroundStyle(.secondary)
+        HStack(spacing: YumiSpace.m) {
+            // Paused is hush lavender, never red (design README, SPEC-04).
+            YumiSymbolBadge(systemName: "pause.fill", hush: true)
             Text(text)
+                .font(YumiFont.body)
+                .foregroundStyle(YumiColor.ink)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: 280, alignment: .leading)
-            HStack(spacing: 8) {
+            HStack(spacing: YumiSpace.s) {
                 Button(PauseCopy.cancel, action: cancel)
+                    .buttonStyle(YumiSecondaryButtonStyle())
                 Button(PauseCopy.resume, action: resume)
-                    .buttonStyle(AlwaysProminentButtonStyle())
+                    .buttonStyle(YumiPrimaryButtonStyle())
             }
             .fixedSize()
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(.separator, lineWidth: 0.5))
-        .padding(1)
+        .padding(.horizontal, YumiSpace.l)
+        .padding(.vertical, YumiSpace.m)
+        .yumiCard()
     }
 }

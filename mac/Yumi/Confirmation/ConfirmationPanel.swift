@@ -52,22 +52,27 @@ struct ConfirmationView: View {
     let choose: (ConfirmationChoice) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(text)
-                .font(.body)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(width: 380, alignment: .leading)
-            HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: YumiSpace.l) {
+            HStack(alignment: .top, spacing: YumiSpace.m) {
+                YumiBadge(size: 32)
+                // Yumi's spoken line, on screen as it is said.
+                Text(text)
+                    .font(YumiFont.headline)
+                    .foregroundStyle(YumiColor.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(width: 360, alignment: .leading)
+            }
+            HStack(spacing: YumiSpace.s) {
                 Button(ConfirmationCopy.cancel) { choose(.cancel) }
+                    .buttonStyle(YumiSecondaryButtonStyle())
                 Spacer()
                 Button(ConfirmationCopy.changeIt) { choose(.changeIt) }
+                    .buttonStyle(YumiSecondaryButtonStyle())
                 Button(ConfirmationCopy.goAhead) { choose(.goAhead) }
-                    .buttonStyle(AlwaysProminentButtonStyle())
+                    .buttonStyle(YumiPrimaryButtonStyle())
             }
         }
-        .padding(16)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(.separator, lineWidth: 0.5))
-        .padding(1)
+        .padding(YumiSpace.l)
+        .yumiCard()
     }
 }

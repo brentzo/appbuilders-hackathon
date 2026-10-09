@@ -44,30 +44,36 @@ struct ApprovalCardView: View {
     let tap: (Bool) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(approval.text)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(width: 400, alignment: .leading)
+        VStack(alignment: .leading, spacing: YumiSpace.m) {
+            HStack(alignment: .top, spacing: YumiSpace.m) {
+                YumiSymbolBadge(systemName: approval.kind == .send ? "paperplane.fill" : "trash.fill")
+                Text(approval.text)
+                    .font(YumiFont.body)
+                    .foregroundStyle(YumiColor.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(width: 400, alignment: .leading)
+            }
             if approval.kind == .delete, let files = approval.files {
                 FileList(files: files)
             }
-            HStack(spacing: 8) {
+            HStack(spacing: YumiSpace.s) {
                 Spacer()
+                // The approving tap is the panel's one ginger action, for a delete too: never red.
                 if approval.kind == .send {
                     Button(ApprovalCopy.dontSend) { tap(false) }
+                        .buttonStyle(YumiSecondaryButtonStyle())
                     Button(ApprovalCopy.send) { tap(true) }
-                        .buttonStyle(AlwaysProminentButtonStyle())
+                        .buttonStyle(YumiPrimaryButtonStyle())
                 } else {
                     Button(ApprovalCopy.dontDelete) { tap(false) }
+                        .buttonStyle(YumiSecondaryButtonStyle())
                     Button(ApprovalCopy.delete) { tap(true) }
-                        .buttonStyle(AlwaysProminentButtonStyle(color: .red))
+                        .buttonStyle(YumiPrimaryButtonStyle())
                 }
             }
         }
-        .padding(16)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(.separator, lineWidth: 0.5))
-        .padding(1)
+        .padding(YumiSpace.l)
+        .yumiCard()
     }
 }
 
@@ -76,27 +82,29 @@ struct FileList: View {
     let files: FileSummary
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: YumiSpace.xs) {
             Label(files.folder, systemImage: "folder")
-                .font(.callout.weight(.medium))
+                .font(YumiFont.label)
+                .foregroundStyle(YumiColor.brand)
                 .lineLimit(1)
                 .truncationMode(.middle)
             ForEach(Array(files.firstNames.prefix(5).enumerated()), id: \.offset) { _, name in
                 Label(name, systemImage: "doc")
-                    .font(.callout)
+                    .font(YumiFont.caption)
+                    .foregroundStyle(YumiColor.ink)
                     .lineLimit(1)
                     .truncationMode(.middle)
             }
             let more = files.count - min(files.firstNames.count, 5)
             if more > 0 {
                 Text(ApprovalCopy.andMore(more))
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .font(YumiFont.caption)
+                    .foregroundStyle(YumiColor.muted)
                     .padding(.leading, 26)
             }
         }
-        .frame(width: 400, alignment: .leading)
-        .padding(10)
-        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(YumiSpace.m)
+        .yumiWell()
     }
 }
