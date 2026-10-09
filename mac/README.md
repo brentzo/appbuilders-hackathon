@@ -410,7 +410,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 | [OBJ-54](../objectives/OBJ-54-mac-cats-avoid-pointer.md) | Cats avoid the user's pointer | Brent | in-progress |
 | [OBJ-58](../objectives/OBJ-58-mac-hey-yumi-recognizer.md) | "Hey Yumi" on the Mac with the on-device recognizer | Brent | done |
 | [OBJ-62](../objectives/OBJ-62-mac-voice-interruption.md) | Mac listens for interruptions during a task | Patrick | todo |
-| [OBJ-72](../objectives/OBJ-72-mac-cross-device-routing.md) | Mac app side of cross-device routing | Patrick | todo |
+| [OBJ-72](../objectives/OBJ-72-mac-cross-device-routing.md) | Mac app side of cross-device routing | Patrick | in-progress |
 | [OBJ-75](../objectives/OBJ-75-vision-fallback.md) | Vision fallback for apps without accessibility content | Patrick | in-progress |
 <!-- generated:product-objectives:end -->
 

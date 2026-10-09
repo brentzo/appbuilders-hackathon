@@ -5,7 +5,7 @@ product: mac
 assignee: Patrick
 touches: []
 specs: [SPEC-09]
-status: todo
+status: in-progress
 priority: p0
 depends-on: [OBJ-14]
 integrates-with: [OBJ-64, OBJ-68, OBJ-70]
@@ -40,15 +40,15 @@ Build against the mock harness script from [OBJ-64](OBJ-64-cross-device-local-rp
 
 ## Tasks
 
-- [ ] **OBJ-72.1** Read this Mac's bridge device id from `hello` and `bridgeStateChanged`, and send it as `originDeviceId` in `submitGoal`; keep `mac-local` only until the harness reports one.
+- [x] **OBJ-72.1** Read this Mac's bridge device id from `hello` and `bridgeStateChanged`, and send it as `originDeviceId` in `submitGoal`; keep `mac-local` only until the harness reports one.
 - [ ] **OBJ-72.2** Show the "Waiting for your OK on your phone" banner, with no buttons, on `approvalWaitingElsewhere`, and close it on `approvalAnsweredElsewhere`, `approvalCancelled`, or the task leaving the approval.
-- [ ] **OBJ-72.3** Make sure a task from the phone shows its cursor as usual but no repeat-back or summary card on the Mac.
-- [ ] **OBJ-72.4** Tests against the mock harness, and an update to [mac/README.md](../mac/README.md).
+- [x] **OBJ-72.3** Make sure a task from the phone shows its cursor as usual but no repeat-back or summary card on the Mac.
+- [x] **OBJ-72.4** Tests against the mock harness, and an update to [mac/README.md](../mac/README.md).
 
 ## Expectations
 
 - [ ] Against the mock harness script, the banner shows during a phone approval and closes when the phone answers.
-- [ ] After the harness reports a device id, every `submitGoal` carries it.
+- [x] After the harness reports a device id, every `submitGoal` carries it.
 
 ## Expected outcomes
 
@@ -61,4 +61,11 @@ Build against the mock harness script from [OBJ-64](OBJ-64-cross-device-local-rp
 
 ## Outcome
 
-_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._
+- **Result:** In progress.
+  OBJ-72.1, OBJ-72.3, and OBJ-72.4 are done; OBJ-72.2 was cut for the demo by Brent's decision (approvals on the phone are out of the demo).
+- **Delivered:** `mac/Yumi/Harness/HarnessClient.swift` (`onDeviceId`, from `hello`), `mac/Yumi/Harness/HarnessLink.swift` (reads the id from `hello` and `bridgeStateChanged`, sends it as `originDeviceId`, falls back to `mac-local`), tests in `mac/YumiTests/HarnessClientTests.swift` and `mac/YumiTests/AutoModeTests.swift`, and the `mac/README.md` note.
+- **Commits:** `994614d feat(mac): send this Mac's bridge device id as originDeviceId`.
+- **Expectations:** "After the harness reports a device id, every `submitGoal` carries it" is verified by `AutoModeTests.everyGoalCarriesThisMacsBridgeDeviceIdOnceKnown` and `HarnessClientTests.helloReportsThisMacsBridgeDeviceId`. OBJ-72.3 holds because the harness withholds the repeat-back and summary events for a phone task, so the cursor shows as usual and nothing else appears.
+- **Not verified:** the banner expectation needs OBJ-72.2, which is cut; the live run on the demo Mac is not done.
+- **Decisions and deviations:** OBJ-72.2 (the "Waiting for your OK on your phone" banner) was cut for the demo by Brent's decision.
+- **For the next objectives:** when OBJ-72.2 returns, the Mac app reads the `approvalWaitingElsewhere` and `approvalAnsweredElsewhere` events from OBJ-64.2.

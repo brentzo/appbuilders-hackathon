@@ -5,7 +5,7 @@ product: harness
 assignee: Brent
 touches: []
 specs: [SPEC-09, SPEC-02]
-status: todo
+status: blocked
 priority: p0
 depends-on: [OBJ-05, OBJ-25, OBJ-49]
 integrates-with: [OBJ-23, OBJ-64, OBJ-67, OBJ-69]
@@ -42,16 +42,16 @@ This objective makes the harness the executing device and moves it to its bridge
 
 ## Tasks
 
-- [ ] **OBJ-68.1** Use this Mac's bridge device id for its tasks and action log instead of `mac-local`, keep reading older `mac-local` records as this Mac, and report the id to the app as [OBJ-64](OBJ-64-cross-device-local-rpc-contract.md) defines.
-- [ ] **OBJ-68.2** Handle `delegateGoal`: create the task with the goal id as task id and the phone as origin, straight into planning with no repeat-back (SPEC-09 r5), and answer `goalAccepted`.
-- [ ] **OBJ-68.3** Send `progress` to the phone on every status change and at least every 30 seconds while running, with the current subtask title.
-- [ ] **OBJ-68.4** Send `goalFinished` with the spoken summary and do not speak it on the Mac; replace the stand-in in `run-task.ts`. The cursor works on the Mac as for any task.
-- [ ] **OBJ-68.5** Tests with a scripted phone on the relay stand-in, and an update to `harness/README.md`.
+- [x] **OBJ-68.1** Use this Mac's bridge device id for its tasks and action log instead of `mac-local`, keep reading older `mac-local` records as this Mac, and report the id to the app as [OBJ-64](OBJ-64-cross-device-local-rpc-contract.md) defines.
+- [x] **OBJ-68.2** Handle `delegateGoal`: create the task with the goal id as task id and the phone as origin, straight into planning with no repeat-back (SPEC-09 r5), and answer `goalAccepted`.
+- [x] **OBJ-68.3** Send `progress` to the phone on every status change and at least every 30 seconds while running, with the current subtask title.
+- [x] **OBJ-68.4** Send `goalFinished` with the spoken summary and do not speak it on the Mac; replace the stand-in in `run-task.ts`. The cursor works on the Mac as for any task.
+- [x] **OBJ-68.5** Tests with a scripted phone on the relay stand-in, and an update to `harness/README.md`.
 
 ## Expectations
 
-- [ ] The Mac side of SPEC-09 "Phone goal is delegated to the Mac" passes with a scripted phone.
-- [ ] A delegated task never shows the Mac's repeat-back and never speaks its summary on the Mac.
+- [x] The Mac side of SPEC-09 "Phone goal is delegated to the Mac" passes with a scripted phone.
+- [x] A delegated task never shows the Mac's repeat-back and never speaks its summary on the Mac.
 
 ## Expected outcomes
 
@@ -64,4 +64,11 @@ This objective makes the harness the executing device and moves it to its bridge
 
 ## Outcome
 
-_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._
+- **Result:** Blocked.
+  Every task and expectation is met and verified, but a hard dependency, [OBJ-49](OBJ-49-mac-bridge-test-support.md), is still `todo` (its bridge test hooks were cut for the demo), so the checker will not let this objective be `done`. Unblock by finishing OBJ-49 or by dropping it from this objective's `depends-on`; OBJ-49.1's `ping` handler is in fact implemented here, in `DelegatedGoals.handle`.
+- **Delivered:** `harness/src/bridge-client/delegated-goals.ts` (`delegateGoal`, `progress`, `goalFinished`, `pause`, `resume`, `cancel`, `ping`, and `failureLine`), `harness/src/device.ts`, wired to the bridge client in `harness/src/main.ts` and to the scheduler in `harness/src/harness.ts`; tests `harness/test/delegated-goals.test.ts` and `harness/test/support/scripted-phone.ts`; `harness/README.md`.
+- **Commits:** `3f98cf5 feat(harness): run goals sent from the paired phone`, `c1019fd feat(protocol): report this Mac's bridge device id in hello and bridgeStateChanged`.
+- **Expectations:** the Mac side of SPEC-09 "Phone goal is delegated to the Mac" passes in `harness/test/delegated-goals.test.ts` with a scripted phone on the fake relay; that test also asserts there is no repeat-back and no summary on the Mac.
+- **Not verified:** not yet run over the live relay on the demo phone (the demo bar). Steps: start the harness with the bridge, pair the demo phone, say a goal, and watch the phone's "Working on your Mac".
+- **Decisions and deviations:** queueing behind a busy Mac (SPEC-09 r14) is not built; every goal answers `started` and starts at once. Approvals on the phone (r10) are OBJ-70, out of the demo cut.
+- **For the next objectives:** OBJ-69 reads `progress`, `goalFinished`, `pauseConfirmed`, and `cancelConfirmed` from the bridge; OBJ-70 replaces the "approvals show on the Mac" stand-in.
