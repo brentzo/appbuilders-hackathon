@@ -124,6 +124,17 @@ Debug builds have "GUI debug…" in the menu: a floating window that shows the t
 Clicking it does not activate Yumi, so a menu Yumi opened stays open while you press the next item.
 Yumi needs Accessibility permission for it, like for any task.
 
+### Window tiling
+
+When the harness sends `tilingSuggested`, Yumi asks "Want me to arrange your windows so you can watch all of us work?" out loud and in a small panel at the top of the task's display, with "Arrange windows" and "Leave them" ([OBJ-20](../objectives/OBJ-20-window-tiling.md)).
+
+- "Arrange windows" saves every window's frame first, then tiles them in a grid on the display with the main cursor: 2 side by side, 3 and 4 in two rows.
+- "Leave them" moves nothing.
+- When the task is done, failed, or cancelled, every moved window goes back to its exact frame.
+- The saved frames are kept in Yumi's preferences (`tiling.savedLayouts`), so they survive a restart: after reconnecting, Yumi asks the harness for its tasks and puts back the windows of any task that is no longer running.
+- While windows are tiled, the menu has "Put windows back".
+- With "Demo mode" on in Settings, Yumi tiles without asking.
+
 ### Signing and permissions
 
 This is how the project implements "Signing" above.
@@ -176,6 +187,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 | `Yumi/Onboarding/` | The permission onboarding window |
 | `Yumi/Settings/` | Settings, their local storage, and the harness settings hand-off |
 | `Yumi/GUI/` | Controlling other apps: the trimmed tree reader, element actions, tagged keystrokes, the direct tools, and the GUI debug window |
+| `Yumi/Tiling/` | Window tiling: the consent panel, the grid, and saving and restoring window frames |
 | `Yumi/Overlay/` | The click-through cursor overlay: panels per display, the placeholder cursor drawing, motion, helper chips, and the cursor debug actions |
 | `Yumi/Harness/` | Harness launcher and supervisor, the Unix socket, the JSON-RPC client, and event handling |
 | `Yumi/Errors/` | Error copy (the only place user-facing error text lives), the error presenter, and the error window |
@@ -193,6 +205,8 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 - Cursors are a placeholder drawing (a black and white pointer, ghosts outlined in their color) until the Rive cat ([OBJ-19](../objectives/OBJ-19-rive-cat-cursor.md)).
 - A cursor moving to an element whose path does not resolve goes to the center of the target window, or the app's frontmost window.
 - Vision clicks (`clickAt`) are refused until the p1 vision fallback.
+- The tiling question is spoken with the system voice (`TilingVoice`) until the `speak` interface from [OBJ-17](../objectives/OBJ-17-goal-confirmation.md).
+  The answer is buttons only until voice replies exist, and it stays in the app: the protocol has no method to tell the harness.
 - Helper chips say "Helper working": the protocol's `routeDecided` event has no subtask title.
 - The status line follows task events. "Listening" waits for voice intake ([OBJ-15](../objectives/OBJ-15-mac-voice-intake.md)).
 
