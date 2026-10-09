@@ -1,23 +1,23 @@
 ---
 name: git-workflow
-description: Yumi's git rules for every agent and person - branches, worktrees, commit messages, identity, rebasing, and who pushes. Use before any commit, branch, rebase, merge, or push in this repo, and whenever you resolve a merge conflict.
+description: Yumi's git rules for every agent and person - worktrees, commits, identity, rebasing, and who pushes. Use before any commit, worktree, rebase, or push in this repo.
 ---
 
 # Git workflow
 
 ## Who does what
 
-- **Each person pushes their own work to `origin/main`.** Before pushing, run `git pull --rebase`, the product's build and tests, and `python3 scripts/objectives.py check`.
+- **Each person pushes their own work to `origin/main`.** Before pushing, fetch and rebase onto `origin/main`, then run the product's build and tests and `python3 scripts/objectives.py check`.
 - Nobody force-pushes or changes remotes.
-- An agent pushes only when its person asks in that session. Worker agents never push; their branch is merged first.
-- **The orchestrator** (the lead's main agent session) owns local `main`: it rebases finished branches onto it and resolves conflicts there.
-- **Worker agents** work and commit only on their own branch, in their own worktree.
+- An agent pushes only when its person asks in that session. Worker agents commit in their worktree; the orchestrator handles the push when authorized.
+- **The orchestrator** (the lead's main agent session) owns local `main` and pushes finished work directly to `origin/main` when asked.
 
-## Branches and worktrees
+## Worktrees
 
-- One objective per branch, named `obj-NN-<short-slug>` (for example `obj-22-android-shell`).
-- Each branch gets its own worktree at `~/Developer/appbuilders.worktrees/<branch>`, created from local `main`.
-- Never check out, commit to, or rebase `main` from a worktree.
+- Use one detached worktree per task at `~/Developer/appbuilders.worktrees/<short-slug>`, created from `origin/main` after fetching.
+- Example: `git worktree add --detach ~/Developer/appbuilders.worktrees/protocol-rpc origin/main`.
+- Do not create a task branch. Commit in the detached worktree and push with `git push origin HEAD:main` only when authorized.
+- Keep the primary checkout on `main`; do not check out or commit to `main` from a task worktree.
 - Stay inside your objective's product folder, plus your objective file and the tables the index script regenerates. Touching other products causes merge conflicts with other agents.
 
 ## Commits
@@ -36,19 +36,18 @@ description: Yumi's git rules for every agent and person - branches, worktrees, 
 
 - The repo's local git config sets `user.name` and `user.email` for the lead. Worktrees share it. Never change git config.
 
-## Rebasing and conflicts (orchestrator)
+## Rebasing and conflicts
 
-1. When a worker's objective is done, review its branch: `git log main..<branch>` and `git diff main...<branch>`.
-2. Rebase the branch onto local `main`, or rebase local `main` onto `origin/main` after the lead pulls, as the lead asks.
-3. Resolve conflicts on the local branch, never by discarding someone's work:
+1. Before pushing, fetch `origin` and rebase the detached worktree onto `origin/main` if it advanced: `git fetch origin` then `git rebase origin/main`.
+2. Resolve conflicts in the task worktree, never by discarding someone's work:
    - Keep teammates' structure and wording. Apply the minimal change that makes both sides true.
    - For generated tables, take either side, then run `python3 scripts/objectives.py index`.
    - If both sides made real, incompatible decisions, stop and ask the lead.
-4. Run `check` (and the product's build and tests) after resolving.
-5. Remove the worktree (`git worktree remove <path>`) and delete the merged branch only after its commits are on `main`. Look at what a branch contains before deleting it.
-6. Tell the person who owns the work that it is ready to push. Push only if they ask.
+3. Run `check` (and the product's build and tests) after resolving.
+4. Push directly to `origin/main` only when authorized and only if it fast-forwards.
+5. Remove the worktree (`git worktree remove <path>`) after its commit is on `main`.
 
 ## Pulling
 
-- `pull.rebase` and `rebase.autoStash` are on globally, so `git pull` rebases and restores uncommitted changes.
+- Fetch `origin` and rebase the detached worktree onto `origin/main`; avoid pulling into the primary checkout while task work is in progress.
 - The stash is shared across worktrees. Never use bare `git stash` or `git stash pop`; prefer a temporary work-in-progress commit.
