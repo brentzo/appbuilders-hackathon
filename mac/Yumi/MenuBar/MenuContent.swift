@@ -8,6 +8,10 @@ struct MenuContent: View {
     var body: some View {
         // A plain Text is shown as a disabled menu item: information, not an action.
         Text(model.status.menuTitle)
+        if let mock = model.mockHarnessName {
+            // Debug label: a mock must never pass for the real thing in a demo.
+            Text("Using the \(mock)")
+        }
 
         Divider()
 

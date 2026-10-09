@@ -6,7 +6,7 @@ import OSLog
 ///     open Yumi.app --args -YumiAppearance dark -YumiOpen settings -YumiSnapshotDir /tmp/shots
 ///
 /// - `-YumiAppearance light|dark` forces the app's appearance without changing the system's.
-/// - `-YumiStatus ready|listening|working|paused` sets the menu's status line.
+/// - `-YumiStatus startingUp|ready|listening|working|paused` sets the menu's status line.
 /// - `-YumiOpen settings|onboarding` opens a window at launch instead of the usual onboarding check.
 /// - `-YumiPermissions mixed|granted` pretends permissions are in that state, without asking macOS.
 ///   `mixed` has the microphone allowed and the other two missing.
@@ -37,7 +37,7 @@ enum DebugLaunchOptions {
         }
 
         if let status = arguments.string(forKey: "YumiStatus").flatMap(AppStatus.init(rawValue:)) {
-            app.model.status = status
+            app.model.statusOverride = status
         }
 
         let opened: (name: String, window: NSWindow)?

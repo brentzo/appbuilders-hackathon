@@ -1,7 +1,9 @@
 /// What Yumi is doing, shown as the first line of the menu.
 ///
-/// Nothing drives this yet: the harness event stream (OBJ-14.5) and voice intake (OBJ-15) will.
+/// `startingUp` shows while the harness is not ready yet. The others come from the harness's task
+/// events (OBJ-14.5); `listening` comes from voice intake (OBJ-15).
 enum AppStatus: String, CaseIterable, Sendable {
+    case startingUp
     case ready
     case listening
     case working
@@ -9,6 +11,7 @@ enum AppStatus: String, CaseIterable, Sendable {
 
     var menuTitle: String {
         switch self {
+        case .startingUp: "Yumi is getting ready"
         case .ready: "Yumi is ready"
         case .listening: "Yumi is listening"
         case .working: "Yumi is working"
