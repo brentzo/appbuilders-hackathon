@@ -10,7 +10,7 @@ import type { ChatMessage } from "../model/openai.ts";
  * once; if the model still gives none, Yumi says `FALLBACK_SUMMARY`, because the work itself is done.
  */
 
-/** Said when the model gives no usable summary. True whenever this runs, since every subtask is done. */
+/** Said when the model gives no usable summary (SPEC-02 r9). True whenever this runs, since every subtask is done. */
 export const FALLBACK_SUMMARY = "Done. I finished everything you asked for.";
 
 const MAX_SUMMARY = 300;

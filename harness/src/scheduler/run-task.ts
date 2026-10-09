@@ -57,6 +57,7 @@ export async function runTask(taskId: Uuid, deps: RunTaskDeps, signal?: AbortSig
   const scheduled = await runSchedule(taskId, confirmedGoal, deps, signal);
   if (scheduled.outcome === "aborted") return { outcome: "aborted" };
   if (scheduled.outcome === "failed") {
+    // Without its own error, the failure was a bug in the harness, not the subtask: "Unexpected" with the last action.
     const lastAction = store.listActionLog(taskId).at(-1)?.description;
     return fail(task, scheduled.userError ?? { kind: "unexpected", taskId, ...(lastAction ? { lastAction } : {}) }, deps);
   }

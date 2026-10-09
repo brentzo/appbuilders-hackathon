@@ -445,7 +445,7 @@ describe("a broken plan never reaches the scheduler", () => {
 });
 
 describe("when a subtask fails", () => {
-  it("stops the others, fails the task, and tells the user with the last action, never the detail", async () => {
+  it("stops the others, fails the task, and tells the user which step could not finish (SPEC-11 r14)", async () => {
     scriptedModel(server, {
       worker: (instruction, steps) => {
         const pdf = /~\/Downloads\/(.+\.pdf) /.exec(instruction)![1]!;
@@ -460,7 +460,7 @@ describe("when a subtask fails", () => {
 
     expect(outcome).toEqual({
       outcome: "failed",
-      userError: { kind: "unexpected", taskId: task.id, lastAction: expect.stringMatching(/^Read .+\.pdf$/) },
+      userError: { kind: "stepFailed", taskId: task.id, step: "Summarize Lease.pdf" },
     });
     expect(harness.store.getTask(task.id)!.status).toBe("failed");
     const subtasks = harness.store.listSubtasks(task.id);

@@ -98,7 +98,10 @@ export async function runSchedule(
     // Cancelled from outside (pause or cancel): what happens to the subtask is the pause and cancel flow's call (OBJ-38).
     if (run.outcome === "aborted" && signal?.aborted) return;
     store.setSubtaskStatus(subtask.id, "failed", { result: run.result });
-    if (run.outcome !== "aborted") fail(subtask.id, "userError" in run ? run.userError : undefined);
+    if (run.outcome === "aborted") return;
+    // A subtask the worker could not finish is "Couldn't finish a step" (SPEC-11 r14), named by its title. Failures
+    // with their own SPEC-11 row (the model, the step guard) keep theirs.
+    fail(subtask.id, "userError" in run && run.userError ? run.userError : { kind: "stepFailed", taskId, step: subtask.title });
   };
 
   /** Marks pending subtasks ready once every subtask they depend on is done. */
