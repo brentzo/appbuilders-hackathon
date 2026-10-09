@@ -46,7 +46,7 @@ struct MockHarnessLauncher: HarnessLauncher {
         if let override = ProcessInfo.processInfo.environment["YUMI_REPO_ROOT"] {
             return URL(fileURLWithPath: override)
         }
-        return URL(fileURLWithPath: #filePath) // mac/Yumi/Harness/MockHarnessLauncher.swift
+        return URL(fileURLWithPath: #filePath) // mac/Yumi/Harness/HarnessLauncher.swift
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
