@@ -1,0 +1,31 @@
+{
+  "name": "yumi-remotion",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Remotion assets for the Yumi cat: the layered character, its moods, and demo-video scenes.",
+  "scripts": {
+    "studio": "remotion studio",
+    "typecheck": "tsc --noEmit",
+    "stills": "remotion still YumiIntro out/intro.png --frame=150 && remotion still YumiMoods out/moods.png --frame=40 && remotion still YumiIdleLoop out/idle.png --frame=10",
+    "render:intro": "remotion render YumiIntro out/yumi-intro.mp4",
+    "render:moods": "remotion render YumiMoods out/yumi-moods.mp4",
+    "render:idle": "remotion render YumiIdleLoop out/yumi-idle.mp4",
+    "render:sticker": "remotion render YumiSticker out/yumi-sticker.webm --codec=vp9 --image-format=png --pixel-format=yuva420p",
+    "render:all": "npm run render:intro && npm run render:moods && npm run render:idle && npm run render:sticker",
+    "export:assets": "tsx scripts/export-assets.ts"
+  },
+  "dependencies": {
+    "@remotion/bundler": "4.0.528",
+    "@remotion/cli": "4.0.528",
+    "@remotion/google-fonts": "4.0.528",
+    "@remotion/renderer": "4.0.528",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.528"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.12",
+    "tsx": "4.19.2",
+    "typescript": "5.6.3"
+  }
+}

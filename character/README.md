@@ -5,7 +5,7 @@ This product is the animated cat itself, a Rive file that both the Mac cursor an
 
 Owner: Patrick.
 
-Status: empty scaffold, nothing built yet.
+Status: master art and video assets are done; the Rive file is next ([OBJ-10](../objectives/OBJ-10-yumi-cat-v0.md)).
 
 ## Responsibilities
 
@@ -36,6 +36,14 @@ First draft from [SPEC-04](../specs/04-cursor-presence.md), to be replaced by th
 - Remotion is only for the demo or pitch video.
 - The cat is black and white. Decided 2026-10-09 by Patrick, recorded in [SPEC-04](../specs/04-cursor-presence.md) Decisions.
 - How the ghost littermates' own colors combine with black and white is still open in [SPEC-04](../specs/04-cursor-presence.md) Open questions.
+
+## Assets
+
+| Path | What |
+|---|---|
+| [art/yumi-cat.svg](art/yumi-cat.svg) | Layered master art, about 8 KB, every part named. The source for everything else |
+| [assets/](assets/README.md) | Background-free stand-ins for the apps: one SVG, PNG set, and looping WebM per cursor state |
+| [remotion/](remotion/README.md) | Remotion project for the demo and pitch video |
 
 ## Workflow
 
