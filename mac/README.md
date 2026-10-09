@@ -5,7 +5,8 @@ It is everything the user sees and hears on the Mac, and every native capability
 
 Owner: Patrick.
 
-Status: the app shell is started ([OBJ-14](../objectives/OBJ-14-mac-app-shell.md)): menu bar item, status line, permission onboarding, and settings. The harness link is not built yet.
+Status: the app shell is started ([OBJ-14](../objectives/OBJ-14-mac-app-shell.md)): menu bar item, status line, permission onboarding, and settings.
+The harness link is not built yet.
 
 ## Responsibilities
 
@@ -46,17 +47,22 @@ Free Apple accounts ("Personal Team") are enough for the hackathon. Build Yumi f
 
 ## Build and run
 
-Needs Xcode 26 (built with 26.4.1). The app runs on macOS 15 or later.
+Needs Xcode 26 (built with 26.4.1).
+The app runs on macOS 15 or later.
 No other tools are needed: `mac/Yumi.xcodeproj` is a plain Xcode project.
 
 From `mac/`:
 
 ```sh
-# Build
+# Build for development
 xcodebuild -project Yumi.xcodeproj -scheme Yumi -configuration Debug -derivedDataPath build build
 
 # Run (Yumi appears in the menu bar as a cat; it has no Dock icon)
 open build/Build/Products/Debug/Yumi.app
+
+# Build for demos and smoke tests (see "Signing and permissions")
+xcodebuild -project Yumi.xcodeproj -scheme Yumi -configuration Release -derivedDataPath build build
+open build/Build/Products/Release/Yumi.app
 
 # Test (unit tests, including the check that the error copy matches SPEC-11)
 xcodebuild -project Yumi.xcodeproj -scheme Yumi -derivedDataPath build test
@@ -81,6 +87,9 @@ Your team ID is the `OU` of your certificate: `security find-certificate -c "App
 
 To reset Yumi's permissions while testing onboarding: `tccutil reset All ph.appbuilders.yumi`.
 
+With ad hoc signing, Debug builds are not signed with the hardened runtime, but Release builds are.
+Use a Release build for demos and smoke tests, so Yumi runs under the same rules macOS applies to a shipped app.
+
 The app is not sandboxed, because controlling other apps through Accessibility does not work from the sandbox.
 
 ### Checking the UI without clicking
@@ -96,7 +105,8 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 - `-YumiOpen settings|onboarding` opens that window at launch.
 - `-YumiPermissions mixed|granted` pretends permissions are in that state, without asking macOS.
 - `-YumiStatus ready|listening|working|paused` sets the menu's status line.
-- `-YumiSnapshotDir <dir>` writes the opened window as PNG files at 1x and 2x, then quits. It needs no Screen Recording permission.
+- `-YumiSnapshotDir <dir>` writes the opened window as PNG files at 1x and 2x, then quits.
+  It needs no Screen Recording permission.
 
 ## Code layout
 
@@ -113,8 +123,10 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 ## Stand-ins in the app today
 
 - The menu bar icon is the SF Symbol `cat` until the Rive cat ([OBJ-19](../objectives/OBJ-19-rive-cat-cursor.md)) exists.
-- Settings changes go to `PendingHarnessSettingsSink`, which only logs. The real sink comes with the harness link (OBJ-14.5) and the generated protocol types ([OBJ-01](../objectives/OBJ-01-task-record-schemas.md)).
-- Nothing changes the status line yet. The harness event stream (OBJ-14.5) and voice intake ([OBJ-15](../objectives/OBJ-15-mac-voice-intake.md)) will.
+- Settings changes go to `PendingHarnessSettingsSink`, which only logs.
+  The real sink comes with the harness link (OBJ-14.5) and the generated protocol types ([OBJ-01](../objectives/OBJ-01-task-record-schemas.md)).
+- Nothing changes the status line yet.
+  The harness event stream (OBJ-14.5) and voice intake ([OBJ-15](../objectives/OBJ-15-mac-voice-intake.md)) will.
 
 ## Specs
 
