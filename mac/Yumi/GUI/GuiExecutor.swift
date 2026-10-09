@@ -17,19 +17,27 @@ final class GuiExecutor {
     var onUserError: ((UserError) -> Void)?
 
     private let overlay: CursorOverlay?
+    private let isTrusted: () -> Bool
     private var snapshots: [String: WindowSnapshot] = [:]
     private var lastPermissionPrompt: Date?
     private let log = Logger(subsystem: "ph.appbuilders.yumi", category: "gui")
 
-    init(overlay: CursorOverlay?, keystrokes: KeystrokeSender = KeystrokeSender()) {
+    init(overlay: CursorOverlay?, keystrokes: KeystrokeSender = KeystrokeSender(), isTrusted: @escaping () -> Bool = { AXIsProcessTrusted() }) {
         self.overlay = overlay
         self.keystrokes = keystrokes
+        self.isTrusted = isTrusted
+    }
+
+    private func requireAccessibility() throws {
+        guard isTrusted() else { throw GuiFailure.accessibilityMissing }
+        try WindowReader.requireAccessibility()
     }
 
     // MARK: observeWindow (OBJ-44.2)
 
     func observeWindow(_ params: ObserveWindowParams) throws -> YumiProtocol.Observation {
         try reporting {
+            try requireAccessibility()
             let snapshot = try WindowReader.observe(params.target)
             snapshots[Self.key(params.target)] = snapshot
             return snapshot.observation
@@ -45,6 +53,13 @@ final class GuiExecutor {
 
     func executeAction(_ params: ExecuteActionParams) async throws -> ExecuteActionResult {
         try await reporting {
+            // A password field is never filled, whatever else is true (SPEC-05 r7).
+            if params.action.element?.role == .secureTextField {
+                switch params.action.action {
+                case .setValue, .type: throw GuiFailure.secureField
+                default: break
+                }
+            }
             switch params.action.action {
             case .click(let click):
                 return try await onElement(click.element, params) { kept in try self.click(kept) }
@@ -71,7 +86,7 @@ final class GuiExecutor {
     private func onElement(
         _ number: Int, _ params: ExecuteActionParams, perform: (KeptElement<LiveNode>) throws -> String
     ) async throws -> ExecuteActionResult {
-        try WindowReader.requireAccessibility()
+        try requireAccessibility()
         guard let kept = snapshots[Self.key(params.target)]?.element(number) else {
             return Self.result(.error, "Element \(number) is not in the last look at this window.")
         }
@@ -88,8 +103,8 @@ final class GuiExecutor {
         await moveCursor(params.cursorId, toTopLeft: CGPoint(x: frame.midX, y: frame.midY))
         do {
             return Self.result(.ok, try perform(kept))
-        } catch let error as AXError {
-            return Self.result(.error, Self.describe(error, kept))
+        } catch let error as AXFailure {
+            return Self.result(.error, Self.describe(error.code, kept))
         }
     }
 
@@ -130,7 +145,7 @@ final class GuiExecutor {
             if current.info().role == kAXScrollAreaRole { break }
             node = current.element(kAXParentAttribute).map(LiveNode.init)
         }
-        guard let area = node, area.info().role == kAXScrollAreaRole else { throw AXError.actionUnsupported }
+        guard let area = node, area.info().role == kAXScrollAreaRole else { throw AXFailure(code: .actionUnsupported) }
         let barAttribute = vertical ? kAXVerticalScrollBarAttribute : kAXHorizontalScrollBarAttribute
         if let bar = area.element(barAttribute), let position = LiveNode(element: bar).copy(kAXValueAttribute) as? NSNumber {
             let next = min(1, max(0, position.doubleValue + (forward ? 0.25 : -0.25)))
@@ -152,7 +167,7 @@ final class GuiExecutor {
 
     private func type(_ text: String, _ params: ExecuteActionParams) async throws -> ExecuteActionResult {
         guard isMainLane(params.cursorId) else { throw GuiFailure.notMainLane }
-        try WindowReader.requireAccessibility()
+        try requireAccessibility()
         let app = try WindowReader.runningApp(params.target.bundleId)
         let appNode = WindowReader.appNode(app)
         if focusIsSecure(appNode) { throw GuiFailure.secureField }
@@ -169,7 +184,7 @@ final class GuiExecutor {
 
     private func press(_ combo: String, _ params: ExecuteActionParams) async throws -> ExecuteActionResult {
         guard isMainLane(params.cursorId) else { throw GuiFailure.notMainLane }
-        try WindowReader.requireAccessibility()
+        try requireAccessibility()
         guard KeyCombo(combo) != nil else { return Self.result(.invalidOutput, "\(combo) is not a key combination Yumi knows.") }
         try await activate(params.target)
         _ = keystrokes.press(combo)
@@ -207,6 +222,7 @@ final class GuiExecutor {
     /// from the screen and never from model text (SPEC-07 r13). A secure field is never read.
     func readFieldValues(_ params: ReadFieldValuesParams) throws -> ReadFieldValuesResult {
         try reporting {
+            try requireAccessibility()
             var fields: [FieldValue] = []
             for path in params.elementPaths {
                 guard let node = try WindowReader.resolve(path, in: params.target), !node.info().isSecure else {
@@ -293,7 +309,7 @@ final class GuiExecutor {
         case .apiDisabled, .notImplemented where !AXIsProcessTrusted():
             throw GuiFailure.accessibilityMissing
         default:
-            throw error
+            throw AXFailure(code: error)
         }
     }
 
@@ -323,4 +339,7 @@ final class GuiExecutor {
     }
 }
 
-extension AXError: @retroactive Error {}
+/// An accessibility call the other app refused.
+nonisolated struct AXFailure: Error {
+    let code: AXError
+}

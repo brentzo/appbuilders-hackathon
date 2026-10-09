@@ -7,9 +7,22 @@ protocol ElementLocating {
     @MainActor func locate(_ target: ElementTarget) -> CGPoint?
 }
 
-/// STAND-IN until native execution can resolve an element path through the Accessibility API
-/// (SPEC-05, OBJ-44): points at the center of the target window, or of the app's frontmost window
-/// when that window id is not on screen. Window bounds need no Screen Recording permission.
+/// Points at the center of the element at `elementPath`, resolved through the Accessibility API
+/// (OBJ-44). When the path does not resolve, for example without Accessibility permission, it
+/// falls back to the window's center.
+struct AccessibilityElementLocator: ElementLocating {
+    var fallback: ElementLocating = WindowCenterLocator()
+
+    func locate(_ target: ElementTarget) -> CGPoint? {
+        if let node = try? WindowReader.resolve(target.elementPath, in: target.target), let frame = node.frame {
+            return ScreenGeometry.appKitPoint(fromGlobalTopLeft: CGPoint(x: frame.midX, y: frame.midY))
+        }
+        return fallback.locate(target)
+    }
+}
+
+/// Points at the center of the target window, or of the app's frontmost window when that window
+/// id is not on screen. Window bounds need no Screen Recording permission.
 struct WindowCenterLocator: ElementLocating {
     func locate(_ target: ElementTarget) -> CGPoint? {
         let bounds = target.target.windowId.flatMap(Self.bounds(ofWindow:))

@@ -25,7 +25,7 @@ final class CursorOverlay {
     private let locator: ElementLocating
     private let log = Logger(subsystem: "ph.appbuilders.yumi", category: "overlay")
 
-    init(locator: ElementLocating = WindowCenterLocator()) {
+    init(locator: ElementLocating = AccessibilityElementLocator()) {
         self.locator = locator
     }
 

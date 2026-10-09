@@ -16,21 +16,32 @@ enum AppMethodReply: Sendable {
 
 /// Serves the harness-to-app methods (OBJ-27). Params and results are the generated protocol types.
 ///
-/// `executeAction`, `observeWindow`, `readFieldValues` (OBJ-44), `showApprovalCard` and
-/// `moveToTrash` (OBJ-45) are not served yet and answer -32601.
+/// `executeAction`, `observeWindow` and `readFieldValues` go to the GUI executor (OBJ-44).
+/// `showApprovalCard` and `moveToTrash` (OBJ-45) are not served yet and answer -32601.
 @MainActor
 final class AppMethodServer {
     private let secrets: SecretStore
+    private let gui: GuiExecutor?
     private let log = Logger(subsystem: "ph.appbuilders.yumi", category: "app-methods")
 
-    init(secrets: SecretStore = SecretStore()) {
+    init(secrets: SecretStore = SecretStore(), gui: GuiExecutor? = nil) {
         self.secrets = secrets
+        self.gui = gui
     }
 
     func serve(_ name: String, params: Data) async -> AppMethodReply {
         guard let method = RpcMethod(rawValue: name) else { return .notServed }
         do {
             switch method {
+            case .observeWindow:
+                guard let gui else { return .notServed }
+                return try encode(try gui.observeWindow(try decode(ObserveWindowParams.self, params)))
+            case .executeAction:
+                guard let gui else { return .notServed }
+                return try encode(try await gui.executeAction(try decode(ExecuteActionParams.self, params)))
+            case .readFieldValues:
+                guard let gui else { return .notServed }
+                return try encode(try gui.readFieldValues(try decode(ReadFieldValuesParams.self, params)))
             case .listWindows:
                 let p = try decode(ListWindowsParams.self, params)
                 return try encode(WindowList(windows: WindowService.listWindows(bundleId: p.bundleId)))
@@ -70,6 +81,8 @@ final class AppMethodServer {
     /// Maps a native failure to the user-facing kind the harness passes on (SPEC-11).
     static func reply(for error: Error, method: String) -> AppMethodReply {
         switch error {
+        case let failure as GuiFailure:
+            return .failed(failure.userError, "\(method): \(failure)")
         case WindowService.Failure.accessibilityMissing, AppCapabilityProbe.Failure.accessibilityMissing:
             return .failed(UserError(kind: .accessibilityPermissionMissing), "\(method): Accessibility permission missing")
         case AppCapabilityProbe.Failure.appNotInstalled:

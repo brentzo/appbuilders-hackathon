@@ -20,6 +20,8 @@ final class HarnessLink {
 
     /// The cursors the harness drives (OBJ-18).
     let overlay: CursorOverlay
+    /// Reads and acts on other apps' windows for the harness (OBJ-44).
+    let gui: GuiExecutor
     /// Helper subtasks shown as chips, by subtask id.
     private var helperSubtasks: Set<String> = []
 
@@ -28,13 +30,15 @@ final class HarnessLink {
         self.overlay = overlay
         supervisor = HarnessSupervisor(launcher: launcher)
         client = HarnessClient(socketPath: socketPath)
-        client.appMethods = AppMethodServer()
+        gui = GuiExecutor(overlay: overlay)
+        client.appMethods = AppMethodServer(gui: gui)
         usesMock = launcher.isMock
         model.mockHarnessName = launcher.isMock ? launcher.displayName : nil
     }
 
     func start() {
         overlay.start()
+        gui.onUserError = { [weak self] error in self?.onUserError?(error) }
         client.onLinkStateChange = { [weak self] state in
             guard let self else { return }
             model.harnessReady = state == .connected
@@ -86,7 +90,8 @@ final class HarnessLink {
         case .bridgeStateChanged(let change):
             PhoneLink.shared.update(connection: PhoneLink.Connection(change.state))
         default:
-            // Voice, confirmation, cursors, approvals and tiling consume these in later objectives.
+            // goalRestated, questionAsked, speak (voice and confirmation), approvalCancelled,
+            // interruptedTaskFound, waitingForWindow and tilingSuggested are consumed in later objectives.
             log.info("Not handled yet: \(event.name, privacy: .public)")
         }
     }
