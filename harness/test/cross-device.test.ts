@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { platform } from "node:os";
 import { PROTOCOL_VERSION } from "@yumi/protocol/types";
@@ -38,6 +38,9 @@ describe.skipIf(platform() === "win32")("SPEC-09 cross-device routing on the Mac
     dir = tempDir();
     home = join(dir.path, "home");
     mkdirSync(join(home, "Downloads"), { recursive: true });
+    // The harness resolves every path through symlinks; on macOS `/var` is a link to `/private/var`, so the test's
+    // home must be canonicalized the same way or path assertions like moveToTrash compare different spellings.
+    home = realpathSync(home);
     model = await startMockModelServer();
     logger = new MemoryLogger();
   });
