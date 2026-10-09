@@ -28,6 +28,8 @@ struct SettingsView: View {
                 .fixedSize()
             }
 
+            PhoneSettingsSection(phone: .shared)
+
             Section("Demo") {
                 Toggle(isOn: $store.demoModeEnabled) {
                     Text("Demo mode")

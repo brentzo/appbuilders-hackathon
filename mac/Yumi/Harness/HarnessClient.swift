@@ -47,6 +47,8 @@ final class HarnessClient {
     private let eventContinuation: AsyncStream<HarnessEvent>.Continuation
 
     private var socket: LineSocket?
+    /// Serves the methods the harness calls on the app (OBJ-27). Set before `start()`.
+    var appMethods: AppMethodServer?
     private var pending: [Int: CheckedContinuation<Data, Error>] = [:]
     private var nextId = 1
     private var running = false
@@ -238,7 +240,7 @@ final class HarnessClient {
         let id = message["id"] as? Int
         if let method = message["method"] as? String {
             if let id {
-                answerUnsupportedRequest(id: id, method: method)
+                answerRequest(id: id, method: method, params: message["params"], on: source)
             } else {
                 receiveEvent(method, params: message["params"])
             }
@@ -276,13 +278,34 @@ final class HarnessClient {
         }
     }
 
-    /// Harness-to-app methods (executeAction, observeWindow, ...) are OBJ-27. Until then the app
-    /// answers that it does not serve them, which the contract allows (-32601).
-    private func answerUnsupportedRequest(id: Int, method: String) {
-        log.notice("The harness called \(method, privacy: .public), which this app does not serve yet (OBJ-27)")
-        let reply = RpcErrorReply(id: id, error: .init(code: RpcErrorCode.methodNotFound, message: "Method not found: \(method)"))
-        if let data = try? JSONEncoder().encode(reply) {
-            socket?.send(data)
+    /// Harness-to-app methods go to `appMethods` (OBJ-27). Without one, or for a method it does not
+    /// serve, the app answers -32601, which the contract allows.
+    private func answerRequest(id: Int, method: String, params: Any?, on source: LineSocket) {
+        let paramsData = (try? JSONSerialization.data(withJSONObject: params ?? [String: Any](), options: .fragmentsAllowed)) ?? Data("{}".utf8)
+        Task { [weak self, appMethods] in
+            let reply = await appMethods?.serve(method, params: paramsData) ?? .notServed
+            guard let self else { return }
+            var message: [String: Any] = ["jsonrpc": "2.0", "id": id]
+            switch reply {
+            case .result(let data):
+                message["result"] = (try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed)) ?? [String: Any]()
+            case .notServed:
+                log.notice("The harness called \(method, privacy: .public), which this app does not serve yet")
+                message["error"] = ["code": RpcErrorCode.methodNotFound, "message": "Method not found: \(method)"]
+            case .invalidParams(let detail):
+                log.error("The harness called \(method, privacy: .public) with params that break the contract: \(detail, privacy: .public)")
+                message["error"] = ["code": RpcErrorCode.invalidParams, "message": "Invalid params for \(method)"]
+            case .failed(let userError, let detail):
+                log.error("\(method, privacy: .public) failed: \(detail, privacy: .public)")
+                var error: [String: Any] = ["code": RpcErrorCode.failed, "message": detail]
+                if let data = try? JSONEncoder().encode(userError) {
+                    error["data"] = try? JSONSerialization.jsonObject(with: data)
+                }
+                message["error"] = error
+            }
+            // Answer on the socket the request came in on; a reply to a replaced socket is dropped.
+            guard source === socket, let line = try? JSONSerialization.data(withJSONObject: message) else { return }
+            source.send(line)
         }
     }
 
@@ -303,6 +326,7 @@ final class HarnessClient {
 /// JSON-RPC error codes on the local socket (protocol/src/rpc.ts).
 enum RpcErrorCode {
     static let methodNotFound = -32601
+    static let invalidParams = -32602
     /// The method ran and failed. The error's data is a `UserError`.
     static let failed = -32000
 }
@@ -314,13 +338,3 @@ private struct RpcRequest<Params: Encodable>: Encodable {
     let params: Params
 }
 
-private struct RpcErrorReply: Encodable {
-    struct ErrorObject: Encodable {
-        let code: Int
-        let message: String
-    }
-
-    let jsonrpc = "2.0"
-    let id: Int
-    let error: ErrorObject
-}

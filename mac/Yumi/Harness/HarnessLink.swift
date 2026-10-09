@@ -28,6 +28,7 @@ final class HarnessLink {
         self.overlay = overlay
         supervisor = HarnessSupervisor(launcher: launcher)
         client = HarnessClient(socketPath: socketPath)
+        client.appMethods = AppMethodServer()
         usesMock = launcher.isMock
         model.mockHarnessName = launcher.isMock ? launcher.displayName : nil
     }
@@ -39,6 +40,7 @@ final class HarnessLink {
             model.harnessReady = state == .connected
             // Without a harness no task is running, so no cursor may stay (SPEC-04 r9).
             if state != .connected { overlay.fadeAll() }
+            if state == .connected { PhoneLink.shared.refreshDevices() }
             log.notice("Status line: \(self.model.status.menuTitle, privacy: .public)")
         }
         eventsTask = Task { [weak self, client] in
@@ -46,6 +48,7 @@ final class HarnessLink {
                 self?.handle(event)
             }
         }
+        PhoneLink.shared.calls = PhoneCalls(client: client) { [weak self] error, method in self?.report(error, from: method) }
         supervisor.start()
         client.start()
     }
@@ -80,6 +83,8 @@ final class HarnessLink {
         case .userError(let error):
             log.notice("The harness reported \(error.kind.rawValue, privacy: .public)")
             onUserError?(error)
+        case .bridgeStateChanged(let change):
+            PhoneLink.shared.update(connection: PhoneLink.Connection(change.state))
         default:
             // Voice, confirmation, cursors, approvals and tiling consume these in later objectives.
             log.info("Not handled yet: \(event.name, privacy: .public)")

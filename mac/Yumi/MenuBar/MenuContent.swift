@@ -14,6 +14,8 @@ struct MenuContent: View {
             Text("Using the \(mock)")
         }
 
+        PhoneMenuItems(phone: .shared)
+
         Divider()
 
         if !model.permissions.allGranted {
