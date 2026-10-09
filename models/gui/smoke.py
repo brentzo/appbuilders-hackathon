@@ -80,18 +80,18 @@ ANA = "ana@example.com"  # example.com never receives mail, and the run stops be
 # Accessibility reading
 # ---------------------------------------------------------------------------
 
-# SPEC-05 r2 roles, plus the raw AX roles we fold into them. Folding is a
-# smoke-test choice; see SMOKE-TEST.md "Decisions and deviations".
+# SPEC-05 r2 roles (AXRole names as in docs/task-record-schema.md, updated on main in d5db14d),
+# plus combo boxes and menu buttons folded into the closest role. See SMOKE-TEST.md.
 ROLE_MAP = {
     "AXButton": "button",
     "AXMenuItem": "menuItem",
-    "AXMenuBarItem": "menuItem",
+    "AXMenuBarItem": "menuBarItem",
     "AXTextField": "textField",
-    "AXTextArea": "textField",
+    "AXTextArea": "textArea",
     "AXComboBox": "textField",
     "AXLink": "link",
     "AXCheckBox": "checkbox",
-    "AXRadioButton": "checkbox",
+    "AXRadioButton": "radioButton",
     "AXPopUpButton": "popUpButton",
     "AXMenuButton": "popUpButton",
 }
@@ -227,10 +227,10 @@ class Collector:
         subrole = ax(el, "AXSubrole") or ""
         secure = subrole == "AXSecureTextField"
         value = None
-        if (role in ("textField", "checkbox") or raw_role == "AXPopUpButton") and not secure:
+        if (role in ("textField", "textArea", "checkbox", "radioButton") or raw_role == "AXPopUpButton") and not secure:
             v = ax(el, "AXValue")
             value = text(v) if v is not None else ""
-            if role == "checkbox":
+            if role in ("checkbox", "radioButton"):
                 value = {"0": "off", "1": "on"}.get(value, value)
         enabled = ax(el, "AXEnabled")
         children = ax(el, "AXChildren") or []
@@ -530,8 +530,8 @@ Each turn you get the user's confirmed goal, your current subtask, your last few
 Reply with exactly one action as a single JSON object and nothing else. No prose, no code fences.
 
 Actions:
-{"action": "axPress", "element": N}                    press element N (buttons, menu items, menu bar items, checkboxes, links, pop-up buttons)
-{"action": "setValue", "element": N, "text": "..."}     replace the text in text field N
+{"action": "axPress", "element": N}                    press element N (buttons, menu items, menu bar items, checkboxes, radio buttons, links, pop-up buttons)
+{"action": "setValue", "element": N, "text": "..."}     replace the text in text field or text area N
 {"action": "type", "text": "..."}                       type text into whatever has keyboard focus
 {"action": "key", "combo": "cmd+shift+g"}               press a key or shortcut, for example "return", "escape", "tab", "down", "cmd+n"
 {"action": "scroll", "element": N, "direction": "down"} scroll the area that contains element N
@@ -887,9 +887,9 @@ PING_OBS = Observation(
         Element(1, "menuItem", "Export To", None, True, "AXMenuItem", False, None, True),
         Element(2, "menuItem", "Save", None, True, "AXMenuItem", False, None),
         Element(3, "menuItem", "Print…", None, True, "AXMenuItem", False, None),
-        Element(4, "menuItem", "Keynote", None, True, "AXMenuBarItem", False, None),
-        Element(5, "menuItem", "File", None, True, "AXMenuBarItem", False, None),
-        Element(6, "menuItem", "Edit", None, True, "AXMenuBarItem", False, None),
+        Element(4, "menuBarItem", "Keynote", None, True, "AXMenuBarItem", False, None),
+        Element(5, "menuBarItem", "File", None, True, "AXMenuBarItem", False, None),
+        Element(6, "menuBarItem", "Edit", None, True, "AXMenuBarItem", False, None),
     ],
     0, 0, 0.0,
 )
@@ -897,7 +897,7 @@ PING_OBS = Observation(
 
 def cmd_ping(args):
     """Model only, no screen. Checks the server, latency, and output validity."""
-    hist = [{"index": 1, "action_text": "axPress [5] menuItem \"File\"", "outcome": "ok", "observation": "new: menuItem \"Export To\", menuItem \"Save\""}]
+    hist = [{"index": 1, "action_text": "axPress [5] menuBarItem \"File\"", "outcome": "ok", "observation": "new: menuItem \"Export To\", menuItem \"Save\""}]
     msgs = build_messages(TASKS["keynote"]["goal"], instruction_for("keynote", 0), hist, PING_OBS)
     for i in range(args.n):
         raw, secs, usage = call_model(msgs, args.mode, len(PING_OBS.elements))
