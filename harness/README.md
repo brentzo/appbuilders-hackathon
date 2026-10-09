@@ -408,4 +408,5 @@ Resume never starts on its own: the user is always asked first ([SPEC-02](../spe
 | [OBJ-41](../objectives/OBJ-41-mac-pairing-verdict.md) | Mac pairing waits for the relay's verdict | Brent | todo |
 | [OBJ-43](../objectives/OBJ-43-mac-bridge-client-version-refusal.md) | Mac bridge client recovers from a version refusal | Brent | todo |
 | [OBJ-47](../objectives/OBJ-47-harness-model-readiness.md) | Harness reports whether the model is ready | Brent | todo |
+| [OBJ-49](../objectives/OBJ-49-mac-bridge-test-support.md) | Mac answers ping and has bridge test hooks | Brent | todo |
 <!-- generated:product-objectives:end -->

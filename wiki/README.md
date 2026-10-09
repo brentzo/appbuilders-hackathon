@@ -10,4 +10,5 @@ Specs still decide behavior: if a report shows a spec is wrong, raise it and cha
 | [Android voice intake and wake word](android-voice-intake.md) | Push-to-talk, the wake word, battery, CPU, misses, false triggers, and traffic on the demo phone |
 | [Setup for judges](judges-setup.md) | How to run Yumi on your own Mac and Android phone, and how to run the tests |
 | [Demo readiness](demo-readiness.md) | What works end to end for the hackathon demo, what is missing, the risks, and the actions before demo day |
+| [Bridge acceptance](bridge-acceptance.md) | The relay's live check against SPEC-08, and the runbook and report for the run on the real Mac and phone |
 | [Bridge deployment](bridge-deployment.md) | The relay on Brent's VPS: where it runs, the Snap Docker changes, and the live checks |

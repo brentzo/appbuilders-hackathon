@@ -311,4 +311,5 @@ A sheet usually has no `AXTitle`.
 | [OBJ-33](../objectives/OBJ-33-pairing-response-timeout-contract.md) | Align the pairing response timeout contract | Jepoy | in-progress |
 | [OBJ-34](../objectives/OBJ-34-protocol-version-upgrade-recovery.md) | Define protocol version upgrade recovery | Jepoy | in-progress |
 | [OBJ-45](../objectives/OBJ-45-pause-scope-and-model-readiness-contracts.md) | Pause scope and model readiness contracts | Jepoy | in-progress |
+| [OBJ-48](../objectives/OBJ-48-unpair-without-device-clocks.md) | Bind unpair to the pairing instead of device clocks | Jepoy | todo |
 <!-- generated:product-objectives:end -->

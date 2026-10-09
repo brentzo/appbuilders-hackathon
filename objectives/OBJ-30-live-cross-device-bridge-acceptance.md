@@ -5,10 +5,10 @@ product: bridge
 assignee: Jepoy
 touches: []
 specs: [SPEC-08]
-status: todo
+status: blocked
 priority: p0
-depends-on: [OBJ-13, OBJ-21, OBJ-23, OBJ-27]
-integrates-with: []
+depends-on: [OBJ-13, OBJ-21, OBJ-23, OBJ-27, OBJ-41, OBJ-42, OBJ-43, OBJ-49]
+integrates-with: [OBJ-48]
 tags: [objective, p0, bridge, mac, android, e2e]
 ---
 
@@ -39,20 +39,24 @@ This follow-up runs the real Mac and Android clients against the deployed relay 
 
 ## Tasks
 
-- [ ] **OBJ-30.1** Connect the real Mac harness client and Android client to the deployed bridge using the same protocol version.
-- [ ] **OBJ-30.2** Pair the phone by scanning the QR code shown by the Mac app, then verify each side lists the paired device.
+- [x] **OBJ-30.1** Run the relay side of every SPEC-08 scenario against the deployed relay with stand-in devices: `npm run live-check` in `bridge/`, which the bridge tests also run against a local relay.
+- [x] **OBJ-30.2** Write the runbook and the report for the device run in [wiki/bridge-acceptance.md](../wiki/bridge-acceptance.md), with the live check's results.
+- [ ] **OBJ-30.3** Connect the real Mac harness client and Android client to the deployed bridge using the same protocol version.
+- [ ] **OBJ-30.4** Pair the phone by scanning the QR code shown by the Mac app, then verify each side lists the paired device.
   Also scan an expired code, and scan a fresh code with the Mac app quit until the 30-second answer window passes, then verify neither side is paired.
-- [ ] **OBJ-30.3** Exchange encrypted commands, results, and events in both directions, and confirm the relay logs and storage contain no plaintext payload.
-- [ ] **OBJ-30.4** Exercise unknown-device rejection, command expiry, duplicate delivery, short reconnect delivery, offline command rejection, and unpair from either device.
+- [ ] **OBJ-30.5** Exchange encrypted commands, results, and events in both directions (`ping` from [OBJ-49](OBJ-49-mac-bridge-test-support.md) and OBJ-23 task 10), and confirm the relay logs and storage contain no plaintext payload.
+- [ ] **OBJ-30.6** Exercise unknown-device rejection, command expiry, duplicate delivery, short reconnect delivery, offline command rejection, and unpair from either device, using the OBJ-49 and OBJ-23 test hooks for the first three.
   Also connect the phone on a build with an older protocol version, send it a command from the Mac, then update it, and verify the SPEC-08 "Protocol versions" scenarios, with the pairing kept.
-- [ ] **OBJ-30.5** Record device models, OS versions, relay version, protocol version, exact steps, and results for every scenario in the bridge integration report.
+- [ ] **OBJ-30.7** Record device models, OS versions, relay version, protocol version, exact steps, and results for every scenario in the bridge integration report.
+  The relay names its commit on `/health` once Brent redeploys it with the `BRIDGE_REVISION` step in `bridge/README.md`.
 
 ## Expectations
 
 - [ ] SPEC-08 scenarios pass on the real Mac, Android phone, and deployed relay: "Pair the phone with the Mac", "Unpair a device", "Pairing code expired", "Mac does not answer pairing", "Mac answers pairing too late", "VPS cannot read messages", "Message from an unknown device is dropped", "Command to an offline device fails at once", "Result survives a short reconnect", "Expired command is not run", "Duplicate delivery runs once", "Device needs an update", "Command to a device that needs an update", and "Devices reconnect after an update".
-- [ ] No secret or plaintext payload appears in relay logs, relay storage, Mac files, or Android files.
-- [ ] The report identifies any scenario not run and the exact blocker.
-
+- [ ] Both apps show connected, reconnecting, and offline as the connection changes (SPEC-08 requirement 10).
+- [ ] No secret appears in relay logs, relay storage, Mac files, or Android files, and no plaintext payload appears in relay logs or storage (SPEC-08 requirement 3).
+  The Mac and phone keep their own results in plain text for at-most-once delivery (SPEC-08 requirement 8), which stays on the device.
+- [x] The report identifies any scenario not run and the exact blocker.
 ## Expected outcomes
 
 - A reproducible real-device bridge acceptance report with logs scrubbed of secrets and plaintext.
@@ -65,4 +69,13 @@ This follow-up runs the real Mac and Android clients against the deployed relay 
 
 ## Outcome
 
-_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._
+Blocked: the device run (OBJ-30.3 to OBJ-30.7) needs the Android bridge client ([OBJ-23](OBJ-23-android-bridge-client.md)), the Mac waiting for the pairing verdict ([OBJ-41](OBJ-41-mac-pairing-verdict.md)), the version mismatch copy and refusal handling ([OBJ-42](OBJ-42-version-mismatch-copy.md), [OBJ-43](OBJ-43-mac-bridge-client-version-refusal.md)), and `ping` and test hooks on the Mac ([OBJ-49](OBJ-49-mac-bridge-test-support.md)) and the phone (OBJ-23 task 10).
+Brent can unblock all of them; a teammate with the Mac and phone then runs [wiki/bridge-acceptance.md](../wiki/bridge-acceptance.md) "Device run".
+
+Done so far:
+- `npm run live-check` in `bridge/` runs the relay side of every SPEC-08 scenario against the deployed relay with stand-in devices; 12 of 12 passed on 2026-10-10. The bridge tests run the same scenarios against a local relay.
+- `/health` names the relay's protocol version and deployed commit, once the relay is redeployed with `BRIDGE_REVISION`.
+- The live check found that an unpair depends on device clocks; [OBJ-48](OBJ-48-unpair-without-device-clocks.md) tracks the fix.
+- The runbook, relay-side results, and device scenarios marked not run with their blockers are in [wiki/bridge-acceptance.md](../wiki/bridge-acceptance.md).
+- Live-check cleanup failures now fail the scenario instead of being silently ignored; `npm test -- test/live-check.test.ts` covers an unpair cleanup failure.
+- This objective now lists the objectives it waits for, adds SPEC-08 requirement 10 to its expectations, and limits "no plaintext" to the relay, as SPEC-08 requirement 3 does.
