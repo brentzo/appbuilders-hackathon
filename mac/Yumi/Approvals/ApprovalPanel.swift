@@ -24,6 +24,8 @@ final class ApprovalPanel: ApprovalPresenting {
         panel.level = .floating
         panel.isReleasedWhenClosed = false
         panel.becomesKeyOnlyIfNeeded = true
+        // Drag it anywhere but its buttons. A non-activating panel moves without taking focus.
+        panel.isMovableByWindowBackground = true
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         let pointer = NSEvent.mouseLocation
         let screen = NSScreen.screens.first { $0.frame.contains(pointer) } ?? NSScreen.main

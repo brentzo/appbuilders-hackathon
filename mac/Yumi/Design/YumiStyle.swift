@@ -84,10 +84,12 @@ extension View {
 }
 
 extension NSWindow {
-    /// Paper all the way into the title bar, so the window reads as one sheet.
+    /// Paper all the way into the title bar, so the window reads as one sheet, and it drags by
+    /// any bare part of that sheet, not only the title bar.
     func applyYumiStyle() {
         backgroundColor = NSColor(YumiColor.paper)
         titlebarAppearsTransparent = true
+        isMovableByWindowBackground = true
     }
 }
 

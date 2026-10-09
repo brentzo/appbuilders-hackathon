@@ -28,6 +28,8 @@ final class TilingPanel {
         panel.level = .floating
         panel.isReleasedWhenClosed = false
         panel.becomesKeyOnlyIfNeeded = true
+        // Drag it anywhere but its buttons. A non-activating panel moves without taking focus.
+        panel.isMovableByWindowBackground = true
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         if let visible = (screen ?? NSScreen.main)?.visibleFrame {
             panel.setFrameOrigin(NSPoint(x: visible.midX - size.width / 2, y: visible.maxY - size.height - 12))

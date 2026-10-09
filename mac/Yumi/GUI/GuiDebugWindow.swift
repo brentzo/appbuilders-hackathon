@@ -30,6 +30,7 @@ final class GuiDebugWindow {
         panel.level = .floating
         panel.hidesOnDeactivate = false
         panel.becomesKeyOnlyIfNeeded = true
+        panel.isMovableByWindowBackground = true
         panel.isReleasedWhenClosed = false
         panel.contentView = NSHostingView(rootView: GuiDebugView(model: model))
         panel.center()
