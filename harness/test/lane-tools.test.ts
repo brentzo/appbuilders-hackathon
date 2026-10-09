@@ -55,6 +55,14 @@ describe("lane tool sets (SPEC-03 r7)", () => {
     expect(main(KEY)).toBe(true);
   });
 
+  it("tells the UI lanes that setValue on a pop-up chooses an item by its title (live Keynote runs, 2026-10-10)", () => {
+    const rule =
+      '- To choose an item in a pop-up button or menu button, such as "Where:" in a save dialog, use setValue on it with the item\'s title, for example "Desktop".';
+    expect(workerSystemPrompt("ghost")).toContain(rule);
+    expect(workerSystemPrompt("main")).toContain(rule);
+    expect(workerSystemPrompt("helper")).not.toContain("pop-up");
+  });
+
   it("never lists keystrokes in a ghost's prompt", () => {
     expect(workerSystemPrompt("ghost")).not.toMatch(/"kind": "(type|key)"/);
     expect(workerSystemPrompt("ghost")).toContain(`"kind": "${ACTION.setValue}"`);

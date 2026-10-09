@@ -74,7 +74,10 @@ export function workerSystemPrompt(lane: Lane, explain = false): string {
     ...(laneAllows(lane, ACTION.click) ? UI_RULES : []),
     "- Use only element numbers from the element list, and only the available tools.",
     ...(laneAllows(lane, ACTION.setValue)
-      ? [`- To fill a text field or text area, use ${ACTION.setValue} on it. Clicking it only puts the cursor there.`]
+      ? [
+          `- To fill a text field or text area, use ${ACTION.setValue} on it. Clicking it only puts the cursor there.`,
+          `- To choose an item in a pop-up button or menu button, such as "Where:" in a save dialog, use ${ACTION.setValue} on it with the item's title, for example "Desktop".`,
+        ]
       : []),
     ...(laneAllows(lane, ACTION.key)
       ? ["- In a macOS open or save dialog you can press cmd+shift+g to type a folder or file path."]
