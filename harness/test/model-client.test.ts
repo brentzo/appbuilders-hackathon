@@ -167,7 +167,7 @@ describe("no user-facing string contains raw model or server errors", () => {
     const result: WorkerStepResult = await runWorkerStep(
       exampleWorkerInput(),
       { client, logger },
-      { taskId: "0d7f4c1e-2a7b-4d3c-9a51-6b1f0e8c2d34", lastAction: "Pressed File in Keynote" },
+      { lane: "main", taskId: "0d7f4c1e-2a7b-4d3c-9a51-6b1f0e8c2d34", lastAction: "Pressed File in Keynote" },
     );
     expect(result.outcome).toBe("error");
     if (result.outcome !== "error") return;

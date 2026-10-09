@@ -1,16 +1,18 @@
 import { validate } from "@yumi/protocol";
-import type { ModelAction, TreeElement, WorkerInput, WorkerOutput } from "@yumi/protocol/types";
+import type { Lane, ModelAction, TreeElement, WorkerInput, WorkerOutput } from "@yumi/protocol/types";
+import { laneAllows } from "../router/lanes.ts";
 import { ACTION, isElementAction } from "./actions.ts";
 
 /**
  * Checks one model reply for a step (SPEC-02 r6): it must be one JSON object that matches the protocol's
- * `WorkerOutput` schema, and its action must fit what the step offered. The error text goes back to the model on
- * the retry and into the log. It never reaches the user, and it never quotes the reply, which can hold screen text.
+ * `WorkerOutput` schema, and its action must fit what the step offered, including its lane (SPEC-03 r7). The error
+ * text goes back to the model on the retry and into the log. It never reaches the user, and it never quotes the
+ * reply, which can hold screen text.
  */
 
 export type OutputCheck = { ok: true; output: WorkerOutput } | { ok: false; error: string };
 
-export function checkWorkerOutput(raw: string | null, input: WorkerInput): OutputCheck {
+export function checkWorkerOutput(raw: string | null, input: WorkerInput, lane: Lane): OutputCheck {
   if (raw === null || raw.trim() === "") return { ok: false, error: "The reply was empty." };
 
   let value: unknown;
@@ -25,11 +27,17 @@ export function checkWorkerOutput(raw: string | null, input: WorkerInput): Outpu
     return { ok: false, error: `The reply does not match the action schema: ${result.errors.join("; ")}.` };
   }
   const output = value as WorkerOutput;
-  const problem = actionProblem(output.action, input);
+  const problem = actionProblem(output.action, input, lane);
   return problem ? { ok: false, error: problem } : { ok: true, output };
 }
 
-function actionProblem(action: ModelAction, input: WorkerInput): string | undefined {
+function actionProblem(action: ModelAction, input: WorkerInput, lane: Lane): string | undefined {
+  // SPEC-03 r7: only the main cursor sends keystrokes; a ghost sets text through the accessibility API or DevTools.
+  if (!laneAllows(lane, action.kind)) {
+    return action.kind === ACTION.type || action.kind === ACTION.key
+      ? `The ${action.kind} action is not available here. Use ${ACTION.setValue} on the element to change its text.`
+      : `The ${action.kind} action is not available here.`;
+  }
   if (isElementAction(action.kind) && "element" in action) {
     const element = input.observation.elements.find((e) => e.n === action.element);
     if (!element) return `Element ${action.element} is not on the screen. Use a number from the element list.`;

@@ -32,7 +32,7 @@ const userText = (request: Record<string, unknown>) => {
 describe("a worker step", () => {
   it("returns a valid output on the first try", async () => {
     server.reply({ kind: "content", content: PRESS_EXPORT });
-    const result = await runWorkerStep(exampleWorkerInput(), { client, logger });
+    const result = await runWorkerStep(exampleWorkerInput(), { client, logger }, { lane: "main" });
 
     expect(result.outcome).toBe("ok");
     if (result.outcome !== "ok") return;
@@ -54,7 +54,7 @@ describe("a worker step", () => {
 
   it("sends only what SPEC-02 r5 allows: goal, instruction, last steps, observation, and tools", async () => {
     server.reply({ kind: "content", content: PRESS_EXPORT });
-    await runWorkerStep(exampleWorkerInput(), { client, logger });
+    await runWorkerStep(exampleWorkerInput(), { client, logger }, { lane: "main" });
     const request = server.requests[0] as unknown as ChatRequest;
     expect(request.messages.map((m) => m.role)).toEqual(["system", "user"]);
     expect(userText(server.requests[0]!)).toContain("1. ");
@@ -63,7 +63,7 @@ describe("a worker step", () => {
 
   it("narrows the schema sent to the model to the elements on screen and the lane's tools", async () => {
     server.reply({ kind: "content", content: PRESS_EXPORT });
-    await runWorkerStep(exampleWorkerInput(), { client, logger });
+    await runWorkerStep(exampleWorkerInput(), { client, logger }, { lane: "main" });
     const schema = (server.requests[0] as unknown as ChatRequest).response_format!.json_schema.schema as {
       $defs: Record<string, { enum?: number[] }>;
     };
@@ -83,7 +83,7 @@ describe("a worker step", () => {
       const input = exampleWorkerInput();
       input.observation.screenshotPath = screenshot;
       server.reply({ kind: "content", content: PRESS_EXPORT });
-      await runWorkerStep(input, { client, logger });
+      await runWorkerStep(input, { client, logger }, { lane: "main" });
       const content = (server.requests[0] as unknown as ChatRequest).messages[1]!.content;
       expect(Array.isArray(content) && content[0]).toEqual({
         type: "image_url",
@@ -104,7 +104,7 @@ describe("a worker step", () => {
         { kind: "content", content: JSON.stringify({ action: { kind: "finish", status: "done", note: "ok", element: 4 } }) },
         { kind: "content", content: PRESS_EXPORT },
       );
-      const result = await runWorkerStep(exampleWorkerInput(), { client, logger });
+      const result = await runWorkerStep(exampleWorkerInput(), { client, logger }, { lane: "main" });
 
       expect(result.attempts[0]!.outcome).toBe("invalidOutput");
       const validationError = result.attempts[0]!.validationError!;
@@ -120,7 +120,7 @@ describe("a worker step", () => {
         { kind: "content", content: "Sure! I'll click Export." },
         { kind: "content", content: '{"action": {"kind": "press"}}' },
       );
-      const result = await runWorkerStep(exampleWorkerInput(), { client, logger });
+      const result = await runWorkerStep(exampleWorkerInput(), { client, logger }, { lane: "main" });
 
       expect(result.outcome).toBe("invalidOutput");
       expect(result.attempts.map((a) => a.outcome)).toEqual(["invalidOutput", "invalidOutput"]);
@@ -148,7 +148,7 @@ describe("a worker step", () => {
     it.each(cases)("%s", async (_name, reply, error) => {
       const content = reply === null ? null : JSON.stringify(reply);
       server.reply({ kind: "content", content }, { kind: "content", content });
-      const result = await runWorkerStep(exampleWorkerInput(), { client, logger });
+      const result = await runWorkerStep(exampleWorkerInput(), { client, logger }, { lane: "main" });
       expect(result.outcome).toBe("invalidOutput");
       if (result.outcome === "invalidOutput") expect(result.validationError).toContain(error);
     });
@@ -158,7 +158,7 @@ describe("a worker step", () => {
       input.observation.elements.push({ n: 6, role: "secureTextField", label: "Password", enabled: true });
       const content = JSON.stringify({ action: { kind: "setValue", element: 6, text: "hunter2" } });
       server.reply({ kind: "content", content }, { kind: "content", content });
-      const result = await runWorkerStep(input, { client, logger });
+      const result = await runWorkerStep(input, { client, logger }, { lane: "main" });
       expect(result.outcome).toBe("invalidOutput");
       if (result.outcome === "invalidOutput") expect(result.validationError).toContain("password field");
     });
@@ -169,7 +169,7 @@ describe("a worker step", () => {
       input.observation.focused = 6;
       const content = JSON.stringify({ action: { kind: "type", text: "hunter2" } });
       server.reply({ kind: "content", content }, { kind: "content", content });
-      const result = await runWorkerStep(input, { client, logger });
+      const result = await runWorkerStep(input, { client, logger }, { lane: "main" });
       expect(result.outcome).toBe("invalidOutput");
       if (result.outcome === "invalidOutput") expect(result.validationError).toContain("password field");
     });
@@ -179,7 +179,7 @@ describe("a worker step", () => {
     const input = exampleWorkerInput();
     input.observation.focused = 5;
     server.reply({ kind: "content", content: JSON.stringify({ action: { kind: "type", text: "Q3" } }) });
-    const result = await runWorkerStep(input, { client, logger });
+    const result = await runWorkerStep(input, { client, logger }, { lane: "main" });
     expect(result.outcome).toBe("ok");
   });
 
@@ -188,7 +188,7 @@ describe("a worker step", () => {
     input.observation.focused = 5;
     input.observation.layer = { kind: "sheet", defaultButton: 3, cancelButton: 4 };
     server.reply({ kind: "content", content: PRESS_EXPORT });
-    await runWorkerStep(input, { client, logger });
+    await runWorkerStep(input, { client, logger }, { lane: "main" });
     const text = userText(server.requests[0]!);
     expect(text).toContain('App: "Keynote"');
     expect(text).toContain("In front: a sheet, default button [3], cancel button [4]");
@@ -199,13 +199,13 @@ describe("a worker step", () => {
     const input = exampleWorkerInput();
     input.observation.layer = { kind: "window" };
     server.reply({ kind: "content", content: PRESS_EXPORT });
-    await runWorkerStep(input, { client, logger });
+    await runWorkerStep(input, { client, logger }, { lane: "main" });
     expect(userText(server.requests[0]!)).not.toContain("In front:");
   });
 
   it("refuses an input that breaks the WorkerInput contract", async () => {
     const input = { ...exampleWorkerInput(), allowedTools: ["bash"] } as never;
-    await expect(runWorkerStep(input, { client, logger })).rejects.toThrow("Invalid WorkerInput");
+    await expect(runWorkerStep(input, { client, logger }, { lane: "main" })).rejects.toThrow("Invalid WorkerInput");
     expect(server.requests).toHaveLength(0);
   });
 });

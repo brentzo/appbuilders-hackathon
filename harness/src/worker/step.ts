@@ -1,5 +1,5 @@
 import { validate } from "@yumi/protocol";
-import type { UserError, WorkerInput, WorkerOutput } from "@yumi/protocol/types";
+import type { Lane, UserError, WorkerInput, WorkerOutput } from "@yumi/protocol/types";
 import { userErrorForModelFailure } from "../errors.ts";
 import type { Logger } from "../log.ts";
 import type { ModelClient, Usage } from "../model/client.ts";
@@ -32,6 +32,8 @@ export type WorkerStepResult =
   | { outcome: "aborted"; attempts: StepAttempt[] };
 
 export interface WorkerStepOptions {
+  /** The subtask's lane. The model is offered, and may use, only this lane's actions (SPEC-03 r7). */
+  lane: Lane;
   signal?: AbortSignal;
   taskId?: string;
   /** Fills {last action} if the step ends in the Unexpected error. */
@@ -44,7 +46,7 @@ const MAX_ATTEMPTS = 2;
 export async function runWorkerStep(
   input: WorkerInput,
   deps: { client: ModelClient; logger: Logger },
-  options: WorkerStepOptions = {},
+  options: WorkerStepOptions,
 ): Promise<WorkerStepResult> {
   const inputCheck = validate("WorkerInput", input);
   if (!inputCheck.valid) throw new Error(`Invalid WorkerInput: ${inputCheck.errors.join("; ")}`);
@@ -53,8 +55,8 @@ export async function runWorkerStep(
   let current = input;
   for (;;) {
     const reply = await deps.client.chat({
-      messages: await buildWorkerMessages(current),
-      responseFormat: { name: "WorkerOutput", schema: workerOutputSchemaFor(current) },
+      messages: await buildWorkerMessages(current, options.lane),
+      responseFormat: { name: "WorkerOutput", schema: workerOutputSchemaFor(current, options.lane) },
       signal: options.signal,
       purpose: "workerStep",
     });
@@ -67,7 +69,7 @@ export async function runWorkerStep(
       return userError ? { outcome: "error", userError, attempts } : { outcome: "aborted", attempts };
     }
 
-    const check = checkWorkerOutput(reply.content, current);
+    const check = checkWorkerOutput(reply.content, current, options.lane);
     if (check.ok) {
       attempts.push({ outcome: "ok", durationMs: reply.durationMs, usage: reply.usage });
       deps.logger.info("step.output", { taskId: options.taskId, attempt: attempts.length, action: check.output.action.kind });

@@ -27,9 +27,11 @@ function log(level: LogEntry["level"], event: string, fields: Record<string, unk
 const input = JSON.parse(
   readFileSync(new URL("../../protocol/examples/WorkerInput.keynote-export.json", import.meta.url), "utf8"),
 ) as WorkerInput;
+/** The main lane offers every action, so the check covers the whole action schema. */
+const LANE = "main";
 
 if (flag("--print-schema") >= 0) {
-  console.log(JSON.stringify(workerOutputSchemaFor(input), null, 2));
+  console.log(JSON.stringify(workerOutputSchemaFor(input, LANE), null, 2));
   process.exit(0);
 }
 
@@ -59,7 +61,7 @@ if (imageAt >= 0) {
   process.exit(0);
 }
 
-const result = await runWorkerStep(input, { client, logger: stderrLogger });
+const result = await runWorkerStep(input, { client, logger: stderrLogger }, { lane: LANE });
 console.log(JSON.stringify(result, null, 2));
 if (result.outcome !== "ok") {
   console.error(`FAILED: ${result.outcome}`);

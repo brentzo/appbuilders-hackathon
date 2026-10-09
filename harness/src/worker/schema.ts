@@ -1,15 +1,17 @@
-import type { WorkerInput } from "@yumi/protocol/types";
+import type { Lane, ModelAction, WorkerInput } from "@yumi/protocol/types";
 import type { JsonSchema } from "../agent/llm.ts";
 import { bundleType } from "../schema/bundle.ts";
-import { ACTION_TYPE_NAME, ELEMENT_ACTIONS } from "./actions.ts";
+import { laneAllows } from "../router/lanes.ts";
+import { ACTION, ACTION_TYPE_NAME, ELEMENT_ACTIONS } from "./actions.ts";
 
 /**
- * The `WorkerOutput` schema sent to the model server for one step, narrowed to what this step offers: only the
- * element numbers on screen, only the lane's tools, and the vision click only when there is a screenshot. The
- * server then cannot decode an action the step would reject. The reply is still checked against the full protocol
- * schema and the same rules afterwards (validate.ts), because not every server constrains decoding.
+ * The `WorkerOutput` schema sent to the model server for one step in `lane`, narrowed to what this step offers: only
+ * the lane's actions (SPEC-03 r7), only the element numbers on screen, only the lane's tools, and the vision click
+ * only when there is a screenshot. The server then cannot decode an action the step would reject. The reply is still
+ * checked against the full protocol schema and the same rules afterwards (validate.ts), because not every server
+ * constrains decoding.
  */
-export function workerOutputSchemaFor(input: WorkerInput): JsonSchema {
+export function workerOutputSchemaFor(input: WorkerInput, lane: Lane): JsonSchema {
   const schema = bundleType("WorkerOutput", { forModel: true });
   const defs = schema["$defs"] as Record<string, JsonSchema>;
   const actions = defs["ModelAction"]!;
@@ -17,6 +19,10 @@ export function workerOutputSchemaFor(input: WorkerInput): JsonSchema {
   const removeAction = (name: string) => {
     actions["oneOf"] = (actions["oneOf"] as JsonSchema[]).filter((variant) => variant["$ref"] !== `#/$defs/${name}`);
   };
+
+  for (const [name, kind] of Object.entries(ACTION) as [keyof typeof ACTION, ModelAction["kind"]][]) {
+    if (!laneAllows(lane, kind)) removeAction(ACTION_TYPE_NAME[name]);
+  }
 
   const numbers = input.observation.elements.map((element) => element.n);
   if (numbers.length > 0) {

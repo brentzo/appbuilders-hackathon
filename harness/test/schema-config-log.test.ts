@@ -34,7 +34,7 @@ describe("the schema bundle", () => {
 
   it("narrows the model schema to the step but still accepts the step's valid actions", () => {
     const input = exampleWorkerInput();
-    const check = compile(workerOutputSchemaFor(input));
+    const check = compile(workerOutputSchemaFor(input, "main"));
     expect(check({ action: { kind: "click", element: 4 } })).toBe(true);
     expect(check({ action: { kind: "tool", call: { tool: "open_app", bundleId: "com.apple.Notes" } } })).toBe(true);
     expect(check({ action: { kind: "click", element: 6 } })).toBe(false);
@@ -45,7 +45,7 @@ describe("the schema bundle", () => {
 
   it("leaves out element and tool actions when the step has none", () => {
     const input = { ...exampleWorkerInput(), allowedTools: [], observation: { windowTitle: "Empty", elements: [] } };
-    const check = compile(workerOutputSchemaFor(input));
+    const check = compile(workerOutputSchemaFor(input, "main"));
     expect(check({ action: { kind: "ask", question: "Which deck?" } })).toBe(true);
     expect(check({ action: { kind: "click", element: 1 } })).toBe(false);
     expect(check({ action: { kind: "tool", call: { tool: "open_app", bundleId: "x" } } })).toBe(false);

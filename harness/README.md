@@ -49,6 +49,7 @@ The task store is built ([OBJ-04](../objectives/OBJ-04-task-store.md)): tasks, s
 | `src/safety/paths.ts` | Path resolution through `..` and symlinks, and the home, Library, dotfile, and secret checks. |
 | `src/safety/trash.ts` | The `move_to_trash` checks and the `FileSummary` for the delete card. |
 | `src/worker/` | One step: the prompt, the action names (`actions.ts`), the narrowed output schema, validation, and the one retry. |
+| `src/router/` | The lane router (`router.ts`), the app capability probe and cache (`capability.ts`), and each lane's actions (`lanes.ts`). |
 | `src/schema/bundle.ts` | Turns a protocol type into one self-contained JSON Schema. |
 | `src/harness.ts` | Opens the task store, starts the RPC server with the history methods, and sends status changes as events. |
 | `src/store/task-store.ts` | The task store: the only module with SQL. Tasks, subtasks, steps, screenshots, the action log, history queries, window locks, and app capabilities. |
@@ -206,6 +207,23 @@ A harness refuses a database written by a newer harness.
 `listTasks` and `searchTasks` answer newest first, 50 tasks by default.
 Search matches tasks whose goal, confirmed goal, summary, or subtask titles contain every word of the query, ignoring case and accents.
 `getTask` returns the task with its subtasks, steps, and action log.
+
+## Lane router
+
+The router picks each subtask's lane ([SPEC-03](../specs/03-lane-routing.md)): `route(subtask, proposed)` in `src/router/router.ts`.
+The planner's proposal is only logged; the router picks the cheapest lane that passes every check.
+
+- No target app: `helper`, reason `noUI`.
+- A target app with an actionable accessibility tree or the DevTools protocol: `ghost`, reason `backgroundCapable`.
+- Any other target app: `main`, reason `appNotBackgroundCapable`.
+
+It stores the lane and reason on the subtask, logs `router.decided` with the proposal, and sends the `routeDecided` event.
+App capability comes from the Mac app's `probeAppCapability`, stored in `app_capabilities` per bundle id and version.
+Each app is probed once per harness run, because only the probe reports the app's version (see OBJ-07's Outcome).
+A failed probe is not cached: `route` rejects with `ProbeFailure`, which carries the SPEC-11 `UserError`, and nothing is stored or sent.
+
+Only `main` gets keystrokes (`type`, `key`); a ghost sets text with `setValue`, and a helper gets no UI actions (`src/router/lanes.ts`).
+`runWorkerStep` takes the subtask's lane, and the schema, the prompt, and the validation offer and accept only that lane's actions.
 
 ## Safety
 
