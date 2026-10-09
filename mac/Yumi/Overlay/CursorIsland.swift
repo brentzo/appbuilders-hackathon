@@ -3,7 +3,7 @@ import QuartzCore
 
 /// Where cats come from and go back to: a black pill at the camera notch, which grows as if the
 /// notch opens, lets a cat out (or in), and shrinks back. Displays without a notch get the same
-/// pill at the top center, just under the menu bar. One per overlay panel.
+/// pill at the top center, just under the menu bar (SPEC-04 r19). One per overlay panel.
 final class CursorIsland {
     /// Where a cat's paws start and end, in AppKit global coordinates: just under the pill.
     let mouth: CGPoint
@@ -72,7 +72,9 @@ final class CursorIsland {
         DispatchQueue.main.asyncAfter(deadline: .now() + seconds, execute: work)
     }
 
-    private static let timing = CAMediaTimingFunction(controlPoints: 0.65, 0, 0.35, 1)
+    private static let timing = CAMediaTimingFunction(
+        controlPoints: Float(YumiMotion.easing.0), Float(YumiMotion.easing.1), Float(YumiMotion.easing.2), Float(YumiMotion.easing.3)
+    )
 
     /// Animated changes run in the caller's transaction, with its duration and timing.
     private func setFrame(_ frame: CGRect, animated: Bool) {

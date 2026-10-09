@@ -75,8 +75,8 @@ final class CursorOverlay {
     // MARK: Cursor operations
 
     /// A new cat drops out of the island (the camera notch, or a pill under the menu bar) in its
-    /// moving pose and leaps to `point`, while the island opens and closes behind it. With Reduce
-    /// Motion on it fades in at the island and glides straight (SPEC-04 r17).
+    /// moving pose and leaps to `point`, while the island opens and closes behind it (SPEC-04 r1,
+    /// r19). With Reduce Motion on it fades in at the island and glides straight (r17).
     func spawn(id: String, kind: CursorKind, label: String?, at point: CGPoint) {
         if cursors[id] != nil { fade(id: id, immediately: true) }
         var palette = CatPalette.ginger

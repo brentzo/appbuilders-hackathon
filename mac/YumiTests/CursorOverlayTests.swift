@@ -94,7 +94,7 @@ struct CursorOverlayTests {
     }
 
     @Test func movesEaseInAndOutOverATimeThatGrowsWithDistance() {
-        #expect(CursorMotion.duration(for: 10) == 0.35)
+        #expect(CursorMotion.duration(for: 0) == 0.35)
         #expect(CursorMotion.duration(for: 400) > 0.35 && CursorMotion.duration(for: 400) < 0.7)
         #expect(CursorMotion.duration(for: 3000) == 0.7)
         #expect(abs(CursorMotion.eased(0.5) - 0.5) < 1e-6, "symmetric")

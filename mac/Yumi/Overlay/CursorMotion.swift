@@ -4,16 +4,17 @@ import QuartzCore
 /// How cursors travel (SPEC-04 r2, r17): a short arc like a cat's leap, eased in and out, taking
 /// longer for longer trips. Pure functions, so the timing can be checked without a screen.
 enum CursorMotion {
-    /// cubic-bezier(0.65, 0, 0.35, 1): a slow start, a quick middle, and a soft landing.
-    static let easing = (x1: 0.65, y1: 0.0, x2: 0.35, y2: 1.0)
-    static let shortestMove: CFTimeInterval = 0.35
-    static let longestMove: CFTimeInterval = 0.7
+    /// The design's move curve, cubic-bezier(0.65, 0, 0.35, 1): a slow start, a quick middle,
+    /// and a soft landing.
+    static let easing = (x1: YumiMotion.easing.0, y1: YumiMotion.easing.1, x2: YumiMotion.easing.2, y2: YumiMotion.easing.3)
+    static let shortestMove: CFTimeInterval = YumiMotion.moveMin
+    static let longestMove: CFTimeInterval = YumiMotion.moveMax
     /// Keyframes per second for a move. Enough that the eased spacing reads as smooth motion.
     static let samplesPerSecond = 60.0
 
-    /// 350 ms for short hops, growing by half a millisecond per point, up to 700 ms.
+    /// 350 ms for a short hop, growing with distance to 700 ms at 1,200 points and beyond.
     static func duration(for distance: CGFloat) -> CFTimeInterval {
-        min(max(shortestMove + Double(distance) * 0.0005, shortestMove), longestMove)
+        YumiMotion.moveDuration(distance: distance)
     }
 
     /// The share of the way travelled at `time` (both 0 to 1), on `easing`.
