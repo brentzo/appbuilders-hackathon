@@ -2,6 +2,7 @@ import type { HarnessConfig } from "./config.ts";
 import type { Handler } from "@yumi/protocol";
 import type { Logger } from "./log.ts";
 import { historyHandlers } from "./rpc/history.ts";
+import { createLaneRouter, type LaneRouter } from "./router/index.ts";
 import { HarnessRpcServer } from "./rpc/server.ts";
 import { TaskStore } from "./store/task-store.ts";
 
@@ -9,6 +10,8 @@ import { TaskStore } from "./store/task-store.ts";
 export interface Harness {
   store: TaskStore;
   server: HarnessRpcServer;
+  /** The lane router (OBJ-07), created once and shared by every task. */
+  router: LaneRouter;
   close(): Promise<void>;
 }
 
@@ -41,9 +44,11 @@ export async function startHarness(
       ...(options.onReady ? { onReady: options.onReady } : {}),
     });
     store.onStatusChanged((event) => server.emit("taskStatusChanged", event));
+    const router = createLaneRouter({ store, server, logger });
     return {
       store,
       server,
+      router,
       close: async () => {
         await server.close();
         store.close();

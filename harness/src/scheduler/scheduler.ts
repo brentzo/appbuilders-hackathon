@@ -1,13 +1,13 @@
 import type { Subtask, UserError, Uuid } from "@yumi/protocol/types";
 import { describeError } from "../log.ts";
+import { ProbeFailure } from "../router/index.ts";
 import type { LaneRunners, RouteSubtask } from "./lanes.ts";
 import { runSubtask, type SubtaskRun, type SubtaskRunDeps } from "./subtask-runner.ts";
 
 /**
  * Runs a saved plan (OBJ-05.4): a subtask becomes ready when every subtask it depends on is done, and ready
  * subtasks run at the same time, up to the model server's parallel slots, each as its own request to the one model
- * (SPEC-02 r7). Each subtask is routed through `route` first, so the lane router (OBJ-07) plugs in without changing
- * this file. If a subtask fails, the others are stopped and the task fails: replanning is not part of OBJ-05.
+ * (SPEC-02 r7). Each subtask is routed through `route` first: the lane router (OBJ-07) in the running harness. If a subtask fails, the others are stopped and the task fails: replanning is not part of OBJ-05.
  */
 
 export interface SchedulerDeps extends SubtaskRunDeps {
@@ -61,7 +61,18 @@ export async function runSchedule(
   };
 
   const runOne = async (subtask: Subtask) => {
-    const decision = await deps.route(subtask);
+    let decision;
+    try {
+      decision = await deps.route(subtask);
+    } catch (error) {
+      if (!(error instanceof ProbeFailure)) throw error;
+      // The router could not learn what the target app supports, so no lane can work in it (OBJ-07 Outcome).
+      logger.warn("schedule.routeFailed", { taskId, subtaskId: subtask.id, kind: error.userError.kind });
+      store.setSubtaskStatus(subtask.id, "failed", {
+        result: { status: "blocked", files: [], note: "Could not check the app." },
+      });
+      return fail(subtask.id, error.userError);
+    }
     const runner = deps.lanes[decision.lane];
     const running = store.setSubtaskStatus(subtask.id, "running", {
       lane: decision.lane,

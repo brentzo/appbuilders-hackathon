@@ -1,24 +1,21 @@
-import type { Lane, Observation, PermissionLevel, RouteReason, Subtask, ToolCall, ToolName } from "@yumi/protocol/types";
+import type { Lane, Observation, PermissionLevel, Subtask, ToolCall, ToolName } from "@yumi/protocol/types";
+import type { LaneRouter, RouteDecision } from "../router/index.ts";
 
 /**
  * The seams between the scheduler and what decides and runs lanes. The scheduler only knows these interfaces, so
- * the lane router (OBJ-07) and the permission-gated typed tools (OBJ-37) plug in without changing it.
+ * the lane router (OBJ-07) plugs in through `route`, and each lane brings its own observation and tools.
  */
-
-/** Where a subtask runs, and why (SPEC-03 r10). */
-export interface RouteDecision {
-  lane: Lane;
-  reason: RouteReason;
-}
-
-/** Decides a subtask's lane. OBJ-07's router replaces `routeEverythingAsHelper`. */
-export type RouteSubtask = (subtask: Subtask) => RouteDecision | Promise<RouteDecision>;
 
 /**
- * STAND-IN until the lane router exists (OBJ-05.8, replaced by OBJ-07.8): every subtask runs as a helper. The
- * reason is `noUI` because the only lane that exists so far is the one with no UI.
+ * Decides a subtask's lane, stores it on the subtask, and tells the apps. Rejects with `ProbeFailure` when the
+ * target app's capability cannot be learned.
  */
-export const routeEverythingAsHelper: RouteSubtask = () => ({ lane: "helper", reason: "noUI" });
+export type RouteSubtask = (subtask: Subtask) => Promise<RouteDecision>;
+
+/** Routes through the lane router (OBJ-07), which only reads the planner's proposed lane for its log. */
+export function routeWith(router: LaneRouter): RouteSubtask {
+  return (subtask) => router.route(subtask, subtask.proposedLane);
+}
 
 /** How one tool call ended, in the words the step log and the action log need. */
 export interface ToolRunResult {

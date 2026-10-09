@@ -5,11 +5,12 @@ import { validate } from "@yumi/protocol";
 import { PROTOCOL_VERSION, type Subtask, type Task } from "@yumi/protocol/types";
 import { startHarness, type Harness } from "../src/harness.ts";
 import { MemoryLogger } from "../src/log.ts";
+import { ProbeFailure } from "../src/router/index.ts";
 import { ModelClient } from "../src/model/client.ts";
 import type { ChatRequest } from "../src/model/openai.ts";
 import { PLANNER_SYSTEM_PROMPT } from "../src/planner/prompt.ts";
 import { SUMMARY_SYSTEM_PROMPT } from "../src/planner/summary.ts";
-import { helperLane, routeEverythingAsHelper, type RouteSubtask } from "../src/scheduler/lanes.ts";
+import { helperLane, routeWith, type RouteSubtask } from "../src/scheduler/lanes.ts";
 import { localVoice, runTask, type RunTaskDeps } from "../src/scheduler/run-task.ts";
 import { createStandInFileTools } from "./support/stand-in-file-tools.ts";
 import { workerSystemPrompt } from "../src/worker/prompt.ts";
@@ -138,7 +139,7 @@ function deps(overrides: Partial<RunTaskDeps> = {}): RunTaskDeps {
     client: new ModelClient(modelConfig(server.baseUrl), logger),
     logger,
     deviceId: "mac-brent",
-    route: routeEverythingAsHelper,
+    route: routeWith(harness.router),
     lanes: { helper: helperLane(createStandInFileTools({ home })) },
     slots: 3,
     voice: localVoice(harness.server, logger, "mac-brent"),
@@ -289,6 +290,59 @@ describe("SPEC-02 task lifecycle", () => {
   });
 });
 
+describe("routing through the lane router (OBJ-07.8)", () => {
+  it("routes every subtask before it runs and sends each decision to the app", async () => {
+    scriptedModel(server);
+    const client = await app();
+    const task = confirmedTask();
+    await runTask(task.id, deps());
+    const subtasks = harness.store.listSubtasks(task.id);
+    await until(() => client.events.filter((e) => e.method === "routeDecided").length === subtasks.length);
+    const decided = client.events.filter((e) => e.method === "routeDecided").map((e) => e.params);
+    for (const event of decided) expect(validate("RouteDecided", event).errors).toEqual([]);
+    expect(decided).toEqual(subtasks.map((s) => ({ taskId: task.id, subtaskId: s.id, lane: "helper", reason: "noUI" })));
+    client.close();
+  });
+
+  it("stores the planner's needsKeyboard on the subtask for the router", async () => {
+    const plan = JSON.stringify({
+      subtasks: [
+        {
+          id: "a",
+          title: "A",
+          instruction: "Read ~/Downloads/Lease.pdf.",
+          dependsOn: [],
+          proposedLane: "main",
+          needsKeyboard: true,
+        },
+      ],
+    });
+    scriptedModel(server, { plan, worker: () => finish("Done.") });
+    const task = confirmedTask();
+    await runTask(task.id, deps());
+    // No target app, so still a helper (SPEC-03 r2 comes before r17).
+    expect(harness.store.listSubtasks(task.id)[0]).toMatchObject({ needsKeyboard: true, lane: "helper", routeReason: "noUI" });
+  });
+
+  it("fails the subtask with the probe's user error when the router cannot check the app", async () => {
+    scriptedModel(server);
+    const client = await app();
+    const task = confirmedTask();
+    const route: RouteSubtask = () =>
+      Promise.reject(new ProbeFailure("com.apple.Keynote", { kind: "accessibilityPermissionMissing" }));
+    const outcome = await runTask(task.id, deps({ route }));
+    expect(outcome).toEqual({ outcome: "failed", userError: { kind: "accessibilityPermissionMissing", taskId: task.id } });
+    expect(harness.store.listSubtasks(task.id).filter((s) => s.status === "failed").length).toBeGreaterThan(0);
+    expect(harness.store.listSubtasks(task.id).some((s) => s.status === "running")).toBe(false);
+    await until(() => client.events.some((e) => e.method === "userError"));
+    expect(client.events.find((e) => e.method === "userError")!.params).toEqual({
+      kind: "accessibilityPermissionMissing",
+      taskId: task.id,
+    });
+    client.close();
+  });
+});
+
 describe("a broken plan never reaches the scheduler", () => {
   it("fails the task after the planner's second broken plan, with no subtasks and no worker steps", async () => {
     const cyclic = JSON.stringify({
@@ -303,7 +357,7 @@ describe("a broken plan never reaches the scheduler", () => {
     let routed = 0;
     const route: RouteSubtask = (subtask) => {
       routed++;
-      return routeEverythingAsHelper(subtask);
+      return routeWith(harness.router)(subtask);
     };
     const outcome = await runTask(task.id, deps({ route }));
 

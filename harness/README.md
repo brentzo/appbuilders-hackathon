@@ -252,7 +252,8 @@ Only `allowed` may run without the user; asking and the Trash are [OBJ-38](../ob
    A second broken plan fails the task with the `unexpected` error before anything runs.
 2. **Save.** `TaskStore.savePlan` adds every subtask and moves the task to `running` in one transaction.
 3. **Schedule.** A subtask is `ready` when everything it depends on is `done`.
-   Ready subtasks run at the same time, up to `YUMI_MODEL_PARALLEL_SLOTS`, each routed through a `route(subtask)` function first.
+   Ready subtasks run at the same time, up to `YUMI_MODEL_PARALLEL_SLOTS`, each routed by the lane router first (`routeWith(harness.router)`).
+   A subtask whose app the router cannot check fails with the probe's error.
    If one fails, the others are stopped and the task fails; there is no replanning yet.
 4. **Work.** Each step's worker input is exactly the confirmed goal, the subtask instruction, the subtask's last 5 finished steps, a fresh observation, and the lane's tools.
    A helper has no window, so its observation is empty.
@@ -261,7 +262,8 @@ Only `allowed` may run without the user; asking and the Trash are [OBJ-38](../ob
 6. **Summary.** The model writes one or two sentences from the goal and the results, retried once.
    The task is set to `done` with the summary, and the summary is sent as a `speak` event.
 
-Stand-ins: `routeEverythingAsHelper` in `src/scheduler/lanes.ts` until [OBJ-07](../objectives/OBJ-07-lane-router-core.md), and the stand-in file tools until [OBJ-37](../objectives/OBJ-37-permission-gate-and-file-tools.md).
+Only the helper lane has a runner so far: ghost and main come with [OBJ-36](../objectives/OBJ-36-gui-act-sub-agent.md), and a subtask routed there fails until then.
+Plans carry no target app yet, so the router sends every planned subtask to `helper`.
 Nothing calls `runTask` in the running harness yet: the confirmation flow that moves a task to `planning` will.
 
 ## Errors and the log
