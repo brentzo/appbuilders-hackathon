@@ -41,20 +41,20 @@ This is also the moment the cat cursor appears, so it is the start of every demo
 
 ## Tasks
 
-- [ ] **OBJ-17.1** Harness: on `submitGoal`, create a task in `awaitingConfirmation` with the raw transcript as `goal`.
-- [ ] **OBJ-17.2** Harness: ask the model to restate the goal as a short repeat-back sentence ending in a question, matching the SPEC-01 copy style ("You want me to ... Should I go ahead?"). Taglish goals are repeated back in English.
-- [ ] **OBJ-17.3** Mac: when a goal arrives, spawn the main cursor near the user's pointer.
-- [ ] **OBJ-17.4** Mac: speak the repeat-back through a `speak` interface backed by `AVSpeechSynthesizer`, and show it in a small panel with "Go ahead", "Change it", and "Cancel" buttons.
-- [ ] **OBJ-17.5** Listen for the reply right after speaking. Classify it as confirm, cancel, or correction (a short model call in the harness is fine).
-- [ ] **OBJ-17.6** Confirm: save `confirmedGoal` and move the task to `planning`. Cancel: say "Okay, I won't do anything.", fade the cursor out, and do not keep the task as work. Correction: combine it with the goal, restate, and ask again.
-- [ ] **OBJ-17.7** Make sure no planning or action happens before confirmation, even if the reply is unclear. Unclear replies get asked again once, then the panel waits for a button.
+- [x] **OBJ-17.1** Harness: on `submitGoal`, create a task in `awaitingConfirmation` with the raw transcript as `goal`.
+- [x] **OBJ-17.2** Harness: ask the model to restate the goal as a short repeat-back sentence ending in a question, matching the SPEC-01 copy style ("You want me to ... Should I go ahead?"). Taglish goals are repeated back in English.
+- [x] **OBJ-17.3** Mac: when a goal arrives, spawn the main cursor near the user's pointer.
+- [x] **OBJ-17.4** Mac: speak the repeat-back through a `speak` interface backed by `AVSpeechSynthesizer`, and show it in a small panel with "Go ahead", "Change it", and "Cancel" buttons.
+- [x] **OBJ-17.5** Listen for the reply right after speaking. Classify it as confirm, cancel, or correction (a short model call in the harness is fine).
+- [x] **OBJ-17.6** Confirm: save `confirmedGoal` and move the task to `planning`. Cancel: say "Okay, I won't do anything.", fade the cursor out, and do not keep the task as work. Correction: combine it with the goal, restate, and ask again.
+- [x] **OBJ-17.7** Make sure no planning or action happens before confirmation, even if the reply is unclear. Unclear replies get asked again once, then the panel waits for a button.
 - [ ] **OBJ-17.8** Tests for the harness flow with a mocked model; manual checks of the full voice loop on the Mac.
 
 ## Expectations
 
 - [ ] SPEC-01 scenarios pass with their exact copy: "User gives a goal and confirms it", "User corrects the goal", "User cancels before work starts".
-- [ ] `confirmedGoal` and the raw `goal` are stored separately.
-- [ ] Nothing runs before a confirm.
+- [x] `confirmedGoal` and the raw `goal` are stored separately.
+- [x] Nothing runs before a confirm.
 
 ## Expected outcomes
 
