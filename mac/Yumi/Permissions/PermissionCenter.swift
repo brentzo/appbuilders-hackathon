@@ -66,6 +66,7 @@ final class PermissionCenter {
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private var timer: Timer?
     @ObservationIgnored private var activationObserver: NSObjectProtocol?
+    @ObservationIgnored private var menuObserver: NSObjectProtocol?
     @ObservationIgnored private let log = Logger(subsystem: "ph.appbuilders.yumi", category: "permissions")
 
     init(system: PermissionSystem = MacPermissionSystem(), defaults: UserDefaults = .standard) {
@@ -102,11 +103,19 @@ final class PermissionCenter {
         return state(of: permission)
     }
 
-    /// Re-checks whenever Yumi becomes active, for the life of the app.
+    /// Re-checks whenever Yumi becomes active or a Yumi menu opens, for the life of the app.
+    /// Opening the menu bar menu does not make Yumi active, so without the menu check
+    /// "Set up permissions…" could still show after the user granted everything.
     func observeActivation() {
         guard activationObserver == nil else { return }
         activationObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.refresh() }
+        }
+        // Yumi has no main menu, so every menu that begins tracking is Yumi's menu bar menu.
+        menuObserver = NotificationCenter.default.addObserver(
+            forName: NSMenu.didBeginTrackingNotification, object: nil, queue: .main
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.refresh() }
         }

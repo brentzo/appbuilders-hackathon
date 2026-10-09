@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Testing
 @testable import Yumi
@@ -94,5 +95,17 @@ extension PermissionCenterTests {
         #expect(center.isPolling)
         center.stopPolling()
         #expect(center.isPolling == false)
+    }
+}
+
+extension PermissionCenterTests {
+    @Test func opensOfTheMenuReadMacOSAgain() {
+        let system = FakeSystem()
+        let center = PermissionCenter(system: system, defaults: freshDefaults())
+        center.observeActivation()
+        system.states[.accessibility] = .granted
+        #expect(center.state(of: .accessibility) == .missing)
+        NotificationCenter.default.post(name: NSMenu.didBeginTrackingNotification, object: NSMenu())
+        #expect(center.state(of: .accessibility) == .granted)
     }
 }
