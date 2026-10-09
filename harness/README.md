@@ -214,12 +214,14 @@ The router picks each subtask's lane ([SPEC-03](../specs/03-lane-routing.md)): `
 The planner's proposal is only logged; the router picks the cheapest lane that passes every check.
 
 - No target app: `helper`, reason `noUI`.
+- A subtask the planner marked `needsKeyboard`: `main`, reason `needsKeyboard`, without probing the app (SPEC-03 r17).
 - A target app with an actionable accessibility tree or the DevTools protocol: `ghost`, reason `backgroundCapable`.
 - Any other target app: `main`, reason `appNotBackgroundCapable`.
 
 It stores the lane and reason on the subtask, logs `router.decided` with the proposal, and sends the `routeDecided` event.
 App capability comes from the Mac app's `probeAppCapability`, stored in `app_capabilities` per bundle id and version.
-Each app is probed once per harness run, because only the probe reports the app's version (see OBJ-07's Outcome).
+Before probing, the router reads the installed version with `getAppVersion` and reuses the stored result for that version, so an app is probed again only after it updates.
+If the Mac app cannot answer `getAppVersion` (an older app answers "method not found"), each app is probed once per harness run.
 A failed probe is not cached: `route` rejects with `ProbeFailure`, which carries the SPEC-11 `UserError`, and nothing is stored or sent.
 
 Only `main` gets keystrokes (`type`, `key`); a ghost sets text with `setValue`, and a helper gets no UI actions (`src/router/lanes.ts`).

@@ -1,5 +1,11 @@
 import { RpcErrorCode, RpcRemoteError, validate } from "@yumi/protocol";
-import type { AppCapability, ProbeAppCapabilityParams, UserError } from "@yumi/protocol/types";
+import type {
+  AppCapability,
+  AppVersionResult,
+  GetAppVersionParams,
+  ProbeAppCapabilityParams,
+  UserError,
+} from "@yumi/protocol/types";
 import { describeError, type Logger } from "../log.ts";
 import type { TaskStore } from "../store/task-store.ts";
 
@@ -64,21 +70,38 @@ function reportedUserError(error: unknown): UserError | undefined {
   return validate("UserError", error.error.data).valid ? (error.error.data as UserError) : undefined;
 }
 
+/**
+ * The installed version through the Mac app's `getAppVersion`, which reads the app bundle without launching the app.
+ * Undefined when the app is not installed or the Mac app cannot answer; a Mac app from before `getAppVersion` answers
+ * "method not found". The cache then falls back to probing once per run, and the probe reports any real failure.
+ */
+export function macAppVersion(app: MacAppCaller, logger: Logger): InstalledVersion {
+  return async (bundleId) => {
+    const params: GetAppVersionParams = { bundleId };
+    try {
+      return ((await app.request("getAppVersion", params)) as AppVersionResult).appVersion;
+    } catch (error) {
+      logger.warn("router.versionLookupFailed", { bundleId, ...describeError(error) });
+      return undefined;
+    }
+  };
+}
+
 export interface AppCapabilitiesOptions {
   store: TaskStore;
   probe: CapabilityProbe;
   logger: Logger;
   /**
    * Reads an app's installed version without probing it. With it, a stored result is reused across restarts and the
-   * app is probed again only when its version changes. Without it, each app is probed once per harness run, because
-   * only the probe reports the version.
+   * app is probed again only when its version changes. Without it, or when it has no answer, each app is probed once
+   * per harness run, because then only the probe reports the version.
    */
   installedVersion?: InstalledVersion;
 }
 
 /** The capability cache. The router asks it; it probes only when it has no result for the app's current version. */
 export class AppCapabilities {
-  /** The newest result per app in this run. */
+  /** Results in this run, by bundle id and the installed version it was looked up under ("" when unknown). */
   private readonly known = new Map<string, AppCapability>();
   /** Probes in flight, so two subtasks routed at once for the same app probe it once. */
   private readonly probing = new Map<string, Promise<AppCapability>>();
@@ -86,36 +109,43 @@ export class AppCapabilities {
   constructor(private readonly options: AppCapabilitiesOptions) {}
 
   async capabilityOf(bundleId: string): Promise<AppCapability> {
-    const cached = await this.cached(bundleId);
+    const version = await this.options.installedVersion?.(bundleId);
+    const key = `${bundleId}\n${version ?? ""}`;
+    const cached = this.known.get(key) ?? this.stored(bundleId, version);
     if (cached) return cached;
-    const inFlight = this.probing.get(bundleId);
+    const inFlight = this.probing.get(key);
     if (inFlight) return inFlight;
-    const probe = this.probeAndStore(bundleId).finally(() => this.probing.delete(bundleId));
-    this.probing.set(bundleId, probe);
+    const probe = this.probeAndStore(bundleId, version, key).finally(() => this.probing.delete(key));
+    this.probing.set(key, probe);
     return probe;
   }
 
-  private async cached(bundleId: string): Promise<AppCapability | undefined> {
-    const { installedVersion, store, logger } = this.options;
-    if (!installedVersion) return this.known.get(bundleId);
-    const version = await installedVersion(bundleId);
+  private stored(bundleId: string, version: string | undefined): AppCapability | undefined {
     if (version === undefined) return undefined;
-    const stored = store.getAppCapability(bundleId, version);
-    if (stored) logger.info("router.capabilityCached", { bundleId, appVersion: version });
+    const stored = this.options.store.getAppCapability(bundleId, version);
+    if (stored) {
+      this.options.logger.info("router.capabilityCached", { bundleId, appVersion: version });
+      this.known.set(`${bundleId}\n${version}`, stored);
+    }
     return stored;
   }
 
-  private async probeAndStore(bundleId: string): Promise<AppCapability> {
+  private async probeAndStore(bundleId: string, version: string | undefined, key: string): Promise<AppCapability> {
     const { probe, store, logger } = this.options;
     const capability = await probe(bundleId);
     store.putAppCapability(capability);
-    this.known.set(bundleId, capability);
+    this.known.set(key, capability);
     logger.info("router.probed", {
       bundleId,
       appVersion: capability.appVersion,
       accessibility: capability.accessibility,
       devtools: capability.devtools,
     });
+    if (version !== undefined && version !== capability.appVersion) {
+      // The two methods disagree on the format, so the stored result is never found by version; this run still
+      // reuses it, keyed by the looked-up version.
+      logger.warn("router.versionMismatch", { bundleId, installedVersion: version, probedVersion: capability.appVersion });
+    }
     return capability;
   }
 }

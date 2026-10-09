@@ -101,6 +101,10 @@ export const MIGRATIONS: readonly string[] = [
   CREATE TRIGGER action_log_append_only BEFORE UPDATE ON action_log
     BEGIN SELECT RAISE(ABORT, 'the action log is append-only'); END;
   `,
+  // 2: the planner marks subtasks that need the keyboard (SPEC-03 r17). NULL when the planner left it out.
+  `
+  ALTER TABLE subtasks ADD COLUMN needs_keyboard INTEGER;
+  `,
 ];
 
 /** Thrown when the database was written by a newer harness, whose schema this one does not know. */

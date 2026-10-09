@@ -1,5 +1,6 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { RpcRemoteError, validate } from "@yumi/protocol";
 import type { AppCapability, Lane, RouteDecided, Subtask, Target } from "@yumi/protocol/types";
@@ -9,11 +10,13 @@ import {
   createLaneRouter,
   LaneRouter,
   macAppProbe,
+  macAppVersion,
   ProbeFailure,
   type CapabilityProbe,
   type InstalledVersion,
 } from "../src/router/index.ts";
 import { HarnessRpcServer } from "../src/rpc/server.ts";
+import { MIGRATIONS } from "../src/store/migrations.ts";
 import type { TaskStore } from "../src/store/task-store.ts";
 import { PROTOCOL_DIR, tempDir } from "./helpers.ts";
 import { openStore, TestClock } from "./store-helpers.ts";
@@ -22,6 +25,8 @@ const CHROME = "com.google.Chrome";
 const KEYNOTE = "com.apple.iWork.Keynote";
 /** A canvas app: no actionable accessibility tree and no DevTools. */
 const CANVAS = "com.example.CanvasPaint";
+/** Draws its window itself, so it has no actionable accessibility tree (OBJ-27). One of the mock Mac app's apps. */
+const WEZTERM = "com.github.wez.wezterm";
 
 const CAPABILITIES: Record<string, Omit<AppCapability, "probedAt">> = {
   [CHROME]: { bundleId: CHROME, appVersion: "141.0 (141.0.7390.55)", accessibility: false, devtools: true },
@@ -74,7 +79,7 @@ afterEach(() => {
 });
 
 /** A subtask the planner proposed, ready to route. */
-function subtask(title: string, proposedLane: Lane, target?: Target): Subtask {
+function subtask(title: string, proposedLane: Lane, target?: Target, needsKeyboard?: boolean): Subtask {
   const task = store.createTask({ originDeviceId: "mac-brent", goal: title });
   store.setTaskStatus(task.id, "planning", { confirmedGoal: title });
   return store.addSubtask({
@@ -84,6 +89,7 @@ function subtask(title: string, proposedLane: Lane, target?: Target): Subtask {
     proposedLane,
     status: "ready",
     ...(target ? { target } : {}),
+    ...(needsKeyboard !== undefined ? { needsKeyboard } : {}),
   });
 }
 
@@ -135,6 +141,32 @@ describe("Feature: Lane routing (SPEC-03)", () => {
     expect(logger.entries).toContainEqual(
       expect.objectContaining({ event: "router.decided", proposed: "ghost", lane: "main", reason: "appNotBackgroundCapable" }),
     );
+  });
+
+  it("Scenario: Parallel goal splits into lanes", async () => {
+    // "pull this month's numbers from my sheets, fill the expense form in Chrome, and put the chart in Keynote"
+    const sheets = subtask("pull this month's numbers from my sheets", "helper");
+    const form = subtask("fill the expense form in Chrome", "ghost", { bundleId: CHROME });
+    const chart = subtask("put the chart in Keynote", "main", { bundleId: KEYNOTE }, true);
+
+    for (const s of [sheets, form, chart]) await router.route(s, s.proposedLane);
+
+    expect(store.getSubtask(sheets.id)).toMatchObject({ lane: "helper", routeReason: "noUI" });
+    expect(store.getSubtask(form.id)).toMatchObject({ lane: "ghost", routeReason: "backgroundCapable" });
+    // Keynote is background-capable, but the planner marked the subtask as needing the keyboard to paste the chart.
+    expect(store.getSubtask(chart.id)).toMatchObject({ lane: "main", routeReason: "needsKeyboard", needsKeyboard: true });
+  });
+
+  it("sends a subtask that needs the keyboard to main without probing its app (SPEC-03 r17)", async () => {
+    const paste = subtask("paste the chart", "ghost", { bundleId: CHROME }, true);
+    expect(await router.route(paste, "ghost")).toEqual({ lane: "main", reason: "needsKeyboard" });
+    expect(fake.calls).toEqual([]);
+    expect(events.map((e) => e.payload.reason)).toEqual(["needsKeyboard"]);
+  });
+
+  it("routes by capability when the planner says the keyboard is not needed", async () => {
+    const form = subtask("fill the form", "ghost", { bundleId: CHROME }, false);
+    expect(await router.route(form, "ghost")).toEqual({ lane: "ghost", reason: "backgroundCapable" });
   });
 
   it.each([
@@ -232,6 +264,25 @@ describe("the capability cache", () => {
     expect(store.getAppCapability(KEYNOTE, "14.3 (7043.0.93)")).toBeDefined();
   });
 
+  it("probes once per run when the version lookup has no answer, for example a Mac app without getAppVersion", async () => {
+    const installedVersion: InstalledVersion = async () => undefined;
+    const noLookup = routerWith({ installedVersion });
+    await noLookup.route(subtask("chart 1", "main", { bundleId: KEYNOTE }), "main");
+    await noLookup.route(subtask("chart 2", "main", { bundleId: KEYNOTE }), "main");
+    expect(fake.calls).toEqual([KEYNOTE]);
+  });
+
+  it("probes once per run, and warns, when the version lookup and the probe disagree on the format", async () => {
+    const installedVersion: InstalledVersion = async () => "14.2";
+    const mismatched = routerWith({ installedVersion });
+    await mismatched.route(subtask("chart 1", "main", { bundleId: KEYNOTE }), "main");
+    await mismatched.route(subtask("chart 2", "main", { bundleId: KEYNOTE }), "main");
+    expect(fake.calls).toEqual([KEYNOTE]);
+    expect(logger.entries).toContainEqual(
+      expect.objectContaining({ event: "router.versionMismatch", installedVersion: "14.2", probedVersion: "14.2 (7041.0.109)" }),
+    );
+  });
+
   it("does not cache a failed probe, stores and emits nothing, and probes again next time", async () => {
     fake.failWith = new ProbeFailure(CHROME, { kind: "accessibilityPermissionMissing" });
     const form = subtask("fill the form", "ghost", { bundleId: CHROME });
@@ -299,6 +350,66 @@ describe("the probe through the Mac app", () => {
   });
 });
 
+describe("the version lookup through the Mac app", () => {
+  it("asks getAppVersion and returns the version, or nothing when the app is not installed", async () => {
+    const calls: unknown[] = [];
+    const versions: Record<string, string> = { [KEYNOTE]: "14.2 (7041.0.109)" };
+    const lookup = macAppVersion(
+      {
+        request: async (method, params) => {
+          calls.push([method, params]);
+          const version = versions[(params as { bundleId: string }).bundleId];
+          return version ? { appVersion: version } : {};
+        },
+      },
+      logger,
+    );
+    expect(await lookup(KEYNOTE)).toBe("14.2 (7041.0.109)");
+    expect(await lookup("com.example.NotInstalled")).toBeUndefined();
+    expect(calls[0]).toEqual(["getAppVersion", { bundleId: KEYNOTE }]);
+  });
+
+  it("has no answer, and logs why, when the Mac app does not serve getAppVersion yet", async () => {
+    const lookup = macAppVersion(
+      { request: () => Promise.reject(new RpcRemoteError({ code: -32601, message: "Method not found" })) },
+      logger,
+    );
+    expect(await lookup(KEYNOTE)).toBeUndefined();
+    expect(logger.entries).toContainEqual(expect.objectContaining({ event: "router.versionLookupFailed", bundleId: KEYNOTE }));
+  });
+});
+
+describe("the planner's needsKeyboard in the task store", () => {
+  it("keeps it, and leaves it out when the planner did", () => {
+    const marked = subtask("paste the chart", "main", { bundleId: KEYNOTE }, true);
+    const unmarked = subtask("fill the form", "ghost", { bundleId: CHROME }, false);
+    const plain = subtask("extract totals", "helper");
+    store.close();
+    store = openStore(dir.path);
+    expect(store.getSubtask(marked.id)!.needsKeyboard).toBe(true);
+    expect(store.getSubtask(unmarked.id)!.needsKeyboard).toBe(false);
+    expect(store.getSubtask(plain.id)).not.toHaveProperty("needsKeyboard");
+  });
+
+  it("upgrades a database written before the column existed", () => {
+    store.close();
+    const old = tempDir();
+    try {
+      const db = new DatabaseSync(join(old.path, "tasks.db"));
+      db.exec(MIGRATIONS[0]!);
+      db.exec("PRAGMA user_version = 1");
+      db.close();
+      store = openStore(old.path);
+      const s = subtask("paste the chart", "main", { bundleId: KEYNOTE }, true);
+      expect(store.getSubtask(s.id)!.needsKeyboard).toBe(true);
+      store.close();
+    } finally {
+      old.cleanup();
+      store = openStore(dir.path);
+    }
+  });
+});
+
 describe.skipIf(process.platform === "win32")("over the local RPC with the protocol's mock Mac app (npm run mock:mac)", () => {
   let server: HarnessRpcServer | undefined;
   let mock: ChildProcess | undefined;
@@ -333,22 +444,48 @@ describe.skipIf(process.platform === "win32")("over the local RPC with the proto
     return server;
   }
 
-  it("probes the app, caches the answer, stores the decision, and sends routeDecided to the app", async () => {
-    // The mock answers every probe with the protocol's Keynote example, so the subtask targets Keynote.
+  it("routes several apps by what each supports, sends routeDecided, and reuses the cache after a restart", async () => {
+    // The mock knows Chrome (DevTools), Keynote (accessibility), and WezTerm (neither), as in OBJ-27's real probes.
     const rpc = await connectMock();
     const live = createLaneRouter({ store, server: rpc, logger });
-    const chart = subtask("add the chart in Keynote", "main", { bundleId: KEYNOTE });
+    const form = subtask("fill the expense form in Chrome", "ghost", { bundleId: CHROME });
+    const title = subtask("add a title in Keynote", "main", { bundleId: KEYNOTE });
+    const shell = subtask("run the build in WezTerm", "ghost", { bundleId: WEZTERM });
+    const chart = subtask("paste the chart in Keynote", "main", { bundleId: KEYNOTE }, true);
 
-    const decision = await live.route(chart, "main");
+    const decisions = [];
+    for (const s of [form, title, shell, chart]) decisions.push(await live.route(s, s.proposedLane));
 
-    expect(decision).toEqual({ lane: "ghost", reason: "backgroundCapable" });
+    expect(decisions).toEqual([
+      { lane: "ghost", reason: "backgroundCapable" },
+      { lane: "ghost", reason: "backgroundCapable" },
+      { lane: "main", reason: "appNotBackgroundCapable" },
+      { lane: "main", reason: "needsKeyboard" },
+    ]);
+    expect(store.getAppCapability(CHROME, "154.0.8037.99 (8037.99)")).toMatchObject({ devtools: true });
     expect(store.getAppCapability(KEYNOTE, "14.2 (7041.0.109)")).toMatchObject({ accessibility: true, devtools: false });
-    expect(store.getSubtask(chart.id)).toMatchObject({ lane: "ghost", routeReason: "backgroundCapable" });
-    const event = { taskId: chart.taskId, subtaskId: chart.id, lane: "ghost", reason: "backgroundCapable" };
+    expect(store.getAppCapability(WEZTERM, "0.1.0 (1)")).toMatchObject({ accessibility: false, devtools: false });
+    const event = { taskId: shell.taskId, subtaskId: shell.id, lane: "main", reason: "appNotBackgroundCapable" };
     await waitFor(() => output.includes(`[mock Mac app] event routeDecided ${JSON.stringify(event)}`));
+    expect(output.match(/probeAppCapability/g)).toHaveLength(3);
 
-    await live.route(subtask("add a title in Keynote", "ghost", { bundleId: KEYNOTE }), "ghost");
-    expect(output.match(/probeAppCapability/g)).toHaveLength(1);
+    // A restart: a new router over the same database reads each version and probes nothing.
+    const restarted = createLaneRouter({ store, server: rpc, logger });
+    for (const app of [CHROME, KEYNOTE, WEZTERM])
+      await restarted.route(subtask(`again in ${app}`, "ghost", { bundleId: app }), "ghost");
+    expect(output.match(/getAppVersion/g)!.length).toBeGreaterThanOrEqual(6);
+    expect(output.match(/probeAppCapability/g)).toHaveLength(3);
+  }, 30_000);
+
+  it("fails the route for an app that is not installed, as the real Mac app does", async () => {
+    const rpc = await connectMock();
+    const live = createLaneRouter({ store, server: rpc, logger });
+    const missing = subtask("open the report in Numbers", "ghost", { bundleId: "com.apple.iWork.Numbers" });
+
+    const failure = (await live.route(missing, "ghost").catch((e: unknown) => e)) as ProbeFailure;
+
+    expect(failure).toBeInstanceOf(ProbeFailure);
+    expect(failure.userError).toEqual({ kind: "unsupportedRequest" });
   }, 30_000);
 
   it("passes on the error the Mac app reports and routes nothing", async () => {

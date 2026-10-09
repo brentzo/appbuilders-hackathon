@@ -10,7 +10,9 @@ import { isBackgroundCapable, type AppCapabilities } from "./capability.ts";
  *
  * Checks, in order:
  * 1. No target app: `helper`, reason `noUI` (SPEC-03 r2).
- * 2. The target app is background-capable (an actionable accessibility tree or the DevTools protocol): `ghost`,
+ * 2. The planner marked the subtask as needing the keyboard: `main`, reason `needsKeyboard`, because only `main`
+ *    sends keystrokes (SPEC-03 r7 and r17). The app is not probed.
+ * 3. The target app is background-capable (an actionable accessibility tree or the DevTools protocol): `ghost`,
  *    reason `backgroundCapable`. Otherwise `main`, reason `appNotBackgroundCapable`, which always accepts work
  *    (SPEC-03 r1 and r3).
  *
@@ -59,6 +61,7 @@ export class LaneRouter {
 
   private async decide(subtask: Subtask): Promise<RouteDecision> {
     if (!subtask.target) return { lane: "helper", reason: "noUI" };
+    if (subtask.needsKeyboard) return { lane: "main", reason: "needsKeyboard" };
     const capability = await this.options.capabilities.capabilityOf(subtask.target.bundleId);
     return isBackgroundCapable(capability)
       ? { lane: "ghost", reason: "backgroundCapable" }

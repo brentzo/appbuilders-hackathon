@@ -83,6 +83,8 @@ export interface NewSubtask {
   instruction: string;
   dependsOn?: Uuid[];
   proposedLane: Lane;
+  /** From the planner: the subtask needs keystrokes, so it runs on main (SPEC-03 r17). */
+  needsKeyboard?: boolean;
   /** Defaults to pending. */
   status?: SubtaskStatus;
   target?: Target;
@@ -298,6 +300,7 @@ export class TaskStore {
       instruction: input.instruction,
       dependsOn: input.dependsOn ?? [],
       proposedLane: input.proposedLane,
+      ...optional("needsKeyboard", input.needsKeyboard),
       ...optional("target", input.target),
       status,
       attempts: 0,
@@ -307,8 +310,9 @@ export class TaskStore {
       const current = this.requireTask(input.taskId);
       const plan = [...current.plan, subtask.id];
       this.stmt(
-        `INSERT INTO subtasks (id, task_id, position, title, instruction, depends_on, proposed_lane, target, status, attempts)
-         VALUES ($id, $taskId, $position, $title, $instruction, $dependsOn, $proposedLane, $target, $status, 0)`,
+        `INSERT INTO subtasks (id, task_id, position, title, instruction, depends_on, proposed_lane, needs_keyboard, target, status,
+           attempts)
+         VALUES ($id, $taskId, $position, $title, $instruction, $dependsOn, $proposedLane, $needsKeyboard, $target, $status, 0)`,
       ).run({
         id: subtask.id,
         taskId: subtask.taskId,
@@ -317,6 +321,7 @@ export class TaskStore {
         instruction: subtask.instruction,
         dependsOn: JSON.stringify(subtask.dependsOn),
         proposedLane: subtask.proposedLane,
+        needsKeyboard: subtask.needsKeyboard === undefined ? null : Number(subtask.needsKeyboard),
         target: json(subtask.target),
         status: subtask.status,
       });
@@ -735,6 +740,7 @@ interface SubtaskRow {
   instruction: string;
   depends_on: string;
   proposed_lane: Lane;
+  needs_keyboard: number | null;
   lane: Lane | null;
   route_reason: RouteReason | null;
   target: string | null;
@@ -807,6 +813,7 @@ function subtaskFromRow(row: SubtaskRow): Subtask {
     instruction: row.instruction,
     dependsOn: JSON.parse(row.depends_on) as Uuid[],
     proposedLane: row.proposed_lane,
+    ...optional("needsKeyboard", row.needs_keyboard === null ? undefined : row.needs_keyboard === 1),
     ...optional("lane", row.lane),
     ...optional("routeReason", row.route_reason),
     ...optional("target", parseJson<Target>(row.target)),
