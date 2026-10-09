@@ -10,17 +10,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// `keynote-export`), `-YumiMockFail method=kind,...` makes methods fail, and
     /// `-YumiSendSampleGoal YES` submits the sample goal once connected. All are read from the launch
     /// arguments only, and work in Release too, which is what smoke tests run.
-    private(set) lazy var harness = HarnessLink(
-        model: model,
-        launcher: Self.usesMockHarness
-            ? MockHarnessLauncher(
-                script: LaunchArguments.string("YumiMockScript") ?? "keynote-export",
-                failures: LaunchArguments.string("YumiMockFail"),
-                socketPath: HarnessSocket.defaultPath
-            )
-            : RealHarnessLauncher(),
-        socketPath: HarnessSocket.defaultPath
-    )
+    var harness: HarnessLink {
+        if let harnessLink { return harnessLink }
+        let link = HarnessLink(
+            model: model,
+            launcher: Self.usesMockHarness
+                ? MockHarnessLauncher(
+                    script: LaunchArguments.string("YumiMockScript") ?? "keynote-export",
+                    failures: LaunchArguments.string("YumiMockFail"),
+                    socketPath: HarnessSocket.defaultPath
+                )
+                : RealHarnessLauncher(),
+            socketPath: HarnessSocket.defaultPath
+        )
+        harnessLink = link
+        return link
+    }
+    /// Made on first use. Making it also loads Yumi's voice, so the test host must never make it.
+    private var harnessLink: HarnessLink?
+    var hasHarnessLink: Bool { harnessLink != nil }
+
+    /// The app's delegate, for checks that the test host stays idle.
+    private(set) static weak var current: AppDelegate?
+
+    override init() {
+        super.init()
+        Self.current = self
+    }
 
     static var usesMockHarness: Bool {
         LaunchArguments.bool("YumiMockHarness") || LaunchArguments.bool("YumiSendSampleGoal")
