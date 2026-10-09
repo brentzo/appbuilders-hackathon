@@ -110,7 +110,7 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-50](OBJ-50-mac-auto-mode.md) | Auto mode skips the repeat-back | mac | Brent | 01 | - | 17 | in-progress |
 | [OBJ-51](OBJ-51-mac-neural-voice.md) | Yumi's neural voice on the Mac | mac | Brent | 04 | - | 17 | todo |
 | [OBJ-52](OBJ-52-harness-debug-logs.md) | Debug mode keeps full local logs | harness | Brent | 07 | - | 53 | done |
-| [OBJ-53](OBJ-53-mac-thoughts-panel.md) | Expand a cursor to see what it is thinking | mac | Brent | 07 | 52 | - | todo |
+| [OBJ-53](OBJ-53-mac-thoughts-panel.md) | Expand a cursor to see what it is thinking | mac | Brent | 07 | 52 | - | in-progress |
 | [OBJ-54](OBJ-54-mac-cats-avoid-pointer.md) | Cats avoid the user's pointer | mac | Brent | 04 | - | - | in-progress |
 | [OBJ-55](OBJ-55-voice-stop-keyword-models.md) | Voice stop keyword models | models | Jepoy | 06 | - | 35 | todo |
 | [OBJ-56](OBJ-56-unclassified-action-approval-contract.md) | Approval contract for unclassified risky actions | protocol | Jepoy | 07 | 01 | 36, 38, 40 | todo |

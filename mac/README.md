@@ -335,7 +335,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 | [OBJ-46](../objectives/OBJ-46-mac-model-readiness.md) | Mac app shows whether the model is ready | Patrick | todo |
 | [OBJ-50](../objectives/OBJ-50-mac-auto-mode.md) | Auto mode skips the repeat-back | Brent | in-progress |
 | [OBJ-51](../objectives/OBJ-51-mac-neural-voice.md) | Yumi's neural voice on the Mac | Brent | todo |
-| [OBJ-53](../objectives/OBJ-53-mac-thoughts-panel.md) | Expand a cursor to see what it is thinking | Brent | todo |
+| [OBJ-53](../objectives/OBJ-53-mac-thoughts-panel.md) | Expand a cursor to see what it is thinking | Brent | in-progress |
 | [OBJ-54](../objectives/OBJ-54-mac-cats-avoid-pointer.md) | Cats avoid the user's pointer | Brent | in-progress |
 | [OBJ-58](../objectives/OBJ-58-mac-hey-yumi-recognizer.md) | "Hey Yumi" on the Mac with the on-device recognizer | Brent | todo |
 <!-- generated:product-objectives:end -->
