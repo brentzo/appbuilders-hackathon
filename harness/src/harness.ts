@@ -15,7 +15,7 @@ import { debugHandlers } from "./rpc/debug.ts";
 import { historyHandlers } from "./rpc/history.ts";
 import { taskControlHandlers } from "./rpc/tasks.ts";
 import { createLaneRouter, type LaneRouter } from "./router/index.ts";
-import { HarnessRpcServer } from "./rpc/server.ts";
+import { HarnessRpcServer, removeStaleSocket } from "./rpc/server.ts";
 import { routeWith } from "./scheduler/lanes.ts";
 import { recoverAfterRestart, type Recovery } from "./scheduler/recovery.ts";
 import { localVoice, type RunTaskDeps } from "./scheduler/run-task.ts";
@@ -84,6 +84,9 @@ export async function startHarness(
   options: HarnessOptions = {},
 ): Promise<Harness> {
   const limits = config.limits ?? DEFAULT_LIMITS;
+  // First of all: while another harness is listening, its tasks are running, not cut off by a crash, so recovery must
+  // not touch them. The Mac app keeps retrying its own harness while a script such as `gui:run` holds the socket.
+  await removeStaleSocket(config.socketPath);
   const debug = options.debug ?? new DebugLog({ dir: join(config.supportDir, DEBUG_LOG_FOLDER), enabled: false, logger });
   debug.deleteOld();
   const store = TaskStore.open({ dir: config.supportDir, logger, maxSubtaskDepth: limits.subtaskDepth });

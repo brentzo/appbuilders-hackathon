@@ -114,6 +114,11 @@ Resume never starts on its own: the user is always asked first.
   - `interruptedTaskFound` goes to every connection that said hello, each time one does, so a second app connection repeats it to the first. The Mac app is the only client today.
   - The step limit's log event is now `subtask.stepLimit` (was `subtask.stepGuard`).
   - The transition table in `src/store/transitions.ts` did not need any change.
+- **Follow-up fix (2026-10-10, found in the live Keynote runs, made on the OBJ-36 branch):**
+  - A second harness on the same support folder ran crash recovery before it found the socket taken.
+    While `npm run gui:run` held the socket, each retry of the Mac app's own harness reset the running subtask to ready and the task to interrupted, and the next step crashed with "Subtask ... is ready, not running" (`recovery.subtaskReset` and `harness.startFailed` in the harness log, 17:52 UTC).
+  - `startHarness` now checks the socket first (`removeStaleSocket` in `harness/src/rpc/server.ts`), before it opens the task store, so a harness that finds another one listening touches no records.
+  - Test: "a second harness on the same folder refuses to start and leaves the running task's records alone" in `harness/test/history-rpc.test.ts`.
 - **For the next objectives:**
   - OBJ-17: start confirmed tasks with `harness.tasks.start(taskId)`, not `runTask`, so cancel and resume can find them. Pass `work` to `startHarness` in `src/main.ts`: `{ client: new ModelClient(config.model, logger), logger, deviceId, home: os.homedir(), lanes: { helper: fileHelperLane({ home, logger }) }, slots: config.model.parallelSlots }`. The route, the voice, and the limits default to the router, `localVoice`, and `config.limits`.
   - OBJ-38: a pause sets running subtasks back to `ready` (keeping attempts) and the task to `paused`, without `interrupted`. Resume and cancel go through `harness.tasks`; extend `TaskControl.cancel` for OBJ-38.6.

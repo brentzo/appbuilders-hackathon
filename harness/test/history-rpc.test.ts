@@ -5,6 +5,7 @@ import { validate } from "@yumi/protocol";
 import { PROTOCOL_VERSION } from "@yumi/protocol/types";
 import { startHarness, type Harness } from "../src/harness.ts";
 import { MemoryLogger } from "../src/log.ts";
+import { HarnessAlreadyRunningError } from "../src/rpc/server.ts";
 import { PROTOCOL_DIR, rawClient, tempDir } from "./helpers.ts";
 import { exampleAction, runningSubtask } from "./store-helpers.ts";
 
@@ -50,6 +51,19 @@ function invoicesTask() {
 }
 
 describe.skipIf(process.platform === "win32")("the history methods over the local RPC", () => {
+  it("a second harness on the same folder refuses to start and leaves the running task's records alone", async () => {
+    // The Mac app retries its own harness while gui:run holds the socket (live Keynote runs, 2026-10-10).
+    const { task, subtask } = runningSubtask(harness.store);
+    const second = new MemoryLogger();
+    await expect(startHarness({ supportDir: dir.path, socketPath: join(dir.path, "harness.sock") }, second)).rejects.toThrow(
+      HarnessAlreadyRunningError,
+    );
+    expect(harness.store.getTask(task.id)!.status).toBe("running");
+    expect(harness.store.getSubtask(subtask.id)).toMatchObject({ status: "running", attempts: 1 });
+    expect(second.entries.map((e) => e.event)).not.toContain("recovery.done");
+    expect(second.entries.map((e) => e.event)).not.toContain("store.opened");
+  });
+
   it("listTasks returns past tasks newest first", async () => {
     const first = invoicesTask().task;
     const second = harness.store.createTask({ originDeviceId: "mac-brent", goal: "tidy my desktop" });

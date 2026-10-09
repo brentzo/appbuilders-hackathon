@@ -128,8 +128,11 @@ export class HarnessRpcServer {
   }
 }
 
-/** Removes a socket file left by a harness that crashed. Refuses to start if a harness still answers on it. */
-async function removeStaleSocket(socketPath: string): Promise<void> {
+/**
+ * Removes a socket file left by a harness that crashed. Refuses to start if a harness still answers on it. The harness
+ * calls it before it opens the task store too, so a second harness never repairs the records of a running one.
+ */
+export async function removeStaleSocket(socketPath: string): Promise<void> {
   if (!existsSync(socketPath)) return;
   const live = await new Promise<boolean>((resolve) => {
     const probe = connect(socketPath);
