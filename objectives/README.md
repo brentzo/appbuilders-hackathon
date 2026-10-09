@@ -83,7 +83,7 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-23](OBJ-23-android-bridge-client.md) | Android bridge client and pairing | android | Brent | 08 | 02, 13, 22 | - | todo |
 | [OBJ-24](OBJ-24-android-voice-intake.md) | Android voice intake and wake word | android | Brent | 01, 10 | 22 | 12 | todo |
 | [OBJ-25](OBJ-25-cross-device-messages.md) | Cross-device message kinds | protocol | Jepoy | 09, 06, 07, 08, 10 | 01, 02 | - | todo |
-| [OBJ-26](OBJ-26-gui-smoke-test.md) | Qwen3.5-9B smoke test on the demo tasks | models | Jepoy | 05 | - | - | todo |
+| [OBJ-26](OBJ-26-gui-smoke-test.md) | Qwen3.5-9B smoke test on the demo tasks | models | Brent | 05 | - | - | todo |
 | [OBJ-27](OBJ-27-mac-native-services.md) | Mac native services for the harness | mac | Patrick | 03, 08 | 14 | 07, 08, 21 | todo |
 <!-- generated:objectives-index:end -->
 
@@ -132,8 +132,8 @@ Workload:
 <!-- generated:objectives-workload:start -->
 | Person | Objectives | Count |
 |---|---|---|
-| Brent | 03, 04, 05, 06, 07, 08, 09, 22, 23, 24 | 10 |
-| Jepoy | 01, 02, 11, 12, 13, 21, 25, 26 | 8 |
+| Brent | 03, 04, 05, 06, 07, 08, 09, 22, 23, 24, 26 | 11 |
+| Jepoy | 01, 02, 11, 12, 13, 21, 25 | 7 |
 | Patrick | 10, 14, 15, 16, 17, 18, 19, 20, 27 | 9 |
 <!-- generated:objectives-workload:end -->
 ## Suggested order
@@ -143,7 +143,7 @@ Waves come from hard dependencies only. Each person works their column top to bo
 <!-- generated:objectives-waves:start -->
 | Wave | Brent | Jepoy | Patrick |
 |---|---|---|---|
-| 1 | OBJ-22 | OBJ-01, OBJ-02, OBJ-11, OBJ-12, OBJ-26 | OBJ-10 |
+| 1 | OBJ-22, OBJ-26 | OBJ-01, OBJ-02, OBJ-11, OBJ-12 | OBJ-10 |
 | 2 | OBJ-03, OBJ-24 | OBJ-13, OBJ-25 | OBJ-14 |
 | 3 | OBJ-04, OBJ-23 | OBJ-21 | OBJ-15, OBJ-18, OBJ-27 |
 | 4 | OBJ-05, OBJ-07 | - | OBJ-16, OBJ-17, OBJ-19, OBJ-20 |

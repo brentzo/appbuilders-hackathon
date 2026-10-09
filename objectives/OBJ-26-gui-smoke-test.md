@@ -2,7 +2,7 @@
 id: OBJ-26
 title: Qwen3.5-9B smoke test on the demo tasks
 product: models
-assignee: Jepoy
+assignee: Brent
 touches: []
 specs: [SPEC-05]
 status: todo
@@ -14,7 +14,7 @@ tags: [objective, p0, models, gui]
 
 # OBJ-26 Qwen3.5-9B smoke test on the demo tasks
 
-**Product:** [Yumi Models](../models/README.md) · **Specs:** [SPEC-05](../specs/05-mac-gui-control.md) · **Assignee:** Jepoy
+**Product:** [Yumi Models](../models/README.md) · **Specs:** [SPEC-05](../specs/05-mac-gui-control.md) · **Assignee:** Brent
 
 ## Project context
 
