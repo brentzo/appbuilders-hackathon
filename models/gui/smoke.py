@@ -1192,14 +1192,15 @@ def cmd_run(args):
 
 def cmd_report(args):
     rows = [json.loads(l) for l in RESULTS.read_text().splitlines() if l.strip()]
-    print("| Task | Mode | Run | Success | Steps | s/step (model) | s/step (total) | Invalid | No effect | Blocked | Peak GiB | End | Gradle | Emulator | Free mem |")
-    print("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
+    print("| Task | Mode | Run | Success | Steps | s/step (model) | s/step (total) | Invalid | No effect | Blocked | Peak GiB | End | Gradle | Emulator | VM | Free mem |")
+    print("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
     for r in rows:
         e = r["env"]
         print(
             f"| {r['task']} | {r['mode']} | {r['run']} | {'yes' if r['success'] else 'no'} | {r['steps']} | {r['model_s_per_step']} | {r['step_s_per_step']} | "
             f"{r['invalid_outputs']} | {r['no_effect']} | {r['blocked']} | {r['server_peak_gib']} | {r['end_reason'][:60]} | "
-            f"{'yes' if e['java_running'] else 'no'} | {'yes' if e['qemu_running'] else 'no'} | {e['memory_free_percent']}% |"
+            f"{'yes' if e.get('gradle_running', e['java_running']) else 'no'} | {'yes' if e['qemu_running'] else 'no'} | "
+            f"{'yes' if e.get('vm_running') else 'no'} | {e['memory_free_percent']}% |"
         )
     print()
     print("| Task | Mode | Successes | Verdict (4 of 5 passes) |")
