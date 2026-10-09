@@ -6,7 +6,7 @@ It is everything the user sees and hears on the Mac, and every native capability
 Owner: Patrick.
 
 Status: the app shell is in progress ([OBJ-14](../objectives/OBJ-14-mac-app-shell.md)): menu bar item, status line, permission onboarding, settings, harness supervision, the harness RPC client, and the error presenter.
-It runs against the mock harness until the real one exists (OBJ-14.8).
+It runs against the mock harness until the real one exists (OBJ-27.8).
 
 ## Responsibilities
 
@@ -86,7 +86,7 @@ A rename in the generator has been proposed to the protocol owner.
 
 ### Harness
 
-Until OBJ-14.8, Yumi starts the mock harness from `protocol/mocks` itself.
+Until OBJ-27.8, Yumi starts the mock harness from `protocol/mocks` itself.
 It finds `node` through your login shell, runs `node --import tsx mocks/mock-harness.ts` in `protocol/`, restarts it whenever it exits, and stops it when Yumi quits.
 The menu says "Using the mock harness" so it is never demoed by accident.
 The status line says "Yumi is getting ready" until the harness answers `hello` and `ping`.
@@ -161,7 +161,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 ## Stand-ins in the app today
 
 - The menu bar icon is the SF Symbol `cat` until the Rive cat ([OBJ-19](../objectives/OBJ-19-rive-cat-cursor.md)) exists.
-- The harness is the mock from `protocol/mocks` until the real harness exists (OBJ-14.8).
+- The harness is the mock from `protocol/mocks` until the real harness exists (OBJ-27.8).
 - Settings changes go to `PendingHarnessSettingsSink`, which only logs.
   The protocol has no method for settings yet.
 - Model readiness is a placeholder that is always unknown (`ModelReadiness`).

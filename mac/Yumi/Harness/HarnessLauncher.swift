@@ -3,7 +3,7 @@ import OSLog
 
 /// Builds the harness process. The supervisor starts it, watches it, and restarts it.
 ///
-/// Today the only launcher is `MockHarnessLauncher`. OBJ-14.8 adds the real harness (OBJ-03)
+/// Today the only launcher is `MockHarnessLauncher`. OBJ-27.8 adds the real harness (OBJ-03)
 /// behind this same protocol.
 protocol HarnessLauncher: Sendable {
     /// Shown in logs and the menu, so nobody demos the mock by accident.
@@ -28,7 +28,7 @@ enum HarnessLaunchError: Error, CustomStringConvertible {
 }
 
 /// STAND-IN: runs the mock harness from `protocol/mocks` (OBJ-01) until the real harness exists
-/// (OBJ-03, swapped in by OBJ-14.8). It needs the repo on disk with `npm install` run in `protocol/`.
+/// (OBJ-03, swapped in by OBJ-27.8). It needs the repo on disk with `npm install` run in `protocol/`.
 ///
 /// It runs `node --import tsx mocks/mock-harness.ts` directly, not through npm, so the harness is
 /// one process the supervisor can stop and watch.

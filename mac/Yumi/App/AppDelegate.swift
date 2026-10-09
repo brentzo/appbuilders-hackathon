@@ -5,7 +5,7 @@ import YumiProtocol
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let model = AppModel(permissions: DebugLaunchOptions.permissionCenter())
     private(set) lazy var windows = WindowCoordinator(model: model)
-    /// Until OBJ-14.8 the harness is always the mock. `-YumiMockScript <name>` picks its event
+    /// Until OBJ-27.8 the harness is always the mock. `-YumiMockScript <name>` picks its event
     /// script (default `keynote-export`), `-YumiMockFail method=kind,...` makes methods fail, and
     /// `-YumiSendSampleGoal YES` submits the sample goal once connected. All work in Release too,
     /// which is what smoke tests run. They are read from the launch arguments only, and only the
