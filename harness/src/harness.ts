@@ -2,7 +2,9 @@ import type { Handler } from "@yumi/protocol";
 import { ActionLogFile } from "./action-log/text-log.ts";
 import { ApprovalFlow } from "./approvals/approval-flow.ts";
 import { DEFAULT_LIMITS, type HarnessConfig } from "./config.ts";
+import { abandonUnconfirmed, GoalConfirmation } from "./confirm/confirmation.ts";
 import { describeError, type Logger } from "./log.ts";
+import { confirmationHandlers } from "./rpc/confirmation.ts";
 import { historyHandlers } from "./rpc/history.ts";
 import { taskControlHandlers } from "./rpc/tasks.ts";
 import { createLaneRouter, type LaneRouter } from "./router/index.ts";
@@ -25,6 +27,8 @@ export interface Harness {
   approvals?: ApprovalFlow;
   /** The action log file (OBJ-38.7). */
   actionLog: ActionLogFile;
+  /** Repeats goals back and starts them once the user confirms (OBJ-17). */
+  confirmation: GoalConfirmation;
   /** What startup recovery found: tasks a restart cut off, and steps it finished as noEffect. */
   recovery: Recovery;
   close(): Promise<void>;
@@ -72,12 +76,15 @@ export async function startHarness(
     // Before the server starts, so no app can ask about a task while its records are being repaired.
     const recovery = recoverAfterRestart(store, logger);
     if (recovery.interrupted.length > 0 || recovery.steps > 0) logger.info("recovery.done", { ...recovery });
+    abandonUnconfirmed(store, logger);
     // The task methods need the server's voice and the router, which need the server: they are wired just below,
     // before any message can arrive.
     // eslint-disable-next-line prefer-const
     let tasks: TaskControl | undefined;
     // eslint-disable-next-line prefer-const
     let approvals: ApprovalFlow | undefined;
+    // eslint-disable-next-line prefer-const
+    let confirmation: GoalConfirmation | undefined;
     const ownHandlers = {
       ...historyHandlers(store, logger),
       ...taskControlHandlers(
@@ -86,6 +93,7 @@ export async function startHarness(
         () => approvals,
         logger,
       ),
+      ...confirmationHandlers(() => confirmation!),
     };
     const clash = Object.keys(options.handlers ?? {}).filter((name) => name in ownHandlers);
     if (clash.length > 0) throw new Error(`RPC methods registered twice: ${clash.join(", ")}`);
@@ -122,6 +130,15 @@ export async function startHarness(
       approvals,
     );
     const control = tasks;
+    confirmation = new GoalConfirmation({
+      store,
+      logger,
+      app: server,
+      voice: voice ?? localVoice(server, logger),
+      tasks: () => control,
+      ...(work ? { client: work.client } : {}),
+    });
+    const confirming = confirmation;
     return {
       store,
       server,
@@ -129,8 +146,10 @@ export async function startHarness(
       tasks: control,
       ...(approvals ? { approvals } : {}),
       actionLog,
+      confirmation: confirming,
       recovery,
       close: async () => {
+        await confirming.close();
         await control.close();
         await server.close();
         actionLog.stop();

@@ -66,6 +66,8 @@ Approvals, pause, and the action log are built ([OBJ-38](../objectives/OBJ-38-ap
 | `src/rpc/server.ts` | The local JSON-RPC server for the Mac app. |
 | `src/rpc/history.ts` | The `listTasks`, `searchTasks`, and `getTask` methods. |
 | `src/rpc/tasks.ts` | The `pause`, `resumeTask`, and `cancelTask` methods. `resumeTask` also answers "Keep going" on an open blocked-action card. |
+| `src/rpc/confirmation.ts` | The `submitGoal` and `replyToConfirmation` methods. |
+| `src/confirm/` | The goal confirmation loop (`confirmation.ts`), the repeat-back prompt and checks (`restate.ts`), and reading the user's answer (`classify.ts`). |
 | `src/errors.ts` | Maps failures to the protocol's `UserError` kinds. Never builds user-facing text. |
 | `src/log.ts` | The local log file. |
 | `scripts/model-check.ts` | Checks the harness against the real model server. |
