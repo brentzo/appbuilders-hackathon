@@ -1,5 +1,6 @@
 import AppKit
 import OSLog
+import SwiftUI
 import YumiProtocol
 
 /// Launch arguments for checking the UI by screenshot, in Debug builds only. For example:
@@ -10,7 +11,7 @@ import YumiProtocol
 /// - `-YumiStatus startingUp|ready|listening|working|paused` sets the menu's status line.
 /// - `-YumiVoiceFile <path>` makes push-to-talk transcribe that recording instead of the microphone.
 /// - `-YumiReplyFile <path>` makes the spoken answer after a repeat-back transcribe that recording.
-/// - `-YumiOpen settings|onboarding|pairing|pairing-code|type-goal|error:<ErrorKind>` opens a window at launch instead of the
+/// - `-YumiOpen settings|onboarding|pairing|pairing-code|type-goal|menu|menu-busy|approval-send|approval-delete|paused|tiling|chips|error:<ErrorKind>` opens a window at launch instead of the
 ///   usual onboarding check. An error uses the sample last action "Clicked Export in Keynote".
 /// - `-YumiPermissions mixed|granted` pretends permissions are in that state, without asking macOS.
 ///   `mixed` has the microphone allowed and the other two missing.
@@ -48,6 +49,10 @@ enum DebugLaunchOptions {
             runOverlayDemo(app.harness.overlay, writingTo: URL(fileURLWithPath: directory))
             return true
         }
+        if LaunchArguments.string("YumiOpen") == "chips", let directory = LaunchArguments.string("YumiSnapshotDir") {
+            runChipsDemo(app.harness.overlay, writingTo: URL(fileURLWithPath: directory))
+            return true
+        }
 
         let opened: (name: String, window: NSWindow)?
         switch LaunchArguments.string("YumiOpen") {
@@ -55,6 +60,21 @@ enum DebugLaunchOptions {
         case "onboarding": opened = ("onboarding", app.windows.showOnboarding())
         case "pairing": opened = ("pairing", PairingWindow.show())
         case "type-goal": opened = ("type-goal", app.showTypeGoal())
+        case "menu":
+            opened = ("menu", sampleWindow(app.menuPanel {}))
+        case "menu-busy":
+            showSampleCursors(app.harness.overlay)
+            app.model.statusOverride = .working
+            app.harness.tiler.state.hasSavedLayout = true
+            opened = ("menu-busy", sampleWindow(app.menuPanel {}))
+        case "approval-send":
+            opened = ("approval-send", sampleWindow(card(ApprovalCardView(approval: sampleSend) { _ in })))
+        case "approval-delete":
+            opened = ("approval-delete", sampleWindow(card(ApprovalCardView(approval: sampleDelete) { _ in })))
+        case "paused":
+            opened = ("paused", sampleWindow(card(PausedView(text: PauseCopy.paused, resume: {}, cancel: {}))))
+        case "tiling":
+            opened = ("tiling", sampleWindow(card(TilingQuestionView { _ in })))
         case "pairing-code":
             PhoneLink.shared.showSampleCode(.init(payload: "yumi-pair:sample", expiresAt: Date().addingTimeInterval(300)))
             opened = ("pairing-code", PairingWindow.show())
@@ -86,6 +106,65 @@ enum DebugLaunchOptions {
         }
         func request(_ permission: Permission) async {}
         func open(_ url: URL) { NSWorkspace.shared.open(url) }
+    }
+
+    /// A snapshot window for a view that normally lives in a menu bar panel or a floating panel.
+    private static func sampleWindow(_ view: some View) -> NSWindow {
+        let window = NSWindow(contentViewController: NSHostingController(rootView: view))
+        window.styleMask = [.titled, .closable]
+        window.title = ""
+        window.isReleasedWhenClosed = false
+        window.applyYumiStyle()
+        window.center()
+        return window
+    }
+
+    /// A floating card on a desktop-like backdrop, so its edge and corners show.
+    private static func card(_ view: some View) -> some View {
+        view.padding(YumiSpace.xl).background(YumiColor.paperDeep)
+    }
+
+    private static let sampleSend = Approval(
+        id: "sample-send", stepId: "step-1", kind: .send, recipients: ["Ana Reyes <ana@example.com>"],
+        text: "I'm about to send this email to Ana Reyes (ana@example.com) with the subject \"Q3 report\". Should I send it?",
+        requestedAt: "", expiresAt: ""
+    )
+
+    private static let sampleDelete = Approval(
+        id: "sample-delete", stepId: "step-2", kind: .delete,
+        files: FileSummary(
+            folder: "~/Downloads", count: 12,
+            firstNames: ["old-invoice.pdf", "Q3 Report final final (Ana's edits) v7 - do not share outside the team.pdf", "receipt-0412.pdf", "scan.png", "notes.txt"],
+            allPaths: ["~/Downloads/old-invoice.pdf"]
+        ),
+        text: "I'm about to move 12 files from Downloads to the Trash, starting with old-invoice.pdf. Should I delete them?",
+        requestedAt: "", expiresAt: ""
+    )
+
+    /// A main cursor and two labeled ghosts, off to the side, for the busy menu panel.
+    private static func showSampleCursors(_ overlay: CursorOverlay) {
+        guard let screen = NSScreen.screens.first else { return }
+        let corner = CGPoint(x: screen.frame.minX + 80, y: screen.frame.minY + 120)
+        overlay.spawn(id: "main", kind: .main, label: "Export my Keynote deck as a PDF", at: corner)
+        overlay.update("main") { $0.state = .acting }
+        overlay.spawn(id: "ghost-1", kind: .ghost, label: "Fill expense form", at: corner)
+        overlay.update("ghost-1") { $0.state = .thinking }
+        overlay.spawn(id: "ghost-2", kind: .ghost, label: "Rename the invoices in Downloads by date", at: corner)
+        overlay.update("ghost-2") { $0.state = .waitingForUser }
+    }
+
+    /// `-YumiOpen chips -YumiSnapshotDir <dir>`: three helper chips, one per littermate, rendered
+    /// with the overlay over white and black, then quits.
+    private static func runChipsDemo(_ overlay: CursorOverlay, writingTo directory: URL) {
+        overlay.showHelperChip(id: "helper-1", text: "Checking the weather")
+        overlay.showHelperChip(id: "helper-2", text: "Summarizing the PDF in Downloads")
+        overlay.showHelperChip(id: "helper-3", text: "Helper working")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            for file in overlay.debugRender(to: directory) {
+                print("Chips snapshot: \(file.path)")
+            }
+            NSApp.terminate(nil)
+        }
     }
 
     /// `-YumiOverlayDemo <dir>`: a main cursor and two labeled ghosts in different states plus a
