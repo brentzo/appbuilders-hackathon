@@ -24,18 +24,19 @@ Deleting is allowed only with a strict confirmation, screen content can never gi
 
    | Level | Actions |
    |---|---|
-   | Allowed | Read files in the home folder, list folders, open apps, files, and URLs, click and type in apps, create new files and folders, copy and move files without replacing anything |
+   | Allowed | Read files in the home folder (except dotfiles and `~/Library`), list folders, open apps, files, and URLs, click and type in apps, create new files and folders, copy and move files without replacing anything |
    | Ask every time | Send an email or message, delete files |
-   | Blocked | Shell commands, `sudo`, installing software, changing system settings, payments and purchases, emptying the Trash, quitting or force-quitting apps, changing file permissions, running downloaded scripts, writing dotfiles or anything in `~/Library`, replacing a file Yumi did not create, reading secret locations |
+   | Blocked | Shell commands, `sudo`, installing software, changing system settings, payments and purchases, emptying the Trash, quitting or force-quitting apps, changing file permissions, running downloaded scripts, reading or writing dotfiles or anything in `~/Library`, opening or acting in apps that run commands or install software (requirement 3), replacing a file Yumi did not create, reading secret locations |
 
 2. Secret locations are `~/.ssh`, `~/.gnupg`, `~/.aws`, `~/Library/Keychains`, and browser profile folders.
-3. Yumi has no free-form shell or AppleScript. File work goes through typed tools only: `read_file`, `list_dir`, `write_new_file`, `copy`, `move`, `open`, and `move_to_trash`. The harness checks every call.
+3. Yumi has no free-form shell or AppleScript. File work goes through typed tools only: `read_file`, `list_dir`, `write_new_file`, `copy`, `move`, `open`, and `move_to_trash`. The harness checks every call. Apps that are a shell or an installer by another route are blocked: Yumi never opens them, opens files with them, or acts in them. They are Terminal, iTerm, Script Editor, Automator, and Installer, and installer files (`.pkg`, `.mpkg`, `.dmg`) and app bundles cannot be opened as files.
 4. `copy` and `move` never replace an existing file. If a name is taken, the new file gets a numbered name. Names are compared without regard to case, because Mac volumes are case-insensitive by default: `Report.pdf` takes the name `report.pdf`.
 5. A blocked action never runs, even if the user says yes. Yumi says "I can't do that. It's blocked to keep your Mac safe, so I skipped it. Want me to keep going with the rest?" with "Keep going" and "Stop" buttons.
 6. Risk is read from the action itself:
    - For accessibility actions, from the element's label. "Send", "Delete", and "Move to Trash" ask. "Empty Trash", "Buy", "Pay", "Install", "Quit", and "Force Quit" are blocked.
    - For key presses, from a per-app list. Return in Messages, Command-Return and Command-Shift-D in Mail ask. Command-Delete in Finder asks. Command-Shift-Delete in Finder is blocked. Command-Q and Command-Option-Escape are blocked in every app.
-   - Anything the harness cannot classify asks. This applies only to key presses, and to clicks in apps on the risky-app list: Mail, Messages, WhatsApp, Finder, and System Settings. Other clicks are allowed.
+   - Anything the harness cannot classify asks, but only in apps on the risky-app list: Mail, Messages, WhatsApp, and Finder. This covers clicks and key presses alike. In other apps, unlisted clicks and key presses are allowed. Each risky app has a short list of safe click labels (see Decisions).
+   - Every action in System Settings is blocked, because the table blocks changing system settings.
 
 ### Strict delete
 
@@ -240,6 +241,10 @@ Until it is reviewed, objectives may build against it but must not treat it as f
 - "Quit", "Force Quit", Command-Q, and Command-Option-Escape are blocked, because the permission table blocks quitting and force-quitting apps and these are the ways to do it. Decided 2026-10-09.
 - "Anything the harness cannot classify asks" applies only to key presses and to clicks in apps on a short risky-app list (Mail, Messages, WhatsApp, Finder, System Settings). Other clicks are allowed, so ordinary clicks never ask. Decided 2026-10-09.
 - Editing files Yumi created in this task is dropped from the allowed list for p0. No typed tool edits a file, and `write_new_file` never replaces one. Decided 2026-10-09.
+- Reading dotfiles and `~/Library` is blocked, not only writing them: they hold tokens and app data. Decided 2026-10-09.
+- Unlisted key presses ask only in risky apps, like unlisted clicks, so Tab, Escape, and Command-S in Keynote do not ask. The blocked combos (Command-Q, Command-Option-Escape) stay blocked everywhere. This replaces "every unlisted key press asks". Decided 2026-10-09.
+- System Settings leaves the risky-app list: every action there is blocked, matching the table. Yumi never needs it; the user grants permissions. Decided 2026-10-09.
+- The shell and installer apps in requirement 3 are written into the spec, since they are how "no shell" is enforced. Decided 2026-10-09.
 - Risky apps get a short per-app list of safe click labels, which are allowed. Other unlisted clicks in a risky app still ask. Mail starts with "New Message" and "Attach", so demo task 2 in [SPEC-05](05-mac-gui-control.md) asks only before Send. The list lives with the permission table in code, and a label is added only with a change to this spec. Brent chose this over allowing every unlisted click in risky apps. Decided 2026-10-09.
 
 ## Open questions
