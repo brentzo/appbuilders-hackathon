@@ -265,6 +265,8 @@ class Attempt {
   private readonly streaks: Streaks = { noEffect: 0, invalidOutput: 0 };
   /** Vision clicks skipped because the window moved, so a window that keeps moving cannot loop forever. */
   private movedSkips = 0;
+  /** The previous action's signature, so the same action twice in a row counts as no progress. */
+  private previousAction: string | undefined;
   /** Actions blocked in this attempt, so the same one is never asked about again. */
   private readonly blockedActions = new Set<string>();
   /** How often the model proposed an action that was already blocked. */
@@ -435,6 +437,10 @@ class Attempt {
     );
     if (readable.looks > 1)
       this.deps.logger.info("gui.windowAppeared", { taskId: this.taskId, subtaskId: this.subtask.id, looks: readable.looks });
+    // A window whose content is not in the accessibility tree (vision) has nothing to settle: its look
+    // is a screenshot, and waiting on an animating window costs seconds per step (Brent's run,
+    // 2026-10-10: 8 looks over five seconds against Spotify). The readable look is enough.
+    if (readable.observation.screenshotPath !== undefined) return this.remember(readable.observation);
     const { observation, settled, looks } = await settledObservation(
       () => this.deps.mac.observe(this.target, this.options.signal),
       this.settle,
@@ -595,8 +601,16 @@ class Attempt {
     }
 
     const files = await this.watch.takeNew();
+    const repeated = key === this.previousAction;
+    this.previousAction = key;
     const outcome = stepOutcome(action, ran, before, after, files);
-    const line = fit(observationLine(action, ran, outcome, before, after, files));
+    const line = fit(
+      // The same action twice in a row is not progress: say so, so the model tries something else
+      // instead of repeating (the model tried open_app twice against Spotify, Brent's run, 2026-10-10).
+      repeated && outcome === "ok"
+        ? `You already tried this exact action. ${observationLine(action, ran, outcome, before, after, files)}`
+        : observationLine(action, ran, outcome, before, after, files),
+    );
     if (outcome === "blocked") {
       this.finishStep(step, "blocked", line, describeNotDone(decision.recorded, app, "blocked", layer));
       // Only typing can stop partway, at a password field (SPEC-05 r7). Any other action the Mac app answers as
@@ -905,6 +919,10 @@ function stepOutcome(
   const ui = action.kind !== ACTION.tool;
   switch (ran.outcome) {
     case "ok":
+      // A vision click cannot be judged from the accessibility tree: a window with no accessible
+      // content has an empty element list and an unchanged title, so the same-tree rule would call
+      // every vision click "noEffect" (Brent's run, 2026-10-10). The Mac app's answer is all there is.
+      if (action.kind === ACTION.clickAt) return "ok";
       return ui && before !== undefined && files.length === 0 && sameTreeAndTitle(before, after) ? "noEffect" : "ok";
     case "error":
       return ui ? "noEffect" : "error";

@@ -389,6 +389,35 @@ describe("SPEC-05 Mac GUI control", () => {
     expect(run.result.status).toBe("done");
   });
 
+  it("a vision click is not judged by the empty accessibility tree", async () => {
+    // The window has no elements at all, so the tree never changes; the click must not be called
+    // noEffect (Brent's run, 2026-10-10).
+    const shot = join(dir.path, "vision-unchanged.png");
+    writeFileSync(shot, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+    const spotify: FakeAppModel = {
+      bundleId: "com.spotify.client",
+      name: "Spotify",
+      screen: () => ({
+        app: "Spotify",
+        title: "Spotify Premium",
+        screenshotPath: shot,
+        windowFrame: { x: 0, y: 34, width: 1470, height: 810 },
+        elements: [],
+      }),
+    };
+    const fake = await connect(spotify);
+    scriptModel((_text, call) =>
+      call === 1 ? reply({ kind: "clickAt", x: 900, y: 120 }) : reply({ kind: "finish", status: "done", note: "Played it." }),
+    );
+    const { subtask } = guiSubtask({ lane: "main", bundleId: "com.spotify.client", instruction: "Play the chill mix." });
+
+    const run = ended(await act(subtask));
+
+    expect(fake.executed.some((c) => c.params.action.action.kind === "clickAt")).toBe(true);
+    expect(harness.store.listSteps(subtask.id).map((s) => s.outcome)).toEqual(["ok"]);
+    expect(run.result.status).toBe("done");
+  });
+
   it("Scenario: Window moved before the click", async () => {
     // Given the model returned a click for a window
     const shot = join(dir.path, "vision-moved.png");

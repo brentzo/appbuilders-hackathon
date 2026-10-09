@@ -80,6 +80,7 @@ export function workerSystemPrompt(lane: Lane, explain = false, vision = false):
     ...(vision && laneAllows(lane, ACTION.clickAt)
       ? [
           "- A screenshot of the window is attached. When nothing in the element list matches, use clickAt with the pixel coordinates (x, y) in that image.",
+          "- This window shows no clickable elements at all. To find something by name, prefer the keyboard over coordinates: a key action such as cmd+l or cmd+f to focus the app's search, then a type action with the name, then enter. Use clickAt only for a control you can clearly see.",
         ]
       : []),
     ...(laneAllows(lane, ACTION.setValue)
