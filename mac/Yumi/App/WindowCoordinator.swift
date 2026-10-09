@@ -7,6 +7,7 @@ final class WindowCoordinator {
     private let model: AppModel
     private var settingsWindow: NSWindow?
     private var onboardingWindow: NSWindow?
+    private var onboardingCloseObserver: NSObjectProtocol?
 
     init(model: AppModel) {
         self.model = model
@@ -31,7 +32,15 @@ final class WindowCoordinator {
                 self?.onboardingWindow?.close()
             }
         )
+        if onboardingWindow == nil {
+            onboardingCloseObserver = NotificationCenter.default.addObserver(
+                forName: NSWindow.willCloseNotification, object: window, queue: .main
+            ) { [weak self] _ in
+                MainActor.assumeIsolated { self?.model.permissions.stopPolling() }
+            }
+        }
         onboardingWindow = window
+        model.permissions.startPolling()
         present(window)
         return window
     }

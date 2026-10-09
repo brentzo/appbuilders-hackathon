@@ -51,10 +51,13 @@ struct MacPermissionSystem: PermissionSystem {
 
 /// Tracks the three permissions and notices grants while Yumi runs.
 ///
-/// macOS posts no notification when a privacy permission changes, so this checks again every
-/// second and whenever Yumi becomes active. Microphone and Accessibility update live. Screen
-/// Recording may only report a grant after Yumi restarts; System Settings offers "Quit & Reopen"
-/// for that.
+/// macOS posts no notification when a privacy permission changes, so this checks again:
+/// - every second, only while the onboarding window is open (`startPolling`),
+/// - whenever Yumi becomes active (`observeActivation`),
+/// - right before a task needs a permission (`check`).
+///
+/// Microphone and Accessibility update live. Screen Recording may only report a grant after Yumi
+/// restarts; System Settings offers "Quit & Reopen" for that.
 @Observable
 final class PermissionCenter {
     private(set) var states: [Permission: PermissionState] = [:]
@@ -93,11 +96,15 @@ final class PermissionCenter {
         states = next
     }
 
-    func startWatching() {
-        guard timer == nil else { return }
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.refresh() }
-        }
+    /// The current state, read from macOS now. Call this right before work that needs the permission.
+    func check(_ permission: Permission) -> PermissionState {
+        refresh()
+        return state(of: permission)
+    }
+
+    /// Re-checks whenever Yumi becomes active, for the life of the app.
+    func observeActivation() {
+        guard activationObserver == nil else { return }
         activationObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main
         ) { [weak self] _ in
@@ -105,13 +112,21 @@ final class PermissionCenter {
         }
     }
 
-    func stopWatching() {
+    var isPolling: Bool { timer != nil }
+
+    /// Re-checks every second. Only for while the onboarding window is open, where the user is
+    /// flipping switches in System Settings and expects Yumi to notice.
+    func startPolling() {
+        guard timer == nil else { return }
+        refresh()
+        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.refresh() }
+        }
+    }
+
+    func stopPolling() {
         timer?.invalidate()
         timer = nil
-        if let activationObserver {
-            NotificationCenter.default.removeObserver(activationObserver)
-        }
-        activationObserver = nil
     }
 
     /// What "Open settings" does.

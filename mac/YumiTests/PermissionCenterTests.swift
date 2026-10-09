@@ -19,7 +19,7 @@ struct PermissionCenterTests {
         func open(_ url: URL) { opened.append(url) }
     }
 
-    private func freshDefaults() -> UserDefaults {
+    func freshDefaults() -> UserDefaults {
         let name = "yumi.tests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: name)!
         defaults.removePersistentDomain(forName: name)
@@ -75,5 +75,24 @@ struct PermissionCenterTests {
         #expect(system.opened.map(\.absoluteString) == [
             "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone",
         ])
+    }
+}
+
+extension PermissionCenterTests {
+    @Test func checkReadsMacOSAgainRightBeforeUse() {
+        let system = FakeSystem()
+        let center = PermissionCenter(system: system, defaults: freshDefaults())
+        system.states[.screenRecording] = .granted
+        #expect(center.state(of: .screenRecording) == .missing) // not re-read yet
+        #expect(center.check(.screenRecording) == .granted)
+    }
+
+    @Test func pollsOnlyWhileAskedTo() {
+        let center = PermissionCenter(system: FakeSystem(), defaults: freshDefaults())
+        #expect(center.isPolling == false)
+        center.startPolling()
+        #expect(center.isPolling)
+        center.stopPolling()
+        #expect(center.isPolling == false)
     }
 }

@@ -15,7 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         log.info("Yumi launched")
         guard !isHostingTests else { return }
 
-        model.permissions.startWatching()
+        model.permissions.observeActivation()
         if DebugLaunchOptions.apply(to: self) { return }
         if !model.permissions.allGranted {
             windows.showOnboarding()
