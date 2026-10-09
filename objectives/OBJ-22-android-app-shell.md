@@ -5,7 +5,7 @@ product: android
 assignee: Brent
 touches: [character]
 specs: [SPEC-10, SPEC-08, SPEC-01]
-status: in-progress
+status: done
 priority: p0
 depends-on: []
 integrates-with: [OBJ-10]
@@ -49,11 +49,11 @@ Android only lets a background app stay alive this way, with a visible notificat
 - [x] **OBJ-22.5** Map structured error kinds to the SPEC-11 copy and buttons in one error presenter. Unknown kinds use the "Unexpected" copy.
 - [x] **OBJ-22.6** Settings screen: wake word on or off, and pairing (placeholder until [OBJ-23](OBJ-23-android-bridge-client.md)).
 - [x] **OBJ-22.7** First-run setup asks to ignore battery optimization, with a plain explanation, so Doze and phone-maker battery savers do not drop the connection.
-- [ ] **OBJ-22.8** Install and run on both the 12 GB demo phone and the 8 GB development phone. Check light and dark mode and fix anything that looks off.
+- [x] **OBJ-22.8** Install and run on both the 12 GB demo phone and the 8 GB development phone. Check light and dark mode and fix anything that looks off. Done in dark mode on both phones; Brent dropped the light mode pass as low return on 2026-10-09.
 
 ## Expectations
 
-- [x] The service survives leaving the app on the development phone; the results are in [wiki/android-background-survival.md](../wiki/android-background-survival.md). Changed by Brent on 2026-10-09: a clean 30-minute locked run is not required, since in the demo the phone is in someone's hand.
+- [x] The service survives leaving the app on both phones; the results are in [wiki/android-background-survival.md](../wiki/android-background-survival.md). Changed by Brent on 2026-10-09: a clean 30-minute locked run is not required, since in the demo the phone is in someone's hand.
 - [x] SPEC-10 scenario "Permission asked from the background" passes, using a test tool.
 - [x] "Stop" in the notification stops the service.
 - [x] The cat plays and switches between idle and listening.
@@ -71,6 +71,11 @@ Android only lets a background app stay alive this way, with a visible notificat
 - Everything in SPEC-10 Part B (p1).
 
 ## Outcome
+
+Done on 2026-10-09.
+The demo phone is a Xiaomi (model 25069PTEBG, HyperOS 2, Android 15, 12 GB): setup, the home screen, and Settings checked in dark mode, and the service stayed alive in the same process for 10 minutes in the background (see the wiki report).
+"Hey Yumi" no longer breaks across two lines (7fede50).
+The build steps now matter: Gradle had kept reusing an old APK, so do a clean build before installing on a phone.
 
 Not finished: the 12 GB demo phone checks (OBJ-22.8 and the 30-minute expectation) are still open, so this stays in-progress.
 Notes from the work so far:

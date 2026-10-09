@@ -6,7 +6,7 @@ Spec: [SPEC-10](../specs/10-android-companion.md), Part A.
 
 ## Summary
 
-Yumi's foreground service stayed alive in every run on the development phone, including a forced deep sleep and real use on battery.
+Yumi's foreground service stayed alive in every run, on the development phone and the demo phone, including a forced deep sleep and real use on battery.
 A clean 30 minutes with the screen locked was never run end to end.
 Brent decided on 2026-10-09 that it is not worth blocking OBJ-22 on: in the demo the phone is in someone's hand, not locked in a pocket for half an hour.
 This report replaces that expectation.
@@ -30,10 +30,16 @@ If Android or the phone maker's battery saver stops the service, the phone silen
 | Forced deep sleep | App in the background, deep Doze forced with `dumpsys deviceidle force-idle`, charger simulated as unplugged, 30 minutes. Screen off and locked for the first 15 to 20 minutes, then unlocked. | Same process the whole time, still a foreground service, notification still shown. |
 | Real use | About 1.5 hours (from about 6:45 pm to 8:15 pm) of normal use with Yumi in the background. On battery from at least 7:51 pm to 8:14 pm, and the USB cable was unplugged and plugged back in. | Same process (alive 1 hour 33 minutes at 8:17 pm), `isForeground=true`, the "Yumi is running" notification still shown. |
 
+## Demo phone
+
+- Xiaomi, model 25069PTEBG, HyperOS 2, Android 15, 12 GB RAM, the teammate's demo phone.
+- Yumi installed and set up on 2026-10-09 at about 8:45 pm. Android's battery optimization allowlist includes Yumi after setup.
+- From 8:56 pm to 9:06 pm the phone was in use with Yumi in the background: Yumi was never on screen (checked every 30 seconds), and at 9:06 pm it was the same process (alive 35 minutes), still a foreground service.
+- HyperOS has its own Autostart and battery restrictions on top of Android's. They did not stop Yumi in this run. If they do later, set Yumi's battery saver to "No restrictions" in its app settings.
+
 ## Not verified
 
 - A clean 30 minutes with the screen locked and the phone untouched.
-- The 12 GB demo phone. Its maker's battery saver may behave differently, so check `isForeground` there once after setup.
 - Android 12 and 13, which the app supports but which were never run.
 
 ## How to check again
