@@ -5,8 +5,8 @@ import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { createServer, type Server } from "node:net";
 import { dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { validate } from "../src/index.ts";
-import { loadRpcContract, RpcFailure, RpcPeer, type Handler } from "../src/index.ts";
+import { PROTOCOL_VERSION } from "../generated/ts/index.ts";
+import { loadRpcContract, RpcFailure, RpcPeer, validate, type Handler } from "../src/index.ts";
 import { exampleByName, exampleOf } from "./examples.ts";
 import { defaultSocketPath, readArgs, readFailures } from "./socket.ts";
 
@@ -91,7 +91,9 @@ export async function startMockHarness(options: MockHarnessOptions = {}): Promis
         if (failure) throw new RpcFailure({ kind: failure }, `Mock failure for ${name}`);
         if (name === "hello") {
           const version = (params as { protocolVersion: number }).protocolVersion;
-          if (version !== 1) throw new RpcFailure({ kind: "unexpected" }, `Protocol version ${version} does not match 1`);
+          if (version !== PROTOCOL_VERSION) {
+            throw new RpcFailure({ kind: "unexpected" }, `Protocol version ${version} does not match ${PROTOCOL_VERSION}`);
+          }
           if (script?.trigger === "connect") setTimeout(() => play(peer), 0);
         }
         if (script?.trigger === name) setTimeout(() => play(peer), 0);

@@ -2,8 +2,6 @@ import Ajv2020, { type ErrorObject, type ValidateFunction } from "ajv/dist/2020.
 import addFormats from "ajv-formats";
 import { ANNOTATION_KEYWORDS, indexTypes, loadSchemaFiles } from "./schemas.ts";
 
-export { RpcFailure, RpcPeer } from "./rpc.ts";
-export type { Handler } from "./rpc.ts";
 export { loadSchemaFiles, indexTypes } from "./schemas.ts";
 export {
   RpcPeer,
