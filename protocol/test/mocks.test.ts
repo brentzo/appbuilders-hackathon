@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { exampleOf } from "../mocks/examples.ts";
 import { connectMockMacApp } from "../mocks/mock-mac-app.ts";
 import { loadScript, SCRIPT_DIR, startMockHarness } from "../mocks/mock-harness.ts";
-import { loadRpcContract, RpcPeer, RpcRemoteError } from "../src/rpc.ts";
+import { loadRpcContract, RpcPeer, RpcRemoteError } from "../src/index.ts";
 
 const contract = loadRpcContract();
 const methods = (direction: "appToHarness" | "harnessToApp") =>

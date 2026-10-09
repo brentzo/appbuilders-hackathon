@@ -3,7 +3,7 @@
 // Run: npm run mock:mac -- [--socket <path>] [--fail method=kind,...]
 import { connect, type Socket } from "node:net";
 import { pathToFileURL } from "node:url";
-import { loadRpcContract, RpcFailure, RpcPeer, type Handler } from "../src/rpc.ts";
+import { loadRpcContract, RpcFailure, RpcPeer, type Handler } from "../src/index.ts";
 import { exampleOf } from "./examples.ts";
 import { defaultSocketPath, readArgs, readFailures } from "./socket.ts";
 

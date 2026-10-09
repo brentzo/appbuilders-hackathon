@@ -81,7 +81,7 @@ CI runs all of the above except the mocks ([.github/workflows/protocol.yml](../.
 
 **TypeScript (harness, bridge)**
 
-- Import types from `@yumi/protocol/types` and validation from `@yumi/protocol`.
+- Import types from `@yumi/protocol/types`, and validation and the RPC peer (`RpcPeer`, `RpcFailure`, `Handler`) from `@yumi/protocol`.
 - Validate every value that crosses a process or device boundary, including every model output (`WorkerOutput`).
 - Import the bridge crypto from `@yumi/protocol/crypto`: `generateDeviceKeys`, `sealEnvelope`, `openEnvelope`, `expiresAt`, `sealPairRequest`, `openPairRequest`, and the signing-bytes builders for relay authentication, pairing accept, and unpair.
 

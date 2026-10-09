@@ -6,7 +6,7 @@ import { createServer, type Server } from "node:net";
 import { dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { validate } from "../src/index.ts";
-import { loadRpcContract, RpcFailure, RpcPeer, type Handler } from "../src/rpc.ts";
+import { loadRpcContract, RpcFailure, RpcPeer, type Handler } from "../src/index.ts";
 import { exampleByName, exampleOf } from "./examples.ts";
 import { defaultSocketPath, readArgs, readFailures } from "./socket.ts";
 

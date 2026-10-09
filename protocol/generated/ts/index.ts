@@ -231,8 +231,8 @@ export type EnvelopeType = "command" | "result" | "event";
 export const envelopeTypeValues: readonly EnvelopeType[] = ["command", "result", "event"];
 
 /** One kind per row of the SPEC-11 error table, plus blockedAction from SPEC-07 r5. x-specRows maps each kind to its SPEC-11 row and is checked by a test. */
-export type ErrorKind = "otherDeviceOffline" | "otherDeviceBusy" | "otherDeviceLocked" | "bridgeDown" | "cannotPauseOtherDevice" | "noReply" | "commandExpired" | "stuckOnScreen" | "taskTookTooLong" | "unsupportedRequest" | "screenPermissionMissing" | "accessibilityPermissionMissing" | "microphonePermissionMissing" | "androidPermissionMissing" | "androidAccessibilityServiceOff" | "phoneTooHot" | "languageNotSupported" | "didNotCatchSpeech" | "modelFailedToLoad" | "unpairedDevice" | "unexpected" | "blockedAction";
-export const errorKindValues: readonly ErrorKind[] = ["otherDeviceOffline", "otherDeviceBusy", "otherDeviceLocked", "bridgeDown", "cannotPauseOtherDevice", "noReply", "commandExpired", "stuckOnScreen", "taskTookTooLong", "unsupportedRequest", "screenPermissionMissing", "accessibilityPermissionMissing", "microphonePermissionMissing", "androidPermissionMissing", "androidAccessibilityServiceOff", "phoneTooHot", "languageNotSupported", "didNotCatchSpeech", "modelFailedToLoad", "unpairedDevice", "unexpected", "blockedAction"];
+export type ErrorKind = "otherDeviceOffline" | "otherDeviceBusy" | "otherDeviceLocked" | "bridgeDown" | "cannotPauseOtherDevice" | "noReply" | "commandExpired" | "stuckOnScreen" | "taskTookTooLong" | "unsupportedRequest" | "screenPermissionMissing" | "accessibilityPermissionMissing" | "microphonePermissionMissing" | "androidPermissionMissing" | "androidAccessibilityServiceOff" | "phoneTooHot" | "languageNotSupported" | "didNotCatchSpeech" | "modelFailedToLoad" | "unpairedDevice" | "pairingCodeExpired" | "notAPairingCode" | "pairingVersionsDiffer" | "macDidNotAnswerPairing" | "unexpected" | "blockedAction";
+export const errorKindValues: readonly ErrorKind[] = ["otherDeviceOffline", "otherDeviceBusy", "otherDeviceLocked", "bridgeDown", "cannotPauseOtherDevice", "noReply", "commandExpired", "stuckOnScreen", "taskTookTooLong", "unsupportedRequest", "screenPermissionMissing", "accessibilityPermissionMissing", "microphonePermissionMissing", "androidPermissionMissing", "androidAccessibilityServiceOff", "phoneTooHot", "languageNotSupported", "didNotCatchSpeech", "modelFailedToLoad", "unpairedDevice", "pairingCodeExpired", "notAPairingCode", "pairingVersionsDiffer", "macDidNotAnswerPairing", "unexpected", "blockedAction"];
 
 /** An event is held for a device that dropped off for 2 minutes (SPEC-08 r7). */
 export const EVENT_EXPIRY_SECONDS = 120;
@@ -939,8 +939,10 @@ export interface UserError {
   taskId?: Uuid;
   /** Fills {device} in the copy: the other device. */
   device?: DeviceId;
-  /** Fills {last action} in the Unexpected copy, from the action log. */
+  /** Fills {last action} in the Unexpected copy, from the action log. Absent when nothing has run yet; the copy then drops that sentence and the Show what I did button. */
   lastAction?: string;
+  /** Fills {permission} in the Android permission copy with a plain name, for example location or camera. */
+  permission?: string;
   /** For taskTookTooLong: what was finished. */
   finishedSoFar?: string;
 }

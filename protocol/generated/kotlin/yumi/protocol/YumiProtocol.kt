@@ -301,6 +301,10 @@ enum class ErrorKind {
     @SerialName("didNotCatchSpeech") DidNotCatchSpeech,
     @SerialName("modelFailedToLoad") ModelFailedToLoad,
     @SerialName("unpairedDevice") UnpairedDevice,
+    @SerialName("pairingCodeExpired") PairingCodeExpired,
+    @SerialName("notAPairingCode") NotAPairingCode,
+    @SerialName("pairingVersionsDiffer") PairingVersionsDiffer,
+    @SerialName("macDidNotAnswerPairing") MacDidNotAnswerPairing,
     @SerialName("unexpected") Unexpected,
     @SerialName("blockedAction") BlockedAction;
 }
@@ -1130,8 +1134,10 @@ data class UserError(
     val taskId: String? = null,
     /** Fills {device} in the copy: the other device. */
     val device: String? = null,
-    /** Fills {last action} in the Unexpected copy, from the action log. */
+    /** Fills {last action} in the Unexpected copy, from the action log. Absent when nothing has run yet; the copy then drops that sentence and the Show what I did button. */
     val lastAction: String? = null,
+    /** Fills {permission} in the Android permission copy with a plain name, for example location or camera. */
+    val permission: String? = null,
     /** For taskTookTooLong: what was finished. */
     val finishedSoFar: String? = null,
 )

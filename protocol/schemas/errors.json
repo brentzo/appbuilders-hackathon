@@ -28,6 +28,10 @@
         "didNotCatchSpeech",
         "modelFailedToLoad",
         "unpairedDevice",
+        "pairingCodeExpired",
+        "notAPairingCode",
+        "pairingVersionsDiffer",
+        "macDidNotAnswerPairing",
         "unexpected",
         "blockedAction"
       ],
@@ -52,6 +56,10 @@
         "didNotCatchSpeech": "Didn't catch speech",
         "modelFailedToLoad": "Model failed to load",
         "unpairedDevice": "Unpaired device",
+        "pairingCodeExpired": "Pairing code expired",
+        "notAPairingCode": "Not a pairing code",
+        "pairingVersionsDiffer": "Pairing versions differ",
+        "macDidNotAnswerPairing": "Mac didn't answer pairing",
         "unexpected": "Unexpected"
       }
     },
@@ -64,7 +72,8 @@
         "kind": { "$ref": "#/$defs/ErrorKind" },
         "taskId": { "$ref": "common.json#/$defs/Uuid" },
         "device": { "description": "Fills {device} in the copy: the other device.", "$ref": "common.json#/$defs/DeviceId" },
-        "lastAction": { "description": "Fills {last action} in the Unexpected copy, from the action log.", "type": "string", "maxLength": 200 },
+        "lastAction": { "description": "Fills {last action} in the Unexpected copy, from the action log. Absent when nothing has run yet; the copy then drops that sentence and the Show what I did button.", "type": "string", "maxLength": 200 },
+        "permission": { "description": "Fills {permission} in the Android permission copy with a plain name, for example location or camera.", "type": "string", "minLength": 1, "maxLength": 40 },
         "finishedSoFar": { "description": "For taskTookTooLong: what was finished.", "type": "string", "maxLength": 500 }
       }
     }

@@ -545,6 +545,10 @@ public enum ErrorKind: String, Codable, Equatable, Sendable, CaseIterable {
     case didNotCatchSpeech
     case modelFailedToLoad
     case unpairedDevice
+    case pairingCodeExpired
+    case notAPairingCode
+    case pairingVersionsDiffer
+    case macDidNotAnswerPairing
     case unexpected
     case blockedAction
 }
@@ -1871,16 +1875,19 @@ public struct UserError: Codable, Equatable, Sendable {
     public var taskId: String?
     /// Fills {device} in the copy: the other device.
     public var device: String?
-    /// Fills {last action} in the Unexpected copy, from the action log.
+    /// Fills {last action} in the Unexpected copy, from the action log. Absent when nothing has run yet; the copy then drops that sentence and the Show what I did button.
     public var lastAction: String?
+    /// Fills {permission} in the Android permission copy with a plain name, for example location or camera.
+    public var permission: String?
     /// For taskTookTooLong: what was finished.
     public var finishedSoFar: String?
 
-    public init(kind: ErrorKind, taskId: String? = nil, device: String? = nil, lastAction: String? = nil, finishedSoFar: String? = nil) {
+    public init(kind: ErrorKind, taskId: String? = nil, device: String? = nil, lastAction: String? = nil, permission: String? = nil, finishedSoFar: String? = nil) {
         self.kind = kind
         self.taskId = taskId
         self.device = device
         self.lastAction = lastAction
+        self.permission = permission
         self.finishedSoFar = finishedSoFar
     }
 }

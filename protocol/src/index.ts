@@ -5,6 +5,18 @@ import { ANNOTATION_KEYWORDS, indexTypes, loadSchemaFiles } from "./schemas.ts";
 export { RpcFailure, RpcPeer } from "./rpc.ts";
 export type { Handler } from "./rpc.ts";
 export { loadSchemaFiles, indexTypes } from "./schemas.ts";
+export {
+  RpcPeer,
+  RpcFailure,
+  RpcRemoteError,
+  RpcErrorCode,
+  loadRpcContract,
+  type Handler,
+  type RpcContract,
+  type RpcErrorObject,
+  type RpcPeerOptions,
+  type RpcRole,
+} from "./rpc.ts";
 
 export interface ValidationResult {
   valid: boolean;
