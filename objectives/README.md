@@ -88,6 +88,7 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-28](OBJ-28-android-whisper-bake-off.md) | Android Whisper bake-off | models | Jepoy | 01, 10 | - | 11, 24 | todo |
 | [OBJ-29](OBJ-29-protocol-mac-fixes.md) | Protocol v3, fit the contracts to real macOS | protocol | Brent | 05, 07 | 01 | 03, 26 | done |
 | [OBJ-30](OBJ-30-live-cross-device-bridge-acceptance.md) | Live cross-device bridge acceptance | bridge | Jepoy | 08 | 13, 21, 23, 27 | - | todo |
+| [OBJ-31](OBJ-31-unpair-delivery-ack-contract.md) | Define unpair delivery acknowledgement | protocol | Jepoy | 08 | 02 | 13, 21, 23 | todo |
 <!-- generated:objectives-index:end -->
 
 ## Priority and blocking
@@ -106,8 +107,8 @@ Ranked by how many objectives each one holds up through hard dependencies:
 | 1 | OBJ-01 Task record schemas and cross-team contracts | Jepoy | 18 | Brent, Patrick |
 | 2 | OBJ-14 Mac app shell, permissions, and harness link | Patrick | 8 | Jepoy |
 | 3 | OBJ-03 Harness skeleton and local model client | Brent | 7 | Patrick |
-| 4 | OBJ-04 Task store and history | Brent | 6 | Patrick |
-| 5 | OBJ-02 Bridge envelope and end-to-end crypto | Jepoy | 5 | Brent |
+| 4 | OBJ-02 Bridge envelope and end-to-end crypto | Jepoy | 6 | Brent |
+| 5 | OBJ-04 Task store and history | Brent | 6 | Patrick |
 | 6 | OBJ-18 Cursor overlay and motion | Patrick | 3 | No |
 | 7 | OBJ-22 Android app shell and foreground service | Brent | 3 | Jepoy |
 | 8 | OBJ-05 Planner, scheduler, and task summary | Brent | 2 | No |
@@ -141,7 +142,7 @@ Workload:
 | Person | Objectives | Count |
 |---|---|---|
 | Brent | 03, 04, 05, 06, 07, 08, 09, 22, 23, 24, 26, 29 | 12 |
-| Jepoy | 01, 02, 11, 12, 13, 21, 25, 28, 30 | 9 |
+| Jepoy | 01, 02, 11, 12, 13, 21, 25, 28, 30, 31 | 10 |
 | Patrick | 10, 14, 15, 16, 17, 18, 19, 20, 27 | 9 |
 <!-- generated:objectives-workload:end -->
 ## Suggested order
@@ -152,7 +153,7 @@ Waves come from hard dependencies only. Each person works their column top to bo
 | Wave | Brent | Jepoy | Patrick |
 |---|---|---|---|
 | 1 | OBJ-22, OBJ-26 | OBJ-01, OBJ-02, OBJ-11, OBJ-12, OBJ-28 | OBJ-10 |
-| 2 | OBJ-03, OBJ-24, OBJ-29 | OBJ-13, OBJ-21, OBJ-25 | OBJ-14 |
+| 2 | OBJ-03, OBJ-24, OBJ-29 | OBJ-13, OBJ-21, OBJ-25, OBJ-31 | OBJ-14 |
 | 3 | OBJ-04, OBJ-23 | - | OBJ-15, OBJ-18, OBJ-27 |
 | 4 | OBJ-05, OBJ-07 | OBJ-30 | OBJ-16, OBJ-17, OBJ-19, OBJ-20 |
 | 5 | OBJ-06, OBJ-08 | - | - |
