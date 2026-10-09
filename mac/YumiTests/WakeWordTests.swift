@@ -60,4 +60,29 @@ struct WakeWordTests {
         let scores = try scorer.append(Array(repeating: 0, count: 16_000 * 3))
         #expect((scores.max() ?? 0) < WakeWordModels.threshold)
     }
+
+    /// SPEC-01 "Wake word turned off": with the setting off, nothing listens for the wake word.
+    /// The recording test aid stands in for the microphone, so no permission is needed.
+    @Test(.enabled(if: modelsPresent, "Wake word models missing: run mac/scripts/fetch-wake-word-models.sh"))
+    func theSettingOpensAndClosesWakeWordListening() throws {
+        let suite = "ph.appbuilders.yumi.tests.wakeword.\(UUID().uuidString.prefix(8))"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let model = AppModel(settings: SettingsStore(defaults: defaults, sink: PendingHarnessSettingsSink()))
+        let listener = WakeWordListener(model: model, isMicrophoneFree: { true }, listenForGoal: {})
+        listener.testRecording = (Self.fixtures.appendingPathComponent("hey-jarvis-clip.wav").path, false)
+
+        model.settings.wakeWordEnabled = false
+        listener.update()
+        #expect(!listener.isListening, "off: the microphone is not opened for the wake word")
+
+        model.settings.wakeWordEnabled = true
+        listener.update()
+        #expect(listener.isListening)
+        #expect(listener.phrase == "Hey Jarvis", "the stand-in until OBJ-12")
+
+        model.settings.wakeWordEnabled = false
+        listener.update()
+        #expect(!listener.isListening)
+    }
 }

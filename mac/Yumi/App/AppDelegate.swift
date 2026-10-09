@@ -32,6 +32,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         submit: { [weak self] goal in self?.harness.submitGoal(goal) },
         showError: { [weak self] error in self?.showError(error) }
     )
+    /// "Hey Yumi" hands-free (OBJ-16), handing over to the same capture path as push-to-talk.
+    private(set) lazy var wakeWord = WakeWordListener(
+        model: model,
+        isMicrophoneFree: { [weak self] in self?.voice.phase == .idle },
+        listenForGoal: { [weak self] in await self?.voice.listenForGoalAfterWakeWord() }
+    )
     private var terminationSignal: DispatchSourceSignal?
     private let log = Logger(subsystem: "ph.appbuilders.yumi", category: "app")
 
@@ -50,6 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         harness.start()
         voice.start()
         harness.confirmation.listener = voice
+        wakeWord.start()
         if LaunchArguments.bool("YumiSendSampleGoal") {
             harness.submitSampleGoalWhenConnected()
         }

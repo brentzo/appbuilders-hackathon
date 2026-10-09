@@ -128,6 +128,22 @@ final class VoiceIntake: ReplyListening {
         submit(transcript)
     }
 
+    // MARK: After the wake word
+
+    /// After the wake word (OBJ-16.4): the same microphone, recognizers, and indicator as
+    /// push-to-talk, ended by the user stopping speaking. Nothing heard is quietly dropped, since a
+    /// false wake-up should not show an error.
+    func listenForGoalAfterWakeWord() async {
+        guard phase == .idle else { return }
+        guard let transcript = await listenForReply() else {
+            dropCursor()
+            return
+        }
+        log.notice("Heard a goal of \(transcript.count) characters after the wake word")
+        spawnedCursor = false
+        submit(transcript)
+    }
+
     // MARK: Spoken answers
 
     /// Hands-free answer right after Yumi asks something (OBJ-17.5): the same microphone,

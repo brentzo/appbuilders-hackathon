@@ -100,7 +100,8 @@ nonisolated final class WakeWordFeatures {
 }
 
 /// Scores the last 16 embeddings with a wake word model (OBJ-16.1), one score per 80 ms chunk.
-nonisolated final class WakeWordScorer {
+/// Used only on the wake word listener's detection queue, one call at a time.
+nonisolated final class WakeWordScorer: @unchecked Sendable {
     private let features: WakeWordFeatures
     private let model: TensorModel
     private var scored = 0
