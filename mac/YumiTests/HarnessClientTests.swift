@@ -16,7 +16,7 @@ struct HarnessClientTests {
         client.start()
         defer { client.stop() }
 
-        try await waitUntil { client.linkState == .connected }
+        try await wait(for: client, toBe: .connected)
         try await client.ping()
 
         // The script has 8 events. If fewer arrive, stopping the client ends the stream, so the
@@ -45,7 +45,7 @@ struct HarnessClientTests {
         let client = HarnessClient(socketPath: mock.socketPath)
         client.start()
         defer { client.stop() }
-        try await waitUntil { client.linkState == .connected }
+        try await wait(for: client, toBe: .connected)
 
         do {
             _ = try await client.submitGoal(SubmitGoalParams(transcript: "test", originDeviceId: "mac-local"))
@@ -62,25 +62,35 @@ struct HarnessClientTests {
 
     @Test func reconnectsAfterTheHarnessIsKilled() async throws {
         var mock = try await MockHarnessProcess.start()
+        // Reads `mock` when the test ends, so it stops whichever mock is running then, even if the
+        // test fails before the restart.
+        defer { mock.stop() }
         let client = HarnessClient(socketPath: mock.socketPath)
         client.start()
         defer { client.stop() }
-        try await waitUntil { client.linkState == .connected }
+        try await wait(for: client, toBe: .connected)
 
         mock.kill()
-        try await waitUntil { client.linkState == .connecting }
+        try await wait(for: client, toBe: .connecting)
         mock = try await MockHarnessProcess.start(socketPath: mock.socketPath)
-        defer { mock.stop() }
-        try await waitUntil { client.linkState == .connected }
+        try await wait(for: client, toBe: .connected)
         try await client.ping()
     }
 
-    private func waitUntil(timeout: Duration = .seconds(15), _ condition: () -> Bool) async throws {
+    private func wait(
+        for client: HarnessClient,
+        toBe expected: HarnessClient.LinkState,
+        timeout: Duration = .seconds(15)
+    ) async throws {
         let clock = ContinuousClock()
         let deadline = clock.now + timeout
-        while !condition() {
+        while client.linkState != expected {
             guard clock.now < deadline else {
-                Issue.record("Timed out waiting")
+                Issue.record("""
+                    The link never became \(expected); it is \(client.linkState). If the rpc log shows \
+                    hello refused with "Protocol version ... does not match", the mock harness and \
+                    PROTOCOL_VERSION (\(PROTOCOL_VERSION)) disagree.
+                    """)
                 throw CancellationError()
             }
             try await Task.sleep(for: .milliseconds(50))
