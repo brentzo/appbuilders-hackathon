@@ -31,10 +31,10 @@ Seen working on the real Mac, on 2026-10-10:
 - A spoken goal repeated back, corrected, cancelled, or confirmed, by voice or by button ([OBJ-17](objectives/OBJ-17-goal-confirmation.md)).
 - The cat exporting a Keynote deck as a PDF through the accessibility tree: in the measured live runs, 3 of the 4 that got going saved a correct, named PDF ([OBJ-36](objectives/OBJ-36-gui-act-sub-agent.md)).
 - A goal said on the Android phone, sent over the live relay, and run on the Mac, which exported `Q3 Report.pdf`, with progress, Stop, Resume, and the summary on the phone (task `b1d6d145`, [OBJ-68](objectives/OBJ-68-harness-delegated-goals.md), [OBJ-69](objectives/OBJ-69-android-delegated-goal-screen.md)).
+- Putting a found list into a new note, both ways: with Auto mode off, after a yes to "Want it in a note too?", and with Auto mode on, saved with no question ([OBJ-74](objectives/OBJ-74-save-list-to-note.md)).
 
 Built and tested, with no recorded live run on the final build yet:
 
-- Putting a found list into a new note ([OBJ-74](objectives/OBJ-74-save-list-to-note.md)). The first live tries failed and were fixed; the fixed build has not been run live.
 - Ghost cats working in other windows at the same time, and handing a stuck step to the main cat ([OBJ-09](objectives/OBJ-09-ghost-handoff.md)).
 - Stop and take-over on the Mac, the approval cards for sends and deletes, and the action log ([OBJ-38](objectives/OBJ-38-approvals-pause-and-action-log.md)).
 - Spotify through a screenshot and vision clicks ([OBJ-75](objectives/OBJ-75-vision-fallback.md)), being fixed now.

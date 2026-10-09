@@ -370,7 +370,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 - "Hey Yumi" is spotted by the speech recognizer for the demo ([OBJ-58](../objectives/OBJ-58-mac-hey-yumi-recognizer.md)) until a trained model is good enough. With `-YumiWakeWordEngine openWakeWord`, the model is openWakeWord's "hey jarvis" until "Hey Yumi" from [OBJ-12](../objectives/OBJ-12-hey-yumi-wake-word.md), with openWakeWord's default threshold, 0.5.
 - Cursors are the cat as static poses, one per state, with small Core Animation motion: ginger for the main cursor, mint, sky, and slate for ghosts. The Rive cat ([OBJ-19](../objectives/OBJ-19-cat-cursor.md)) replaces them.
 - A cursor moving to an element whose path does not resolve goes to the center of the target window, or the app's frontmost window.
-- Vision clicks (`clickAt`) are refused until the p1 vision fallback.
+- Vision clicks (`clickAt`) are only for a window whose content has nothing actionable in its accessibility tree, such as Spotify's ([OBJ-75](../objectives/OBJ-75-vision-fallback.md)): `WindowReader` then sends no elements, only a ScreenCaptureKit screenshot and the window's frame, and `GuiExecutor` turns the model's pixel into a screen point, refuses if the window moved since the screenshot, and clicks with the real mouse. Their live check in Spotify (OBJ-75.7) is not done yet.
 - The tiling question is answered with its buttons only, and its answer stays in the app: the protocol has no method to tell the harness.
 - Helper chips say "Helper working": the protocol's `routeDecided` event has no subtask title.
 - Whisper is large-v3-turbo until the bake-off ([OBJ-11](../objectives/OBJ-11-whisper-bake-off.md)) picks the Mac model.

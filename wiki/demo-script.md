@@ -78,9 +78,9 @@ Skip this step if step 2 already showed the export and time is short.
 
 ### 5. A list into a note
 
-**Status: built and tested; the final build has not been run live yet** ([OBJ-74](../objectives/OBJ-74-save-list-to-note.md)).
-Earlier live tries failed (a "yes" that was not heard, and a click on "New Note" that lost the window), and both were fixed; the note is now written by a fixed script, not by the model.
-Rehearse it once before the demo.
+**Status: worked live** on 2026-10-10, confirmed by Brent in two runs: with Auto mode off he said yes to the note, and with Auto mode on the note was saved with no question ([OBJ-74](../objectives/OBJ-74-save-list-to-note.md)).
+The note is written by a fixed script, not by the model, so the list in Notes is exactly the list Yumi found.
+With Auto mode on there is no repeat-back and no offer: Yumi says "On it." and the note is saved automatically.
 
 - **Say, to the Mac:** "Hey Yumi, list the files in my Downloads folder."
 - **The audience sees:** the repeat-back offers the note: "You want me to list the files in your Downloads folder. Want it in a note too?"
