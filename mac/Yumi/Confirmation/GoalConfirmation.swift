@@ -125,14 +125,10 @@ final class GoalConfirmation {
         finish(taskId, cancelled: status == .cancelled)
     }
 
-    private func listenOnce(for taskId: String, bargeIn: Bool = false) async {
+    private func listenOnce(for taskId: String) async {
         guard let entry = waiting[taskId], entry.listensLeft > 0 else { return }
         waiting[taskId]?.listensLeft = entry.listensLeft - 1
-        // With barge-in, the first word the user says stops Yumi's voice (SPEC-06 r14).
-        let heard = bargeIn
-            ? await listener.listenForReply(onSpeechStarted: { [weak self] in self?.speech.stop() })
-            : await listener.listenForReply()
-        guard let heard = heard?.trimmingCharacters(in: .whitespacesAndNewlines), !heard.isEmpty,
+        guard let heard = await listener.listenForReply()?.trimmingCharacters(in: .whitespacesAndNewlines), !heard.isEmpty,
               waiting[taskId] != nil
         else {
             // Nothing heard: the panel stays with its buttons, and "Hey Yumi" or the shortcut

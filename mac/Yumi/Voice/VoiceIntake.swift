@@ -169,16 +169,6 @@ final class VoiceIntake: ReplyListening {
         return text
     }
 
-    /// The reply listen with barge-in: `onSpeechStarted` runs the first moment the user is heard, so
-    /// Yumi stops talking mid-sentence instead of the user waiting for her (SPEC-06 r14).
-    func listenForReply(onSpeechStarted: @escaping () -> Void) async -> String? {
-        guard case .heard(let text) = await listenHandsFree(promptIfNeeded: false, onSpeechStarted: onSpeechStarted) else { return nil }
-        return text
-    }
-
-    /// Set for the length of one reply listen: the first words the user says call it. Fires once.
-    private var onReplySpeech: (() -> Void)?
-
     /// "Talk" in the menu bar panel: push-to-talk without a key to hold, ended by a short
     /// silence. Unlike the wake word, the user asked on purpose, so silence says "Didn't catch speech".
     func talk() async {
@@ -203,9 +193,8 @@ final class VoiceIntake: ReplyListening {
         case heard(String)
     }
 
-    private func listenHandsFree(promptIfNeeded: Bool, onSpeechStarted: (() -> Void)? = nil, handover: WakeHandover? = nil) async -> HandsFree {
+    private func listenHandsFree(promptIfNeeded: Bool, handover: WakeHandover? = nil) async -> HandsFree {
         guard phase == .idle else { return .notStarted }
-        onReplySpeech = onSpeechStarted
         let ended = Outcome<SpeechEndpoint.Outcome>()
         let endpoint = handover.map { SpeechEndpoint(floor: $0.floor, speaking: $0.speaking) { ended.resolve(.success($0)) } }
             ?? SpeechEndpoint { ended.resolve(.success($0)) }
@@ -215,7 +204,6 @@ final class VoiceIntake: ReplyListening {
         defer {
             self.session = nil
             phase = .idle
-            onReplySpeech = nil
         }
         // Wall-clock cap too, in case the microphone delivers nothing at all.
         Task {
@@ -289,15 +277,10 @@ final class VoiceIntake: ReplyListening {
             // After "Hey Yumi", only the words after it: the recording starts before the phrase.
             let afterPhrase = handover != nil
             session.observePartials { [weak self] heard in
-                guard let text = afterPhrase ? WakePhrase.remainder(after: heard) : heard, !text.isEmpty else { return }
+                guard let text = afterPhrase ? WakePhrase.remainder(after: heard) : heard else { return }
                 Task { @MainActor in
                     guard let self, self.model.isListening else { return }
                     self.overlay.update(GoalConfirmation.mainCursorId) { $0.transcript = text }
-                    // The user is talking: stop Yumi's voice now (barge-in, SPEC-06 r14).
-                    if let fire = self.onReplySpeech {
-                        self.onReplySpeech = nil
-                        fire()
-                    }
                 }
             }
             if let handover {

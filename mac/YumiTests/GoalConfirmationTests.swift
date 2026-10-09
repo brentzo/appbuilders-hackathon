@@ -10,9 +10,7 @@ import YumiProtocol
 struct GoalConfirmationTests {
     final class FakeSpeech: SpeechOutput {
         var said: [String] = []
-        var stopped = 0
         func speak(_ text: String) async { said.append(text) }
-        func stop() { stopped += 1 }
     }
 
     final class FakeListener: ReplyListening {
@@ -21,17 +19,6 @@ struct GoalConfirmationTests {
         init(_ answers: [String?]) { self.answers = answers }
         func listenForReply() async -> String? {
             listens += 1
-            return answers.isEmpty ? nil : answers.removeFirst()
-        }
-    }
-
-    /// A listener that reports the user talking over Yumi, for the barge-in tests.
-    final class BargeInListener: ReplyListening {
-        var answers: [String?]
-        init(_ answers: [String?]) { self.answers = answers }
-        func listenForReply() async -> String? { answers.isEmpty ? nil : answers.removeFirst() }
-        func listenForReply(onSpeechStarted: @escaping () -> Void) async -> String? {
-            onSpeechStarted()
             return answers.isEmpty ? nil : answers.removeFirst()
         }
     }
@@ -66,7 +53,7 @@ struct GoalConfirmationTests {
         var replies: [ConfirmationReply] = []
     }
 
-    func confirmation(_ listener: ReplyListening, sent: Sent) -> GoalConfirmation {
+    func confirmation(_ listener: FakeListener, sent: Sent) -> GoalConfirmation {
         GoalConfirmation(speech: speech, listener: listener, presenter: panel, overlay: overlay) { taskId, reply in
             #expect(taskId == Self.taskId)
             sent.replies.append(reply)
