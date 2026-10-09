@@ -22,7 +22,7 @@ enum VisionCapture {
         case captureFailed
     }
 
-    static func capture(bundleId: String, windowId: Int, windowFrame: CGRect) async throws -> Captured {
+    static func capture(bundleId: String, windowId: Int) async throws -> Captured {
         try requireScreenRecording()
         let content: SCShareableContent
         do {
@@ -34,10 +34,10 @@ enum VisionCapture {
             throw Failure.windowNotFound
         }
         let filter = SCContentFilter(desktopIndependentWindow: window)
-        let scale = scaleFactor(for: windowFrame)
+        let size = Self.imageSize(for: window.frame)
         let configuration = SCStreamConfiguration()
-        configuration.width = Int((window.frame.width * scale).rounded())
-        configuration.height = Int((window.frame.height * scale).rounded())
+        configuration.width = size.width
+        configuration.height = size.height
         configuration.showsCursor = false
         let image: CGImage
         do {
@@ -61,12 +61,18 @@ enum VisionCapture {
         throw Failure.screenPermissionMissing
     }
 
-    /// The highest backing scale factor of the screens the window is on, so the image is captured at
-    /// native resolution and the conversion back to points is exact.
-    private static func scaleFactor(for windowFrame: CGRect) -> CGFloat {
-        let screens = NSScreen.screens
-        let onScreen = screens.first { $0.frame.intersects(windowFrame) }
-        return (onScreen ?? screens.first)?.backingScaleFactor ?? 2
+    /// The longest side of the image the model sees. A full Retina capture is about 4.8 million
+    /// pixels, which the model server turns into roughly 5,000 vision tokens and a minute before the
+    /// first token (Brent's run, 2026-10-10: a worker step hit that and was cut off at 52 s). At this
+    /// size the window is still legible and a worker step stays quick.
+    static let maxImageSide = 1280
+
+    /// The pixel size to capture, keeping the window's shape and never enlarging it.
+    static func imageSize(for frame: CGRect) -> (width: Int, height: Int) {
+        let longSide = max(frame.width, frame.height)
+        guard longSide > 0 else { return (maxImageSide, maxImageSide) }
+        let factor = min(1, CGFloat(maxImageSide) / longSide)
+        return (max(1, Int((frame.width * factor).rounded())), max(1, Int((frame.height * factor).rounded())))
     }
 
     /// `~/Library/Application Support/Yumi/vision/<bundle id>-<window id>-<seconds>.png`.

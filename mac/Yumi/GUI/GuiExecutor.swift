@@ -54,8 +54,7 @@ final class GuiExecutor {
                 do {
                     captured = try await VisionCapture.capture(
                         bundleId: params.target.bundleId,
-                        windowId: windowId,
-                        windowFrame: windowFrame
+                        windowId: windowId
                     )
                 } catch VisionCapture.Failure.screenPermissionMissing {
                     throw GuiFailure.screenPermissionMissing

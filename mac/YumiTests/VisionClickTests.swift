@@ -34,6 +34,21 @@ struct VisionClickTests {
         #expect(middle.y == 450)
     }
 
+    // MARK: Capture size (keeps the model's prompt small and quick)
+
+    @Test func aBigWindowIsCapturedSmallEnoughForTheModel() {
+        // 1470x810 points at Retina 2x would be 2940x1620 pixels: about 5,000 vision tokens and a
+        // minute of prefill. The capture is capped by its long side instead (Brent's run, 2026-10-10).
+        let big = VisionCapture.imageSize(for: CGRect(x: 0, y: 34, width: 1470, height: 810))
+        #expect(max(big.width, big.height) == 1280)
+        #expect(big.width == 1280)
+        #expect(big.height == 705)
+        // A window that is already small is not enlarged.
+        let small = VisionCapture.imageSize(for: CGRect(x: 0, y: 0, width: 800, height: 600))
+        #expect(small.width == 800)
+        #expect(small.height == 600)
+    }
+
     // MARK: Moved window (SPEC-05 r13)
 
     @Test func aFrameIsTheSameWithinHalfAPoint() {
