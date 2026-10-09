@@ -3,7 +3,7 @@ id: OBJ-29
 title: Protocol v3, fit the contracts to real macOS
 product: protocol
 assignee: Brent
-touches: [models]
+touches: [models, harness]
 specs: [SPEC-05, SPEC-07]
 status: done
 priority: p0
@@ -14,7 +14,7 @@ tags: [objective, p0, protocol]
 
 # OBJ-29 Protocol v3, fit the contracts to real macOS
 
-**Product:** [Protocol](../protocol/README.md) · **Also touches:** [models](../models/README.md) · **Specs:** [SPEC-05](../specs/05-mac-gui-control.md), [SPEC-07](../specs/07-safety.md) · **Assignee:** Brent
+**Product:** [Protocol](../protocol/README.md) · **Also touches:** [models](../models/README.md), [harness](../harness/README.md) · **Specs:** [SPEC-05](../specs/05-mac-gui-control.md), [SPEC-07](../specs/07-safety.md) · **Assignee:** Brent
 
 ## Project context
 
@@ -79,53 +79,60 @@ Decided by Brent on 2026-10-09; Brent leads the change in Jepoy's product.
 
 - **Result:** Done.
 - **Delivered:**
-  - Protocol version 3 in `protocol/schemas/`: `click {element}` and `clickAt {x, y}` in `action.json`; 19 `AXRole` values with the macOS mapping in the description; `Observation.app`, `focused`, and `layer` with the new `Layer` and `LayerKind` types in `observation.json`; `open_app` by exactly one of `bundleId` or `name` and `open_file` with an optional `bundleId` in `tools.json`; `enter` in the key pattern; the case-insensitive and package notes on `Path` in `common.json`.
+  - Protocol version 3 in `protocol/schemas/`: `click {element}` and `clickAt {x, y}` in `action.json`; 19 `AXRole` values with the macOS mapping in the description; `Observation.app`, `focused`, and `layer` with the new `Layer` and `LayerKind` (`window`, `sheet`, `dialog`, `menu`) types in `observation.json`; `open_app` by exactly one of `bundleId` or `name` and `open_file` with an optional `bundleId` in `tools.json`; `enter` in the key pattern; the case-insensitive and package notes on `Path` in `common.json`.
   - `RecordedAction` now carries the focused element for a `type` action, and rejects a `type` or `setValue` whose element is a `secureTextField`.
-  - `HelloParams.protocolVersion` accepts any positive integer, so a Mac app on another version gets the harness's `UserError` (`-32000`) instead of a `-32602` contract error. `HelloResult` and the bridge types keep the `ProtocolVersion` const (added at the orchestrator's request).
+  - `PeerProtocolVersion` in `common.json` (any positive integer) for the version another side reports before it is checked: `HelloParams`, the relay's `AuthenticateFrame`, and the pairing QR code's `PairingOffer`. A Mac app on another version now gets the harness's `UserError` (`-32000`) instead of a `-32602` contract error, the relay can answer `unsupportedVersion`, and the phone can show "Pairing versions differ", as `protocol/docs/pairing.md` describes. Envelopes, `HelloResult`, and everything else keep the `ProtocolVersion` const.
   - Regenerated TypeScript, Swift, and Kotlin in `protocol/generated/`, and the crypto vectors in `protocol/vectors/bridge-crypto-v2.json` for the new version.
   - Examples: every `axPress` is now `click`, `ModelAction.click-at-p1`, and new `ModelAction.click-row`, `ModelAction.key-enter`, `Layer.export-sheet`, `Observation.export-sheet`, `Observation.mail-inbox`, `Observation.password-dialog`, `RecordedAction.type-into-subject`, `ToolCall.open-app-by-name`, `ToolCall.open-app-by-bundle-id`, and `ToolCall.open-file-with-mail`.
   - The mock Mac app sends the generated `PROTOCOL_VERSION` in `hello` instead of a literal.
-  - `protocol/README.md`: "Rules the schemas cannot express", "How macOS roles map", and the version 3 and `hello` notes under "Versioning". `docs/task-record-schema.md` matches.
-  - SPEC-05: requirement 1.2 (click, row selection), requirement 2 (role list), requirement 7 (no typing while a password field has focus), new requirement 15 (focus and front layer), scenarios "The model sees the focus and the front sheet" and "Rows are selected by clicking", and a decision dated 2026-10-09. SPEC-07 requirement 4 says names compare case-insensitively.
-  - `models/gui/smoke.py` uses `click`, keeps `comboBox` and `menuButton` as their own roles, and sends the keypad key code (76) for `enter`.
+  - `protocol/README.md`: "Rules the schemas cannot express", "How macOS roles map", and the version 3 and peer version notes under "Versioning". `protocol/docs/pairing.md` and `docs/task-record-schema.md` match.
+  - SPEC-05: requirement 1.2 (click, row selection), requirement 2 (role list), requirement 7 (no typing while a password field has focus), new requirement 15 (focus and front layer; an alert counts as the sheet or dialog it is shown in), scenarios "The model sees the focus and the front sheet" and "Rows are selected by clicking", and a decision dated 2026-10-09. SPEC-07 requirement 4 says names compare case-insensitively.
+  - Harness (`harness/src/worker/`), after OBJ-03 landed: `click` and `clickAt` in `actions.ts`, the prompt, schema narrowing, and validation. The worker refuses a `type` reply while a `secureTextField` has focus, and the prompt shows the model the app, the focused element, and the sheet, dialog, or menu in front with its default and cancel buttons. The `hello` test expects the `UserError`.
+  - `models/gui/smoke.py` sends the real `WorkerOutput` reply shape (`{"action": {"kind": "click", "element": N}}`), uses `click`, allows only `done` and `stuck` for `finish`, keeps `comboBox` and `menuButton` as their own roles, and sends the keypad key code (76) for `enter`. `models/gui/SMOKE-TEST.md` notes the change under "Setup".
 - **Commits:**
-  - `b20f4f2 docs(objectives): start OBJ-29`
-  - `b94ca6d feat(protocol)!: protocol v3, fit the action and observation contracts to real macOS`
-  - `841e392 docs(spec-05): click elements, select rows, and see focus and the front sheet`
-  - `f8ad265 fix(models): use the protocol v3 action names in the GUI smoke test`
-  - `docs(objectives): finish OBJ-29` (this commit)
+  - `11edf9c docs(objectives): start OBJ-29`
+  - `56d649c feat(protocol)!: protocol v3, fit the action and observation contracts to real macOS`
+  - `dca1d3c docs(spec-05): click elements, select rows, and see focus and the front sheet`
+  - `b92a043 fix(models): use the protocol v3 action names in the GUI smoke test`
+  - `f785365 docs(objectives): finish OBJ-29`
+  - `4ea9f8e fix(harness): adopt protocol v3 action names, focus, and front layer`
+  - `b1be28f fix(protocol): drop the alert layer and let peers send any version where it is checked`
+  - `657209b fix(models): send the real WorkerOutput reply shape in the GUI smoke test`
+  - `docs(objectives): update the OBJ-29 Outcome for the harness and bridge changes` (this commit)
 - **Expectations:**
-  - `python3 scripts/verify.py` passes: docs check, protocol generated types, typecheck, 248 tests, and the Android build, tests, and lint. The Swift and Kotlin round trips were not run (Docker is not running); CI runs them on push.
-  - Every example validates (`test/examples.test.ts`). Wrong-value tests in `test/validation.test.ts`: `axPress` rejected, `click` with coordinates and `clickAt` with an element rejected, raw macOS role names rejected, key aliases (`Cmd+S`, `esc`, `backspace`, `Enter`) rejected, `type` into a secure text field rejected, an element on `key` or `finish` rejected, `open_app` with neither or both fields rejected, an empty or unknown `open_file` app rejected, and an unknown layer kind, empty layer title, zero element number, and empty app name rejected. `test/types-check.ts` proves `axPress` and `clickAt {element}` no longer type-check. `test/mocks.test.ts` proves a hello from another version validates and gets a `-32000` `UserError`.
-  - `grep -rn axPress` finds only history and deliberate mentions: the allowed files, the done objectives OBJ-01 and OBJ-26 (left as written, since they record what was true then), the version 3 note in `protocol/README.md`, and the two tests that check the old name is rejected.
-  - SPEC-05 requirement 2 lists the same 19 roles as `AXRole`, and requirement 1 names `click`; the decision names `click` and `clickAt`. Compared by hand against `protocol/schemas/action.json`.
+  - `python3 scripts/verify.py` passes: docs check, protocol generated types, typecheck, and 250 tests, the harness typecheck, lint, format, and 61 tests, and the Android build, tests, and lint. The Swift and Kotlin round trips were not run (Docker is not running); CI runs them on push.
+  - Every example validates (`protocol/test/examples.test.ts`). Wrong-value tests in `protocol/test/validation.test.ts`: `axPress` rejected, `click` with coordinates and `clickAt` with an element rejected, raw macOS role names rejected, key aliases (`Cmd+S`, `esc`, `backspace`, `Enter`) rejected, `type` into a secure text field rejected, an element on `key` or `finish` rejected, `open_app` with neither or both fields rejected, an empty or unknown `open_file` app rejected, and an unknown layer kind (including `alert`), empty layer title, zero element number, and empty app name rejected. `protocol/test/types-check.ts` proves `axPress` and `clickAt {element}` no longer type-check. `protocol/test/mocks.test.ts` proves a hello from another version validates and gets a `-32000` `UserError`. `protocol/test/bridge.test.ts` proves an `authenticate` frame and a `PairingOffer` from versions 2 and 4 validate, versions 0, 2.5, and `"3"` do not, and an envelope from another version is still rejected.
+  - Harness tests: `harness/test/worker-step.test.ts` rejects `axPress`, `click` at coordinates, and `clickAt` without a screenshot, rejects `type` while a password field has focus, accepts `type` into a focused text field, and checks the prompt lines for the app, the focus, and a sheet in front (and none for a plain window). `harness/test/rpc-server.test.ts` expects `-32000` with kind `unexpected` and the `rpc.versionMismatch` log for another version.
+  - `grep -rn axPress` finds only history and deliberate mentions: the allowed files, the done objectives OBJ-01 and OBJ-26 (left as written, since they record what was true then), the version 3 note in `protocol/README.md`, and the protocol and harness tests that check the old name is rejected.
+  - SPEC-05 requirement 2 lists the same 19 roles as `AXRole`, requirement 1 names `click`, and requirement 15 names the same layers as `LayerKind`; the decision names `click` and `clickAt`. Compared by hand against `protocol/schemas/`.
 - **Not verified:**
   - The Swift and Kotlin round trips: run `npm run compile:swift` and `npm run compile:kotlin` in `protocol/` with Docker running, or let CI run them.
-  - `models/gui/smoke.py` was not run against a model or a real app, as the objective says. It compiles, and with pyobjc stubbed out, `parse_action` accepts `click`, rejects `axPress`, and maps `enter` to key code 76. OBJ-26 runs it for real.
+  - `models/gui/smoke.py` was not run against a model or a real app, as the objective says. With pyobjc stubbed out, its action schema is valid JSON Schema 2020-12, and `parse_action` accepts `{"action": {"kind": "click", "element": 1}}`, rejects the flat round 1 and 2 shape, `axPress`, and `finish` with `partial`, and maps `enter` to key code 76. OBJ-26 runs it for real.
   - macOS behavior the SDK headers do not document, taken from the audit: rows usually do not support `AXPress`, a sheet usually has no `AXTitle`, and a tab is an `AXRadioButton` in an `AXTabGroup`. The constants themselves (`kAXRowRole`, `kAXSecureTextFieldSubrole`, `kAXSearchFieldSubrole`, `kAXSheetRole`, `kAXDialogSubrole`, `kAXSystemDialogSubrole`, `kAXFocusedUIElementAttribute`, `kAXDefaultButtonAttribute`, `kAXCancelButtonAttribute`, `kAXSelectedAttribute`, `kAXPressAction`, `kVK_ANSI_KeypadEnter`) were read in the local macOS SDK. Patrick can confirm the behavior with Accessibility Inspector on the demo apps.
   - Opening a PDF with Mail through `open_file` with `bundleId: com.apple.mail` starting a new message with the file attached. Check on a real Mac in OBJ-26.
   - Whether `.key` and `.pages` documents on the demo Mac are packages (folders) or single files. Both are possible, so file tools must handle folders either way.
 - **Decisions and deviations:**
-  - The type rule is in the schema: `RecordedAction.element` holds the focused element for a `type` action, and a `secureTextField` there fails validation. The harness still has to look up `Observation.focused` itself, because one schema cannot see two messages.
-  - `alert` is in `LayerKind` as the objective says, but macOS has no alert role or subrole in `AXRoleConstants.h` or AppKit's `NSAccessibilityConstants.h`. The schema says the Mac app reports an alert as `sheet` or `dialog` unless it can tell. Raised as a question for Brent.
+  - The type rule is in the schema: `RecordedAction.element` holds the focused element for a `type` action, and a `secureTextField` there fails validation. The harness also checks `Observation.focused` itself, because one schema cannot see two messages.
+  - `alert` was dropped from `LayerKind` (Brent, 2026-10-09): macOS has no alert role or subrole in `AXRoleConstants.h` or AppKit's `NSAccessibilityConstants.h`, so the Mac app could never produce it. An alert is reported as the sheet or dialog it is shown in. This differs from OBJ-29.3, which listed `alert`.
+  - The bridge's `authenticate` frame and `PairingOffer` take a `PeerProtocolVersion`, like `hello` (Brent, 2026-10-09), so the version checks in `protocol/docs/pairing.md` are reachable. Envelopes keep the const.
+  - `smoke.py` sends the real nested `WorkerOutput` shape (Brent, 2026-10-09): measuring the real contract matters more than comparing round 3 with rounds 1 and 2. Rows, cells, and the scrollable containers are still not read by `smoke.py`, since none of the three demo tasks needs them.
   - The new SPEC-05 requirement is number 15, appended so requirements 12 to 14, which other objectives cite, keep their numbers.
   - The crypto vectors file keeps its name `bridge-crypto-v2.json`: the crypto scheme and its domains did not change, only the `protocolVersion` value inside the vectors.
-  - Rows, cells, and the scrollable containers are not read by `smoke.py`; none of the three demo tasks needs them, and adding them would change what the next OBJ-26 round compares against round 2. The smoke test keeps its flat `{"action": "click", "element": N}` reply shape rather than the real `WorkerOutput` (`{"action": {"kind": ...}}`), so round 3 compares with rounds 1 and 2.
   - SPEC-07 requirement 4 gained one sentence on case-insensitive names, to match the `Path` note (OBJ-29.8).
+  - The harness is outside this objective's product, but the orchestrator widened the boundary after rebasing onto OBJ-03, because `verify.py` failed on `axPress` there. Only the rename and the small, direct uses of the new fields were changed; the rest is listed below.
 - **For the next objectives:**
-  - **Harness (OBJ-03):**
-    - Use `click` and `clickAt` in the prompt, validation, risk check, and action log. `click` on a row or cell selects; `scroll` should target a `scrollArea`, `table`, `list`, or `outline`.
-    - Normalize key aliases before validating a `key` action: case (`Cmd+S` to `cmd+s`), `command`/`option`/`control` to `cmd`/`opt`/`ctrl`, `esc` to `escape`, `backspace` to `delete`. Keep `enter` and `return` distinct. Add `enter` to the per-app risk lists wherever `return` is (SPEC-07 r6).
-    - Refuse `type` when `Observation.focused` names a `secureTextField`, and record the focused element as `RecordedAction.element` for `type`.
-    - Check that `focused`, `layer.defaultButton`, and `layer.cancelButton` are element numbers in the observation.
-    - Compare file names case-insensitively for name clashes (SPEC-07 r4) and for "a file Yumi did not create"; treat a package path as a folder in every file tool, including counting files inside it for deletes (SPEC-07 r8).
-    - Show the model `app`, `focused`, and `layer` in the prompt. Prefer `open_app` by `name`.
-    - Refuse a `hello` with another version with a `UserError` (the mock uses kind `unexpected`), now that the params validate.
+  - **Harness follow-ups (OBJ-04 onward, wherever actions are recorded, checked, and run):**
+    - Record the focused element as `RecordedAction.element` for a `type` action, so the schema's secure-field rule also guards what reaches the Mac app.
+    - Normalize key aliases before validating a `key` action: case (`Cmd+S` to `cmd+s`), `command`/`option`/`control` to `cmd`/`opt`/`ctrl`, `esc` to `escape`, `backspace` to `delete`. Keep `enter` and `return` distinct, and add `enter` to the per-app risk lists wherever `return` is (SPEC-07 r6).
+    - Check that `focused`, `layer.defaultButton`, and `layer.cancelButton` are element numbers in the observation the Mac app sent.
+    - Compare file names case-insensitively for name clashes (SPEC-07 r4) and for "a file Yumi did not create"; treat a package path as a folder in every file tool, including counting the files inside it for deletes (SPEC-07 r8).
+    - Read the risk of a `click` on a row from its label like any other element (SPEC-07 r6); selecting a row is not opening or deleting it.
+    - Steer `open_app` toward `name` in the tool descriptions once typed tools are offered, and give `open_file`'s optional `bundleId` an example.
   - **Mac app (Patrick):**
     - Map roles and subroles as in `protocol/README.md`, "How macOS roles map": secure text fields by subrole, search fields to `textField`, tabs to `radioButton`, combo boxes and menu buttons to their own roles, and rows, cells, and the four scrollable containers.
     - Carry out `click` on a row or cell by setting `AXSelected` to true, and on everything else with `AXPress`.
-    - Fill `Observation.app`, `focused` (from `AXFocusedUIElement`), and `layer` (sheet, dialog window subroles, open menu, `AXDefaultButton`, `AXCancelButton`; most sheets have no title).
+    - Fill `Observation.app`, `focused` (from `AXFocusedUIElement`), and `layer`: `sheet` for an `AXSheet`, `dialog` for a window with subrole `AXDialog` or `AXSystemDialog`, `menu` for an open menu, otherwise `window`; an alert is whichever sheet or dialog it is shown in. Most sheets have no title. Buttons come from `AXDefaultButton` and `AXCancelButton`.
     - Resolve `open_app` by `name` through Launch Services, and open `open_file` with the app given by `bundleId`.
-    - Send `PROTOCOL_VERSION` (3) in `hello`.
-  - **OBJ-26 (Mail quirks to check on a real Mac first):** the message body is likely a web area whose value cannot be set with `setValue`; the To field is a token field whose value may hold placeholder characters instead of addresses, which matters for reading recipients (SPEC-07 r13); and whether `open_file` with Mail starts a new message with the file attached.
-  - **Bridge (Jepoy):** the relay's `authenticate` frame and `PairingOffer` still use the `ProtocolVersion` const, so per `protocol/docs/pairing.md` a device on another version fails the schema check (`invalidFrame`) before the relay can answer `unsupportedVersion`, and the phone cannot tell a version mismatch from a bad QR code. Envelopes keep the const, which no doc contradicts. Not changed here; raised for Brent.
+    - Send `PROTOCOL_VERSION` (3) in `hello`, and put it in the pairing QR code.
+  - **Bridge relay (OBJ-13) and the bridge clients (OBJ-21, OBJ-23):** an `authenticate` frame from another version now passes the schema, so the relay must compare `protocolVersion` itself and refuse with `unsupportedVersion`. The phone must compare the QR code's `protocolVersion` itself and show "Pairing versions differ" (`pairingVersionsDiffer`).
+  - **OBJ-26 (Mail quirks to check on a real Mac first):** the message body is likely a web area whose value cannot be set with `setValue`; the To field is a token field whose value may hold placeholder characters instead of addresses, which matters for reading recipients (SPEC-07 r13); and whether `open_file` with Mail starts a new message with the file attached. Round 3 uses the nested reply shape, so compare its validity numbers with rounds 1 and 2 with that in mind.
