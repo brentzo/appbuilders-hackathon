@@ -77,7 +77,8 @@ final class GoalConfirmation {
             Task { await self?.choose(choice, for: taskId) }
         }
         overlay.update(Self.mainCursorId) { $0.state = .listening }
-        await speech.speak(restated.text)
+        // The first repeat-back of a goal opens the conversation; asking again after an unclear answer does not.
+        if previous == nil { await speech.speakOpening(restated.text) } else { await speech.speak(restated.text) }
         await listenOnce(for: taskId)
     }
 

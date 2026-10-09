@@ -101,6 +101,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             PairingWindow.show()
         case .typeGoal:
             showTypeGoal()
+        case .reloadVoice:
+            (harness.speech as? NeuralSpeech)?.reload()
         case .dismiss, .notAvailableYet:
             break
         }

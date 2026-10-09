@@ -27,6 +27,8 @@ enum ErrorButtonAction: Equatable, Sendable {
     case pairPhone
     /// Opens the box for typing a goal ("Type instead").
     case typeGoal
+    /// Loads Yumi's voice again ("Try again" on "Voice didn't load (Mac)", OBJ-51).
+    case reloadVoice
     /// The feature behind this button is built in a later objective. Shown disabled.
     case notAvailableYet
 }
@@ -94,6 +96,8 @@ enum ErrorPresenter {
             action = .pairPhone
         case "Type instead":
             action = .typeGoal
+        case "Try again" where error.kind == .voiceFailedToLoad:
+            action = .reloadVoice
         case "Try again" where error.kind == .didNotCatchSpeech:
             // Push-to-talk: trying again is holding the shortcut again, so this only closes the error.
             action = .dismiss

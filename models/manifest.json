@@ -161,6 +161,44 @@
         ]
       },
       "checksums_verified": "2026-10-09: every file's size matched Hugging Face, and every LFS file's SHA-256 matched Hugging Face's LFS object id. SHA-256 of the small non-LFS files was computed from the downloaded copy."
+    },
+    {
+      "id": "mac-voice",
+      "role": "Yumi's voice on the Mac: everything Yumi says (SPEC-04 r20)",
+      "device": "mac",
+      "status": "chosen",
+      "status_note": "Brent picked the sound from voice samples on 2026-10-10 (OBJ-51). Evidence: wiki/mac-neural-voice.md.",
+      "model": "Kokoro-82M v1.0 (82M parameters), float32 safetensors converted for MLX, with the af_heart voice style",
+      "runtime": "MLX Swift 0.30.2 through mac/Packages/KokoroSwift (kokoro-ios at 4d6d1d8 with Yumi's changes), MisakiSwift 1.0.6 for pronunciation",
+      "settings": {
+        "voice": "af_heart",
+        "speed": 1.1,
+        "pitchShiftSemitones": 4,
+        "intonation": 1.3,
+        "playbackPitchCents": 300
+      },
+      "source": {
+        "host": "huggingface.co",
+        "repo": "mlx-community/Kokoro-82M-bf16",
+        "revision": "a71e4d38b236d968966a2002c4c895dbd12b1c3c",
+        "upstream": "hexgrad/Kokoro-82M"
+      },
+      "license": "Apache-2.0 (hexgrad/Kokoro-82M model card and mlx-community/Kokoro-82M-bf16)",
+      "fetch": "mac/scripts/fetch-voice-model.sh, into ~/Library/Application Support/Yumi/Models/Voice. Brent's copy is in ~/Developer/vendor/kokoro-82m.",
+      "total_bytes": 327637472,
+      "files": [
+        {
+          "path": "kokoro-v1_0.safetensors",
+          "bytes": 327115152,
+          "sha256": "4e9ecdf03b8b6cf906070390237feda473dc13327cb8d56a43deaa374c02acd8"
+        },
+        {
+          "path": "voices/af_heart.safetensors",
+          "bytes": 522320,
+          "sha256": "2c1c733b0e6576c810e268d3e440c21dea4e0f0131a3ba4cfc98d7fe6136d094"
+        }
+      ],
+      "checksums_verified": "2026-10-10: each file's size and SHA-256 matched Hugging Face's LFS object id at this revision."
     }
   ]
 }

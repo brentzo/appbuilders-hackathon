@@ -27,6 +27,7 @@ The custom wake-word model is not ready; app checks still use the documented sta
 | Android brain and app control (p1 only) | Qwen3.5-4B, 4-bit, fixed | ~2.7 GB. 9B was too tight on the 12 GB demo phone. Decided in [SPEC-10](../specs/10-android-companion.md). Part A (p0) has no model |
 | Speech to text, Mac | Whisper large-v3-turbo on WhisperKit (`large-v3-v20240930_turbo_632MB`), Tagalog forced | 646 MB on disk, about 0.8 GiB loaded. Recommended by [OBJ-11](../objectives/OBJ-11-whisper-bake-off.md), pending Jepoy's confirmation. Handles English and Taglish |
 | Speech to text, Android and iPhone | Whisper, size to be decided | Android (p1, [OBJ-28](../objectives/OBJ-28-android-whisper-bake-off.md)) and iPhone (p2, WhisperKit, [SPEC-12](../specs/12-iphone-companion.md)). The Android p0 recognizer is Android's on-device English recognizer |
+| Yumi's voice, Mac | Kokoro-82M with the af_heart voice, on MLX Swift | 327 MB on disk, about 0.5 GB loaded. Picked by Brent in [OBJ-51](../objectives/OBJ-51-mac-neural-voice.md); measurements in [the voice report](../wiki/mac-neural-voice.md) |
 | Wake word | openWakeWord, custom "Hey Yumi" | Trained once, runs fully on device |
 | Voice stop keywords (p1) | openWakeWord, custom | "stop", "teka", "tama na", "hinto" |
 

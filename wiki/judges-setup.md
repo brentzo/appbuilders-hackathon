@@ -64,7 +64,16 @@ The menu says "Using the mock harness" the whole time.
 
    Without this the app still builds, but macOS forgets its permissions every time it is rebuilt.
 
-2. Build and open it:
+2. Install Xcode's Metal Toolchain once (about 840 MB), which Yumi's voice needs to build, and fetch the voice (327 MB):
+
+   ```sh
+   xcodebuild -downloadComponent MetalToolchain
+   sh scripts/fetch-voice-model.sh
+   ```
+
+   Without the voice, Yumi works but stays quiet, and shows a note that its voice didn't load.
+
+3. Build and open it:
 
    ```sh
    xcodebuild -project Yumi.xcodeproj -scheme Yumi -configuration Release -derivedDataPath build build
@@ -73,10 +82,10 @@ The menu says "Using the mock harness" the whole time.
 
    Yumi appears in the menu bar as a cat; it has no Dock icon.
 
-3. Follow the setup window.
+4. Follow the setup window.
    It asks for Microphone, Accessibility, and Screen Recording, which Yumi needs to hear you, control apps, and see the screen.
 
-4. Try it:
+5. Try it:
    - Choose "Send sample goal to the mock" in the menu, or hold ⌥Space, say a goal, and let go.
    - Yumi repeats the goal back out loud and waits for "Go ahead", "Change it", or "Cancel", by button or by voice.
    - The cat cursor then plays the scripted Keynote export.
@@ -230,6 +239,7 @@ cd android && ./gradlew testDebugUnitTest
 | Yumi asks for Accessibility or Screen Recording again after a rebuild | Set up `Signing.local.xcconfig` (path 1, step 1) and rebuild. A build signed ad hoc changes its signature every time, so macOS forgets it. |
 | The status line stays on "Yumi is getting ready" | Run `npm install` in `protocol/` and `harness/`, and check that `node --version` in a new terminal shows 24 or later. Yumi finds `node` through your login shell. |
 | An error that the protocol folder does not exist | The app was moved away from its checkout. Rebuild from the checkout, or set `YUMI_REPO_ROOT` to it. |
+| Yumi shows "I couldn't start my voice" | Run `mac/scripts/fetch-voice-model.sh`, then choose "Try again". If the files are there, close other heavy apps first. |
 | The wake word does nothing | Run `mac/scripts/fetch-wake-word-models.sh`, and say "Hey Jarvis". |
 | Every step takes minutes with the real model | Close other heavy apps; the model needs about 9 GB of free memory. |
 | You want to start the permissions over | `tccutil reset All <bundle identifier>`, using the bundle identifier from your signing settings. |

@@ -30,7 +30,7 @@ It starts the real harness from `harness/` by default, or the mock harness with 
 - ScreenCaptureKit for capture, the Accessibility API (`AXUIElement`) for reading and acting on apps, `CGEvent` for mouse and keyboard.
 - A borderless, transparent, click-through `NSPanel` per display for the overlay.
 - Speech: WhisperKit or whisper.cpp for Whisper (final choice from [models](../models/README.md)); `SFSpeechRecognizer` with `requiresOnDeviceRecognition = true`, or SpeechAnalyzer, for native on-device recognition. Never cloud.
-- Speech output: `AVSpeechSynthesizer` first, behind a `speak` interface so Kokoro can replace it later.
+- Speech output: Kokoro-82M on MLX Swift, behind the `SpeechOutput` interface (see "Yumi's voice"). Never the system voice.
 - Wake word: openWakeWord models run with ONNX Runtime.
 - Cat: Rive's Apple runtime (rive-ios, which supports macOS) playing the `.riv` file from [character](../character/README.md).
 - Talks to the harness over a local Unix socket with JSON-RPC, using types from [protocol](../protocol/README.md).
@@ -50,7 +50,9 @@ Free Apple accounts ("Personal Team") are enough for the hackathon. Build Yumi f
 
 Needs Xcode 26 (built with 26.4.1).
 The app runs on macOS 15 or later.
-No other tools are needed to build: `mac/Yumi.xcodeproj` is a plain Xcode project.
+`mac/Yumi.xcodeproj` is a plain Xcode project.
+It also needs Xcode's Metal Toolchain, because MLX (Yumi's voice) compiles its GPU kernels during the build. Install it once with `xcodebuild -downloadComponent MetalToolchain` (about 840 MB).
+Fetch Yumi's voice once with `scripts/fetch-voice-model.sh` (see "Yumi's voice"); without it Yumi stays quiet and says so on screen.
 To run Yumi against the mock harness, and for the harness tests, install the protocol package once with `npm install` in `protocol/` (needs Node.js).
 
 From `mac/`:
@@ -140,7 +142,7 @@ Before any work starts, Yumi repeats the goal back ([OBJ-17](../objectives/OBJ-1
 - Every answer goes to the harness with `replyToConfirmation`: a button, or what the user said after the sentence (listened for at most twice per sentence, then only the buttons work).
 - "Cancel", or the harness cancelling the task while it waits, says "Okay, I won't do anything." and fades the cursor.
 - While a goal waits for its answer and no task is confirmed, `executeAction` does nothing.
-- Everything Yumi says goes through `SpeechOutput` (`SystemSpeech`, the system voice), including the harness's `speak` events and the tiling question.
+- Everything Yumi says goes through `SpeechOutput` (`NeuralSpeech`, Yumi's voice), including the harness's `speak` events and the tiling question. The first repeat-back of a goal is the conversation's opening line, so it starts with a meow.
 
 With "Auto mode" on in Settings (off by default), the goal starts without the repeat-back ([OBJ-50](../objectives/OBJ-50-mac-auto-mode.md), SPEC-01 r14).
 
@@ -191,6 +193,20 @@ With the wake word on in Settings (on by default), Yumi listens for it hands-fre
 - On a detection Yumi plays a short sound and listens for the goal on the push-to-talk path, until the user stops speaking.
 - Audio lives only in the detector's rolling buffers in memory; nothing is transcribed or stored before the wake word.
 - With the setting off, the microphone is not opened for the wake word at all.
+
+### Yumi's voice
+
+Yumi speaks with a neural voice made on this Mac ([OBJ-51](../objectives/OBJ-51-mac-neural-voice.md), [SPEC-04](../specs/04-cursor-presence.md) requirement 20). Measurements are in [the voice report](../wiki/mac-neural-voice.md).
+
+- The model is Kokoro-82M (Apache-2.0) with the af_heart voice, run by MLX through `Packages/KokoroSwift`, a copy of kokoro-ios (MIT) at upstream commit `4d6d1d8`, just after 1.0.9, with three changes marked "Yumi": loading errors throw instead of crashing, `KokoroSpeaker` keeps MLX out of the app target, and `generateAudio` can shift the predicted pitch curve.
+  Pronunciation is MisakiSwift (Apache-2.0), with no espeak.
+- The sound Brent picked: speed 1.1, pitch up 4 semitones inside the model with livelier intonation, then 3 more on playback with `AVAudioUnitTimePitch`, which also lifts the formants a little. The settings are in `KokoroVoice`.
+- The files are not in git and the app never downloads them. `scripts/fetch-voice-model.sh` copies them from `~/Developer/vendor/kokoro-82m`, or downloads them from a pinned Hugging Face revision, checks their SHA-256, and puts them in `~/Library/Application Support/Yumi/Models/Voice`.
+  After that the voice works with the network off; nothing about speech leaves the Mac.
+- Lines are said in the order they were asked for, one sentence at a time, so the first sentence plays while the next is made.
+- The opening line (the first repeat-back of a goal) starts with the cat's meow (`Overlay/Sounds/cat-meow.mp3`) while the voice gets ready, unless "Play sounds" is off. Asking again after an unclear answer does not meow.
+- If the voice cannot load, Yumi stays quiet instead of using the system voice (Brent's decision) and shows "Voice didn't load (Mac)" from SPEC-11 in a panel that does not take focus. "Try again" loads it again. Why it failed is in the `speech` log.
+- The voice uses about 490 MB while loaded, and about 1.3 GB for a moment while loading.
 
 ### Approval cards and the Trash
 
@@ -272,6 +288,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 - `-YumiPermissions mixed|granted` pretends permissions are in that state, without asking macOS.
 - `-YumiStatus startingUp|ready|listening|working|paused` sets the menu's status line.
 - `-YumiOverlayDemo <dir>` shows sample cursors and a helper chip, writes each display's overlay over white and over black as PNG files, then quits.
+- `-YumiSay "<line>"` says the line once Yumi's voice is ready, `-YumiSayOpening YES` says it as an opening line with the meow, and `-YumiVoiceFolder <path>` loads the voice from another folder, for example an empty one to see the warning. Timings are in the `speech` log (Debug builds).
 - `-YumiCursorDemo YES` plays a cursor demo of about a minute on screen: the main cat drops out of the island and goes through its states, three ghosts follow it out and leap around, the cats dodge the pointer (a quick hop when it comes at them, staying put beside a still pointer), the ghosts finish and leap back into the island with a meow, and the main cat does the same last (Debug builds).
   In the middle, the four cats line up idle, thinking, paused, and acting, and the demo moves your pointer onto each one: the first three hop away with their ears back and drift back, and the acting cat fades in place.
   Then the cats wait about 7 seconds for you to try it with your own pointer.
@@ -297,6 +314,8 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 | `Yumi/Approvals/` | Send and delete approval cards, their copy, and `moveToTrash` |
 | `Yumi/Control/` | The stop shortcut, the take-over watcher, the local stop, and the paused panel |
 | `Yumi/WakeWord/` | The wake word: ONNX Runtime models, the openWakeWord feature port, and the listener |
+| `Yumi/Speech/` | Yumi's voice: `NeuralSpeech` (order, meow, failed load), `KokoroVoice` (the model on its own queue), `SpeechPlayback` (the audio engine), and the voice warning panel |
+| `Packages/KokoroSwift/` | Kokoro for MLX Swift, copied from kokoro-ios with Yumi's changes (MIT) |
 | `Yumi/Voice/` | Voice intake: the push-to-talk hot key, the microphone, the recognizers and their rule, the silence endpoint, and the typed-goal box |
 | `Yumi/Confirmation/` | Goal confirmation: the repeat-back panel, the `speak` interface, and listening for the answer |
 | `Yumi/Tiling/` | Window tiling: the consent panel, the grid, and saving and restoring window frames |

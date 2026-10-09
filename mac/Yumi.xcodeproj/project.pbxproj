@@ -11,6 +11,7 @@
 		A1000000000000000000F105 /* libYumiProtocol.a in Frameworks */ = {isa = PBXBuildFile; fileRef = A1000000000000000000F005 /* libYumiProtocol.a */; };
 		A1000000000000000000F203 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = A1000000000000000000F202 /* WhisperKit */; };
 		A1000000000000000000F206 /* onnxruntime in Frameworks */ = {isa = PBXBuildFile; productRef = A1000000000000000000F205 /* onnxruntime */; };
+		A1000000000000000000F209 /* KokoroSwift in Frameworks */ = {isa = PBXBuildFile; productRef = A1000000000000000000F208 /* KokoroSwift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -60,6 +61,7 @@
 				A1000000000000000000F105 /* libYumiProtocol.a in Frameworks */,
 				A1000000000000000000F203 /* WhisperKit in Frameworks */,
 				A1000000000000000000F206 /* onnxruntime in Frameworks */,
+				A1000000000000000000F209 /* KokoroSwift in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -133,6 +135,7 @@
 			packageProductDependencies = (
 				A1000000000000000000F202 /* WhisperKit */,
 				A1000000000000000000F205 /* onnxruntime */,
+				A1000000000000000000F208 /* KokoroSwift */,
 			);
 			productName = Yumi;
 			productReference = A1000000000000000000F001 /* Yumi.app */;
@@ -209,6 +212,7 @@
 			packageReferences = (
 				A1000000000000000000F201 /* XCRemoteSwiftPackageReference "WhisperKit" */,
 				A1000000000000000000F204 /* XCRemoteSwiftPackageReference "onnxruntime-swift-package-manager" */,
+				A1000000000000000000F207 /* XCLocalSwiftPackageReference "Packages/KokoroSwift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A10000000000000000000003 /* Products */;
@@ -476,6 +480,13 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		A1000000000000000000F207 /* XCLocalSwiftPackageReference "Packages/KokoroSwift" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/KokoroSwift;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		A1000000000000000000F201 /* XCRemoteSwiftPackageReference "WhisperKit" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -505,6 +516,10 @@
 			isa = XCSwiftPackageProductDependency;
 			package = A1000000000000000000F204 /* XCRemoteSwiftPackageReference "onnxruntime-swift-package-manager" */;
 			productName = onnxruntime;
+		};
+		A1000000000000000000F208 /* KokoroSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = KokoroSwift;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
