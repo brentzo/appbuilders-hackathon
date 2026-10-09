@@ -528,11 +528,13 @@ describe("nothing is deleted", () => {
         .map((m) => `${file.replaceAll("\\", "/")}: ${m[1]}`),
     );
     expect(deletes).toEqual(["store/task-store.ts: window_locks"]);
-    // No file removal in the store; the RPC server removes only its own socket file.
+    // No file removal in the store; the RPC server removes only its own socket file, and the move tool removes a
+    // file's old name only after the same file has its new one (OBJ-37).
     const removals = sources
       .filter(({ text }) => /\b(rmSync|unlinkSync|rm|unlink|rmdirSync)\(/.test(text))
-      .map(({ file }) => file.replaceAll("\\", "/"));
-    expect(removals).toEqual(["rpc/server.ts"]);
+      .map(({ file }) => file.replaceAll("\\", "/"))
+      .sort();
+    expect(removals).toEqual(["rpc/server.ts", "tools/file-tools.ts"]);
     expect(existsSync(join(srcDir, "store"))).toBe(true);
   });
 });

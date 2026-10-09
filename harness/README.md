@@ -43,6 +43,11 @@ The task store is built ([OBJ-04](../objectives/OBJ-04-task-store.md)): tasks, s
 | `src/agent/` | The forked Pi agent loop, message types, and session state. |
 | `src/model/` | The model client (`client.ts`), the server's wire shapes (`openai.ts`), and the loop's stream function (`stream-fn.ts`). |
 | `src/tools/registry.ts` | The tool registry and per-call tool subsets (at most 10). Starts empty: Pi's coding tools are not included. |
+| `src/tools/file-tools.ts` | The typed file tools: `read_file`, `list_dir`, `write_new_file`, `copy`, and `move`. Each checks its own call with the gate and never replaces a file. |
+| `src/safety/rules.ts` | The SPEC-07 permission table as data: levels, secret locations, protected folders, labels, key combos, risky apps and their safe labels. |
+| `src/safety/gate.ts` | `checkAction`, the one permission gate every action goes through. |
+| `src/safety/paths.ts` | Path resolution through `..` and symlinks, and the home, Library, dotfile, and secret checks. |
+| `src/safety/trash.ts` | The `move_to_trash` checks and the `FileSummary` for the delete card. |
 | `src/worker/` | One step: the prompt, the action names (`actions.ts`), the narrowed output schema, validation, and the one retry. |
 | `src/schema/bundle.ts` | Turns a protocol type into one self-contained JSON Schema. |
 | `src/harness.ts` | Opens the task store, starts the RPC server with the history methods, and sends status changes as events. |
@@ -201,6 +206,18 @@ A harness refuses a database written by a newer harness.
 `listTasks` and `searchTasks` answer newest first, 50 tasks by default.
 Search matches tasks whose goal, confirmed goal, summary, or subtask titles contain every word of the query, ignoring case and accents.
 `getTask` returns the task with its subtasks, steps, and action log.
+
+## Safety
+
+Every action goes through `checkAction(action, { home, app })` in `src/safety/gate.ts` before it runs ([SPEC-07](../specs/07-safety.md)).
+It returns the level (`allowed`, `ask`, or `blocked`), the rule that decided it, and the `RecordedAction` with the level stored on it.
+Only `allowed` may run without the user; asking and the Trash are [OBJ-43](../objectives/OBJ-43-approvals-pause-and-action-log.md).
+
+- The gate reads only the resolved action, the app the Mac app reported, and the real file system. It never reads model text.
+- The rules are data in `src/safety/rules.ts`. A rule changes only with a change to SPEC-07.
+- Paths are resolved through `..` and every symlink before the check, and names are compared without regard to case, as on a default Mac volume.
+- The file tools never replace a file: a taken name gets a number ("Report.pdf" becomes "Report 2.pdf").
+- There is no shell, AppleScript, or edit tool, and a test fails if the harness ever imports `child_process` or mentions `osascript`.
 
 ## Errors and the log
 
