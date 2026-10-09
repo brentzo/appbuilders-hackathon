@@ -11,6 +11,7 @@ import type { AddressInfo, Socket } from "node:net";
  * - request validation failures: 422 with FastAPI's list of problems;
  * - an unhandled exception: 500 with Starlette's plain-text "Internal Server Error";
  * - a crashed server: the connection drops without an answer.
+ * The success body's fields and the 422 body were checked against the real server on 2026-10-09.
  * Each request takes the next scripted reply and is recorded for assertions.
  */
 

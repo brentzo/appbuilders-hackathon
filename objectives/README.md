@@ -60,7 +60,7 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 |---|---|---|---|---|---|---|---|
 | [OBJ-01](OBJ-01-task-record-schemas.md) | Task record schemas and cross-team contracts | protocol | Jepoy | 02, 03, 05, 07, 11 | - | - | done |
 | [OBJ-02](OBJ-02-bridge-envelope-and-crypto.md) | Bridge envelope and end-to-end crypto | protocol | Jepoy | 08 | - | - | done |
-| [OBJ-03](OBJ-03-harness-skeleton.md) | Harness skeleton and local model client | harness | Brent | 02 | 01 | - | in-progress |
+| [OBJ-03](OBJ-03-harness-skeleton.md) | Harness skeleton and local model client | harness | Brent | 02 | 01 | - | done |
 | [OBJ-04](OBJ-04-task-store.md) | Task store and history | harness | Brent | 02 | 01, 03 | - | todo |
 | [OBJ-05](OBJ-05-planner-and-scheduler.md) | Planner, scheduler, and task summary | harness | Brent | 02 | 03, 04 | - | todo |
 | [OBJ-06](OBJ-06-resume-and-limits.md) | Resume and limits | harness | Brent | 02 | 04, 05 | - | todo |
