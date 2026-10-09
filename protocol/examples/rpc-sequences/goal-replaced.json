@@ -1,0 +1,97 @@
+{
+  "spec": "SPEC-06",
+  "scenario": "User replaces the goal while Yumi works",
+  "steps": [
+    {
+      "call": "pause",
+      "params": {
+        "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+        "scope": "uiLanes"
+      },
+      "result": {}
+    },
+    {
+      "event": "taskStatusChanged",
+      "payload": {
+        "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+        "status": "paused"
+      }
+    },
+    {
+      "call": "reviseGoal",
+      "params": {
+        "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+        "transcript": "sorry, not Notes, put it in Keynote"
+      },
+      "result": {}
+    },
+    {
+      "event": "goalRestated",
+      "payload": {
+        "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+        "text": "I already opened a new note with some text in it. I'll leave it there. I'll put the meeting summary in a new Keynote slide instead. Should I go ahead?"
+      }
+    },
+    {
+      "call": "replyToConfirmation",
+      "params": {
+        "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+        "reply": {
+          "kind": "spoken",
+          "text": "go ahead"
+        }
+      },
+      "result": {}
+    },
+    {
+      "event": "taskStatusChanged",
+      "payload": {
+        "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+        "status": "planning"
+      }
+    },
+    {
+      "event": "taskStatusChanged",
+      "payload": {
+        "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+        "status": "running"
+      }
+    },
+    {
+      "call": "getTask",
+      "params": {
+        "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8"
+      },
+      "result": {
+        "task": {
+          "id": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+          "originDeviceId": "mac-ana",
+          "goal": "write a summary of the meeting in a new note",
+          "goalRevisions": [
+            {
+              "userSaid": "sorry, not Notes, put it in Keynote",
+              "goal": "put the meeting summary in a new Keynote slide",
+              "confirmedAt": "2026-10-10T15:42:30+08:00"
+            }
+          ],
+          "confirmedGoal": "put the meeting summary in a new Keynote slide",
+          "status": "running",
+          "plan": [],
+          "createdAt": "2026-10-10T15:40:00+08:00",
+          "updatedAt": "2026-10-10T15:42:30+08:00"
+        },
+        "subtasks": [],
+        "steps": [],
+        "actionLog": [
+          {
+            "time": "2026-10-10T15:42:30+08:00",
+            "deviceId": "mac-ana",
+            "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+            "description": "Goal changed to \"put the meeting summary in a new Keynote slide\"",
+            "outcome": "ok"
+          }
+        ]
+      }
+    }
+  ]
+}

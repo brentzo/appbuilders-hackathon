@@ -33,6 +33,7 @@ The bridge envelope, relay frames, pairing, crypto, and cross-device message kin
 | `src/` | `validate(typeName, value)`, cross-device payload and expiry checks (`src/messages.ts`), the local RPC peer (`src/rpc.ts`), and the reference bridge crypto (`src/crypto.ts`) for TypeScript products. |
 | `docs/` | [crypto.md](docs/crypto.md) (keys, envelope sealing, expiry, test vectors) and [pairing.md](docs/pairing.md) (relay connection, pairing, delivery, unpairing). |
 | `vectors/` | Cross-language crypto test vectors that the Swift and Kotlin clients must reproduce. |
+| `examples/rpc-sequences/` | Local RPC sequences, one per spec scenario they cover, each checked against the contract. |
 | `mocks/` | The mock harness and the mock Mac app, with scripted event sequences in `mocks/scripts/`. |
 | `generator/` | Reads the schemas and writes the generated types. |
 | `generated/ts/index.ts` | TypeScript types, for the harness and the bridge. |
@@ -159,6 +160,8 @@ Goal changes during a task (SPEC-06 requirements 14 to 20, OBJ-60):
 - `Task.goalRevisions` stores confirmed revisions in order; each records the user's words, the revised goal, and confirmation time, while `confirmedGoal` stays the latest and `goal` stays the original.
 - Each confirmed revision adds an `ActionLogEntry` whose description starts with "Goal changed to".
 - A revised plan retains matching completed work and active helpers, records obsolete subtasks as `cancelled`, and starts new subtasks from the current goal.
+- `examples/rpc-sequences/` writes each SPEC-06 "Changing the goal mid-task" scenario, and Auto mode, as a message sequence; a test checks every message against the contract and that every scenario has one.
+- The mock harness's `goal-revision` script repeats a revised goal back after `reviseGoal`.
 
 Pausing, approvals, and blocked actions (SPEC-06, SPEC-07, [OBJ-38](../objectives/OBJ-38-approvals-pause-and-action-log.md)):
 
@@ -232,6 +235,7 @@ Options for both:
 | `keynote-export` | Repeat-back, planning, the main cursor exporting a Keynote deck with one `workerThought`, and the spoken summary |
 | `approval-and-question` | A question from the model, then a pause that cancels a pending approval |
 | `windows-and-bridge` | Bridge state changes, a resumable task, a tiling suggestion, a busy window, and errors |
+| `goal-revision` | A revised goal repeated back after `reviseGoal`, naming what was left behind |
 
 ## Generator
 

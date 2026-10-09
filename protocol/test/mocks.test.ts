@@ -59,6 +59,20 @@ describe("mock harness", () => {
     expect(received).toEqual(expected);
   });
 
+  it("repeats a revised goal back for the task the app interrupted", async () => {
+    const path = socketPath();
+    const harness = await startMockHarness({ socketPath: path, script: "goal-revision", speed: 0, quiet: true });
+    cleanups.push(() => harness.close());
+    const params = exampleOf("ReviseGoalParams") as { taskId: string };
+    let restated: (payload: unknown) => void = () => {};
+    const repeatBack = new Promise<unknown>((resolve) => (restated = resolve));
+    const app = await appClient(path, (event, payload) => {
+      if (event === "goalRestated") restated(payload);
+    });
+    await app.request("reviseGoal", params);
+    expect(await repeatBack).toMatchObject({ taskId: params.taskId });
+  });
+
   it("returns a structured error for a method set to fail, the same shape the real harness returns", async () => {
     const path = socketPath();
     const harness = await startMockHarness({ socketPath: path, fail: { submitGoal: "bridgeDown" }, quiet: true });

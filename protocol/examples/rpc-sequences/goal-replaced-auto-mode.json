@@ -1,0 +1,72 @@
+{
+  "spec": "SPEC-06 r17",
+  "scenario": "User replaces the goal in Auto mode",
+  "steps": [
+    {
+      "call": "pause",
+      "params": {
+        "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+        "scope": "uiLanes"
+      },
+      "result": {}
+    },
+    {
+      "call": "reviseGoal",
+      "params": {
+        "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+        "transcript": "sorry, not Notes, put it in Keynote",
+        "autoMode": true
+      },
+      "result": {}
+    },
+    {
+      "event": "goalRestated",
+      "payload": {
+        "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+        "text": "I'll put the meeting summary in a new Keynote slide instead.",
+        "autoMode": true
+      }
+    },
+    {
+      "event": "speak",
+      "payload": {
+        "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+        "text": "Okay, I'll put it in Keynote instead."
+      }
+    },
+    {
+      "event": "taskStatusChanged",
+      "payload": {
+        "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+        "status": "running"
+      }
+    },
+    {
+      "call": "getTask",
+      "params": {
+        "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8"
+      },
+      "result": {
+        "task": {
+          "id": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+          "originDeviceId": "mac-ana",
+          "goal": "write a summary of the meeting in a new note",
+          "goalRevisions": [
+            {
+              "userSaid": "sorry, not Notes, put it in Keynote",
+              "goal": "put the meeting summary in a new Keynote slide",
+              "confirmedAt": "2026-10-10T15:42:05+08:00"
+            }
+          ],
+          "confirmedGoal": "put the meeting summary in a new Keynote slide",
+          "status": "running",
+          "plan": [],
+          "createdAt": "2026-10-10T15:40:00+08:00",
+          "updatedAt": "2026-10-10T15:42:05+08:00"
+        },
+        "subtasks": [],
+        "steps": []
+      }
+    }
+  ]
+}

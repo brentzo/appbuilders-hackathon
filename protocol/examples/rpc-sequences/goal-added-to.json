@@ -1,0 +1,47 @@
+{
+  "spec": "SPEC-06",
+  "scenario": "User adds to the goal",
+  "steps": [
+    {
+      "call": "pause",
+      "params": {
+        "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+        "scope": "uiLanes"
+      },
+      "result": {}
+    },
+    {
+      "call": "reviseGoal",
+      "params": {
+        "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+        "transcript": "and also email it to Ana"
+      },
+      "result": {}
+    },
+    {
+      "event": "goalRestated",
+      "payload": {
+        "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+        "text": "I'll export your Keynote deck as a PDF and email it to Ana. Should I go ahead?"
+      }
+    },
+    {
+      "call": "replyToConfirmation",
+      "params": {
+        "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+        "reply": {
+          "kind": "button",
+          "choice": "goAhead"
+        }
+      },
+      "result": {}
+    },
+    {
+      "event": "taskStatusChanged",
+      "payload": {
+        "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+        "status": "running"
+      }
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "spec": "SPEC-06",
+  "scenario": "Interrupting an approval card",
+  "steps": [
+    {
+      "call": "showApprovalCard",
+      "params": {
+        "approval": {
+          "id": "4d5e6f7a-8b9c-4d0e-9f2a-3b4c5d6e7f80",
+          "stepId": "3c4d5e6f-7a8b-4c9d-8e1f-2a3b4c5d6e7f",
+          "kind": "send",
+          "recipients": [
+            "ana@example.com"
+          ],
+          "text": "I'm about to send this email to Ana. Should I send it?",
+          "requestedAt": "2026-10-10T15:42:00+08:00",
+          "expiresAt": "2026-10-10T15:47:00+08:00"
+        }
+      },
+      "result": {
+        "approved": false,
+        "method": "voice",
+        "decidedAt": "2026-10-10T15:42:10+08:00"
+      }
+    },
+    {
+      "call": "reviseGoal",
+      "params": {
+        "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+        "transcript": "no wait, send it to Ben instead"
+      },
+      "result": {}
+    },
+    {
+      "event": "goalRestated",
+      "payload": {
+        "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+        "text": "I'll send the email to Ben instead of Ana. Should I go ahead?"
+      }
+    },
+    {
+      "call": "replyToConfirmation",
+      "params": {
+        "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+        "reply": {
+          "kind": "button",
+          "choice": "goAhead"
+        }
+      },
+      "result": {}
+    },
+    {
+      "event": "taskStatusChanged",
+      "payload": {
+        "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+        "status": "running"
+      }
+    },
+    {
+      "call": "showApprovalCard",
+      "params": {
+        "approval": {
+          "id": "5e6f7a8b-9c0d-4e1f-8a2b-3c4d5e6f7a81",
+          "stepId": "4d5e6f7a-8b9c-4d0e-9f1a-2b3c4d5e6f70",
+          "kind": "send",
+          "recipients": [
+            "ben@example.com"
+          ],
+          "text": "I'm about to send this email to Ben. Should I send it?",
+          "requestedAt": "2026-10-10T15:43:00+08:00",
+          "expiresAt": "2026-10-10T15:48:00+08:00"
+        }
+      }
+    }
+  ]
+}

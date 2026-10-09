@@ -1,0 +1,7 @@
+{
+  "description": "A revised goal repeated back after the app interrupts a task with reviseGoal (SPEC-06 r17).",
+  "trigger": "reviseGoal",
+  "events": [
+    { "afterMs": 600, "event": "goalRestated", "payload": { "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8", "text": "I already opened a new note with some text in it. I'll leave it there. I'll put the meeting summary in a new Keynote slide instead. Should I go ahead?" } }
+  ]
+}
