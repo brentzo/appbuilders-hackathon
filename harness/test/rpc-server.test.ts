@@ -63,7 +63,7 @@ describe("the local RPC server", () => {
     client.close();
   });
 
-  it("answers hello with its protocol version, and refuses another version", async () => {
+  it("answers hello with its protocol version, and refuses another version with a UserError", async () => {
     server = await HarnessRpcServer.start({ socketPath, logger });
     const client = await rawClient(socketPath);
     client.send({ jsonrpc: "2.0", id: 1, method: "hello", params: { protocolVersion: PROTOCOL_VERSION } });
@@ -71,8 +71,11 @@ describe("the local RPC server", () => {
 
     const other = await rawClient(socketPath);
     other.send({ jsonrpc: "2.0", id: 1, method: "hello", params: { protocolVersion: PROTOCOL_VERSION + 1 } });
-    // ProtocolVersion is a const in the contract, so another version fails param validation before the handler runs.
-    expect(await other.next()).toMatchObject({ id: 1, error: { code: -32602 } });
+    // HelloParams accepts any version (protocol v3), so the harness's own check answers with a UserError.
+    expect(await other.next()).toMatchObject({ id: 1, error: { code: -32000, data: { kind: "unexpected" } } });
+    expect(logger.entries).toContainEqual(
+      expect.objectContaining({ event: "rpc.versionMismatch", app: PROTOCOL_VERSION + 1, harness: PROTOCOL_VERSION }),
+    );
     expect(server.readyConnections).toBe(1);
     client.close();
     other.close();

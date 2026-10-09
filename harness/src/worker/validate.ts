@@ -1,5 +1,5 @@
 import { validate } from "@yumi/protocol";
-import type { ModelAction, WorkerInput, WorkerOutput } from "@yumi/protocol/types";
+import type { ModelAction, TreeElement, WorkerInput, WorkerOutput } from "@yumi/protocol/types";
 import { ACTION, isElementAction } from "./actions.ts";
 
 /**
@@ -41,8 +41,18 @@ function actionProblem(action: ModelAction, input: WorkerInput): string | undefi
   if (action.kind === ACTION.tool && !input.allowedTools.includes(action.call.tool)) {
     return `The tool ${action.call.tool} is not available for this step. Available tools: ${input.allowedTools.join(", ") || "none"}.`;
   }
-  if (action.kind === ACTION.visionClick && !input.observation.screenshotPath) {
-    return `There is no screenshot for this step, so ${ACTION.visionClick} at coordinates is not available. Use an element action.`;
+  // SPEC-05 r7: never type with the keyboard while a password field has focus.
+  if (action.kind === ACTION.type && focusedElement(input)?.role === "secureTextField") {
+    return `The focused element is a password field. Never type into it; use ${ACTION.ask} so the user types it.`;
+  }
+  if (action.kind === ACTION.clickAt && !input.observation.screenshotPath) {
+    return `There is no screenshot for this step, so ${ACTION.clickAt} at coordinates is not available. Use ${ACTION.click} with an element number.`;
   }
   return undefined;
+}
+
+/** The element with keyboard focus, when the Mac app reported one and it is in the tree. */
+export function focusedElement(input: WorkerInput): TreeElement | undefined {
+  const focused = input.observation.focused;
+  return focused === undefined ? undefined : input.observation.elements.find((e) => e.n === focused);
 }

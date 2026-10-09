@@ -33,7 +33,7 @@ export function workerOutputSchemaFor(input: WorkerInput): JsonSchema {
   });
   if ((toolCall["oneOf"] as JsonSchema[]).length === 0) removeAction(ACTION_TYPE_NAME.tool);
 
-  if (!input.observation.screenshotPath) removeAction(ACTION_TYPE_NAME.visionClick);
+  if (!input.observation.screenshotPath) removeAction(ACTION_TYPE_NAME.clickAt);
 
   return pruneUnreachable(schema);
 }

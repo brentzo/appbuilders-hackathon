@@ -24,7 +24,7 @@ describe("the schema bundle", () => {
     expect(refs.every((ref) => ref.startsWith('"$ref":"#/$defs/'))).toBe(true);
     const check = compile(schema);
     expect(check(example("WorkerOutput.press-export"))).toBe(true);
-    expect(check({ action: { kind: "axPress", element: 4, text: "x" } })).toBe(false);
+    expect(check({ action: { kind: "click", element: 4, text: "x" } })).toBe(false);
   });
 
   it("drops uniqueItems for the model, which llguidance 1.9.1 rejects", () => {
@@ -35,10 +35,11 @@ describe("the schema bundle", () => {
   it("narrows the model schema to the step but still accepts the step's valid actions", () => {
     const input = exampleWorkerInput();
     const check = compile(workerOutputSchemaFor(input));
-    expect(check({ action: { kind: "axPress", element: 4 } })).toBe(true);
+    expect(check({ action: { kind: "click", element: 4 } })).toBe(true);
     expect(check({ action: { kind: "tool", call: { tool: "open_app", bundleId: "com.apple.Notes" } } })).toBe(true);
-    expect(check({ action: { kind: "axPress", element: 6 } })).toBe(false);
+    expect(check({ action: { kind: "click", element: 6 } })).toBe(false);
     expect(check({ action: { kind: "tool", call: { tool: "move_to_trash", paths: ["/a"] } } })).toBe(false);
+    expect(check({ action: { kind: "clickAt", x: 1, y: 1 } })).toBe(false);
     expect(check({ action: { kind: "click", x: 1, y: 1 } })).toBe(false);
   });
 
@@ -46,7 +47,7 @@ describe("the schema bundle", () => {
     const input = { ...exampleWorkerInput(), allowedTools: [], observation: { windowTitle: "Empty", elements: [] } };
     const check = compile(workerOutputSchemaFor(input));
     expect(check({ action: { kind: "ask", question: "Which deck?" } })).toBe(true);
-    expect(check({ action: { kind: "axPress", element: 1 } })).toBe(false);
+    expect(check({ action: { kind: "click", element: 1 } })).toBe(false);
     expect(check({ action: { kind: "tool", call: { tool: "open_app", bundleId: "x" } } })).toBe(false);
   });
 });

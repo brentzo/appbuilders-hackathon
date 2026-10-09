@@ -8,7 +8,7 @@ import { runWorkerStep } from "../src/worker/step.ts";
 import { exampleWorkerInput, modelConfig, tempDir } from "./helpers.ts";
 import { startMockModelServer, type MockModelServer } from "./mock-model-server.ts";
 
-const PRESS_EXPORT = JSON.stringify({ action: { kind: "axPress", element: 4 } });
+const PRESS_EXPORT = JSON.stringify({ action: { kind: "click", element: 4 } });
 
 let server: MockModelServer;
 let logger: MemoryLogger;
@@ -36,7 +36,7 @@ describe("a worker step", () => {
 
     expect(result.outcome).toBe("ok");
     if (result.outcome !== "ok") return;
-    expect(result.output).toEqual({ action: { kind: "axPress", element: 4 } });
+    expect(result.output).toEqual({ action: { kind: "click", element: 4 } });
     expect(result.attempts).toEqual([{ outcome: "ok", durationMs: expect.any(Number), usage: expect.any(Object) }]);
     expect(server.requests).toHaveLength(1);
 
@@ -70,7 +70,8 @@ describe("a worker step", () => {
     expect(schema.$defs["ElementNumber"]).toEqual({ type: "integer", enum: [1, 2, 3, 4, 5] });
     expect(Object.keys(schema.$defs)).toContain("OpenAppCall");
     expect(Object.keys(schema.$defs)).not.toContain("MoveToTrashCall");
-    expect(Object.keys(schema.$defs)).not.toContain("ClickAction");
+    expect(Object.keys(schema.$defs)).not.toContain("ClickAtAction");
+    expect(Object.keys(schema.$defs)).toContain("ClickAction");
     expect(JSON.stringify(schema)).not.toContain("uniqueItems");
   });
 
@@ -131,14 +132,16 @@ describe("a worker step", () => {
 
   describe("rejects actions that do not fit the step", () => {
     const cases: [string, unknown, string][] = [
-      ["an element that is not on screen", { action: { kind: "axPress", element: 9 } }, "Element 9 is not on the screen"],
+      ["an element that is not on screen", { action: { kind: "click", element: 9 } }, "Element 9 is not on the screen"],
       [
         "a tool outside the lane's subset",
         { action: { kind: "tool", call: { tool: "move_to_trash", paths: ["/Users/a/b.txt"] } } },
         "The tool move_to_trash is not available",
       ],
-      ["a vision click without a screenshot", { action: { kind: "click", x: 10, y: 10 } }, "no screenshot"],
-      ["two actions", [{ action: { kind: "axPress", element: 1 } }, { action: { kind: "axPress", element: 2 } }], "schema"],
+      ["a vision click without a screenshot", { action: { kind: "clickAt", x: 10, y: 10 } }, "no screenshot"],
+      ["the v2 element press", { action: { kind: "axPress", element: 4 } }, "schema"],
+      ["a click at coordinates instead of clickAt", { action: { kind: "click", x: 10, y: 10 } }, "schema"],
+      ["two actions", [{ action: { kind: "click", element: 1 } }, { action: { kind: "click", element: 2 } }], "schema"],
       ["no action", { note: "nothing to do" }, "schema"],
       ["an empty reply", null, "empty"],
     ];
@@ -159,6 +162,45 @@ describe("a worker step", () => {
       expect(result.outcome).toBe("invalidOutput");
       if (result.outcome === "invalidOutput") expect(result.validationError).toContain("password field");
     });
+
+    it("typing while a password field has focus (SPEC-05 r7)", async () => {
+      const input = exampleWorkerInput();
+      input.observation.elements.push({ n: 6, role: "secureTextField", label: "Password", enabled: true });
+      input.observation.focused = 6;
+      const content = JSON.stringify({ action: { kind: "type", text: "hunter2" } });
+      server.reply({ kind: "content", content }, { kind: "content", content });
+      const result = await runWorkerStep(input, { client, logger });
+      expect(result.outcome).toBe("invalidOutput");
+      if (result.outcome === "invalidOutput") expect(result.validationError).toContain("password field");
+    });
+  });
+
+  it("lets the model type when an ordinary text field has focus", async () => {
+    const input = exampleWorkerInput();
+    input.observation.focused = 5;
+    server.reply({ kind: "content", content: JSON.stringify({ action: { kind: "type", text: "Q3" } }) });
+    const result = await runWorkerStep(input, { client, logger });
+    expect(result.outcome).toBe("ok");
+  });
+
+  it("shows the model the app, the focused element, and the sheet in front (SPEC-05 r15)", async () => {
+    const input = exampleWorkerInput();
+    input.observation.focused = 5;
+    input.observation.layer = { kind: "sheet", defaultButton: 3, cancelButton: 4 };
+    server.reply({ kind: "content", content: PRESS_EXPORT });
+    await runWorkerStep(input, { client, logger });
+    const text = userText(server.requests[0]!);
+    expect(text).toContain('App: "Keynote"');
+    expect(text).toContain("In front: a sheet, default button [3], cancel button [4]");
+    expect(text).toContain("Keyboard focus: [5]");
+  });
+
+  it("says nothing about a layer when the window itself is in front", async () => {
+    const input = exampleWorkerInput();
+    input.observation.layer = { kind: "window" };
+    server.reply({ kind: "content", content: PRESS_EXPORT });
+    await runWorkerStep(input, { client, logger });
+    expect(userText(server.requests[0]!)).not.toContain("In front:");
   });
 
   it("refuses an input that breaks the WorkerInput contract", async () => {
