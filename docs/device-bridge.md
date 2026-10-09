@@ -87,19 +87,27 @@ Message kinds inside the payload:
 
 | Kind | Envelope type | Direction | Expires after |
 |---|---|---|---|
-| Tool call (`set_alarm`, `set_timer`, `open_app`) | command | brain to tool provider | 2 minutes |
-| Tool result | result | back to the caller | 2 minutes |
-| Delegated goal | command | origin device to Mac | 2 minutes, sent only while the Mac is online |
-| Progress | event | executing device to origin device | 2 minutes |
-| Approval request | command | executing device to origin device | 5 minutes |
-| Approval response | result | origin device back | 2 minutes |
-| Pause, cancel | command | either way | 2 minutes |
-| Pause confirmed | result | back to the sender | 2 minutes |
-| Tool list | event | on connect | 2 minutes |
-| Busy (goal queued behind another task) | result | back to the origin device | 2 minutes |
+| `toolList` | event | each device to its paired device on connect | 2 minutes |
+| `toolCall` | command | brain to tool provider | 2 minutes |
+| `toolResult` | result | tool provider back to the caller | 2 minutes |
+| `delegateGoal` | command | origin device to Mac, sent only while the Mac is online | 2 minutes |
+| `goalAccepted` (started or queued behind the active task) | result | Mac back to the origin device | 2 minutes |
+| `progress` | event | executing device to origin device, on changes and at least every 30 seconds | 2 minutes |
+| `goalFinished` | event | executing device to origin device | 2 minutes |
+| `approvalRequest` | command | executing device to origin device | 5 minutes |
+| `approvalResponse` | result | origin device back to executing device | 2 minutes |
+| `approvalCancelled` | event | executing device to origin device when pause cancels approval | 2 minutes |
+| `pause`, `resume`, `cancel` | command | either way | 2 minutes |
+| `pauseConfirmed`, `cancelConfirmed` | result | executing device back to the sender | 2 minutes |
+| `commandExpired` | result | receiving device back to the command sender | 2 minutes |
+| `ping` | command | either way, for connection tests | 2 minutes |
+| `pingResult` | result | back to the ping sender | 2 minutes |
 | Target offline, expired, not paired | relay frame, not an envelope ([pairing](../protocol/docs/pairing.md)) | relay to the sender | held 2 minutes |
 | Pairing request | relay frame, sealed with the QR code's secret | phone to Mac | open 30 seconds at the relay |
 | Paired, pairing expired | relay frame, not an envelope ([pairing](../protocol/docs/pairing.md)) | relay to the phone or Mac | held 2 minutes |
+
+All payload kinds and their envelope-type checks are defined in [protocol/README.md](../protocol/README.md#cross-device-messages).
+Result correlation uses encrypted `replyTo`, so the relay cannot link a result to its command.
 
 Schemas: [OBJ-02](../objectives/OBJ-02-bridge-envelope-and-crypto.md) (envelope and crypto) and [OBJ-25](../objectives/OBJ-25-cross-device-messages.md) (message kinds).
 

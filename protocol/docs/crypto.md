@@ -104,6 +104,11 @@ The 6-minute limit is the longest expiry, 5 minutes for an approval request, plu
 Without it, a sender could make a command that never expires.
 The receiver then checks the expiry for the payload's kind once it is decrypted ([OBJ-25](../../objectives/OBJ-25-cross-device-messages.md)).
 Every device uses the operating system's network-synced clock.
+`getMessageExpiryKind` in `src/messages.ts` maps the payload kind to the generated command, approval-request, result, or event duration.
+`validateMessageExpiry` checks that the message is still live and that no more than its duration plus the 60-second clock-skew allowance remains.
+An `approvalRequest` also carries its five-minute approval deadline, which must be exactly five minutes after `requestedAt`.
+An expired command delivered to its receiver is never run; the receiver returns an encrypted `commandExpired` result with `ErrorKind` `commandExpired`.
+The relay's `expired` frame remains for messages that expired before delivery.
 
 A message that opens is run at most once: the receiver remembers its `id` and, on a repeat, resends the stored result instead of running it again (SPEC-08 r8).
 

@@ -6,8 +6,7 @@ If two products exchange data, the shape of that data is defined here, once.
 Owner: Jepoy.
 
 Status: task record, action, tool, observation, approval, action log, error, and local RPC schemas are built ([OBJ-01](../objectives/OBJ-01-task-record-schemas.md)).
-The bridge envelope, relay frames, pairing, and crypto are built ([OBJ-02](../objectives/OBJ-02-bridge-envelope-and-crypto.md)).
-Cross-device message kinds are next ([OBJ-25](../objectives/OBJ-25-cross-device-messages.md)).
+The bridge envelope, relay frames, pairing, crypto, and cross-device message kinds are built ([OBJ-02](../objectives/OBJ-02-bridge-envelope-and-crypto.md), [OBJ-25](../objectives/OBJ-25-cross-device-messages.md)).
 
 ## Responsibilities
 
@@ -31,7 +30,7 @@ Cross-device message kinds are next ([OBJ-25](../objectives/OBJ-25-cross-device-
 |---|---|
 | `schemas/*.json` | JSON Schema (draft 2020-12), the source of truth. Related types are grouped under `$defs`, and type names are unique across files. |
 | `examples/<Type>.<label>.json` | Example values. Every object and union type has one, every union variant appears in one, and every one must validate. |
-| `src/` | `validate(typeName, value)`, the local RPC peer (`src/rpc.ts`), and the reference bridge crypto (`src/crypto.ts`) for TypeScript products. |
+| `src/` | `validate(typeName, value)`, cross-device payload and expiry checks (`src/messages.ts`), the local RPC peer (`src/rpc.ts`), and the reference bridge crypto (`src/crypto.ts`) for TypeScript products. |
 | `docs/` | [crypto.md](docs/crypto.md) (keys, envelope sealing, expiry, test vectors) and [pairing.md](docs/pairing.md) (relay connection, pairing, delivery, unpairing). |
 | `vectors/` | Cross-language crypto test vectors that the Swift and Kotlin clients must reproduce. |
 | `mocks/` | The mock harness and the mock Mac app, with scripted event sequences in `mocks/scripts/`. |
@@ -40,7 +39,7 @@ Cross-device message kinds are next ([OBJ-25](../objectives/OBJ-25-cross-device-
 | `generated/swift/YumiProtocol.swift` | Swift types, for the Mac app and later the iPhone app. |
 | `generated/kotlin/yumi/protocol/YumiProtocol.kt` | Kotlin types (kotlinx.serialization), for the Android app. |
 | `scripts/` | The generate command and the Swift and Kotlin compile checks. |
-| `test/` | Validation, error kind, RPC, mock, example, and generator tests. |
+| `test/` | Validation, error kind, message, RPC, mock, example, sequence, and generator tests. |
 
 | Schema file | Types |
 |---|---|
@@ -54,8 +53,43 @@ Cross-device message kinds are next ([OBJ-25](../objectives/OBJ-25-cross-device-
 | `approval.json` | Approval, ApprovalKind, FileSummary, ApprovalDecision, ApprovalMethod |
 | `action-log.json` | ActionLogEntry |
 | `errors.json` | ErrorKind, UserError |
+| `messages.json` | Payload and every encrypted cross-device message kind, plus phone tool descriptions and argument schemas |
 | `rpc.json` | Every local RPC method and event (listed under `x-rpc`), with their params, results, and error data |
 | `bridge.json` | Envelope, EnvelopeType, Signature, SealedPayload, Key32, DeviceName, DevicePlatform, PairingOffer, PairRequest, PairAccept, BridgeFrame and one frame type per variant, RefusedReason, the expiry constants, and the pairing constants (`PairingOfferSeconds`, `PairingAnswerSeconds`) |
+
+## Cross-device messages
+
+`Payload` in `schemas/messages.json` is the closed union encrypted inside an `Envelope`.
+The payload `kind` must use the envelope type listed below; `replyTo` is carried separately inside the encrypted body for every result.
+Results and events may be held by the relay for up to two minutes, but commands are never queued by the relay.
+Goals that wait for an offline device stay on the origin device ([SPEC-09 r15](../specs/09-cross-device-routing.md)).
+
+| Payload kind | Envelope type | Expiry policy | Direction / purpose |
+|---|---|---|---|
+| `toolList` | event | 2 minutes | Device advertises tool names, descriptions, and argument schemas on connect |
+| `toolCall` | command | 2 minutes | Brain calls one tool on its paired device |
+| `toolResult` | result | 2 minutes | Tool provider returns success data or an `ErrorKind` |
+| `delegateGoal` | command | 2 minutes | Origin sends the confirmed whole goal to the Mac while it is online |
+| `goalAccepted` | result | 2 minutes | Mac says it started the goal or queued it behind the active task |
+| `progress` | event | 2 minutes | Executing device reports changes and at least a 30-second heartbeat |
+| `goalFinished` | event | 2 minutes | Executing device returns final status and spoken summary |
+| `approvalRequest` | command | 5 minutes | Executing device asks for approval on the origin device |
+| `approvalResponse` | result | 2 minutes | Origin returns the decision; delete approvals require a tap |
+| `approvalCancelled` | event | 2 minutes | Executing device reports that pause cancelled the pending approval |
+| `pause`, `resume`, `cancel` | command | 2 minutes | Either device controls a delegated goal |
+| `pauseConfirmed`, `cancelConfirmed` | result | 2 minutes | Executing device confirms the control action |
+| `commandExpired` | result | 2 minutes | Receiver tells the sender that it did not run an expired command |
+| `ping` | command | 2 minutes | Either device tests its peer connection |
+| `pingResult` | result | 2 minutes | Peer answers the ping |
+
+`validateMessagePayload(payload, envelopeType)` rejects unknown kinds and a kind carried under the wrong envelope type.
+`getMessageExpiryKind(payload, envelopeType)` selects the matching generated expiry constant.
+`validateMessageExpiry(payload, envelopeType, expiresAt, now)` rejects stale messages and expiries too far in the future.
+`isApprovalDecisionAllowed(approvalKind, decision)` is the receiver-side guard against approving a delete by voice.
+The `toolResult` schema rejects free-text failures; failures use `ErrorKind`.
+
+Individual payload examples live in `examples/Payload.*.json` and `examples/PhoneTool*.json`.
+The end-to-end JSON sequences in `examples/sequences/` cover the Mac-to-phone alarm, phone-to-Mac Keynote export, and phone Stop with pause confirmation.
 
 ## Commands
 
@@ -85,6 +119,7 @@ CI runs all of the above except the mocks ([.github/workflows/protocol.yml](../.
 - Import types from `@yumi/protocol/types`, and validation and the RPC peer (`RpcPeer`, `RpcFailure`, `Handler`) from `@yumi/protocol`.
 - Validate every value that crosses a process or device boundary, including every model output (`WorkerOutput`).
 - Import the bridge crypto from `@yumi/protocol/crypto`: `generateDeviceKeys`, `sealEnvelope`, `openEnvelope`, `expiresAt`, `sealPairRequest`, `openPairRequest`, and the signing-bytes builders for relay authentication, pairing accept, and unpair.
+- Import cross-device payload validation and expiry helpers from `@yumi/protocol/messages`.
 
 **Swift (Mac app)**
 
@@ -258,7 +293,7 @@ A sheet usually has no `AXTitle`.
 |---|---|---|---|
 | [OBJ-01](../objectives/OBJ-01-task-record-schemas.md) | Task record schemas and cross-team contracts | Jepoy | done |
 | [OBJ-02](../objectives/OBJ-02-bridge-envelope-and-crypto.md) | Bridge envelope and end-to-end crypto | Jepoy | done |
-| [OBJ-25](../objectives/OBJ-25-cross-device-messages.md) | Cross-device message kinds | Jepoy | todo |
+| [OBJ-25](../objectives/OBJ-25-cross-device-messages.md) | Cross-device message kinds | Jepoy | blocked |
 | [OBJ-29](../objectives/OBJ-29-protocol-mac-fixes.md) | Protocol v3, fit the contracts to real macOS | Brent | done |
 | [OBJ-31](../objectives/OBJ-31-unpair-delivery-ack-contract.md) | Define unpair delivery acknowledgement | Jepoy | done |
 | [OBJ-33](../objectives/OBJ-33-pairing-response-timeout-contract.md) | Align the pairing response timeout contract | Jepoy | in-progress |
