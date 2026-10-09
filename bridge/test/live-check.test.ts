@@ -28,4 +28,25 @@ describe("live check (OBJ-30)", () => {
     expect(results[0]).toMatchObject({ name: "Devices authenticate", ok: false });
     expect(results[0]!.detail).not.toBe("");
   });
+
+  it("reports when cleanup cannot remove a test pairing", async () => {
+    const fixture = await openRelayFixture(undefined, () => new Date(Date.now() + 120_000));
+    const scenario = {
+      name: "cleanup failure is reported",
+      spec: "live-check cleanup",
+      run: async (context: Parameters<(typeof liveScenarios)[number]["run"]>[0]) => {
+        await context.paired();
+      },
+    };
+    liveScenarios.push(scenario);
+    try {
+      const results = await runLiveCheck(fixture.relay.url(), { advance: async () => undefined }, [scenario.name]);
+      expect(results).toHaveLength(1);
+      expect(results[0]).toMatchObject({ ok: false });
+      expect(results[0]!.detail).toMatch(/cleanup failed/i);
+    } finally {
+      liveScenarios.splice(liveScenarios.indexOf(scenario), 1);
+      await fixture.close();
+    }
+  });
 });

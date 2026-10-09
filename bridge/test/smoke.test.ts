@@ -20,7 +20,7 @@ describe("bridge relay smoke", () => {
     }
   });
 
-  it("reports its protocol version and deployed commit on /health, so a live check can name the relay it ran against (OBJ-30.5)", async () => {
+  it("reports its protocol version and deployed commit on /health, so a live check can name the relay it ran against (OBJ-30.7)", async () => {
     const fixture = await openRelayFixture(undefined, undefined, "0487067");
     try {
       const response = await fetch(fixture.relay.url().replace("ws://", "http://").replace(/\/$/, "") + "/health");

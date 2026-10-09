@@ -80,8 +80,9 @@ export class Context {
     return sleep(SETTLE_MS);
   }
 
-  /** Unpairs every pair this scenario made, so a deployed relay keeps no test pairings, then closes every socket. */
+  /** Attempts every unpair and socket close, then throws if any cleanup failed. */
   async close(): Promise<void> {
+    const errors: string[] = [];
     for (const { mac, phone } of this.pairs) {
       try {
         const cleaner = await this.ready(phone.keys);
@@ -89,11 +90,20 @@ export class Context {
         const unpair = makeUnpair(cleaner, mac, new Date(Date.now() + 60_000).toISOString());
         cleaner.send(unpair);
         await cleaner.next("ack");
-      } catch {
-        // Best effort: a scenario that failed half way may have left nothing to undo.
+      } catch (error) {
+        errors.push(error instanceof Error ? error.message : String(error));
       }
     }
-    await Promise.all(this.devices.map((device) => device.close()));
+    await Promise.all(
+      this.devices.map(async (device) => {
+        try {
+          await device.close();
+        } catch (error) {
+          errors.push(error instanceof Error ? error.message : String(error));
+        }
+      }),
+    );
+    if (errors.length) throw new Error(`cleanup failed: ${errors.join("; ")}`);
   }
 }
 
@@ -300,7 +310,12 @@ export async function runLiveCheck(url: string, clock: Clock, only?: string[], o
     } catch (error) {
       detail = error instanceof Error ? error.message : String(error);
     } finally {
-      await context.close().catch(() => undefined);
+      try {
+        await context.close();
+      } catch (error) {
+        const cleanupError = error instanceof Error ? error.message : String(error);
+        detail = detail ? `${detail}; ${cleanupError}` : cleanupError;
+      }
     }
     results.push({ name: scenario.name, spec: scenario.spec, ok: detail === "", detail, ms: Date.now() - started });
   }
