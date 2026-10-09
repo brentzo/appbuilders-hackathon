@@ -35,7 +35,7 @@ Permission onboarding is the first thing users see, so it must be clear and frie
 
 - [mac/README.md](../mac/README.md) and [harness/README.md](../harness/README.md).
 - [SPEC-11](../specs/11-user-facing-errors.md), "Screen permission missing (Mac)", "Accessibility permission missing (Mac)", "Microphone permission missing", and "Unexpected".
-- [OBJ-01](OBJ-01-task-record-schemas.md): the RPC contracts and the mock harness. Build against the mock; [OBJ-03](OBJ-03-harness-skeleton.md) (Brent) provides the real harness later.
+- [OBJ-01](OBJ-01-task-record-schemas.md): the RPC contracts and the mock harness. Build against the mock; [OBJ-03](OBJ-03-harness-skeleton.md) (Brent) provides the real harness later, and [OBJ-27](OBJ-27-mac-native-services.md) task OBJ-27.8 switches the app to it.
 
 ## Tasks
 
@@ -46,8 +46,7 @@ Permission onboarding is the first thing users see, so it must be clear and frie
 - [x] **OBJ-14.5** Connect to the harness's JSON-RPC socket, with reconnect. Subscribe to its event stream.
 - [x] **OBJ-14.6** Map structured error kinds from the harness to the SPEC-11 copy and buttons in one place (an error presenter). Unknown kinds use the "Unexpected" copy.
 - [x] **OBJ-14.7** Settings window: wake word on or off, push-to-talk shortcut, demo mode, and the visible cursor cap. Store them and send relevant ones to the harness.
-- [ ] **OBJ-14.8** When [OBJ-03](OBJ-03-harness-skeleton.md) is done, switch from the mock harness to the real one and re-check the expectations.
-- [x] **OBJ-14.9** Check light mode, dark mode, and every display scale for the menu, onboarding, and settings, and fix anything that looks off.
+- [x] **OBJ-14.8** Check light mode, dark mode, and every display scale for the menu, onboarding, and settings, and fix anything that looks off.
 
 ## Expectations
 

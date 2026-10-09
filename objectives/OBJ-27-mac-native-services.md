@@ -8,7 +8,7 @@ specs: [SPEC-03, SPEC-08]
 status: todo
 priority: p0
 depends-on: [OBJ-14]
-integrates-with: [OBJ-07, OBJ-08, OBJ-21]
+integrates-with: [OBJ-03, OBJ-07, OBJ-08, OBJ-21]
 tags: [objective, p0, mac, gui, bridge]
 ---
 
@@ -49,6 +49,7 @@ Each service follows a contract from [OBJ-01](OBJ-01-task-record-schemas.md), so
 - [ ] **OBJ-27.5** Pairing screen: call `startPairing`, show the QR code, then "Paired with <device name>" when done. Add "Unpair" in settings.
 - [ ] **OBJ-27.6** Show the bridge connection state (connected, reconnecting, offline) in the menu bar from `bridgeStateChanged`, and the SPEC-11 "Bridge down" and "Unpaired device" copy from `userError` events.
 - [ ] **OBJ-27.7** Test each method with the mock harness and by hand against Chrome, Finder, Mail, Keynote, and one app without accessibility support.
+- [ ] **OBJ-27.8** When [OBJ-03](OBJ-03-harness-skeleton.md) is done, switch the Mac app from the mock harness to the real one (a launcher next to `MockHarnessLauncher` in `mac/Yumi/Harness/HarnessLauncher.swift`), and re-check the [OBJ-14](OBJ-14-mac-app-shell.md) expectations against it. Moved here from OBJ-14 so OBJ-14 could finish before the real harness exists.
 
 ## Expectations
 
