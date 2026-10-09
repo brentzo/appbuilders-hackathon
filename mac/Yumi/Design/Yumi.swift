@@ -1,6 +1,6 @@
 // Generated from character/design/tokens.json by character/design/build.py. Do not edit by hand.
-// Copied into the Mac app with one change: every declaration is `nonisolated`, because the app
-// target defaults to the main actor and AppKit resolves the dynamic colors off the main thread.
+// Every declaration is nonisolated: app targets that default to the main actor would otherwise
+// isolate the dynamic colors, which AppKit resolves off the main thread.
 import AppKit
 import SwiftUI
 
@@ -95,12 +95,23 @@ nonisolated public enum YumiRadius {
 }
 
 nonisolated public enum YumiMotion {
-    public static let move: Double = 0.3
+    /// A move takes moveMin for a short hop, growing with distance to moveMax at moveFar points.
+    public static let moveMin: Double = 0.35
+    public static let moveMax: Double = 0.7
+    public static let moveFar: CGFloat = 1200
     public static let pounce: Double = 0.3
     public static let fadeOut: Double = 1.0
     public static let panel: Double = 0.35
-    /// The cursor's eased move. With Reduce Motion on, use a plain glide instead.
-    public static let moveAnimation = Animation.timingCurve(0.25, 0.85, 0.3, 1, duration: move)
+    /// The ease-in-out curve of a move, as cubic-bezier control points.
+    public static let easing: (Double, Double, Double, Double) = (0.65, 0, 0.35, 1)
+    /// How long a move of `distance` points takes.
+    public static func moveDuration(distance: CGFloat) -> Double {
+        moveMin + (moveMax - moveMin) * Double(min(max(distance / moveFar, 0), 1))
+    }
+    /// The cursor's eased move over `distance`. With Reduce Motion on, use a straight glide instead.
+    public static func moveAnimation(distance: CGFloat) -> Animation {
+        Animation.timingCurve(easing.0, easing.1, easing.2, easing.3, duration: moveDuration(distance: distance))
+    }
 }
 
 nonisolated private func nsColor(_ hex: UInt32) -> NSColor {
