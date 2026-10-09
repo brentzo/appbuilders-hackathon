@@ -3,6 +3,10 @@
 ///
 /// Only the rows the app shell uses so far are here. The error presenter (OBJ-14.6) adds the rest
 /// and maps the harness's structured error kinds to them, once the protocol defines those kinds.
+/// TEMPORARY: copy keys for the app shell until OBJ-01 defines the protocol's `ErrorKind` and its
+/// generated Swift type exists. This is not a contract type and must not grow into one.
+/// OBJ-14.6 maps the generated `ErrorKind` onto these copy entries (or replaces this enum with it)
+/// rather than adding a second error-kind enum next to it.
 enum UserErrorKind: CaseIterable, Sendable {
     case screenPermissionMissing
     case accessibilityPermissionMissing
