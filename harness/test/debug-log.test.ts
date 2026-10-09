@@ -171,7 +171,7 @@ function scriptedModel(model: Model) {
       return content({ goal: model.restate ?? "rename the invoices in your Downloads folder" });
     if (system === CLASSIFY_SYSTEM_PROMPT) return content({ reply: model.classify ?? "confirm" });
     if (system === PLANNER_SYSTEM_PROMPT) return content(plans.length > 1 ? plans.shift() : plans[0]);
-    if (system === SUMMARY_SYSTEM_PROMPT) return content({ summary: "Done. I looked in your Downloads folder." });
+    if (system === SUMMARY_SYSTEM_PROMPT) return content({ summary: "Your Downloads folder has one file, invoice-october.pdf." });
     workerRequests.push(request);
     return worker.length > 1 ? worker.shift()! : worker[0]!;
   });
@@ -401,7 +401,7 @@ describe("Debug mode on: a failed goal can be explained from the detailed log al
     expect(entries.find((e) => e.event === "subtask.ended")).toMatchObject({ subtaskId, outcome: "finished" });
     expect(entries.find((e) => e.event === "task.done")).toMatchObject({
       taskId,
-      summary: "Done. I looked in your Downloads folder.",
+      summary: "Your Downloads folder has one file, invoice-october.pdf.",
     });
     client.close();
   });

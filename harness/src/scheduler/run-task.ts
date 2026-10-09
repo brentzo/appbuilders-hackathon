@@ -2,7 +2,7 @@ import type { DeviceId, Speak, Task, UserError, Uuid } from "@yumi/protocol/type
 import { RunControl } from "../control/run-control.ts";
 import { orchestratorTools } from "../gui/orchestrator-tools.ts";
 import { makePlan, subtasksFromPlan } from "../planner/planner.ts";
-import { summarizeTask } from "../planner/summary.ts";
+import { lookingOnlyFindings, summarizeTask } from "../planner/summary.ts";
 import { runSchedule, type ScheduleOptions, type SchedulerDeps } from "./scheduler.ts";
 
 /**
@@ -106,7 +106,9 @@ async function runPlan(
     );
   }
 
-  const summary = await summarizeTask(confirmedGoal, store.listSubtasks(taskId), model, { taskId, signal });
+  const subtasks = store.listSubtasks(taskId);
+  const findings = lookingOnlyFindings(store, subtasks);
+  const summary = await summarizeTask(confirmedGoal, subtasks, model, { taskId, signal, ...(findings ? { findings } : {}) });
   if (summary === undefined) return { outcome: "aborted" };
   store.setTaskStatus(taskId, "done", { summary });
   deps.voice.speak(task.originDeviceId, { taskId, text: summary });

@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { validate } from "@yumi/protocol";
@@ -9,7 +9,19 @@ import { ModelClient } from "../src/model/client.ts";
 import type { ChatRequest } from "../src/model/openai.ts";
 import { checkPlan, findCycle, MAX_PLAN_SUBTASKS } from "../src/planner/check.ts";
 import { makePlan, planSchemaForModel, subtasksFromPlan } from "../src/planner/planner.ts";
-import { checkSummary, FALLBACK_SUMMARY, sentenceCount, summarizeTask } from "../src/planner/summary.ts";
+import {
+  answerFromListing,
+  answersFromListing,
+  checkSummary,
+  FALLBACK_SUMMARY,
+  lookingOnlyFindings,
+  sentenceCount,
+  summarizeTask,
+  SUMMARY_SYSTEM_PROMPT,
+} from "../src/planner/summary.ts";
+import { PLANNER_SYSTEM_PROMPT } from "../src/planner/prompt.ts";
+import { startWithMac, type RunningHarness } from "./support/harness-run.ts";
+import { until } from "./support/mock-mac.ts";
 import { HELPER_OBSERVATION } from "../src/scheduler/lanes.ts";
 import { buildSubtaskResult } from "../src/scheduler/result.ts";
 import { fileHelperLane } from "../src/scheduler/lanes.ts";
@@ -385,5 +397,142 @@ describe("the parallel slots setting", () => {
     expect(loadConfig({}).model.parallelSlots).toBe(3);
     expect(loadConfig({ YUMI_MODEL_PARALLEL_SLOTS: "4" }).model.parallelSlots).toBe(4);
     expect(() => loadConfig({ YUMI_MODEL_PARALLEL_SLOTS: "0" })).toThrow("YUMI_MODEL_PARALLEL_SLOTS");
+  });
+});
+
+describe("a goal that asks for information gets the answer (SPEC-02 r9, Brent's live check 2026-10-10)", () => {
+  let dir: { path: string; cleanup: () => void };
+  let home: string;
+  let server: MockModelServer;
+  let logger: MemoryLogger;
+  let run: RunningHarness | undefined;
+
+  beforeEach(async () => {
+    dir = tempDir();
+    home = join(dir.path, "home");
+    mkdirSync(join(home, "Downloads", "Receipts"), { recursive: true });
+    for (const name of ["invoice-oct.pdf", "photo.jpg", "notes.txt"]) writeFileSync(join(home, "Downloads", name), name);
+    mkdirSync(join(home, "Documents"), { recursive: true });
+    server = await startMockModelServer();
+    logger = new MemoryLogger();
+  });
+  afterEach(async () => {
+    await run?.close();
+    run = undefined;
+    await server.close();
+    dir.cleanup();
+  });
+
+  /** Plans one helper subtask, runs the real file tools, and answers the summary with `summaries` in turn. */
+  async function listDownloads(worker: (text: string) => string, summaries: string[]) {
+    const summaryRequests: string[] = [];
+    server.respond((body) => {
+      const request = body as unknown as ChatRequest;
+      const system = request.messages[0]!.content as string;
+      const text = request.messages.at(-1)!.content as string;
+      if (system === PLANNER_SYSTEM_PROMPT) {
+        return { kind: "content", content: planJson({ ...sub("list"), instruction: "List the files in ~/Downloads." }) };
+      }
+      if (system === SUMMARY_SYSTEM_PROMPT) {
+        summaryRequests.push(request.messages[1]!.content as string);
+        return { kind: "content", content: JSON.stringify({ summary: summaries.shift() ?? "Done." }) };
+      }
+      return { kind: "content", content: worker(text) };
+    });
+    run = await startWithMac({ dir: dir.path, home, logger, model: server, lanes: { helper: fileHelperLane({ home }) } });
+    const task = run.startTask("List the files in my Downloads folder");
+    await until(() => ["done", "failed"].includes(run!.harness.store.getTask(task.id)!.status));
+    const spoken = run.mac.events.filter((e) => e.event === "speak").map((e) => (e.payload as { text: string }).text);
+    return { task: run.harness.store.getTask(task.id)!, summaryRequests, spoken };
+  }
+
+  const listThenFinish = (text: string) =>
+    JSON.stringify({
+      action: text.includes("invoice-oct.pdf")
+        ? { kind: "finish", status: "done", note: "Listed the files in Downloads." }
+        : { kind: "tool", call: { tool: "list_dir", path: "~/Downloads" } },
+    });
+
+  it("gives the summary model the real listing, with the count, and keeps an answer that uses it", async () => {
+    const { task, summaryRequests, spoken } = await listDownloads(listThenFinish, [
+      "You have 3 files and 1 folder in Downloads, including invoice-oct.pdf, notes.txt and photo.jpg.",
+    ]);
+    expect(task.status).toBe("done");
+    expect(summaryRequests[0]).toContain('The folder "Downloads" has 4 items: 3 files and 1 folders shown.');
+    expect(summaryRequests[0]).toContain('"invoice-oct.pdf", "notes.txt", "photo.jpg", "Receipts (folder)"');
+    expect(task.summary).toBe("You have 3 files and 1 folder in Downloads, including invoice-oct.pdf, notes.txt and photo.jpg.");
+    expect(spoken).toEqual([task.summary]);
+  });
+
+  it("sends back a summary that does not answer, then says the answer from the listing itself", async () => {
+    // What the model said in Brent's live check.
+    const vague = "Done. Listed the files in your Downloads folder.";
+    const { task, summaryRequests } = await listDownloads(listThenFinish, [vague, vague]);
+    expect(summaryRequests).toHaveLength(2);
+    expect(task.summary).toBe(
+      "You have 3 files and 1 folder in Downloads. Some of them are invoice-oct.pdf, notes.txt and photo.jpg.",
+    );
+    expect(sentenceCount(task.summary!)).toBeLessThanOrEqual(2);
+  });
+
+  it("says an empty folder is empty", async () => {
+    for (const name of ["invoice-oct.pdf", "photo.jpg", "notes.txt"]) rmSync(join(home, "Downloads", name));
+    rmSync(join(home, "Downloads", "Receipts"), { recursive: true });
+    const { task } = await listDownloads(
+      (text) =>
+        JSON.stringify({
+          action: text.includes("empty")
+            ? { kind: "finish", status: "done", note: "Listed." }
+            : { kind: "tool", call: { tool: "list_dir", path: "~/Downloads" } },
+        }),
+      ["Done.", "Done."],
+    );
+    expect(task.summary).toBe("Your Downloads folder is empty.");
+  });
+
+  it("leaves the summary of a task that changed something alone", async () => {
+    const { task, summaryRequests } = await listDownloads(
+      (text) =>
+        JSON.stringify({
+          action: text.includes("Created")
+            ? { kind: "finish", status: "done", note: "Wrote it." }
+            : { kind: "tool", call: { tool: "write_new_file", path: "~/Documents/List.md", content: "files" } },
+        }),
+      ["Done. I wrote List in Documents."],
+    );
+    expect(task.summary).toBe("Done. I wrote List in Documents.");
+    expect(summaryRequests[0]).not.toContain("The user asked for information");
+  });
+
+  it("reads the count past list_dir's limit and a cut output as at least", () => {
+    const store = openStore(join(dir.path, "s"), undefined, logger);
+    try {
+      const task = store.createTask({ originDeviceId: "mac-local", goal: "how many files" });
+      store.setTaskStatus(task.id, "planning", { confirmedGoal: "how many files" });
+      const { subtasks } = store.savePlan(task.id, [
+        { title: "List", instruction: "List", proposedLane: "helper", status: "ready" },
+      ]);
+      store.setSubtaskStatus(subtasks[0]!.id, "running", { lane: "helper", workerId: "helper-1", attempts: 1 });
+      const step = store.beginStep({
+        subtaskId: subtasks[0]!.id,
+        lane: "helper",
+        action: { action: { kind: "tool", call: { tool: "list_dir", path: "/Users/brent/Downloads" } }, permission: "allowed" },
+      });
+      store.finishStep(step.id, {
+        outcome: "ok",
+        observation: "Listed.",
+        toolOutput: "a.pdf\nb.pdf\n[and 498 more]",
+        log: { deviceId: "mac-local", description: "Looked in the folder Downloads" },
+      });
+      const findings = lookingOnlyFindings(store, store.listSubtasks(task.id))!;
+      expect(findings).toEqual([
+        { kind: "list", folder: "Downloads", files: ["a.pdf", "b.pdf"], folders: [], total: 500, atLeast: false },
+      ]);
+      expect(answerFromListing(findings)).toBe("You have 500 items in Downloads. Some of them are a.pdf and b.pdf.");
+      expect(answersFromListing("You have 500 things there.", findings)).toBe(true);
+      expect(answersFromListing("Done. Listed the files in your Downloads folder.", findings)).toBe(false);
+    } finally {
+      store.close();
+    }
   });
 });
