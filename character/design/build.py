@@ -106,6 +106,15 @@ sw += ["}", "", "nonisolated public enum YumiMotion {",
        f"    public static let panel: Double = {m['panelMs'] / 1000}",
        f"    /// The ease-in-out curve of a move, as cubic-bezier control points.",
        f"    public static let easing: (Double, Double, Double, Double) = ({e[0]}, {e[1]}, {e[2]}, {e[3]})",
+       f"    /// A cat reacts when the pointer comes within avoidRadius points of its body (SPEC-04 r21).",
+       f"    public static let avoidRadius: CGFloat = {m['avoidRadiusPt']}",
+       f"    /// How far an idle, thinking, or paused cat hops out of the pointer's way.",
+       f"    public static let avoidHop: CGFloat = {m['avoidHopPt']}",
+       f"    /// How see-through a cat that cannot move gets, and how fast.",
+       f"    public static let avoidFadeOpacity: Double = {m['avoidFadeOpacity']}",
+       f"    public static let avoidFade: Double = {m['avoidFadeMs'] / 1000}",
+       f"    /// How long after the pointer leaves a cat drifts or fades back.",
+       f"    public static let avoidReturn: Double = {m['avoidReturnMs'] / 1000}",
        "    /// How long a move of `distance` points takes.",
        "    public static func moveDuration(distance: CGFloat) -> Double {",
        "        moveMin + (moveMax - moveMin) * Double(min(max(distance / moveFar, 0), 1))",
@@ -188,7 +197,10 @@ kt += ["}", "", "object YumiRadius {"] + [f"    val {k} = {v}.dp" for k, v in T[
 kt += ["}", "", "object YumiMotion {",
        f"    const val MOVE_MIN_MS = {m['moveMinMs']}", f"    const val MOVE_MAX_MS = {m['moveMaxMs']}",
        f"    const val MOVE_FAR_PT = {m['moveFarPt']}", f"    const val POUNCE_MS = {m['pounceMs']}",
-       f"    const val FADE_OUT_MS = {m['fadeOutMs']}", f"    const val PANEL_MS = {m['panelMs']}", "}", ""]
+       f"    const val FADE_OUT_MS = {m['fadeOutMs']}", f"    const val PANEL_MS = {m['panelMs']}",
+       f"    const val AVOID_RADIUS_PT = {m['avoidRadiusPt']}", f"    const val AVOID_HOP_PT = {m['avoidHopPt']}",
+       f"    const val AVOID_FADE_OPACITY = {m['avoidFadeOpacity']}f", f"    const val AVOID_FADE_MS = {m['avoidFadeMs']}",
+       f"    const val AVOID_RETURN_MS = {m['avoidReturnMs']}", "}", ""]
 open(os.path.join(OUT, "YumiTheme.kt"), "w", encoding="utf-8", newline="\n").write("\n".join(kt))
 
 # ---------- Android resources ----------
