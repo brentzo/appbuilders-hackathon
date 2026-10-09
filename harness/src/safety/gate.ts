@@ -6,6 +6,8 @@ import { ACTION } from "../worker/actions.ts";
 import { entryKind, isFolder, isProtectedFolder, nameKey, pathProblem, realHome, resolvePath } from "./paths.ts";
 import {
   BLOCKED_APPS,
+  CLOSE_COMBOS,
+  CLOSE_LABELS,
   INSTALLER_EXTENSIONS,
   KEY_RULES,
   LABEL_RULES,
@@ -36,6 +38,12 @@ export interface GateContext {
   home: string;
   /** The app the action acts in, as the Mac app reported it (`Observation.app`). Never from the model. */
   app?: string | undefined;
+  /**
+   * May this action close the window it acts in without asking: the task started in Auto mode, or Yumi opened the
+   * window for this task (SPEC-07, decided 2026-10-10). From the harness's own records, never from the model.
+   * Missing means no: closing a window the user had open is never allowed by default.
+   */
+  mayCloseWindow?: boolean;
 }
 
 /** An action after the harness resolved its element, before the gate decided its level. */
@@ -106,6 +114,7 @@ function decide(unchecked: UncheckedAction, context: GateContext): Verdict {
     if (blockedApp) return { rule: blockedApp.rule };
     if (SYSTEM_SETTINGS_APPS.some((name) => sameName(name, app))) return { rule: "changeSystemSettings" };
   }
+  if (closesWindow(action, element)) return { rule: context.mayCloseWindow === true ? "closeYumiWindow" : "closeUserWindow" };
 
   switch (action.kind) {
     case ACTION.click:
@@ -125,6 +134,18 @@ function decide(unchecked: UncheckedAction, context: GateContext): Verdict {
     case ACTION.tool:
       return checkTool(action.call, realHome(context.home));
   }
+}
+
+/** A click on a close button or a Close menu item, or a close shortcut (`CLOSE_LABELS`, `CLOSE_COMBOS`). */
+export function closesWindow(action: ModelAction, element: ResolvedElement | undefined): boolean {
+  if (action.kind === ACTION.click && element !== undefined) {
+    return CLOSE_LABELS.some((label) => normalizeLabel(label) === normalizeLabel(element.label));
+  }
+  if (action.kind === ACTION.key) {
+    const combo = canonicalCombo(action.combo);
+    return combo !== undefined && CLOSE_COMBOS.some((close) => canonicalCombo(close) === combo);
+  }
+  return false;
 }
 
 function isGuiAction(action: ModelAction): boolean {

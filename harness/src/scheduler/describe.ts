@@ -1,6 +1,7 @@
 import { basename, dirname } from "node:path";
 import type { RecordedAction, ToolCall } from "@yumi/protocol/types";
 import { PASSWORD_QUESTION } from "../gui/copy.ts";
+import { closesWindow } from "../safety/gate.ts";
 
 /**
  * Plain-language action log lines (SPEC-07 r18), built from the action, the real element, the app the Mac app
@@ -147,6 +148,8 @@ export function describeInterrupted(recorded: RecordedAction): string {
 function guiPhrase(recorded: RecordedAction, app: string | undefined): { done: string; todo: string } | undefined {
   const { action, element } = recorded;
   const where = app ? ` in ${app}` : "";
+  // Said as what it does, so the blocked-action message reads "I can't close a window in Keynote" (SPEC-07).
+  if (closesWindow(action, element)) return { done: `Closed a window${where}`, todo: `close a window${where}` };
   const label = element?.label.trim() ? element.label.trim() : undefined;
   const on = label ? ` ${label}` : "";
   switch (action.kind) {

@@ -124,6 +124,11 @@ export class WindowCoordinator {
   private readonly appNames = new Map<string, string>();
   /** The most windows suggested for tiling per task, so the app is asked again only when a task uses more. */
   private readonly suggested = new Map<Uuid, number>();
+  /**
+   * Windows opened for each task with `openNewWindow`. Yumi may close these without asking (SPEC-07, decided
+   * 2026-10-10). Kept in memory: after a restart they count as the user's, which only makes closing them stricter.
+   */
+  private readonly opened = new Map<Uuid, Set<number>>();
   private readonly wakers = new Set<() => void>();
   private readonly stopListening: () => void;
   private readonly cap: number;
@@ -190,6 +195,10 @@ export class WindowCoordinator {
     // Every window is held by another cursor, or the app has none. A wait means the app already could not open one.
     if (candidates.length === 0 || !this.waits.get(subtask.id)?.noSecondWindow) {
       const opened = await this.options.windows.open(bundleId);
+      if (opened !== undefined) {
+        const forTask = this.opened.get(subtask.taskId) ?? new Set<number>();
+        this.opened.set(subtask.taskId, forTask.add(opened));
+      }
       const lock = opened === undefined ? undefined : this.lock(subtask, lane, opened);
       if (lock) {
         const busy = candidates.length > 0;
@@ -204,6 +213,11 @@ export class WindowCoordinator {
     const heldBy = store.getWindowLock(candidates[0]!)?.subtaskId;
     const appName = windows.find((window) => window.windowId === candidates[0])?.appName || this.appNameOf(subtask, bundleId);
     return this.queued(subtask, "windowLocked", appName, { bundleId, windowId: candidates[0], heldBy });
+  }
+
+  /** The windows opened for a task with `openNewWindow` since this harness started. */
+  openedFor(taskId: Uuid): ReadonlySet<number> {
+    return this.opened.get(taskId) ?? new Set();
   }
 
   /**

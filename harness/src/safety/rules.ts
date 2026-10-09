@@ -30,6 +30,8 @@ export const RULE = {
   safeLabel: "allowed",
   /** Phone tools: a stand-in until SPEC-09 and SPEC-10 give their levels (see PHONE_TOOL_LEVELS). */
   phoneTool: "allowed",
+  /** Closing a window Yumi opened for this task, or any window in Auto mode (SPEC-07, decided 2026-10-10). */
+  closeYumiWindow: "allowed",
 
   // Ask every time (SPEC-07 r1 and r6).
   send: "ask",
@@ -47,6 +49,11 @@ export const RULE = {
   quitApp: "blocked",
   /** Any action in System Settings: the table blocks changing system settings (SPEC-07 r6). */
   changeSystemSettings: "blocked",
+  /**
+   * Closing a window Yumi did not open for this task (SPEC-07, decided 2026-10-10 by Brent). The spec says it asks,
+   * like a send or a delete; it is blocked until the general approval card (OBJ-56) exists, then becomes "ask".
+   */
+  closeUserWindow: "blocked",
   /** Deleting without the Trash. SPEC-07 r7: nothing is ever deleted permanently. */
   deletePermanently: "blocked",
   runScript: "blocked",
@@ -267,3 +274,10 @@ export function canonicalCombo(combo: string): string | undefined {
   const ordered = MODIFIER_ORDER.filter((m) => modifiers.has(m));
   return [...ordered, KEY_ALIASES[key] ?? key].join("+");
 }
+
+/**
+ * What closes a window (SPEC-07, decided 2026-10-10): the window's close button, whose accessibility label is
+ * "close", the File menu's Close items, and their shortcuts. Compared after `normalizeLabel`, exactly.
+ */
+export const CLOSE_LABELS = ["close", "close window", "close all"] as const;
+export const CLOSE_COMBOS = ["cmd+w", "cmd+opt+w", "cmd+shift+w"] as const;

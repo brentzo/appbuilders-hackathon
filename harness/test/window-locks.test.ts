@@ -339,6 +339,8 @@ describe("the window coordinator (OBJ-08.2 to OBJ-08.7)", () => {
       expect(a).toMatchObject({ target: { bundleId: CHROME, windowId: 5000 } });
       expect(a.reason).toBeUndefined();
       expect(b).toMatchObject({ target: { bundleId: CHROME, windowId: 5003 }, reason: "openedSecondWindow" });
+      // Yumi may close the window it opened for the task, but not the user's (SPEC-07, decided 2026-10-10).
+      expect([...coordinator.openedFor(form!.taskId)]).toEqual([5003]);
       expect(store.listLiveWindowLocks().map((l) => [l.windowId, l.subtaskId])).toEqual([
         [5000, form!.id],
         [5003, other!.id],

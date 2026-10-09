@@ -414,6 +414,7 @@ export class GoalConfirmation {
       goal: params.transcript,
       confirmedGoal,
       status: "planning",
+      autoMode: true,
     });
     logger.info("confirm.autoMode", { taskId: task.id, transcriptChars: params.transcript.length });
     this.deps.debug?.write("voice.goal", {

@@ -149,6 +149,12 @@ export const MIGRATIONS: readonly string[] = [
   `
   ALTER TABLE tasks ADD COLUMN goal_revisions TEXT NOT NULL DEFAULT '[]';
   `,
+  // 9: whether the task started in Auto mode (SPEC-01 r14), which lets it close windows Yumi did not open without
+  // asking (SPEC-07, decided 2026-10-10 by Brent). Harness-only: not part of the protocol's Task. Older tasks were
+  // all confirmed, so they get 0.
+  `
+  ALTER TABLE tasks ADD COLUMN auto_mode INTEGER NOT NULL DEFAULT 0;
+  `,
 ];
 
 /** Thrown when the database was written by a newer harness, whose schema this one does not know. */

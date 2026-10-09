@@ -149,14 +149,21 @@ function keynoteWorker(name = "Q3 Report") {
 
 /** A confirmed task with one ghost or main subtask in an app, running, as the scheduler leaves it before gui_act. */
 function guiSubtask(
-  options: { lane?: "ghost" | "main"; bundleId?: string; windowId?: number; instruction?: string; goal?: string } = {},
+  options: {
+    lane?: "ghost" | "main";
+    bundleId?: string;
+    windowId?: number;
+    instruction?: string;
+    goal?: string;
+    autoMode?: boolean;
+  } = {},
 ): {
   task: Task;
   subtask: Subtask;
 } {
   const store = harness.store;
   const goal = options.goal ?? GOAL;
-  const task = store.createTask({ originDeviceId: "mac-brent", goal });
+  const task = store.createTask({ originDeviceId: "mac-brent", goal, ...(options.autoMode ? { autoMode: true } : {}) });
   store.setTaskStatus(task.id, "planning", { confirmedGoal: goal });
   const { subtasks } = store.savePlan(task.id, [
     {
@@ -649,6 +656,58 @@ describe("gui_act limits and endings (OBJ-36.5 to OBJ-36.8)", () => {
       action: { permission: "allowed", element: { role: "menuBarItem", label: "File" } },
     });
     expect(logger.entries.some((e) => e.event === "gui.macStopped")).toBe(true);
+  });
+
+  describe("closing a window (SPEC-07, decided 2026-10-10 by Brent)", () => {
+    const deckWindow = () =>
+      staticApp(KEYNOTE, {
+        app: "Keynote",
+        title: "Q3 Report",
+        elements: [
+          { role: "button", label: "close" },
+          { role: "menuBarItem", label: "File" },
+        ],
+      });
+
+    it("never closes the user's window: the click is blocked and nothing runs (live Keynote run 51)", async () => {
+      await connect(deckWindow());
+      scriptModel(() => reply({ kind: "click", element: 1 }));
+      const { gate, blockedCalls } = approvalsAnswering({ outcome: "cancelled" }, "cancelled");
+      const { subtask } = guiSubtask({ windowId: 7 });
+      const run = ended(await act(subtask, { approvals: gate }));
+      expect(mac!.executed).toEqual([]);
+      expect(blockedCalls).toHaveLength(1);
+      expect(harness.store.listSteps(subtask.id)[0]).toMatchObject({ outcome: "blocked", action: { permission: "blocked" } });
+      expect(run).toMatchObject({ reason: "blocked" });
+      expect(logger.entries.find((e) => e.event === "gui.blocked")).toMatchObject({ rule: "closeUserWindow" });
+      // The blocked-action message and the action log say what it would have done, not which button it clicked.
+      expect(harness.store.listActionLog(subtask.taskId).at(-1)!.description).toBe(
+        "Did not close a window in Keynote, because Yumi's safety rules do not allow it",
+      );
+    });
+
+    it("closes a window Yumi opened for the task", async () => {
+      await connect(deckWindow());
+      scriptModel((text, call) =>
+        call === 1 ? reply({ kind: "click", element: 1 }) : reply({ kind: "finish", status: "done", note: "Closed it." }),
+      );
+      const { subtask } = guiSubtask({ windowId: 7 });
+      const run = ended(await act(subtask, { openedWindows: () => new Set([7]) }));
+      expect(mac!.executed.map((c) => c.params.action)).toMatchObject([{ permission: "allowed", element: { label: "close" } }]);
+      expect(run.reason).toBe("finished");
+    });
+
+    it("closes the user's window without asking in Auto mode", async () => {
+      await connect(deckWindow());
+      scriptModel((text, call) =>
+        call === 1 ? reply({ kind: "click", element: 1 }) : reply({ kind: "finish", status: "done", note: "Closed it." }),
+      );
+      const { subtask } = guiSubtask({ windowId: 7, autoMode: true });
+      expect(harness.store.isAutoMode(subtask.taskId)).toBe(true);
+      const run = ended(await act(subtask));
+      expect(mac!.executed).toHaveLength(1);
+      expect(run).toMatchObject({ reason: "finished" });
+    });
   });
 
   it("ends with blockedAction when there is no approval flow", async () => {

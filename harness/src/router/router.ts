@@ -1,4 +1,4 @@
-import type { Lane, RouteDecided, RouteReason, Subtask, Target, WindowLock } from "@yumi/protocol/types";
+import type { Lane, RouteDecided, RouteReason, Subtask, Target, Uuid, WindowLock } from "@yumi/protocol/types";
 import type { Logger } from "../log.ts";
 import type { TaskStore } from "../store/task-store.ts";
 import { isBackgroundCapable, ProbeFailure, type AppCapabilities, type AppResolver } from "./capability.ts";
@@ -61,6 +61,11 @@ export class LaneRouter {
   /** Stops the window coordinator's timers. */
   close(): void {
     this.options.windows?.close();
+  }
+
+  /** The windows Yumi opened for a task, which it may close without asking (SPEC-07, decided 2026-10-10). */
+  openedWindows(taskId: Uuid): ReadonlySet<number> {
+    return this.options.windows?.openedFor(taskId) ?? new Set();
   }
 
   /**

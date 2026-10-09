@@ -107,6 +107,8 @@ export interface GuiServices {
   watchHome?: WatchHome;
   /** How long to wait for the screen to settle after an action. */
   settle?: SettleTiming;
+  /** The windows the lane router opened for a task, which Yumi may close without asking (SPEC-07, 2026-10-10). */
+  openedWindows?: (taskId: Uuid) => ReadonlySet<number>;
 }
 
 export interface GuiActDeps extends GuiServices {
@@ -261,6 +263,8 @@ class Attempt {
   private readonly blockedActions = new Set<string>();
   /** How often the model proposed an action that was already blocked. */
   private blockedRepeats = 0;
+  /** This attempt opened the app with `open_app`, because it had no window: that window is Yumi's. */
+  private openedApp = false;
   private last: Observation | undefined;
 
   constructor(
@@ -393,6 +397,8 @@ class Attempt {
       if (locked || !isMissingWindow(error)) return this.lookFailed(error);
     }
     const opened = await this.act({ kind: ACTION.tool, call: { tool: "open_app", bundleId: this.target.bundleId } }, undefined);
+    // The app had no window, so the one it opens is Yumi's.
+    this.openedApp = true;
     if ("end" in opened) return opened;
     return { next: opened.next };
   }
@@ -426,7 +432,10 @@ class Attempt {
   private async act(action: ModelAction, before: Observation | undefined): Promise<ActResult> {
     const { store } = this.deps;
     const app = before?.app;
-    const decision = checkAction({ action, element: resolveElement(action, before) }, { home: this.deps.home, app });
+    const decision = checkAction(
+      { action, element: resolveElement(action, before) },
+      { home: this.deps.home, app, mayCloseWindow: this.mayCloseWindow() },
+    );
     // SPEC-06 r4: nothing is written or sent once a pause covers this lane. Checked right before the step is written.
     const stop = this.stopped();
     if (stop) return { end: stop };
@@ -706,6 +715,17 @@ class Attempt {
   /** Cancelled or paused: the attempt must not write or send anything more (SPEC-06 r4, r8). */
   private stopped(): GuiActRun | undefined {
     return this.options.signal.aborted || !this.options.control.mayAct(this.lane) ? this.aborted() : undefined;
+  }
+
+  /**
+   * Whether closing the target window needs no approval (SPEC-07, decided 2026-10-10 by Brent): the task started in
+   * Auto mode, or Yumi opened the window for this task, with the router's `openNewWindow` or this attempt's
+   * `open_app`. Any other window is the user's.
+   */
+  private mayCloseWindow(): boolean {
+    if (this.deps.store.isAutoMode(this.taskId) || this.openedApp) return true;
+    const windowId = this.target.windowId;
+    return windowId !== undefined && (this.deps.openedWindows?.(this.taskId).has(windowId) ?? false);
   }
 
   /** How long the attempt has run. */

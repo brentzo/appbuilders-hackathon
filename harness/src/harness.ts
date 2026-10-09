@@ -184,7 +184,12 @@ export async function startHarness(
           debug,
           thoughts,
           ...(approvals ? { approvals } : {}),
-          gui: { mac: macAppGui(server, logger), ...work.gui, questions },
+          gui: {
+            mac: macAppGui(server, logger),
+            openedWindows: (taskId) => router.openedWindows(taskId),
+            ...work.gui,
+            questions,
+          },
         },
       approvals,
     );

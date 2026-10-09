@@ -87,6 +87,8 @@ export interface NewTask {
   confirmedGoal?: string;
   /** Defaults to awaitingConfirmation. A goal confirmed on the other device can start queued or planning. */
   status?: TaskStatus;
+  /** The goal was sent in Auto mode (SPEC-01 r14), with no repeat-back. Defaults to false. */
+  autoMode?: boolean;
 }
 
 /** Fields that change together with a task's status: the confirmed goal when it leaves awaitingConfirmation, and the summary when it ends. */
@@ -296,8 +298,8 @@ export class TaskStore {
     };
     this.check("Task", task);
     this.stmt(
-      `INSERT INTO tasks (id, origin_device_id, goal, confirmed_goal, goal_revisions, status, plan, summary, created_at, created_ms, updated_at)
-       VALUES ($id, $origin, $goal, $confirmed, '[]', $status, $plan, NULL, $createdAt, $createdMs, $updatedAt)`,
+      `INSERT INTO tasks (id, origin_device_id, goal, confirmed_goal, goal_revisions, status, plan, summary, created_at, created_ms, updated_at, auto_mode)
+       VALUES ($id, $origin, $goal, $confirmed, '[]', $status, $plan, NULL, $createdAt, $createdMs, $updatedAt, $autoMode)`,
     ).run({
       id: task.id,
       origin: task.originDeviceId,
@@ -308,9 +310,16 @@ export class TaskStore {
       createdAt: task.createdAt,
       createdMs: time.getTime(),
       updatedAt: task.updatedAt,
+      autoMode: input.autoMode === true ? 1 : 0,
     });
     this.emit({ taskId: task.id, status: task.status });
     return task;
+  }
+
+  /** Whether the task started in Auto mode (SPEC-01 r14). False for a task that does not exist. */
+  isAutoMode(id: Uuid): boolean {
+    const row = this.stmt("SELECT auto_mode FROM tasks WHERE id = ?").get(id) as { auto_mode: number } | undefined;
+    return row?.auto_mode === 1;
   }
 
   getTask(id: Uuid): Task | undefined {

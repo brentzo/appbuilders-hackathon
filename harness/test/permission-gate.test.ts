@@ -663,3 +663,44 @@ describe("the gate's input", () => {
     expect(decision.recorded).toEqual({ action: { kind: "key", combo: "cmd+q" }, permission: "blocked" });
   });
 });
+
+describe("closing a window (SPEC-07, decided 2026-10-10 by Brent)", () => {
+  const closeClick = (label: string, role: Parameters<typeof element>[1], mayCloseWindow?: boolean) =>
+    checkAction(
+      { action: { kind: "click", element: 3 }, element: element(label, role) },
+      { home: "/nonexistent", app: "Keynote", ...(mayCloseWindow !== undefined ? { mayCloseWindow } : {}) },
+    );
+
+  it("blocks closing a window Yumi did not open, by its close button, a Close menu item, or a shortcut", () => {
+    for (const [label, role] of [
+      ["close", "button"],
+      ["Close", "menuItem"],
+      ["Close Window", "menuItem"],
+      ["Close All", "menuItem"],
+    ] as const) {
+      expect(closeClick(label, role)).toMatchObject({ level: "blocked", rule: "closeUserWindow" });
+    }
+    for (const combo of ["cmd+w", "cmd+opt+w", "cmd+shift+w"]) {
+      expect(key(combo, "Keynote")).toMatchObject({ level: "blocked", rule: "closeUserWindow" });
+    }
+    // In a risky app the close rule decides, not "unclassified".
+    expect(click("close", "Finder")).toMatchObject({ level: "blocked", rule: "closeUserWindow" });
+  });
+
+  it("allows closing a window Yumi opened for the task, or any window in Auto mode", () => {
+    expect(closeClick("close", "button", true)).toMatchObject({ level: "allowed", rule: "closeYumiWindow" });
+    expect(
+      checkAction({ action: { kind: "key", combo: "cmd+w" } }, { home: "/nonexistent", app: "Keynote", mayCloseWindow: true }),
+    ).toMatchObject({ level: "allowed", rule: "closeYumiWindow" });
+  });
+
+  it("leaves other clicks alone, and still blocks Quit even when closing is allowed", () => {
+    expect(closeClick("Closed captions", "button")).toMatchObject({ level: "allowed", rule: "clickOrType" });
+    expect(
+      checkAction(
+        { action: { kind: "click", element: 3 }, element: element("Quit Keynote", "menuItem") },
+        { home: "/nonexistent", app: "Keynote", mayCloseWindow: true },
+      ),
+    ).toMatchObject({ level: "blocked", rule: "quitApp" });
+  });
+});
