@@ -313,4 +313,5 @@ Nothing calls `runTask` in the running harness yet: the confirmation flow that m
 | [OBJ-37](../objectives/OBJ-37-permission-gate-and-file-tools.md) | Permission gate and typed file tools | Brent | done |
 | [OBJ-38](../objectives/OBJ-38-approvals-pause-and-action-log.md) | Approvals, pause, and action log in the harness | Brent | todo |
 | [OBJ-41](../objectives/OBJ-41-mac-pairing-verdict.md) | Mac pairing waits for the relay's verdict | Brent | todo |
+| [OBJ-43](../objectives/OBJ-43-mac-bridge-client-version-refusal.md) | Mac bridge client recovers from a version refusal | Brent | todo |
 <!-- generated:product-objectives:end -->

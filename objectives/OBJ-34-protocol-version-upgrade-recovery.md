@@ -3,12 +3,12 @@ id: OBJ-34
 title: Define protocol version upgrade recovery
 product: protocol
 assignee: Jepoy
-touches: [harness, mac, android]
+touches: [bridge, harness]
 specs: [SPEC-08, SPEC-11]
-status: todo
+status: in-progress
 priority: p1
 depends-on: [OBJ-31]
-integrates-with: [OBJ-21, OBJ-23, OBJ-30]
+integrates-with: [OBJ-21, OBJ-23, OBJ-30, OBJ-42, OBJ-43, OBJ-44]
 tags: [objective, p1, protocol, compatibility]
 ---
 

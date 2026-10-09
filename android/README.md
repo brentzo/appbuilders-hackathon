@@ -144,6 +144,7 @@ If Yumi stops when the phone is locked, open Yumi's app settings from Yumi's Set
 | [OBJ-22](../objectives/OBJ-22-android-app-shell.md) | Android app shell and foreground service | Brent | done |
 | [OBJ-23](../objectives/OBJ-23-android-bridge-client.md) | Android bridge client and pairing | Brent | todo |
 | [OBJ-24](../objectives/OBJ-24-android-voice-intake.md) | Android voice intake and wake word | Brent | todo |
+| [OBJ-42](../objectives/OBJ-42-version-mismatch-copy.md) | Add the protocol version mismatch copy | Brent | todo |
 <!-- generated:product-objectives:end -->
 
 Not written yet: Part A phone-only goals, phone tools, and delegated goals (SPEC-09 and SPEC-10 Part A), and everything in Part B.

@@ -91,7 +91,7 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-31](OBJ-31-unpair-delivery-ack-contract.md) | Define unpair delivery acknowledgement | protocol | Jepoy | 08 | 02 | 13, 21, 23 | done |
 | [OBJ-32](OBJ-32-production-bridge-deployment.md) | Deploy the bridge relay to the VPS | bridge | Brent | 08 | - | 30 | done |
 | [OBJ-33](OBJ-33-pairing-response-timeout-contract.md) | Align the pairing response timeout contract | protocol | Jepoy | 08 | 02 | 13, 21, 23 | in-progress |
-| [OBJ-34](OBJ-34-protocol-version-upgrade-recovery.md) | Define protocol version upgrade recovery | protocol | Jepoy | 08, 11 | 31 | 21, 23, 30 | todo |
+| [OBJ-34](OBJ-34-protocol-version-upgrade-recovery.md) | Define protocol version upgrade recovery | protocol | Jepoy | 08, 11 | 31 | 21, 23, 30, 42, 43, 44 | in-progress |
 | [OBJ-35](OBJ-35-mac-stop-and-take-over.md) | Stop and take over on the Mac | mac | Patrick | 06 | 17, 39 | 38 | todo |
 | [OBJ-36](OBJ-36-gui-act-sub-agent.md) | gui_act sub-agent | harness | Brent | 05, 02, 11 | 06, 07, 37 | 26, 39 | todo |
 | [OBJ-37](OBJ-37-permission-gate-and-file-tools.md) | Permission gate and typed file tools | harness | Brent | 07 | 03 | - | done |
@@ -99,6 +99,9 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-39](OBJ-39-mac-gui-execution.md) | Mac GUI execution | mac | Patrick | 05, 11 | 14, 18 | 26, 36 | in-progress |
 | [OBJ-40](OBJ-40-mac-approval-cards.md) | Approval and blocked-action cards on the Mac | mac | Patrick | 07, 11 | 17 | 38 | todo |
 | [OBJ-41](OBJ-41-mac-pairing-verdict.md) | Mac pairing waits for the relay's verdict | harness | Brent | 08 | 21, 33 | 13, 23 | todo |
+| [OBJ-42](OBJ-42-version-mismatch-copy.md) | Add the protocol version mismatch copy | android | Brent | 08, 11 | 34 | 23, 43, 44 | todo |
+| [OBJ-43](OBJ-43-mac-bridge-client-version-refusal.md) | Mac bridge client recovers from a version refusal | harness | Brent | 08 | 21, 34 | 13, 42 | todo |
+| [OBJ-44](OBJ-44-mac-version-mismatch-copy.md) | Mac app shows the version mismatch copy | mac | Patrick | 08, 11 | 34 | 42, 43 | todo |
 <!-- generated:objectives-index:end -->
 
 ## Priority and blocking
@@ -115,27 +118,28 @@ Ranked by how many objectives each one holds up through hard dependencies:
 | Rank | Objective | Assignee | Holds up (hard) | Holds up another person |
 |---|---|---|---|---|
 | 1 | OBJ-01 Task record schemas and cross-team contracts | Jepoy | 24 | Brent, Patrick |
-| 2 | OBJ-03 Harness skeleton and local model client | Brent | 12 | Patrick |
-| 3 | OBJ-14 Mac app shell, permissions, and harness link | Patrick | 11 | Jepoy |
-| 4 | OBJ-04 Task store and history | Brent | 10 | Patrick |
-| 5 | OBJ-02 Bridge envelope and end-to-end crypto | Jepoy | 9 | Brent |
+| 2 | OBJ-02 Bridge envelope and end-to-end crypto | Jepoy | 12 | Brent, Patrick |
+| 3 | OBJ-03 Harness skeleton and local model client | Brent | 12 | Patrick |
+| 4 | OBJ-14 Mac app shell, permissions, and harness link | Patrick | 11 | Jepoy |
+| 5 | OBJ-04 Task store and history | Brent | 10 | Patrick |
 | 6 | OBJ-18 Cursor overlay and motion | Patrick | 6 | No |
 | 7 | OBJ-05 Planner, scheduler, and task summary | Brent | 4 | No |
 | 8 | OBJ-15 Mac voice intake | Patrick | 4 | No |
-| 9 | OBJ-06 Resume and limits | Brent | 3 | No |
-| 10 | OBJ-07 Lane router core | Brent | 3 | No |
-| 11 | OBJ-22 Android app shell and foreground service | Brent | 3 | Jepoy |
-| 12 | OBJ-13 Bridge relay server | Jepoy | 2 | Brent |
-| 13 | OBJ-17 Goal confirmation loop | Patrick | 2 | No |
-| 14 | OBJ-21 Mac bridge client and pairing | Jepoy | 2 | Brent |
-| 15 | OBJ-27 Mac native services for the harness | Patrick | 2 | Jepoy |
-| 16 | OBJ-37 Permission gate and typed file tools | Brent | 2 | No |
-| 17 | OBJ-08 Window locks, busy windows, and cursor cap | Brent | 1 | No |
-| 18 | OBJ-10 Yumi cat v0 in Rive | Patrick | 1 | No |
-| 19 | OBJ-23 Android bridge client and pairing | Brent | 1 | Jepoy |
-| 20 | OBJ-31 Define unpair delivery acknowledgement | Jepoy | 1 | No |
-| 21 | OBJ-33 Align the pairing response timeout contract | Jepoy | 1 | Brent |
-| 22 | OBJ-39 Mac GUI execution | Patrick | 1 | No |
+| 9 | OBJ-31 Define unpair delivery acknowledgement | Jepoy | 4 | Brent, Patrick |
+| 10 | OBJ-06 Resume and limits | Brent | 3 | No |
+| 11 | OBJ-07 Lane router core | Brent | 3 | No |
+| 12 | OBJ-21 Mac bridge client and pairing | Jepoy | 3 | Brent |
+| 13 | OBJ-22 Android app shell and foreground service | Brent | 3 | Jepoy |
+| 14 | OBJ-34 Define protocol version upgrade recovery | Jepoy | 3 | Brent, Patrick |
+| 15 | OBJ-13 Bridge relay server | Jepoy | 2 | Brent |
+| 16 | OBJ-17 Goal confirmation loop | Patrick | 2 | No |
+| 17 | OBJ-27 Mac native services for the harness | Patrick | 2 | Jepoy |
+| 18 | OBJ-37 Permission gate and typed file tools | Brent | 2 | No |
+| 19 | OBJ-08 Window locks, busy windows, and cursor cap | Brent | 1 | No |
+| 20 | OBJ-10 Yumi cat v0 in Rive | Patrick | 1 | No |
+| 21 | OBJ-23 Android bridge client and pairing | Brent | 1 | Jepoy |
+| 22 | OBJ-33 Align the pairing response timeout contract | Jepoy | 1 | Brent |
+| 23 | OBJ-39 Mac GUI execution | Patrick | 1 | No |
 <!-- generated:objectives-priority:end -->
 Hard dependencies that cross between people (everything else is within one person's queue):
 
@@ -152,15 +156,19 @@ Hard dependencies that cross between people (everything else is within one perso
 - OBJ-27 (Patrick) before OBJ-30 (Jepoy)
 - OBJ-21 (Jepoy) before OBJ-41 (Brent)
 - OBJ-33 (Jepoy) before OBJ-41 (Brent)
+- OBJ-34 (Jepoy) before OBJ-42 (Brent)
+- OBJ-21 (Jepoy) before OBJ-43 (Brent)
+- OBJ-34 (Jepoy) before OBJ-43 (Brent)
+- OBJ-34 (Jepoy) before OBJ-44 (Patrick)
 <!-- generated:objectives-cross:end -->
 Workload:
 
 <!-- generated:objectives-workload:start -->
 | Person | Objectives | Count |
 |---|---|---|
-| Brent | 03, 04, 05, 06, 07, 08, 09, 22, 23, 24, 26, 29, 32, 36, 37, 38, 41 | 17 |
+| Brent | 03, 04, 05, 06, 07, 08, 09, 22, 23, 24, 26, 29, 32, 36, 37, 38, 41, 42, 43 | 19 |
 | Jepoy | 01, 02, 11, 12, 13, 21, 25, 28, 30, 31, 33, 34 | 12 |
-| Patrick | 10, 14, 15, 16, 17, 18, 19, 20, 27, 35, 39, 40 | 12 |
+| Patrick | 10, 14, 15, 16, 17, 18, 19, 20, 27, 35, 39, 40, 44 | 13 |
 <!-- generated:objectives-workload:end -->
 ## Suggested order
 
@@ -172,7 +180,7 @@ Waves come from hard dependencies only. Each person works their column top to bo
 | 1 | OBJ-22, OBJ-26, OBJ-32 | OBJ-01, OBJ-02, OBJ-11, OBJ-12, OBJ-28 | OBJ-10 |
 | 2 | OBJ-03, OBJ-24, OBJ-29 | OBJ-13, OBJ-21, OBJ-25, OBJ-31, OBJ-33 | OBJ-14 |
 | 3 | OBJ-04, OBJ-23, OBJ-37, OBJ-41 | OBJ-34 | OBJ-15, OBJ-18, OBJ-27 |
-| 4 | OBJ-05, OBJ-07 | OBJ-30 | OBJ-16, OBJ-17, OBJ-19, OBJ-20, OBJ-39 |
+| 4 | OBJ-05, OBJ-07, OBJ-42, OBJ-43 | OBJ-30 | OBJ-16, OBJ-17, OBJ-19, OBJ-20, OBJ-39, OBJ-44 |
 | 5 | OBJ-06, OBJ-08 | - | OBJ-35, OBJ-40 |
 | 6 | OBJ-09, OBJ-36, OBJ-38 | - | - |
 <!-- generated:objectives-waves:end -->
