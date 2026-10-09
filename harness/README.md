@@ -423,7 +423,7 @@ Resume never starts on its own: the user is always asked first ([SPEC-02](../spe
 | [OBJ-08](../objectives/OBJ-08-locks-busy-windows-cap.md) | Window locks, busy windows, and cursor cap | Brent | done |
 | [OBJ-09](../objectives/OBJ-09-ghost-handoff.md) | Ghost handoff | Brent | todo |
 | [OBJ-21](../objectives/OBJ-21-mac-bridge-client-and-pairing.md) | Mac bridge client and pairing | Jepoy | done |
-| [OBJ-36](../objectives/OBJ-36-gui-act-sub-agent.md) | gui_act sub-agent | Brent | todo |
+| [OBJ-36](../objectives/OBJ-36-gui-act-sub-agent.md) | gui_act sub-agent | Brent | in-progress |
 | [OBJ-37](../objectives/OBJ-37-permission-gate-and-file-tools.md) | Permission gate and typed file tools | Brent | done |
 | [OBJ-38](../objectives/OBJ-38-approvals-pause-and-action-log.md) | Approvals, pause, and action log in the harness | Brent | in-progress |
 | [OBJ-41](../objectives/OBJ-41-mac-pairing-verdict.md) | Mac pairing waits for the relay's verdict | Brent | todo |
