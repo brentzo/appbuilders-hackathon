@@ -1,0 +1,8 @@
+{
+  "description": "The local model loads after the app connects: loading at once, ready a few seconds later (OBJ-45, OBJ-46).",
+  "trigger": "connect",
+  "events": [
+    { "afterMs": 0, "event": "modelStateChanged", "example": "ModelStateChanged.loading" },
+    { "afterMs": 4000, "event": "modelStateChanged", "example": "ModelStateChanged.ready" }
+  ]
+}

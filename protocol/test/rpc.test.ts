@@ -43,6 +43,17 @@ describe("local RPC", () => {
     expect(validate("PauseParams", { scope: "helpers" }).valid).toBe(false);
   });
 
+  it("tells the app whether the model is loading, ready, or failed, on connect and on every change (OBJ-45)", () => {
+    expect(rpc().events["modelStateChanged"]).toBe("ModelStateChanged");
+    for (const state of ["loading", "ready", "failed"]) {
+      expect(validate("ModelStateChanged", { state }).errors).toEqual([]);
+      expect(validate("HelloResult", { protocolVersion: 4, modelState: state }).errors).toEqual([]);
+    }
+    expect(validate("HelloResult", { protocolVersion: 4 }).errors).toEqual([]);
+    expect(validate("ModelStateChanged", { state: "warming" }).valid).toBe(false);
+    expect(validate("ModelStateChanged", {}).valid).toBe(false);
+  });
+
   it("moves a cursor to an element or a point, and nothing else", () => {
     const move = (to: unknown) => ({ command: "move", cursorId: "main", to });
     expect(validate("CursorCommand", move({ kind: "point", x: 512, y: 300 })).valid).toBe(true);

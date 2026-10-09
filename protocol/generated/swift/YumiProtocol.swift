@@ -861,9 +861,12 @@ public struct HelloParams: Codable, Equatable, Sendable {
 /// The harness's version. The app refuses to continue if it differs.
 public struct HelloResult: Codable, Equatable, Sendable {
     public var protocolVersion: Int
+    /// The local model's state when the app connects, so an app that connects while the model loads knows it at once. Later changes come as modelStateChanged.
+    public var modelState: ModelState?
 
-    public init(protocolVersion: Int) {
+    public init(protocolVersion: Int, modelState: ModelState? = nil) {
         self.protocolVersion = protocolVersion
+        self.modelState = modelState
     }
 }
 
@@ -1013,6 +1016,22 @@ public enum ModelAction: Codable, Equatable, Sendable {
             try container.encode("clickAt", forKey: .discriminator)
             try value.encode(to: encoder)
         }
+    }
+}
+
+/// loading: the harness is waiting for the local model server to answer with the configured model. ready: it answers. failed: it did not start in time, or serves another model; the app shows the SPEC-11 "Model failed to load" copy.
+public enum ModelState: String, Codable, Equatable, Sendable, CaseIterable {
+    case loading
+    case ready
+    case failed
+}
+
+/// Harness to app: the local model's state changed (OBJ-45, OBJ-47).
+public struct ModelStateChanged: Codable, Equatable, Sendable {
+    public var state: ModelState
+
+    public init(state: ModelState) {
+        self.state = state
     }
 }
 
@@ -2745,4 +2764,5 @@ public enum RpcEvent: String, CaseIterable, Sendable {
     case speak
     case bridgeStateChanged
     case workerThought
+    case modelStateChanged
 }

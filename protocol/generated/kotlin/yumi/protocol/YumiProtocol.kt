@@ -528,6 +528,8 @@ data class HelloParams(
 @Serializable
 data class HelloResult(
     val protocolVersion: Long,
+    /** The local model's state when the app connects, so an app that connects while the model loads knows it at once. Later changes come as modelStateChanged. */
+    val modelState: ModelState? = null,
 )
 
 /** Press a key combination, for example cmd+shift+e. Main lane only. Risk comes from a per-app list (SPEC-07 r6). */
@@ -597,6 +599,20 @@ data class LoadSecretResult(
 @Serializable
 @JsonClassDiscriminator("kind")
 sealed interface ModelAction
+
+/** loading: the harness is waiting for the local model server to answer with the configured model. ready: it answers. failed: it did not start in time, or serves another model; the app shows the SPEC-11 "Model failed to load" copy. */
+@Serializable
+enum class ModelState {
+    @SerialName("loading") Loading,
+    @SerialName("ready") Ready,
+    @SerialName("failed") Failed;
+}
+
+/** Harness to app: the local model's state changed (OBJ-45, OBJ-47). */
+@Serializable
+data class ModelStateChanged(
+    val state: ModelState,
+)
 
 /** Move a file. A taken name gets a number instead of replacing (SPEC-07 r4). */
 @Serializable
@@ -1684,5 +1700,6 @@ enum class RpcEvent(val wireName: String) {
     RouteDecided("routeDecided"),
     Speak("speak"),
     BridgeStateChanged("bridgeStateChanged"),
-    WorkerThought("workerThought");
+    WorkerThought("workerThought"),
+    ModelStateChanged("modelStateChanged");
 }

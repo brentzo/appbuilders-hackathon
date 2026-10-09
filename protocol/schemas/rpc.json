@@ -49,7 +49,8 @@
       "routeDecided": "RouteDecided",
       "speak": "Speak",
       "bridgeStateChanged": "BridgeStateChanged",
-      "workerThought": "WorkerThought"
+      "workerThought": "WorkerThought",
+      "modelStateChanged": "ModelStateChanged"
     }
   },
   "$defs": {
@@ -76,7 +77,25 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["protocolVersion"],
-      "properties": { "protocolVersion": { "$ref": "common.json#/$defs/ProtocolVersion" } }
+      "properties": {
+        "protocolVersion": { "$ref": "common.json#/$defs/ProtocolVersion" },
+        "modelState": {
+          "description": "The local model's state when the app connects, so an app that connects while the model loads knows it at once. Later changes come as modelStateChanged.",
+          "$ref": "#/$defs/ModelState"
+        }
+      }
+    },
+    "ModelState": {
+      "description": "loading: the harness is waiting for the local model server to answer with the configured model. ready: it answers. failed: it did not start in time, or serves another model; the app shows the SPEC-11 \"Model failed to load\" copy.",
+      "type": "string",
+      "enum": ["loading", "ready", "failed"]
+    },
+    "ModelStateChanged": {
+      "description": "Harness to app: the local model's state changed (OBJ-45, OBJ-47).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state"],
+      "properties": { "state": { "$ref": "#/$defs/ModelState" } }
     },
     "TaskRef": {
       "type": "object",

@@ -399,6 +399,8 @@ export interface HelloParams {
 /** The harness's version. The app refuses to continue if it differs. */
 export interface HelloResult {
   protocolVersion: ProtocolVersion;
+  /** The local model's state when the app connects, so an app that connects while the model loads knows it at once. Later changes come as modelStateChanged. */
+  modelState?: ModelState;
 }
 
 /** 32 bytes in standard base64 with padding: a public key, a pairing secret, or a challenge nonce. */
@@ -463,6 +465,15 @@ export type ModelAction =
   | AskAction
   | FinishAction
   | ClickAtAction;
+
+/** loading: the harness is waiting for the local model server to answer with the configured model. ready: it answers. failed: it did not start in time, or serves another model; the app shows the SPEC-11 "Model failed to load" copy. */
+export type ModelState = "loading" | "ready" | "failed";
+export const modelStateValues: readonly ModelState[] = ["loading", "ready", "failed"];
+
+/** Harness to app: the local model's state changed (OBJ-45, OBJ-47). */
+export interface ModelStateChanged {
+  state: ModelState;
+}
 
 /** Move a file. A taken name gets a number instead of replacing (SPEC-07 r4). */
 export interface MoveCall {
@@ -1427,4 +1438,5 @@ export interface RpcEvents {
   speak: Speak;
   bridgeStateChanged: BridgeStateChanged;
   workerThought: WorkerThought;
+  modelStateChanged: ModelStateChanged;
 }
