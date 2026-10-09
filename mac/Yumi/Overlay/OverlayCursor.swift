@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import YumiProtocol
 
 /// One cursor on the overlay (OBJ-18.2). `position` is the pointer tip, which is the click point,
@@ -33,27 +34,29 @@ extension CursorState {
     }
 }
 
-/// The cat's coats, from the design tokens (character/design/tokens.json). Copied here until the
-/// shared `Yumi.swift` design file lands in the app.
+/// Which coat a cursor wears: the design's cat palettes (`YumiCatColors`).
 enum CatPalette: String, CaseIterable {
     case ginger, mint, sky, slate
 
     /// The littermates, in the order ghosts take them.
     static let ghosts: [CatPalette] = [.mint, .sky, .slate]
 
-    var fur: NSColor {
+    var colors: YumiCatPalette {
         switch self {
-        case .ginger: Self.rgb(0xF0A76A)
-        case .mint: Self.rgb(0x86D6BE)
-        case .sky: Self.rgb(0x93BCF0)
-        case .slate: Self.rgb(0xAEB4BE)
+        case .ginger: YumiCatColors.ginger
+        case .mint: YumiCatColors.mint
+        case .sky: YumiCatColors.sky
+        case .slate: YumiCatColors.slate
         }
     }
 
-    /// Text on the fur: the ghosts' label colors, and the ginger cat's cocoa line.
+    var fur: NSColor { NSColor(colors.fur) }
+
+    /// Text on the fur: the ghosts' label colors (`cat.labelText` in character/design/tokens.json,
+    /// not in the generated Swift yet), and the ginger cat's cocoa line.
     var labelText: NSColor {
         switch self {
-        case .ginger: Self.rgb(0x6E413E)
+        case .ginger: NSColor(YumiCatColors.ginger.line)
         case .mint: Self.rgb(0x1F3D35)
         case .sky: Self.rgb(0x22324F)
         case .slate: Self.rgb(0x2A2E35)
