@@ -557,4 +557,5 @@ Every line about a task has its `taskId`, and every line about a subtask has its
 | [OBJ-65](../objectives/OBJ-65-harness-phone-tool-lane.md) | Phone tool lane in the harness | Brent | todo |
 | [OBJ-68](../objectives/OBJ-68-harness-delegated-goals.md) | Harness runs goals sent from the phone | Brent | todo |
 | [OBJ-70](../objectives/OBJ-70-harness-phone-approvals-and-stop.md) | Harness takes approvals and Stop from the phone | Brent | todo |
+| [OBJ-74](../objectives/OBJ-74-save-list-to-note.md) | Save a list into a new note | Brent | todo |
 <!-- generated:product-objectives:end -->

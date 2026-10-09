@@ -29,6 +29,7 @@ Schema: [task-record-schema](../docs/task-record-schema.md).
 10. Task records (tasks, subtasks, steps, the action log, and step screenshots) are kept forever. Nothing is deleted automatically.
 11. The user can browse and search past tasks from the Mac menu bar and the phone app.
 12. `p1` A task keeps every confirmed revised goal ([SPEC-06](06-user-control.md) requirement 16) in order, each with what the user said and when; `confirmedGoal` is always the latest, and the action log records each change. A revision that is cancelled or never confirmed is not kept.
+13. When a goal asks for a list, the Mac's repeat-back offers to put it in a new note, for example "You want me to list the files in your Downloads folder. Want me to put the list in a new note too?" If the user says yes to the note, Yumi writes the full list into a new note in Notes after finding it. In Auto mode it does not ask: the summary card shows the full list with a "Save to Notes" button, and saying "save it" does the same. The summary card always shows the full list, not only the spoken sentence.
 
 ## Scenarios
 
@@ -91,6 +92,7 @@ Feature: Task lifecycle
 
 - If the task summary cannot be written, Yumi says "Done. I finished everything you asked for." instead of saying nothing (requirement 9). Decided 2026-10-09.
 - When a goal asks for information, the summary is the answer, built from the steps' real tool output, and a task that only listed a folder falls back to the number of items and up to three names rather than "Done." (requirement 9). In Brent's live check, "List the files in my Downloads folder" ended with only "Done. Listed the files in your Downloads folder.", so the user never heard the list. Decided 2026-10-10.
+- Lists can go into a new note: offered in the repeat-back, or a "Save to Notes" button on the summary card in Auto mode (requirement 13). Decided 2026-10-10 by Brent.
 
 ## Revisit after the hackathon
 
