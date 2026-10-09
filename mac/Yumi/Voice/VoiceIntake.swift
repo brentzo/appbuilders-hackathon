@@ -253,6 +253,13 @@ final class VoiceIntake: ReplyListening {
                 whisperReady: whisperReady
             ))
             session = endpoint.map { EndpointedSession(recognizers, endpoint: $0) } ?? recognizers
+            // The words so far, live in the main cat's bubble while the user speaks.
+            session.observePartials { [weak self] text in
+                Task { @MainActor in
+                    guard let self, self.model.isListening else { return }
+                    self.overlay.update(GoalConfirmation.mainCursorId) { $0.transcript = text }
+                }
+            }
             if let testRecording {
                 try MicrophoneCapture.feed(URL(fileURLWithPath: testRecording), to: session)
             } else {
@@ -278,7 +285,10 @@ final class VoiceIntake: ReplyListening {
     private func closeMicrophone() {
         microphone.stop()
         model.isListening = false
-        overlay.update(GoalConfirmation.mainCursorId) { $0.state = .thinking }
+        overlay.update(GoalConfirmation.mainCursorId) {
+            $0.state = .thinking
+            $0.transcript = nil
+        }
     }
 
     /// Nothing usable was heard for a new goal: the cursor this recording brought goes away.

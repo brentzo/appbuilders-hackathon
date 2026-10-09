@@ -17,6 +17,7 @@ nonisolated final class EndpointedSession: RecognitionSession, @unchecked Sendab
 
     func finish() async throws -> String { try await inner.finish() }
     func cancel() { inner.cancel() }
+    func observePartials(_ handler: @escaping @Sendable (String) -> Void) { inner.observePartials(handler) }
 }
 
 /// Finds where the user stopped talking, for hands-free replies (OBJ-17.5): there is no shortcut

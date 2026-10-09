@@ -8,6 +8,13 @@ nonisolated protocol RecognitionSession: AnyObject, Sendable {
     /// The transcript, empty when nothing was said.
     func finish() async throws -> String
     func cancel()
+    /// Reports the words heard so far while the user is still speaking, from any thread.
+    /// Recognizers that cannot do that (Whisper) never call it.
+    func observePartials(_ handler: @escaping @Sendable (String) -> Void)
+}
+
+nonisolated extension RecognitionSession {
+    func observePartials(_ handler: @escaping @Sendable (String) -> Void) {}
 }
 
 nonisolated enum RecognitionFailure: Error, Equatable {
@@ -71,17 +78,20 @@ nonisolated final class NativeRecognitionSession: RecognitionSession, @unchecked
     private let request = SFSpeechAudioBufferRecognitionRequest()
     private var task: SFSpeechRecognitionTask?
     private let outcome = Outcome<String>()
+    private let partials = Locked<(@Sendable (String) -> Void)?>(nil)
 
     init() throws {
         guard let recognizer = SFSpeechRecognizer(locale: Self.locale), recognizer.supportsOnDeviceRecognition else {
             throw RecognitionFailure.onDeviceUnavailable
         }
         request.requiresOnDeviceRecognition = true
-        request.shouldReportPartialResults = false
+        request.shouldReportPartialResults = true
         request.addsPunctuation = true
-        task = recognizer.recognitionTask(with: request) { [outcome] result, error in
+        task = recognizer.recognitionTask(with: request) { [outcome, partials] result, error in
             if let result, result.isFinal {
                 outcome.resolve(.success(result.bestTranscription.formattedString))
+            } else if let result {
+                partials.get()?(result.bestTranscription.formattedString)
             } else if let error {
                 // "No speech detected" arrives as an error; to the user that is silence, not a failure.
                 outcome.resolve(Self.isNoSpeech(error) ? .success("") : .failure(Self.isOffline(error) ? RecognitionFailure.onDeviceUnavailable : error))
@@ -91,6 +101,10 @@ nonisolated final class NativeRecognitionSession: RecognitionSession, @unchecked
 
     func append(_ buffer: AVAudioPCMBuffer) {
         request.append(buffer)
+    }
+
+    func observePartials(_ handler: @escaping @Sendable (String) -> Void) {
+        partials.set(handler)
     }
 
     func finish() async throws -> String {

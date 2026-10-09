@@ -27,7 +27,7 @@ nonisolated final class AnalyzerRecognitionSession: RecognitionSession, @uncheck
     }
 
     private static func makeTranscriber() -> SpeechTranscriber {
-        SpeechTranscriber(locale: NativeRecognitionSession.locale, transcriptionOptions: [], reportingOptions: [], attributeOptions: [])
+        SpeechTranscriber(locale: NativeRecognitionSession.locale, transcriptionOptions: [], reportingOptions: [.volatileResults], attributeOptions: [])
     }
 
     private let analyzer: SpeechAnalyzer
@@ -36,6 +36,7 @@ nonisolated final class AnalyzerRecognitionSession: RecognitionSession, @uncheck
     private let input: AsyncStream<AnalyzerInput>.Continuation
     private let started: Task<Void, Error>
     private let collected: Task<String, Error>
+    private let partials = Locked<(@Sendable (String) -> Void)?>(nil)
 
     init() throws {
         guard let format = Self.readyFormat.get() else { throw RecognitionFailure.modelNotReady }
@@ -47,10 +48,18 @@ nonisolated final class AnalyzerRecognitionSession: RecognitionSession, @uncheck
         self.input = input
         // Audio appended before the analyzer starts waits in the stream.
         started = Task { try await analyzer.start(inputSequence: stream) }
-        collected = Task {
+        collected = Task { [partials] in
+            // Final results add up to the transcript; a volatile one is the guess for the words
+            // after them, shown while the user speaks and replaced as it firms up.
             var text = ""
             for try await result in transcriber.results {
-                text += String(result.text.characters)
+                let words = String(result.text.characters)
+                if result.isFinal {
+                    text += words
+                    partials.get()?(text)
+                } else {
+                    partials.get()?(text + words)
+                }
             }
             return text
         }
@@ -78,6 +87,10 @@ nonisolated final class AnalyzerRecognitionSession: RecognitionSession, @uncheck
             return source
         }
         if output.frameLength > 0 { input.yield(AnalyzerInput(buffer: output)) }
+    }
+
+    func observePartials(_ handler: @escaping @Sendable (String) -> Void) {
+        partials.set(handler)
     }
 
     func finish() async throws -> String {

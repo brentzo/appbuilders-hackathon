@@ -71,4 +71,8 @@ nonisolated final class FallbackRecognitionSession: RecognitionSession, @uncheck
     func cancel() {
         for (_, session) in sessions { session.cancel() }
     }
+
+    func observePartials(_ handler: @escaping @Sendable (String) -> Void) {
+        for (_, session) in sessions { session.observePartials(handler) }
+    }
 }
