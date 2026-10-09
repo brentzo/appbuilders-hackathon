@@ -28,8 +28,8 @@ tags: [objective, p1, mac, voice, ux]
 
 ## Why this objective
 
-SPEC-06 "Changing the goal mid-task" lets the user say "Hey Yumi, sorry, not Notes, put it in Keynote" while a cursor is working.  
-The Mac hears it, freezes the cursors the moment the user starts talking, stops speaking, and hands what was said to the harness ([OBJ-61](OBJ-61-harness-goal-revision.md)) through the [OBJ-60](OBJ-60-goal-revision-contract.md) contract.  
+SPEC-06 "Changing the goal mid-task" lets the user say "Hey Yumi, sorry, not Notes, put it in Keynote" while a cursor is working.
+The Mac hears it, freezes the cursors the moment the user starts talking, stops speaking, and hands what was said to the harness ([OBJ-61](OBJ-61-harness-goal-revision.md)) through the [OBJ-60](OBJ-60-goal-revision-contract.md) contract.
 It reuses the local stop and the `uiLanes` pause from [OBJ-35](OBJ-35-mac-stop-and-take-over.md), and the wake word from [OBJ-16](OBJ-16-mac-wake-word.md).
 
 ## Read first

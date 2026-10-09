@@ -35,20 +35,20 @@ They can stop, pause, take over, or resume at any time, by voice or by touching 
 
 ### Changing the goal mid-task (p1)
 
-14. `p1` Saying the wake word or holding push-to-talk on the Mac while a task runs is an interruption: every UI lane pauses before its next action, as in requirement 2, helpers keep running, and Yumi stops speaking at once.  
+14. `p1` Saying the wake word or holding push-to-talk on the Mac while a task runs is an interruption: every UI lane pauses before its next action, as in requirement 2, helpers keep running, and Yumi stops speaking at once.
     The wake word stays live while Yumi is talking.
-15. `p1` If no speech starts within 5 seconds of an interruption, the task resumes without a word.  
+15. `p1` If no speech starts within 5 seconds of an interruption, the task resumes without a word.
     If speech starts but cannot be understood, Yumi says the SPEC-11 "Didn't catch speech" copy and the task stays paused.
-16. `p1` Saying "stop", "cancel", or "continue" after an interruption acts on the paused task as in requirements 6 and 8.  
+16. `p1` Saying "stop", "cancel", or "continue" after an interruption acts on the paused task as in requirements 6 and 8.
     Anything else becomes one revised goal, which the model writes from the original goal, what is already done, and what the user just said, whether they replaced the goal, added to it, or asked for something separate.
-17. `p1` A revised goal is repeated back and waits for a yes, a correction, or a cancel, as a new goal does in [SPEC-01](01-voice-intake.md) requirements 4 to 6, with the task paused until then.  
-    In Auto mode it is shown on screen with a short spoken acknowledgement, and the task resumes.  
+17. `p1` A revised goal is repeated back and waits for a yes, a correction, or a cancel, as a new goal does in [SPEC-01](01-voice-intake.md) requirements 4 to 6, with the task paused until then.
+    In Auto mode it is shown on screen with a short spoken acknowledgement, and the task resumes.
     "Cancel" cancels the task.
-18. `p1` Nothing already done is undone.  
+18. `p1` Nothing already done is undone.
     The repeat-back names anything left behind that the revised goal no longer needs, and the new plan starts from the screen as it is; anything the user wants undone goes through [SPEC-07](07-safety.md).
 19. `p1` Once a revised goal is confirmed, the plan is redone from it: running helpers and queued subtasks still in the new plan carry on, and the others are cancelled.
-20. `p1` While Yumi waits for the user, an answer is not an interruption.  
-    On an approval card, anything other than the card's own answers declines the card and becomes an interruption; a delete is still approved only by a tap ([SPEC-07](07-safety.md) requirement 11).  
+20. `p1` While Yumi waits for the user, an answer is not an interruption.
+    On an approval card, anything other than the card's own answers declines the card and becomes an interruption; a delete is still approved only by a tap ([SPEC-07](07-safety.md) requirement 11).
     An answer to a question from the model is an interruption only if it says "stop", "cancel", or clearly changes the goal.
 21. `p1` Only the Mac takes voice interruptions. The phone keeps "Stop" and "Cancel" for a task it sent to the Mac; revising that task from the phone comes later.
 
@@ -221,6 +221,6 @@ Feature: Changing the goal mid-task
 - "Paused. Say continue when you're ready, or cancel to stop for good." is spoken only after the stop shortcut and the menu bar "Stop". A mouse take-over pauses silently and shows the paused panel, because the user is busy with their own work and speech would interrupt. Decided 2026-10-09.
 - A take-over is a real click, a key press, a scroll, or a deliberate pointer move of more than about 80 points within about half a second, replacing the earlier "any mouse movement". Small jiggles and trackpad bumps never pause a task, and pointer movement over, and clicks in, Yumi's own bubbles, thoughts panels, helper chips, cards, and windows never count, so the user can reach for a cat's bubble mid-task (SPEC-07 requirement 23) without pausing it. The Mac logs which event triggered each take-over. Decided 2026-10-10 by Brent.
 - The paused panel keeps the "Resume" button, and both "continue" and "resume" work by voice, so the spoken line and the button label both work. Decided 2026-10-09.
-- **Changing the goal mid-task** is one revised goal rather than separate kinds of change or a second task, so the user never names a category and Yumi keeps one task at a time on the Mac.  
-  It pauses the UI lanes at once, because a correction usually means the next clicks are wrong; nothing done is undone automatically, because an undo is more actions on a screen Yumi may have misread.  
+- **Changing the goal mid-task** is one revised goal rather than separate kinds of change or a second task, so the user never names a category and Yumi keeps one task at a time on the Mac.
+  It pauses the UI lanes at once, because a correction usually means the next clicks are wrong; nothing done is undone automatically, because an undo is more actions on a screen Yumi may have misread.
   It is p1 and builds on the stop and take-over, confirmation, and wake word objectives. Decided 2026-10-10 by Jepoy.

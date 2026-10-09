@@ -28,8 +28,8 @@ tags: [objective, p1, harness, voice, ux]
 
 ## Why this objective
 
-SPEC-06 "Changing the goal mid-task" turns whatever the user says during a running task into one revised goal.  
-The Mac pauses the UI lanes and hands over what was said ([OBJ-62](OBJ-62-mac-voice-interruption.md)); the harness writes the revised goal, repeats it back, and redoes the plan from it without undoing anything.  
+SPEC-06 "Changing the goal mid-task" turns whatever the user says during a running task into one revised goal.
+The Mac pauses the UI lanes and hands over what was said ([OBJ-62](OBJ-62-mac-voice-interruption.md)); the harness writes the revised goal, repeats it back, and redoes the plan from it without undoing anything.
 It builds on the repeat-back from [OBJ-17](OBJ-17-goal-confirmation.md) and the pause, cancel, and approval handling from [OBJ-38](OBJ-38-approvals-pause-and-action-log.md).
 
 ## Read first

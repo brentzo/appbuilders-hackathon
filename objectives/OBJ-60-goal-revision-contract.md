@@ -28,9 +28,9 @@ tags: [objective, p1, protocol, voice, ux]
 
 ## Why this objective
 
-SPEC-06 "Changing the goal mid-task" lets the user interrupt a running task by voice on the Mac and turn what they say into one revised goal.  
-The Mac already pauses the UI lanes with `pause` and `scope: uiLanes` ([OBJ-45](OBJ-45-pause-scope-and-model-readiness-contracts.md)), and the harness already repeats goals back with `goalRestated` and `replyToConfirmation`.  
-What is missing is a way to hand the harness what the user said for a task that is already running, and a place in the task record for each revision (SPEC-02 requirement 12).  
+SPEC-06 "Changing the goal mid-task" lets the user interrupt a running task by voice on the Mac and turn what they say into one revised goal.
+The Mac already pauses the UI lanes with `pause` and `scope: uiLanes` ([OBJ-45](OBJ-45-pause-scope-and-model-readiness-contracts.md)), and the harness already repeats goals back with `goalRestated` and `replyToConfirmation`.
+What is missing is a way to hand the harness what the user said for a task that is already running, and a place in the task record for each revision (SPEC-02 requirement 12).
 This objective adds both, so [OBJ-61](OBJ-61-harness-goal-revision.md) and [OBJ-62](OBJ-62-mac-voice-interruption.md) can be built against the same contract.
 
 ## Read first
