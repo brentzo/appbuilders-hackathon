@@ -17,6 +17,8 @@ services:
       BRIDGE_HOST: 0.0.0.0
       BRIDGE_PORT: 8787
       BRIDGE_DATABASE_PATH: /data/bridge.sqlite
+      # The deployed commit, shown on /health. The deploy command sets it from the REVISION file.
+      BRIDGE_REVISION: ${BRIDGE_REVISION:-unknown}
     ports:
       - "127.0.0.1:8787:8787"
     volumes:

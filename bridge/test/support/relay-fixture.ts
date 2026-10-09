@@ -11,7 +11,7 @@ export interface RelayFixture {
   close(): Promise<void>;
 }
 
-export async function openRelayFixture(databasePath?: string, now?: () => Date): Promise<RelayFixture> {
+export async function openRelayFixture(databasePath?: string, now?: () => Date, revision?: string): Promise<RelayFixture> {
   const directory = await mkdtemp(join(tmpdir(), "yumi-relay-test-"));
   const path = databasePath ?? join(directory, "relay.sqlite");
   const logs: Array<{ event: string; fields: Record<string, unknown> }> = [];
@@ -20,6 +20,7 @@ export async function openRelayFixture(databasePath?: string, now?: () => Date):
     port: 0,
     databasePath: path,
     ...(now ? { now } : {}),
+    ...(revision ? { revision } : {}),
     log: (event, fields = {}) => logs.push({ event, fields }),
   });
   await relay.start();

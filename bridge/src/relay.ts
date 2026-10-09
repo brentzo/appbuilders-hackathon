@@ -33,6 +33,8 @@ export interface RelayOptions {
   databasePath: string;
   log?: (event: string, fields?: Record<string, string | number | boolean>) => void;
   now?: () => Date;
+  /** The deployed commit, shown on /health so a live check can name the relay it ran against. */
+  revision?: string;
 }
 
 interface Connection {
@@ -62,7 +64,7 @@ export class Relay {
     this.httpServer = createServer((request, response) => {
       if (request.method === "GET" && request.url === "/health") {
         response.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
-        response.end('{"status":"ok"}');
+        response.end(JSON.stringify({ status: "ok", protocolVersion: PROTOCOL_VERSION, revision: options.revision ?? "unknown" }));
       } else {
         response.writeHead(404);
         response.end();

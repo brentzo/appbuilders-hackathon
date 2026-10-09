@@ -20,6 +20,17 @@ describe("bridge relay smoke", () => {
     }
   });
 
+  it("reports its protocol version and deployed commit on /health, so a live check can name the relay it ran against (OBJ-30.5)", async () => {
+    const fixture = await openRelayFixture(undefined, undefined, "0487067");
+    try {
+      const response = await fetch(fixture.relay.url().replace("ws://", "http://").replace(/\/$/, "") + "/health");
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ status: "ok", protocolVersion: PROTOCOL_VERSION, revision: "0487067" });
+    } finally {
+      await fixture.close();
+    }
+  });
+
   it("refuses an unsupported protocol version and a forged challenge signature", async () => {
     const fixture = await openRelayFixture();
     const wrongVersion = await RelayDevice.connect(fixture.relay.url(), undefined, PROTOCOL_VERSION + 1);

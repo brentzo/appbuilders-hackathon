@@ -4,6 +4,7 @@ export interface RelayConfig {
   host: string;
   port: number;
   databasePath: string;
+  revision: string;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): RelayConfig {
@@ -11,6 +12,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RelayConfig {
     host: env["BRIDGE_HOST"] || "0.0.0.0",
     port: positiveInteger(env["BRIDGE_PORT"], 8787, "BRIDGE_PORT"),
     databasePath: resolve(env["BRIDGE_DATABASE_PATH"] || "/data/bridge.sqlite"),
+    revision: env["BRIDGE_REVISION"] || "unknown",
   };
 }
 
