@@ -10,8 +10,9 @@ struct YumiApp: App {
         MenuBarExtra {
             MenuContent(model: appDelegate.model, windows: appDelegate.windows, harness: appDelegate.harness)
         } label: {
-            // Stand-in until the Rive cat from OBJ-10/OBJ-19 provides a menu bar icon.
-            Image(systemName: "cat")
+            // A template image, so macOS tints it for the menu bar's light, dark, and selected states.
+            Image("MenuBarIcon")
+                .renderingMode(.template)
                 .accessibilityLabel("Yumi")
         }
         .menuBarExtraStyle(.menu)
