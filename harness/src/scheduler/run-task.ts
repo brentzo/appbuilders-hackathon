@@ -1,5 +1,6 @@
 import type { DeviceId, Speak, Task, UserError, Uuid } from "@yumi/protocol/types";
 import { RunControl } from "../control/run-control.ts";
+import { orchestratorTools } from "../gui/orchestrator-tools.ts";
 import { makePlan, subtasksFromPlan } from "../planner/planner.ts";
 import { summarizeTask } from "../planner/summary.ts";
 import { runSchedule, type ScheduleOptions, type SchedulerDeps } from "./scheduler.ts";
@@ -36,13 +37,12 @@ export async function runTask(taskId: Uuid, deps: RunTaskDeps, control = new Run
   const confirmedGoal = task.confirmedGoal;
   const model = { client: deps.client, logger };
 
-  const tools = Object.values(deps.lanes).flatMap((lane) => lane?.tools.tools ?? []);
-  const planned = await makePlan(
-    confirmedGoal,
-    tools.filter((tool, i) => tools.findIndex((t) => t.name === tool.name) === i),
-    model,
-    { taskId, signal },
+  // The orchestrator's tools (SPEC-05 r9): gui_act for work in an app's window, and the helper lane's tools.
+  const tools = orchestratorTools(
+    Object.values(deps.lanes).flatMap((lane) => lane?.tools.tools ?? []),
+    deps.gui !== undefined,
   );
+  const planned = await makePlan(confirmedGoal, tools, model, { taskId, signal });
   switch (planned.outcome) {
     case "aborted":
       return { outcome: "aborted" };

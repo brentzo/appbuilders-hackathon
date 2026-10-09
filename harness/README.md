@@ -11,6 +11,7 @@ The task store is built ([OBJ-04](../objectives/OBJ-04-task-store.md)): tasks, s
 The planner, scheduler, and task summary are built ([OBJ-05](../objectives/OBJ-05-planner-and-scheduler.md)), with every subtask running as a helper on test-only file tools until the lane router and the typed file tools land.
 Resume and limits are built ([OBJ-06](../objectives/OBJ-06-resume-and-limits.md)): startup recovery, `resumeTask` and `cancelTask`, and the step, attempt, and depth limits.
 Approvals, pause, and the action log are built ([OBJ-38](../objectives/OBJ-38-approvals-pause-and-action-log.md)): the send and delete approvals with their re-checks, blocked actions, `pause` with two scopes, a cancel that stops every lane, and the action log file.
+The `gui_act` sub-agent is built ([OBJ-36](../objectives/OBJ-36-gui-act-sub-agent.md)): ghost and main subtasks run a short step loop in the target app's window through the Mac app, and return a structured result.
 
 ## Responsibilities
 
@@ -55,11 +56,12 @@ Approvals, pause, and the action log are built ([OBJ-38](../objectives/OBJ-38-ap
 | `src/control/run-control.ts` | One run's pause state, which every step loop checks before it acts. |
 | `src/action-log/text-log.ts` | The action log file, written from the task store. |
 | `src/worker/` | One step: the prompt, the action names (`actions.ts`), the narrowed output schema, validation, and the one retry. |
+| `src/gui/` | `gui_act` (`gui-act.ts`): one attempt's step loop, with the Mac app seam (`mac.ts`), settling and the no-effect check (`screen.ts`), the home folder watch for files an app wrote (`file-watch.ts`), questions to the user (`questions.ts`), the copy it speaks (`copy.ts`), and the orchestrator's tool list (`orchestrator-tools.ts`). |
 | `src/router/` | The lane router (`router.ts`), the app capability probe and cache (`capability.ts`), each lane's actions (`lanes.ts`), and cursors and window locks (`windows.ts`). |
 | `src/schema/bundle.ts` | Turns a protocol type into one self-contained JSON Schema. |
 | `src/harness.ts` | Opens the task store, starts the RPC server with the history methods, and sends status changes as events. |
 | `src/planner/` | The planner prompt (`prompt.ts`), the plan checks (`check.ts`), `makePlan` with its one retry (`planner.ts`), and the spoken summary (`summary.ts`). |
-| `src/scheduler/` | `runTask` and `continueTask` (`run-task.ts`), the scheduler (`scheduler.ts`), one subtask's step loop (`subtask-runner.ts`), the worker input (`worker-input.ts`), the structured result and what was finished so far (`result.ts`), the route and lane seams (`lanes.ts`), startup recovery (`recovery.ts`), and starting, resuming, and cancelling tasks (`task-control.ts`). |
+| `src/scheduler/` | `runTask` and `continueTask` (`run-task.ts`), the scheduler (`scheduler.ts`), one subtask's step loop (`subtask-runner.ts`), the worker input (`worker-input.ts`), the structured result and what was finished so far (`result.ts`), the route and lane seams (`lanes.ts`), the ghost and main lanes through `gui_act` (`gui-lane.ts`), startup recovery (`recovery.ts`), and starting, resuming, and cancelling tasks (`task-control.ts`). |
 | `src/store/task-store.ts` | The task store: the only module with SQL. Tasks, subtasks, steps, screenshots, the action log, history queries, window locks, and app capabilities. |
 | `src/store/migrations.ts` | The database schema as ordered migrations, and the triggers that refuse deletes. |
 | `src/store/transitions.ts` | The allowed task and subtask status changes. |
@@ -71,6 +73,7 @@ Approvals, pause, and the action log are built ([OBJ-38](../objectives/OBJ-38-ap
 | `src/errors.ts` | Maps failures to the protocol's `UserError` kinds. Never builds user-facing text. |
 | `src/log.ts` | The local log file. |
 | `scripts/model-check.ts` | Checks the harness against the real model server. |
+| `scripts/gui-run.ts` | Runs one `gui_act` subtask on the real Mac app and model, several times, and prints each run's steps and time. |
 | `scripts/check-grammar.py` | Checks that the output schema compiles as mlx-vlm's grammar, without loading a model. |
 | `test/` | Tests, with a mock model server that answers like mlx-vlm 0.7.6. |
 
@@ -87,6 +90,7 @@ Run from `harness/` after `npm install` here and in `protocol/`.
 | `npm run format` / `npm run format:check` | Prettier. Markdown is not formatted. |
 | `npm run verify` | Typecheck, lint, format check, and tests. Run it before every commit that touches `harness/`. |
 | `npm run model:check` | Sends the protocol's example step to the real model server and prints the validated action. See below. |
+| `npm run gui:run -- --app Keynote --instruction "..." --runs 5` | Runs a GUI subtask on the real Mac app and model server. Start the model server, then this, then the Mac app (see "gui_act"). |
 
 ## Configuration
 
@@ -178,6 +182,7 @@ mlx-vlm 0.7.6 compiles schemas with llguidance 1.9.1, which rejects `uniqueItems
 - It refuses to start if another harness is already listening.
 - The Mac app calls `hello` with the protocol version first. Events go only to connections that said hello.
 - Build and test the Mac side against it with the protocol's mock Mac app: `npm start` here, then `npm run mock:mac` in `protocol/`.
+- `answerQuestion` delivers the user's answer to a `gui_act` question (`questionAsked`). An answer nobody is waiting for, such as a late one after a pause, answers the `unexpected` kind.
 
 ## Task store
 
@@ -332,7 +337,7 @@ One file a day, in local time, with lines like these:
 
 - Lines say the time (am/pm), the device ("Mac" or "phone"), the lane ("helper", "ghost cursor", "main cursor"), and what happened in plain language. A delete lists every path on its own line.
 - When a task ends, a count line says what it did, counting only actions that ran: "Read 3 files and clicked 12 times".
-- Descriptions never contain text Yumi typed or set (`src/scheduler/describe.ts`), so a password never reaches the log (SPEC-07 r20). `describeGuiAction` is the line for a UI action, for OBJ-36.
+- Descriptions never contain text Yumi typed or set (`src/scheduler/describe.ts`), so a password never reaches the log (SPEC-07 r20). `describeGuiAction` is the line for a UI action, a direct tool, or a question in `gui_act`.
 
 ## Planner and scheduler
 
@@ -357,7 +362,7 @@ One file a day, in local time, with lines like these:
 6. **Summary.** The model writes one or two sentences from the goal and the results, retried once.
    The task is set to `done` with the summary, and the summary is sent as a `speak` event.
 
-Only the helper lane has a runner so far: ghost and main come with [OBJ-36](../objectives/OBJ-36-gui-act-sub-agent.md), and a subtask routed there fails until then.
+Ghost and main subtasks run through `gui_act` (below), unless a test gives the lane its own runner; helpers run the step loop in `subtask-runner.ts`.
 The planner names the app a UI subtask works in (`targetApp`); file work names none and runs as a helper.
 Nothing calls `runTask` in the running harness yet: the confirmation flow that moves a task to `planning` will, through `harness.tasks.start`.
 
@@ -384,6 +389,65 @@ Resume never starts on its own: the user is always asked first ([SPEC-02](../spe
   - Steps per subtask (25): every step counts, across attempts and restarts. At the limit the subtask fails and the user gets `taskTookTooLong` with `finishedSoFar`: the titles of the finished subtasks, then what the stopped subtask did that worked, one line each, at most 500 characters.
   - Attempts per subtask (3): starting a subtask starts an attempt; a resume carries on the attempt it cut off. A subtask whose attempts are used up fails before it is routed, with `stepFailed` naming it.
   - Subtask depth (1): the task store refuses a subtask made from inside a subtask.
+
+## gui_act
+
+`guiAct(subtaskId, deps, options)` in `src/gui/gui-act.ts` is one attempt at a ghost or main subtask ([SPEC-05](../specs/05-mac-gui-control.md)).
+The orchestrator never looks at the screen: it gets back a `SubtaskResult`, never a transcript.
+
+### The orchestrator's tools
+
+The planner is offered at most 8 tools (SPEC-05 r9, `src/gui/orchestrator-tools.ts`), and a test fails past 8:
+
+`gui_act`, `read_file`, `list_dir`, `write_new_file`, `copy`, `move`, `move_to_trash`, `phone`.
+
+`open_app`, `open_file`, `open_url`, and `reveal_in_finder` live inside `gui_act`, as the direct tools its worker is offered first.
+Today the planner sees 7 of them; `phone` joins when its lane exists.
+`gui_act` takes the subtask: its instruction and target come from the task record.
+
+### One attempt
+
+1. Count the attempt on the subtask (a resume carries on the one it cut off), spawn the lane's cursor (`main`, or the ghost's worker id with the subtask title), and look at the target window.
+   If the app has no window to read, open it with `open_app` first, as a step of its own.
+2. Each step: stop if the subtask's signal aborted or `RunControl.mayAct(lane)` is false (a cancel, a pause, or a take-over), the attempt has run 10 steps (`partial`), or the subtask 25 (`taskTookTooLong`).
+3. Build the worker input with the OBJ-05 builder and the direct tools, set the cursor to thinking, and call the model with the step's schema for constrained decoding. An invalid reply is retried once.
+4. `finish` ends the attempt. Its status is checked against the step log: `done` after an attempt in which no action worked is `stuck`; `done` before any action stays `done`.
+5. An action that would fill a password field (setting it, typing while it has focus, or clicking it) never runs: the user is asked to type the password, with the SPEC-07 draft copy. So is any `ask` while a password field is on screen; other questions are the model's own.
+   A question is a step: the subtask waits for the user the way an approval does (`RunControl.setWaiting`, task `waitingForUser`), so a take-over `pause` while the user types is ignored; the `questionAsked` event goes out, and the answer from `answerQuestion` goes into the step's observation for the next step.
+6. Otherwise resolve the element, check the action with the gate, check `mayAct` once more, and write the step row before anything runs.
+   - `blocked`: recorded as not done, then `approvals.blocked`; "Keep going" goes on, anything else ends the attempt.
+   - `ask`: `approvals.request`, with the To and Cc fields from `findRecipientFields` for a send. Only `approved` runs; a no or an unavailable approval is recorded as not done, and the model reads why.
+7. Run it through the Mac app's `executeAction` with the lane's cursor, which the Mac app moves to the element first. Then look again until two looks 500 ms apart match (at most 5 seconds), so a closing sheet is not shown as the current screen.
+8. The outcome: a UI action that left the trimmed tree and the window title as they were is `noEffect`, unless a file appeared; so is an accessibility error from the Mac app, with its reason. A direct tool is judged by the Mac app's answer.
+   The step's line says what the Mac app did, what changed, why nothing changed (for example "clicking a text field only puts the cursor in it. Use setValue to fill it."), and any file that appeared ("New file: Q3 Report.pdf.").
+9. 3 `noEffect` in a row end the attempt with `stuck` and `stuckOnScreen`; 2 invalid replies in a row end it with `stuck`. The result carries both streaks for OBJ-09's handoff, which is not built yet, so a ghost ends the same way as main.
+
+Action log lines come from `describeGuiAction` and `describeNotDone` (`src/scheduler/describe.ts`).
+The result's note is the harness's own words ("Done in 6 steps.", "Stopped after 10 steps without finishing, with a sheet in front."), never model or screen text.
+Its files are the files written in the home folder during the attempt (below).
+
+Element paths are a stand-in (`#3`): the observation carries no paths, and the Mac app resolves numbers itself for `executeAction`.
+`readFieldValues` cannot resolve them, so until the Mac app returns paths (OBJ-39, "Protocol asks"), a send's recipients cannot be read and the send is not run.
+
+### What the scheduler does with it
+
+`runGuiSubtask` (`src/scheduler/gui-lane.ts`) calls `gui_act` again after a `partial` attempt, up to 3 attempts and 25 steps, and keeps the files of every attempt.
+`done` finishes the subtask; anything else fails it with the attempt's error, or "Couldn't finish a step".
+A take-over sends the subtask back to `ready` with its attempt, and Resume carries on with the same attempt (OBJ-38).
+
+### Files an app wrote
+
+A PDF exported through Keynote's menus is in no tool call, so `gui_act` watches the home folder for the length of the attempt with recursive `fs.watch` (FSEvents).
+It reports files written after the attempt began that still exist, as `~/` paths, and collapses changes inside a document package (`.key`, `.pages`) into the package.
+`~/Library`, hidden files, and hidden folders are never reported.
+A watch goes live a little after it starts and events arrive a little after the write, so the watcher writes a marker file in `~/Library/Application Support/Yumi` and waits for its event before the first action and before each report.
+It cannot tell who wrote a file: a download or another subtask writing at the same time is reported too.
+
+### Running it on the real Mac
+
+The Mac app always connects to `~/Library/Application Support/Yumi/harness.sock` and starts its own harness, which does not run tasks yet.
+`npm run gui:run` starts a harness with the work it needs on that socket: start the model server, then the script, then the Mac app.
+The app's own harness then exits because the socket is taken, and the app keeps retrying it; that is only noise in its log.
 
 ## Errors and the log
 

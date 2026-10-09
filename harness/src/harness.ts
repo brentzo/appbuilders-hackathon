@@ -1,8 +1,12 @@
-import type { Handler } from "@yumi/protocol";
+import { RpcFailure, type Handler } from "@yumi/protocol";
+import type { AnswerQuestionParams, Empty } from "@yumi/protocol/types";
 import { ActionLogFile } from "./action-log/text-log.ts";
 import { ApprovalFlow } from "./approvals/approval-flow.ts";
 import { DEFAULT_LIMITS, type HarnessConfig } from "./config.ts";
 import { abandonUnconfirmed, GoalConfirmation } from "./confirm/confirmation.ts";
+import type { GuiServices } from "./gui/gui-act.ts";
+import { macAppGui } from "./gui/mac.ts";
+import { NoQuestionError, QuestionBroker } from "./gui/questions.ts";
 import { describeError, type Logger } from "./log.ts";
 import { confirmationHandlers } from "./rpc/confirmation.ts";
 import { historyHandlers } from "./rpc/history.ts";
@@ -29,6 +33,8 @@ export interface Harness {
   actionLog: ActionLogFile;
   /** Repeats goals back and starts them once the user confirms (OBJ-17). */
   confirmation: GoalConfirmation;
+  /** Questions from gui_act to the user, answered through `answerQuestion` (OBJ-36.9). */
+  questions: QuestionBroker;
   /** What startup recovery found: tasks a restart cut off, and steps it finished as noEffect. */
   recovery: Recovery;
   close(): Promise<void>;
@@ -38,8 +44,11 @@ export interface Harness {
  * What running tasks needs beyond what the harness makes itself (the store, the lane router, the voice on the local
  * socket, the approval flow, and the limits from the configuration). Tests may replace the route and the voice.
  */
-export type HarnessWork = Omit<RunTaskDeps, "store" | "route" | "voice" | "limits" | "approvals"> &
-  Partial<Pick<RunTaskDeps, "route" | "voice">>;
+export type HarnessWork = Omit<RunTaskDeps, "store" | "route" | "voice" | "limits" | "approvals" | "gui"> &
+  Partial<Pick<RunTaskDeps, "route" | "voice">> & {
+    /** Replaces parts of the ghost and main lanes, which by default act through the connected Mac app. */
+    gui?: Partial<Omit<GuiServices, "questions">>;
+  };
 
 /** Extra parts wired into the RPC server, such as the Mac bridge client's methods. */
 export interface HarnessOptions {
@@ -85,6 +94,10 @@ export async function startHarness(
     let approvals: ApprovalFlow | undefined;
     // eslint-disable-next-line prefer-const
     let confirmation: GoalConfirmation | undefined;
+    // The broker sends through the server, which is created just below, before any question can be asked.
+    // eslint-disable-next-line prefer-const
+    let server: HarnessRpcServer;
+    const questions = new QuestionBroker((payload) => server.emit("questionAsked", payload), logger);
     const ownHandlers = {
       ...historyHandlers(store, logger),
       ...taskControlHandlers(
@@ -94,10 +107,20 @@ export async function startHarness(
         logger,
       ),
       ...confirmationHandlers(() => confirmation!),
+      answerQuestion: (params: unknown): Empty => {
+        try {
+          questions.answer(params as AnswerQuestionParams);
+        } catch (error) {
+          if (!(error instanceof NoQuestionError)) throw error;
+          // A late answer, after a pause or cancel dropped the question. The app shows "Unexpected".
+          throw new RpcFailure({ kind: "unexpected", taskId: (params as AnswerQuestionParams).taskId }, error.message);
+        }
+        return {};
+      },
     };
     const clash = Object.keys(options.handlers ?? {}).filter((name) => name in ownHandlers);
     if (clash.length > 0) throw new Error(`RPC methods registered twice: ${clash.join(", ")}`);
-    const server: HarnessRpcServer = await HarnessRpcServer.start({
+    server = await HarnessRpcServer.start({
       socketPath: config.socketPath,
       logger,
       handlers: { ...ownHandlers, ...options.handlers },
@@ -131,7 +154,15 @@ export async function startHarness(
       store,
       logger,
       work &&
-        voice && { ...work, store, limits, route: work.route ?? routeWith(router), voice, ...(approvals ? { approvals } : {}) },
+        voice && {
+          ...work,
+          store,
+          limits,
+          route: work.route ?? routeWith(router),
+          voice,
+          ...(approvals ? { approvals } : {}),
+          gui: { mac: macAppGui(server, logger), ...work.gui, questions },
+        },
       approvals,
     );
     const control = tasks;
@@ -152,6 +183,7 @@ export async function startHarness(
       ...(approvals ? { approvals } : {}),
       actionLog,
       confirmation: confirming,
+      questions,
       recovery,
       close: async () => {
         await confirming.close();

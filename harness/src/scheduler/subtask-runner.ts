@@ -148,7 +148,7 @@ export async function runSubtask(
  * What the task finished before the step limit stopped this subtask (SPEC-11 "Task took too long"): the titles of
  * its finished subtasks, then what this subtask's actions did that worked, from the action log.
  */
-function describeFinished(store: TaskStore, subtask: Subtask): string | undefined {
+export function describeFinished(store: TaskStore, subtask: Subtask): string | undefined {
   const done = store
     .listSubtasks(subtask.taskId)
     .filter((s) => s.status === "done")

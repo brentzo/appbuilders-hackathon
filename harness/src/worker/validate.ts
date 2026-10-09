@@ -12,7 +12,19 @@ import { ACTION, isElementAction } from "./actions.ts";
 
 export type OutputCheck = { ok: true; output: WorkerOutput } | { ok: false; error: string };
 
-export function checkWorkerOutput(raw: string | null, input: WorkerInput, lane: Lane): OutputCheck {
+/**
+ * What to do with an action that would fill a password field (SPEC-05 r7): `reject` it as invalid so the model asks
+ * instead, or `handOff`: accept it, so the caller replaces it with its own request for the user to type the password
+ * and never runs it. Either way the field is never filled.
+ */
+export type SecureFieldRule = "reject" | "handOff";
+
+export function checkWorkerOutput(
+  raw: string | null,
+  input: WorkerInput,
+  lane: Lane,
+  secureFields: SecureFieldRule = "reject",
+): OutputCheck {
   if (raw === null || raw.trim() === "") return { ok: false, error: "The reply was empty." };
 
   let value: unknown;
@@ -27,11 +39,11 @@ export function checkWorkerOutput(raw: string | null, input: WorkerInput, lane: 
     return { ok: false, error: `The reply does not match the action schema: ${result.errors.join("; ")}.` };
   }
   const output = value as WorkerOutput;
-  const problem = actionProblem(output.action, input, lane);
+  const problem = actionProblem(output.action, input, lane, secureFields);
   return problem ? { ok: false, error: problem } : { ok: true, output };
 }
 
-function actionProblem(action: ModelAction, input: WorkerInput, lane: Lane): string | undefined {
+function actionProblem(action: ModelAction, input: WorkerInput, lane: Lane, secureFields: SecureFieldRule): string | undefined {
   // SPEC-03 r7: only the main cursor sends keystrokes; a ghost sets text through the accessibility API or DevTools.
   if (!laneAllows(lane, action.kind)) {
     return action.kind === ACTION.type || action.kind === ACTION.key
@@ -42,7 +54,7 @@ function actionProblem(action: ModelAction, input: WorkerInput, lane: Lane): str
     const element = input.observation.elements.find((e) => e.n === action.element);
     if (!element) return `Element ${action.element} is not on the screen. Use a number from the element list.`;
     // SPEC-05 r7: never fill a password field; ask the user to type it.
-    if (action.kind === ACTION.setValue && element.role === "secureTextField") {
+    if (action.kind === ACTION.setValue && element.role === "secureTextField" && secureFields === "reject") {
       return `Element ${action.element} is a password field. Never fill it; use ${ACTION.ask} so the user types it.`;
     }
   }
@@ -50,7 +62,7 @@ function actionProblem(action: ModelAction, input: WorkerInput, lane: Lane): str
     return `The tool ${action.call.tool} is not available for this step. Available tools: ${input.allowedTools.join(", ") || "none"}.`;
   }
   // SPEC-05 r7: never type with the keyboard while a password field has focus.
-  if (action.kind === ACTION.type && focusedElement(input)?.role === "secureTextField") {
+  if (action.kind === ACTION.type && focusedElement(input)?.role === "secureTextField" && secureFields === "reject") {
     return `The focused element is a password field. Never type into it; use ${ACTION.ask} so the user types it.`;
   }
   if (action.kind === ACTION.clickAt && !input.observation.screenshotPath) {

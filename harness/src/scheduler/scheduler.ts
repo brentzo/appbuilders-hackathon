@@ -1,8 +1,10 @@
 import type { Subtask, UserError, Uuid } from "@yumi/protocol/types";
 import { DEFAULT_LIMITS } from "../config.ts";
 import { isUiLane, RunControl } from "../control/run-control.ts";
+import type { GuiServices } from "../gui/gui-act.ts";
 import { describeError } from "../log.ts";
 import { ProbeFailure, type RouteDecision } from "../router/index.ts";
+import { runGuiSubtask } from "./gui-lane.ts";
 import type { LaneRunners, RouteSubtask } from "./lanes.ts";
 import { runSubtask, type SubtaskRun, type SubtaskRunDeps } from "./subtask-runner.ts";
 
@@ -26,7 +28,10 @@ import { runSubtask, type SubtaskRun, type SubtaskRunDeps } from "./subtask-runn
 
 export interface SchedulerDeps extends SubtaskRunDeps {
   route: RouteSubtask;
+  /** Each lane's runner. The running harness has only the helper's; tests may stand in for a UI lane. */
   lanes: LaneRunners;
+  /** What the ghost and main lanes need: subtasks routed to a lane with no runner run through `gui_act` (OBJ-36). */
+  gui?: GuiServices;
   /** How many subtasks run at once: `ModelConfig.parallelSlots`. */
   slots: number;
 }
@@ -186,14 +191,17 @@ export async function runSchedule(
       held.add(subtask.id);
       return;
     }
+    // A lane with its own runner uses it; the ghost and main lanes otherwise run through gui_act.
     const runner = deps.lanes[decision.lane];
+    const gui = !runner && isUiLane(decision.lane) ? deps.gui : undefined;
     const running = store.setSubtaskStatus(subtask.id, "running", {
       lane: decision.lane,
       routeReason: decision.reason,
       workerId: `${decision.lane}-${++workers}`,
-      attempts: continues ? subtask.attempts : subtask.attempts + 1,
+      // Each gui_act call counts its own attempt (OBJ-36.1).
+      attempts: continues || gui ? subtask.attempts : subtask.attempts + 1,
     });
-    if (!runner) {
+    if (!runner && !gui) {
       logger.error("schedule.noLane", { taskId, subtaskId: subtask.id, lane: decision.lane });
       store.setSubtaskStatus(subtask.id, "failed", {
         result: { status: "blocked", files: [], note: "No worker for this lane yet." },
@@ -211,15 +219,10 @@ export async function runSchedule(
     const subtaskSignal = control.enter(subtask.id, decision.lane);
     let run: SubtaskRun;
     try {
-      run = await runSubtask(
-        running,
-        decision.lane,
-        runner,
-        confirmedGoal,
-        deps,
-        AbortSignal.any([subtaskSignal, stop.signal]),
-        control,
-      );
+      const runSignal = AbortSignal.any([subtaskSignal, stop.signal]);
+      run = gui
+        ? await runGuiSubtask(running, confirmedGoal, { ...deps, ...gui }, runSignal, control, continues)
+        : await runSubtask(running, decision.lane, runner!, confirmedGoal, deps, runSignal, control);
     } finally {
       control.leave(subtask.id);
     }

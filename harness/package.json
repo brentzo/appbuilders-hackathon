@@ -15,7 +15,8 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "verify": "npm run typecheck && npm run lint && npm run format:check && npm test",
-    "model:check": "tsx scripts/model-check.ts"
+    "model:check": "tsx scripts/model-check.ts",
+    "gui:run": "tsx scripts/gui-run.ts"
   },
   "dependencies": {
     "@yumi/protocol": "file:../protocol",

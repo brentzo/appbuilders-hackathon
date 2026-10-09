@@ -5,7 +5,7 @@ import type { Logger } from "../log.ts";
 import type { ModelClient, Usage } from "../model/client.ts";
 import { buildWorkerMessages } from "./prompt.ts";
 import { workerOutputSchemaFor } from "./schema.ts";
-import { checkWorkerOutput } from "./validate.ts";
+import { checkWorkerOutput, type SecureFieldRule } from "./validate.ts";
 
 /**
  * Runs the model for one step and returns exactly one validated action (SPEC-02 r5 and r6). An invalid reply is
@@ -38,6 +38,8 @@ export interface WorkerStepOptions {
   taskId?: string;
   /** Fills {last action} if the step ends in the Unexpected error. */
   lastAction?: string;
+  /** How an action that would fill a password field is treated. Defaults to `reject`. */
+  secureFields?: SecureFieldRule;
 }
 
 /** One retry after the first invalid reply. */
@@ -69,7 +71,7 @@ export async function runWorkerStep(
       return userError ? { outcome: "error", userError, attempts } : { outcome: "aborted", attempts };
     }
 
-    const check = checkWorkerOutput(reply.content, current, options.lane);
+    const check = checkWorkerOutput(reply.content, current, options.lane, options.secureFields);
     if (check.ok) {
       attempts.push({ outcome: "ok", durationMs: reply.durationMs, usage: reply.usage });
       deps.logger.info("step.output", { taskId: options.taskId, attempt: attempts.length, action: check.output.action.kind });

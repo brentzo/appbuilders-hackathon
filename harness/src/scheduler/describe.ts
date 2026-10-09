@@ -1,5 +1,6 @@
 import { basename, dirname } from "node:path";
 import type { RecordedAction, ToolCall } from "@yumi/protocol/types";
+import { PASSWORD_QUESTION } from "../gui/copy.ts";
 
 /**
  * Plain-language action log lines (SPEC-07 r18), built from the action, the real element, the app the Mac app
@@ -28,8 +29,28 @@ export function describeToolRun(call: ToolCall, ok: boolean, path?: string): str
       const what = call.paths.length === 1 ? name(call.paths[0]!) : `${call.paths.length} items`;
       return ok ? `Moved ${what} to the Trash` : `Tried to move ${what} to the Trash`;
     }
+    // The direct tools gui_act offers (SPEC-05 r1). They open things; nothing is created or changed.
+    case "open_app": {
+      const app = call.name ?? call.bundleId ?? "an app";
+      return ok ? `Opened ${app}` : `Tried to open ${app}`;
+    }
+    case "open_file":
+      return ok ? `Opened ${name(call.path)}` : `Tried to open ${name(call.path)}`;
+    case "open_url":
+      return ok ? `Opened ${host(call.url)}` : `Tried to open ${host(call.url)}`;
+    case "reveal_in_finder":
+      return ok ? `Showed ${name(call.path)} in Finder` : `Tried to show ${name(call.path)} in Finder`;
     default:
       return ok ? `Used ${call.tool}` : `Tried to use ${call.tool}`;
+  }
+}
+
+/** A link's site, never its path or query, which can hold personal data: "Opened example.com". */
+function host(url: string): string {
+  try {
+    return new URL(url).host || "a link";
+  } catch {
+    return "a link";
   }
 }
 
@@ -50,6 +71,7 @@ export function describeTrashed(paths: readonly string[]): string {
  * reported (`Observation.app`). Text that was typed or set is never part of the line.
  */
 export function describeGuiAction(recorded: RecordedAction, app: string | undefined, ok: boolean): string {
+  if (recorded.action.kind === "tool") return describeToolRun(recorded.action.call, ok);
   const phrase = guiPhrase(recorded, app);
   return phrase
     ? ok
@@ -129,6 +151,11 @@ function guiPhrase(recorded: RecordedAction, app: string | undefined): { done: s
       return { done: `Pressed ${keyName(action.combo)}${where}`, todo: `press ${keyName(action.combo)}${where}` };
     case "scroll":
       return { done: `Scrolled${on}${where}`, todo: `scroll${on}${where}` };
+    case "ask":
+      // The question's text is model text, or the password copy: only which of the two it was is logged.
+      return action.question === PASSWORD_QUESTION
+        ? { done: "Asked you to type a password", todo: "ask you to type a password" }
+        : { done: "Asked you a question", todo: "ask you a question" };
     default:
       return undefined;
   }
