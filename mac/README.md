@@ -254,7 +254,10 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 - `-YumiPermissions mixed|granted` pretends permissions are in that state, without asking macOS.
 - `-YumiStatus startingUp|ready|listening|working|paused` sets the menu's status line.
 - `-YumiOverlayDemo <dir>` shows sample cursors and a helper chip, writes each display's overlay over white and over black as PNG files, then quits.
-- `-YumiCursorDemo YES` plays a 15-second cursor demo on screen: the main cat drops out of the island and goes through its states, three ghosts follow it out and leap around, the ghosts finish and leap back into the island with a meow, and the main cat does the same last (Debug builds).
+- `-YumiCursorDemo YES` plays a 32-second cursor demo on screen: the main cat drops out of the island and goes through its states, three ghosts follow it out and leap around, the ghosts finish and leap back into the island with a meow, and the main cat does the same last (Debug builds).
+  In the middle, the four cats line up idle, thinking, paused, and acting, and the demo moves your pointer onto each one: the first three hop away with their ears back and drift back, and the acting cat fades in place.
+  Then the cats wait about 7 seconds for you to try it with your own pointer.
+  Moving the pointer needs Accessibility; without it, only the hands-on part works.
 - `-YumiSnapshotDir <dir>` makes the opened window the key, active window, writes it as PNG files at 1x and 2x, then quits.
   If the window never becomes key, it writes nothing and says so on standard error.
   It needs no Screen Recording permission.
@@ -276,7 +279,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 | `Yumi/Voice/` | Voice intake: the push-to-talk hot key, the microphone, the recognizers and their rule, the silence endpoint, and the typed-goal box |
 | `Yumi/Confirmation/` | Goal confirmation: the repeat-back panel, the `speak` interface, and listening for the answer |
 | `Yumi/Tiling/` | Window tiling: the consent panel, the grid, and saving and restoring window frames |
-| `Yumi/Overlay/` | The click-through cursor overlay: panels per display, the cat cursor and its poses (`CursorCat.xcassets`, made by `scripts/render-cursor-cat.py`), motion, helper chips, and the cursor debug actions |
+| `Yumi/Overlay/` | The click-through cursor overlay: panels per display, the cat cursor and its poses (`CursorCat.xcassets`, made by `scripts/render-cursor-cat.py`, plus the ears-back pose by `scripts/render-ears-back-cat.py`), motion, cats avoiding the user's pointer (`PointerAvoidance.swift`), helper chips, and the cursor debug actions |
 | `Yumi/Harness/` | Harness launcher and supervisor, the Unix socket, the JSON-RPC client, and event handling |
 | `Yumi/Errors/` | Error copy (the only place user-facing error text lives), the error presenter, and the error window |
 | `YumiTests/` | Unit tests (Swift Testing) |
