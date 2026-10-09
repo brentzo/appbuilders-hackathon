@@ -20,6 +20,7 @@ import type { MacAppCaller } from "../router/index.ts";
 import type { GateDecision } from "../safety/gate.ts";
 import { realHome } from "../safety/paths.ts";
 import { checkTrash } from "../safety/trash.ts";
+import { describeSkipped } from "../scheduler/describe.ts";
 import type { TaskStore } from "../store/task-store.ts";
 import { deleteText, sendText, type SendKind } from "./copy.ts";
 import { parseRecipients, sendApp } from "./recipients.ts";
@@ -72,6 +73,8 @@ export interface ApprovalContext {
   control: RunControl;
   /** Required for a send. */
   send?: SendFields;
+  /** The app the action was in, as the Mac app reported it, to name a blocked action (SPEC-07 r5). */
+  app?: string | undefined;
 }
 
 /** Why there is nothing the user can approve, so the action is not run. */
@@ -120,7 +123,7 @@ export interface ApprovalFlowDeps {
   /** Sends an event to the apps: `approvalCancelled`. */
   emit(event: string, payload: unknown): unknown;
   /** Sends a `userError` to the device the user spoke to. */
-  userError(originDeviceId: string, error: { kind: "blockedAction"; taskId: Uuid }): void;
+  userError(originDeviceId: string, error: { kind: "blockedAction"; taskId: Uuid; skippedAction?: string }): void;
   /** The user's home folder, for listing the files again. Tests pass a temporary one. */
   home: string;
   now?: () => Date;
@@ -210,7 +213,7 @@ export class ApprovalFlow implements ApprovalGate {
 
   async blocked(context: Omit<ApprovalContext, "send">, signal: AbortSignal): Promise<BlockedAnswer> {
     const { store, logger } = this.deps;
-    const { subtask, step, control } = context;
+    const { subtask, step, control, app } = context;
     if (!(await control.untilMayAsk(signal))) return "cancelled";
     const task = store.getTask(subtask.taskId);
     if (!task) throw new Error(`No task ${subtask.taskId}`);
@@ -219,7 +222,13 @@ export class ApprovalFlow implements ApprovalGate {
       const answer = new Promise<BlockedAnswer>((resolve) =>
         this.blockedCards.set(step.id, { taskId: subtask.taskId, answer: resolve }),
       );
-      this.deps.userError(task.originDeviceId, { kind: "blockedAction", taskId: task.id });
+      // Names what was skipped: "I can't click File in Keynote." (SPEC-07 r5).
+      const skippedAction = describeSkipped(step.action, app);
+      this.deps.userError(task.originDeviceId, {
+        kind: "blockedAction",
+        taskId: task.id,
+        ...(skippedAction ? { skippedAction } : {}),
+      });
       logger.info("blocked.asked", { taskId: task.id, subtaskId: subtask.id, stepId: step.id });
       const choice = await Promise.race([answer, aborted(signal).then(() => "cancelled" as const)]);
       logger.info("blocked.answered", { taskId: task.id, stepId: step.id, choice });

@@ -21,7 +21,7 @@ import { startHarness, type Harness } from "../src/harness.ts";
 import { MemoryLogger } from "../src/log.ts";
 import { ModelClient } from "../src/model/client.ts";
 import { RunControl } from "../src/control/run-control.ts";
-import { describeGuiAction, describeNotDone } from "../src/scheduler/describe.ts";
+import { describeGuiAction, describeNotDone, describeSkipped } from "../src/scheduler/describe.ts";
 import { fileHelperLane } from "../src/scheduler/lanes.ts";
 import { FILE_TOOL_NAMES } from "../src/tools/file-tools.ts";
 import { modelConfig, PROTOCOL_DIR, tempDir } from "./helpers.ts";
@@ -94,6 +94,30 @@ describe("gui_act's words for the user", () => {
       permission: "ask" as const,
     };
     expect(describeNotDone(send, "Mail", "declined")).toBe("Did not click Send in Mail, because you said no");
+  });
+});
+
+describe("naming a blocked action for its message (SPEC-07 r5)", () => {
+  const recorded = (action: object, element?: object) => ({
+    action,
+    permission: "blocked" as const,
+    ...(element ? { element } : {}),
+  });
+
+  it("says what was skipped, after I can't", () => {
+    expect(
+      describeSkipped(recorded({ kind: "click" }, { path: "#2", role: "menuBarItem", label: "File" }) as never, "Keynote"),
+    ).toBe("click File in Keynote");
+    expect(describeSkipped(recorded({ kind: "key", combo: "cmd+q" }) as never, "Keynote")).toBe("press Command-Q in Keynote");
+    expect(describeSkipped(recorded({ kind: "tool", call: { tool: "open_app", name: "Terminal" } }) as never, undefined)).toBe(
+      "open Terminal",
+    );
+  });
+
+  it("never holds typed text, and has no name for an action it cannot describe", () => {
+    const typed = describeSkipped(recorded({ kind: "type", text: "hunter2" }) as never, "Mail");
+    expect(typed).toBe("type in Mail");
+    expect(describeSkipped(recorded({ kind: "done" }) as never, "Mail")).toBeUndefined();
   });
 });
 

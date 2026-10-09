@@ -292,7 +292,8 @@ describe("SPEC-07 Blocked action is refused even with a yes (OBJ-38.4)", () => {
 
     const error = run!.mac.events.find((e) => e.event === "userError")!.payload as UserError;
     const blocked = steps(task.id).find((s) => s.outcome === "blocked")!;
-    expect(error).toEqual({ kind: "blockedAction", taskId: task.id });
+    // It names what was skipped, so the card says "I can't move Downloads to the Trash." (SPEC-07 r5).
+    expect(error).toEqual({ kind: "blockedAction", taskId: task.id, skippedAction: "move Downloads to the Trash" });
     expect(blocked.action.permission).toBe("blocked");
     // Yumi waits for "Keep going" or "Stop"
     expect(run!.harness.store.getTask(task.id)!.status).toBe("waitingForUser");

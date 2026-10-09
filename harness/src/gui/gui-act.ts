@@ -27,7 +27,7 @@ import { SubtaskTrail, type TrailDeps } from "../debug/trail.ts";
 import type { Logger } from "../log.ts";
 import type { ModelClient } from "../model/client.ts";
 import { checkAction } from "../safety/gate.ts";
-import { describeGuiAction, describeNotDone, type NotDone } from "../scheduler/describe.ts";
+import { describeGuiAction, describeNotDone, describeSkipped, type NotDone } from "../scheduler/describe.ts";
 import { buildSubtaskResult } from "../scheduler/result.ts";
 import { describeFinished } from "../scheduler/subtask-runner.ts";
 import { buildWorkerInput } from "../scheduler/worker-input.ts";
@@ -551,10 +551,19 @@ class Attempt {
    */
   private async afterBlocked(step: Step, screen: Observation | undefined): Promise<ActResult> {
     const { approvals } = this.deps;
-    if (!approvals) return { end: this.end("blocked", "blocked", { kind: "blockedAction", taskId: this.taskId }) };
+    if (!approvals) {
+      const skippedAction = describeSkipped(step.action, screen?.app);
+      return {
+        end: this.end("blocked", "blocked", {
+          kind: "blockedAction",
+          taskId: this.taskId,
+          ...(skippedAction ? { skippedAction } : {}),
+        }),
+      };
+    }
     this.cursorState("waitingForUser");
     const choice = await approvals.blocked(
-      { subtask: this.subtask, step, lane: this.lane, control: this.options.control },
+      { subtask: this.subtask, step, lane: this.lane, control: this.options.control, app: screen?.app },
       this.options.signal,
     );
     if (choice === "keepGoing" && !this.stopped()) return { next: screen ?? (await this.look()) };

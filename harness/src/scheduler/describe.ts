@@ -120,6 +120,19 @@ export function describeNotDone(recorded: RecordedAction, app: string | undefine
 }
 
 /**
+ * The action a blocked-action message names (SPEC-07 r5), as the words after "I can't": "click File in Keynote",
+ * "press Command-Q in Keynote", "open Terminal". Undefined when there is no plain name for it, so the message says
+ * "I can't do that" instead. Built like the action log line: never model text, never typed text.
+ */
+export function describeSkipped(recorded: RecordedAction, app: string | undefined): string | undefined {
+  const { action } = recorded;
+  const what =
+    action.kind === "tool" ? describeToolRun(action.call, false).replace(/^Tried to /, "") : guiPhrase(recorded, app)?.todo;
+  if (!what) return undefined;
+  return what.length <= 200 ? what : `${what.slice(0, 199).trimEnd()}…`;
+}
+
+/**
  * A step a restart cut off (SPEC-02 r4): its action may or may not have happened. Tool calls name what they were
  * doing; UI actions name the element when they have one.
  */

@@ -254,7 +254,7 @@ async function runTool(
     logger.warn("step.blocked", log);
     notDone("blocked", "blocked");
     if (!deps.approvals) return { stopped: false };
-    const choice = await deps.approvals.blocked({ subtask, step, lane, control }, signal);
+    const choice = await deps.approvals.blocked({ subtask, step, lane, control, app: observation.app }, signal);
     return { stopped: choice !== "keepGoing" };
   }
 

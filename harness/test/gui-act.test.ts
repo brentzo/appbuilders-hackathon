@@ -647,7 +647,10 @@ describe("gui_act limits and endings (OBJ-36.5 to OBJ-36.8)", () => {
     scriptModel(() => reply({ kind: "click", element: 2 }));
     const { subtask } = guiSubtask();
     const run = ended(await act(subtask));
-    expect(run).toMatchObject({ reason: "blocked", userError: { kind: "blockedAction", taskId: subtask.taskId } });
+    expect(run).toMatchObject({
+      reason: "blocked",
+      userError: { kind: "blockedAction", taskId: subtask.taskId, skippedAction: "click Quit Keynote in Keynote" },
+    });
     expect(harness.store.listSteps(subtask.id)[0]).toMatchObject({ outcome: "blocked" });
   });
 
