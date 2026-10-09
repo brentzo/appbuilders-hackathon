@@ -23,7 +23,7 @@ export interface RunTaskDeps extends SchedulerDeps {
 export type RunTaskOutcome =
   | { outcome: "done"; summary: string }
   | { outcome: "failed"; userError: UserError }
-  /** Cancelled from outside; the task's status is left to the pause and cancel flow (OBJ-43). */
+  /** Cancelled from outside; the task's status is left to the pause and cancel flow (OBJ-38). */
   | { outcome: "aborted" };
 
 export async function runTask(taskId: Uuid, deps: RunTaskDeps, signal?: AbortSignal): Promise<RunTaskOutcome> {

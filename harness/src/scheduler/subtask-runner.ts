@@ -100,7 +100,7 @@ export async function runSubtask(
     const action = step.output.action;
     if (action.kind === ACTION.finish) return { outcome: "finished", result: result(action.status, action.note) };
     if (action.kind === ACTION.ask) {
-      // Questions to the user are not wired up yet (waitingForUser, OBJ-43): end the subtask instead of guessing.
+      // Questions to the user are not wired up yet (waitingForUser, OBJ-38): end the subtask instead of guessing.
       return { outcome: "failed", result: result("blocked", "Needs an answer from the user, and asking is not available yet.") };
     }
     if (action.kind === ACTION.tool) {
@@ -124,7 +124,7 @@ async function runTool(
   const recorded: RecordedAction = { action, permission };
   const step = deps.store.beginStep({ subtaskId: subtask.id, lane, action: recorded });
   if (permission !== "allowed") {
-    // Approvals (permission "ask") are not wired up yet (OBJ-43), so only allowed calls run.
+    // Approvals (permission "ask") are not wired up yet (OBJ-38), so only allowed calls run.
     deps.store.finishStep(step.id, {
       outcome: "blocked",
       observation: `The tool ${action.call.tool} is not allowed here.`,

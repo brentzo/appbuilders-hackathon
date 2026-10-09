@@ -2,7 +2,7 @@ import type { Lane, Observation, PermissionLevel, RouteReason, Subtask, ToolCall
 
 /**
  * The seams between the scheduler and what decides and runs lanes. The scheduler only knows these interfaces, so
- * the lane router (OBJ-07) and the permission-gated typed tools (OBJ-42) plug in without changing it.
+ * the lane router (OBJ-07) and the permission-gated typed tools (OBJ-37) plug in without changing it.
  */
 
 /** Where a subtask runs, and why (SPEC-03 r10). */
@@ -43,7 +43,7 @@ export interface LaneRunner {
   tools: LaneTools;
 }
 
-/** The lanes the scheduler can run. Until OBJ-07 and OBJ-41, only the helper lane exists. */
+/** The lanes the scheduler can run. Until OBJ-07 and OBJ-36, only the helper lane exists. */
 export type LaneRunners = Partial<Record<Lane, LaneRunner>>;
 
 /**

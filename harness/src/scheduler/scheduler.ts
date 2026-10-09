@@ -84,7 +84,7 @@ export async function runSchedule(
       promoteReady(taskId);
       return;
     }
-    // Cancelled from outside (pause or cancel): what happens to the subtask is the pause and cancel flow's call (OBJ-43).
+    // Cancelled from outside (pause or cancel): what happens to the subtask is the pause and cancel flow's call (OBJ-38).
     if (run.outcome === "aborted" && signal?.aborted) return;
     store.setSubtaskStatus(subtask.id, "failed", { result: run.result });
     if (run.outcome !== "aborted") fail(subtask.id, "userError" in run ? run.userError : undefined);

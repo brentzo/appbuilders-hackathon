@@ -4,11 +4,11 @@ import type { Path, PermissionLevel, ToolCall } from "@yumi/protocol/types";
 import type { LaneTools, ToolRunResult } from "../../src/scheduler/lanes.ts";
 
 /**
- * STAND-IN FILE TOOLS, FOR TESTS ONLY (OBJ-05.8). OBJ-42.4 replaces this whole file with the typed file tools behind
+ * STAND-IN FILE TOOLS, FOR TESTS ONLY (OBJ-05.8). OBJ-37.4 replaces this whole file with the typed file tools behind
  * the permission gate. Until then these let a helper read, list, and write files so the planner and scheduler can
  * be tested end to end.
  *
- * What they do NOT do, and OBJ-42 must: resolve symlinks, block `~/Library`, dotfiles, and secret locations
+ * What they do NOT do, and OBJ-37 must: resolve symlinks, block `~/Library`, dotfiles, and secret locations
  * (SPEC-07 r2), or give a taken name a number (SPEC-07 r4). They only keep every path inside `home`, read text,
  * and refuse to replace a file. Never register them in a running harness.
  */
