@@ -4,7 +4,7 @@
 /// same role, so an element added elsewhere in its group does not change the path.
 ///
 /// Built by the tree reader, returned as `ResolvedElement.path`, and read back by
-/// `readFieldValues` and cursor moves to an element (OBJ-44.1).
+/// `readFieldValues` and cursor moves to an element (OBJ-39.1).
 enum ElementPath {
     static let windowRoot = "AXWindow"
     static let menuBarRoot = "AXMenuBar"

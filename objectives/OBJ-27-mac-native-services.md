@@ -115,7 +115,7 @@ Each service follows a contract from [OBJ-01](OBJ-01-task-record-schemas.md), so
   - Copy I wrote that is not in SPEC-08 or SPEC-11, for Patrick to review: "Pair your phone…", "Pair your phone" (window title), "Scan this code with Yumi on your phone", "The code works for m:ss.", "This code expired.", "New code", "Getting a pairing code…", "Paired with <name>", "Not paired", "<name>: connected", "<name>: reconnecting…", "<name>: offline", "Unpair", and the settings section title "Phone".
   - The real harness connects to the live bridge (`wss://yumibridge.studiokova.co`) unless `YUMI_BRIDGE_URL` says otherwise.
 - **For the next objectives:**
-  - New app methods go in `AppMethodServer.serve`. Everything it does not handle answers -32601, so OBJ-34 (`executeAction`, `observeWindow`) and the approval cards plug in there.
+  - New app methods go in `AppMethodServer.serve`. Everything it does not handle answers -32601, so OBJ-39 (`executeAction`, `observeWindow`) and the approval cards plug in there.
   - Map native failures to SPEC-11 kinds in `AppMethodServer.reply(for:method:)`. Accessibility missing becomes `accessibilityPermissionMissing`.
   - Per-app new-window strategies are the `NewWindowOpener.strategies` table.
   - `PhoneLink.shared` holds the phone state for any view. Files that import `YumiProtocol` whole cannot be `@Observable`, so protocol calls live in `PhoneCalls`.

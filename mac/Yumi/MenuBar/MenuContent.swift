@@ -42,7 +42,7 @@ struct MenuContent: View {
         }
 
         #if DEBUG
-        // Debug aid: reads and presses other apps' elements by hand (OBJ-44.9), with either harness.
+        // Debug aid: reads and presses other apps' elements by hand (OBJ-39.9), with either harness.
         Button("GUI debug…") {
             GuiDebugWindow.show(executor: harness.gui, overlay: harness.overlay)
         }

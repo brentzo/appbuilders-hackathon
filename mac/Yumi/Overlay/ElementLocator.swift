@@ -8,7 +8,7 @@ protocol ElementLocating {
 }
 
 /// Points at the center of the element at `elementPath`, resolved through the Accessibility API
-/// (OBJ-44). When the path does not resolve, for example without Accessibility permission, it
+/// (OBJ-39). When the path does not resolve, for example without Accessibility permission, it
 /// falls back to the window's center.
 struct AccessibilityElementLocator: ElementLocating {
     var fallback: ElementLocating = WindowCenterLocator()

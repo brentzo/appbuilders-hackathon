@@ -36,7 +36,7 @@ Specs say what Yumi must do and are the source of truth for behavior; objectives
 ## Creating an objective
 
 1. Only create objectives for specs whose decisions are final. If a spec still has open questions that affect the work, raise them instead.
-2. Take the next unused `NN`. Check with `ls objectives/`.
+2. Numbers run in order with no gaps. Run `git pull --rebase` first, then take the number right after the highest one in `objectives/`. Never skip ahead or reserve a range for a person, product, or theme; group related objectives with `product` and `tags`, not with their numbers. Creating several at once, number them consecutively. `check` fails on a gap or a repeated number.
 3. Keep it small: 5 to 10 tasks, one product, one assignee. If it needs more, split it.
 4. Fill every section of the template:
    - **Project context:** copy the shared brief exactly from an existing objective. If the brief itself needs to change, change it in every objective in one commit.
@@ -52,7 +52,7 @@ Specs say what Yumi must do and are the source of truth for behavior; objectives
 
 ## Editing an objective
 
-- Never renumber an objective. If you insert or remove tasks, renumber the tasks within that objective in order, then search the repo for references to the old task ids (`grep -rn "OBJ-NN\." .`).
+- Never renumber an objective, with one exception: two people pushed the same or gapped numbers at once. Then whoever pulls second renumbers their own new objectives to the next free numbers before pushing, renames the files, and updates every reference across the repo, including code comments (`grep -rnE "OBJ-NN\b" .`). Otherwise, if you insert or remove tasks, renumber the tasks within that objective in order, then search the repo for references to the old task ids (`grep -rn "OBJ-NN\." .`).
 - If you change `depends-on`, `integrates-with`, `assignee`, or `status`, run `index` and `check`.
 - If a spec changes under an objective, update the objective's tasks and expectations in the same commit, and say what changed in the commit message.
 - Reassigning is fine. Update `assignee` and run `index`.

@@ -1,7 +1,7 @@
 import ApplicationServices
 import CoreGraphics
 
-/// A real accessibility element (OBJ-44.1). Every call is a message to the other app, so `info()`
+/// A real accessibility element (OBJ-39.1). Every call is a message to the other app, so `info()`
 /// reads all the attributes the tree reader needs in one request.
 struct LiveNode: TreeNode {
     let element: AXUIElement

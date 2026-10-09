@@ -1,7 +1,7 @@
 import AppKit
 import YumiProtocol
 
-/// The typed direct tools the Mac app runs (OBJ-44.6, SPEC-05 r1): `open_app`, `open_file`,
+/// The typed direct tools the Mac app runs (OBJ-39.6, SPEC-05 r1): `open_app`, `open_file`,
 /// `open_url`, and `reveal_in_finder`. Each takes only its schema arguments and goes through
 /// `NSWorkspace`. There is no shell, AppleScript, or `Process` here, by design (SPEC-07 r3).
 @MainActor
@@ -55,7 +55,7 @@ enum DirectTools {
             NSWorkspace.shared.activateFileViewerSelecting([url])
             return "Showed \(url.lastPathComponent) in Finder."
         default:
-            // File tools, the Trash and the phone are the harness's (OBJ-42, OBJ-45).
+            // File tools, the Trash and the phone are the harness's (OBJ-37, OBJ-40).
             throw Failure.couldNotOpen
         }
     }

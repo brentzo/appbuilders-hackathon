@@ -4,7 +4,7 @@ import Testing
 import YumiProtocol
 @testable import Yumi
 
-/// OBJ-44.10, main paths: trimming, secure fields, the keystroke lane rule, event tagging,
+/// OBJ-39.10, main paths: trimming, secure fields, the keystroke lane rule, event tagging,
 /// typing stopping on the cancel flag, and the missing-permission error.
 @MainActor
 struct GuiExecutionTests {
@@ -72,7 +72,7 @@ struct GuiExecutionTests {
         1 + node.children().map(count).reduce(0, +)
     }
 
-    // MARK: Trimming (OBJ-44.1, OBJ-44.2)
+    // MARK: Trimming (OBJ-39.1, OBJ-39.2)
 
     @Test func theModelSeesATrimmedTree() {
         let reads = FixtureNode.Reads()
@@ -126,7 +126,7 @@ struct GuiExecutionTests {
         #expect(GuiFailure.secureField.userError.kind == .blockedAction)
     }
 
-    // MARK: Keystrokes (OBJ-44.5)
+    // MARK: Keystrokes (OBJ-39.5)
 
     func keystrokeParams(_ action: ModelAction, cursor: String) -> ExecuteActionParams {
         ExecuteActionParams(
@@ -179,7 +179,7 @@ struct GuiExecutionTests {
     @Test func typingStopsBeforeTheNextChunk() async {
         let poster = RecordingPoster()
         let sender = KeystrokeSender(poster: poster)
-        // The user takes over while the first chunk is going out (OBJ-40 sets the flag).
+        // The user takes over while the first chunk is going out (OBJ-35 sets the flag).
         poster.onPost = { [unowned sender] in sender.cancelTyping() }
         let stopped = await sender.type("This sentence is longer than one chunk.", focusIsSecure: { false })
         #expect(stopped.typed == KeystrokeSender.chunkSize)
@@ -198,7 +198,7 @@ struct GuiExecutionTests {
         #expect(KeyCombo("Cmd+S") == nil, "the harness normalizes aliases; the app takes the canonical form only")
     }
 
-    // MARK: Missing permission (OBJ-44.8)
+    // MARK: Missing permission (OBJ-39.8)
 
     @Test func missingAccessibilityShowsTheSpec11Error() async throws {
         let gui = GuiExecutor(overlay: nil, isTrusted: { false })
@@ -222,7 +222,7 @@ struct GuiExecutionTests {
         #expect(presented.buttons.first == ErrorButton(label: "Open settings", action: .openSettings(.accessibility)))
     }
 
-    // MARK: Safety of the code itself (OBJ-44.6)
+    // MARK: Safety of the code itself (OBJ-39.6)
 
     @Test func noShellOrAppleScriptInGuiExecution() throws {
         let folder = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()

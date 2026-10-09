@@ -3,7 +3,7 @@ import Combine
 import SwiftUI
 import YumiProtocol
 
-/// Debug aid (OBJ-44.9): shows the trimmed tree of an app's front window with its numbers, and
+/// Debug aid (OBJ-39.9): shows the trimmed tree of an app's front window with its numbers, and
 /// runs real `executeAction` calls on it as the main lane, with a debug main cursor. This is how
 /// Keynote, Mail and Notes are checked by hand.
 ///

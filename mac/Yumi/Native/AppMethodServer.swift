@@ -16,8 +16,8 @@ enum AppMethodReply: Sendable {
 
 /// Serves the harness-to-app methods (OBJ-27). Params and results are the generated protocol types.
 ///
-/// `executeAction`, `observeWindow` and `readFieldValues` go to the GUI executor (OBJ-44).
-/// `showApprovalCard` and `moveToTrash` (OBJ-45) are not served yet and answer -32601.
+/// `executeAction`, `observeWindow` and `readFieldValues` go to the GUI executor (OBJ-39).
+/// `showApprovalCard` and `moveToTrash` (OBJ-40) are not served yet and answer -32601.
 @MainActor
 final class AppMethodServer {
     private let secrets: SecretStore

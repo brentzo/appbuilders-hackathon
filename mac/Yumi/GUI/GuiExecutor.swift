@@ -3,7 +3,7 @@ import ApplicationServices
 import OSLog
 import YumiProtocol
 
-/// The Mac side of every GUI step (OBJ-44): `observeWindow`, `executeAction`, and
+/// The Mac side of every GUI step (OBJ-39): `observeWindow`, `executeAction`, and
 /// `readFieldValues`, with the protocol's own types.
 ///
 /// Element numbers resolve against the last observation of the same window. Before every
@@ -13,7 +13,7 @@ import YumiProtocol
 @MainActor
 final class GuiExecutor {
     let keystrokes: KeystrokeSender
-    /// Shows a failure to the user through the error presenter (OBJ-44.8). Set by the app.
+    /// Shows a failure to the user through the error presenter (OBJ-39.8). Set by the app.
     var onUserError: ((UserError) -> Void)?
 
     private let overlay: CursorOverlay?
@@ -33,7 +33,7 @@ final class GuiExecutor {
         try WindowReader.requireAccessibility()
     }
 
-    // MARK: observeWindow (OBJ-44.2)
+    // MARK: observeWindow (OBJ-39.2)
 
     func observeWindow(_ params: ObserveWindowParams) throws -> YumiProtocol.Observation {
         try reporting {
@@ -49,7 +49,7 @@ final class GuiExecutor {
         snapshots[Self.key(target)]
     }
 
-    // MARK: executeAction (OBJ-44.3 to OBJ-44.6)
+    // MARK: executeAction (OBJ-39.3 to OBJ-39.6)
 
     func executeAction(_ params: ExecuteActionParams) async throws -> ExecuteActionResult {
         try await reporting {
@@ -157,7 +157,7 @@ final class GuiExecutor {
         return "Scrolled \(Self.name(kept)) \(direction.rawValue)."
     }
 
-    // MARK: Keystrokes (OBJ-44.5)
+    // MARK: Keystrokes (OBJ-39.5)
 
     /// The lane comes from the cursor's kind, set when the harness spawned it: the main cursor is
     /// the main lane. An unknown cursor is not the main lane (SPEC-03 r7).
@@ -195,7 +195,7 @@ final class GuiExecutor {
         app.element(kAXFocusedUIElementAttribute).map { LiveNode(element: $0).info().isSecure } ?? false
     }
 
-    // MARK: Direct tools (OBJ-44.6)
+    // MARK: Direct tools (OBJ-39.6)
 
     private func run(_ call: ToolCall) async -> ExecuteActionResult {
         guard DirectTools.runsHere(call) else {
@@ -216,7 +216,7 @@ final class GuiExecutor {
         }
     }
 
-    // MARK: readFieldValues (OBJ-44.7)
+    // MARK: readFieldValues (OBJ-39.7)
 
     /// Reads real field values, for example a Mail draft's To and Cc, so the send approval is built
     /// from the screen and never from model text (SPEC-07 r13). A secure field is never read.

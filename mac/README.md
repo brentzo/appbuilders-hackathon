@@ -108,7 +108,7 @@ What happens is logged under the subsystem `ph.appbuilders.yumi`, including the 
 
 ### Controlling other apps
 
-Yumi reads and presses other apps' windows through the Accessibility API ([OBJ-44](../objectives/OBJ-44-mac-gui-execution.md)).
+Yumi reads and presses other apps' windows through the Accessibility API ([OBJ-39](../objectives/OBJ-39-mac-gui-execution.md)).
 The harness calls `observeWindow`, `executeAction`, and `readFieldValues`; `Yumi/GUI/` answers them.
 
 - The trimmed tree keeps visible, actionable elements and the containers that scroll, numbered from 1, at most 200.
@@ -201,7 +201,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 - Model readiness is a placeholder that is always unknown (`ModelReadiness`).
   The protocol cannot report it yet; this is open with the protocol and harness owners.
 - Error buttons whose feature comes in a later objective are shown disabled: for example "Try again", "Stop", and "Type instead".
-- `showApprovalCard` and `moveToTrash` answer "method not found" until [OBJ-45](../objectives/OBJ-45-mac-approval-cards.md).
+- `showApprovalCard` and `moveToTrash` answer "method not found" until [OBJ-40](../objectives/OBJ-40-mac-approval-cards.md).
 - Cursors are a placeholder drawing (a black and white pointer, ghosts outlined in their color) until the Rive cat ([OBJ-19](../objectives/OBJ-19-rive-cat-cursor.md)).
 - A cursor moving to an element whose path does not resolve goes to the center of the target window, or the app's frontmost window.
 - Vision clicks (`clickAt`) are refused until the p1 vision fallback.
@@ -234,10 +234,10 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 | [OBJ-19](../objectives/OBJ-19-rive-cat-cursor.md) | Rive cat cursor | Patrick | todo |
 | [OBJ-20](../objectives/OBJ-20-window-tiling.md) | Window tiling with consent | Patrick | in-progress |
 | [OBJ-27](../objectives/OBJ-27-mac-native-services.md) | Mac native services for the harness | Patrick | done |
-| [OBJ-40](../objectives/OBJ-40-mac-stop-and-take-over.md) | Stop and take over on the Mac | Patrick | todo |
-| [OBJ-44](../objectives/OBJ-44-mac-gui-execution.md) | Mac GUI execution | Patrick | in-progress |
-| [OBJ-45](../objectives/OBJ-45-mac-approval-cards.md) | Approval and blocked-action cards on the Mac | Patrick | todo |
+| [OBJ-35](../objectives/OBJ-35-mac-stop-and-take-over.md) | Stop and take over on the Mac | Patrick | todo |
+| [OBJ-39](../objectives/OBJ-39-mac-gui-execution.md) | Mac GUI execution | Patrick | in-progress |
+| [OBJ-40](../objectives/OBJ-40-mac-approval-cards.md) | Approval and blocked-action cards on the Mac | Patrick | todo |
 <!-- generated:product-objectives:end -->
 
 Related: [OBJ-21](../objectives/OBJ-21-mac-bridge-client-and-pairing.md) (Jepoy's bridge client; its pairing screen and connection state are built here in OBJ-27).
-Related: the harness side of GUI control, pausing, and safety is Brent's [OBJ-41](../objectives/OBJ-41-gui-act-sub-agent.md), [OBJ-42](../objectives/OBJ-42-permission-gate-and-file-tools.md), and [OBJ-43](../objectives/OBJ-43-approvals-pause-and-action-log.md).
+Related: the harness side of GUI control, pausing, and safety is Brent's [OBJ-36](../objectives/OBJ-36-gui-act-sub-agent.md), [OBJ-37](../objectives/OBJ-37-permission-gate-and-file-tools.md), and [OBJ-38](../objectives/OBJ-38-approvals-pause-and-action-log.md).

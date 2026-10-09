@@ -268,6 +268,22 @@ def check_objectives(objs, prods, problems):
             if o["status"] in ("in-progress", "done") and d in objs and objs[d]["status"] != "done":
                 problems.append(f"{where}: is {o['status']} but hard dependency {d} is {objs[d]['status']}")
 
+    # From the file names, so two files with the same id are both counted.
+    numbers = sorted(
+        int(m.group(1))
+        for f in glob.glob(os.path.join(OBJ_DIR, "OBJ-*.md"))
+        if (m := re.match(r"OBJ-(\d+)-", os.path.basename(f)))
+    )
+    missing = sorted(set(range(1, numbers[-1] + 1)) - set(numbers)) if numbers else []
+    if missing:
+        problems.append(
+            "objectives: ids must run without gaps; missing "
+            + ", ".join(f"OBJ-{n:02d}" for n in missing)
+            + ". A new objective takes the next free number after the highest one on origin/main"
+        )
+    if len(numbers) != len(set(numbers)):
+        problems.append("objectives: two objectives share an id; renumber the later one to the next free number")
+
     seen, stack = set(), set()
 
     def visit(i):

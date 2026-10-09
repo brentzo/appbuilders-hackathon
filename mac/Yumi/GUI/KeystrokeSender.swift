@@ -14,9 +14,9 @@ struct HIDEventPoster: EventPosting {
     }
 }
 
-/// Sends the main cursor's keystrokes (OBJ-44.5). Only `GuiExecutor` calls it, after the lane check.
+/// Sends the main cursor's keystrokes (OBJ-39.5). Only `GuiExecutor` calls it, after the lane check.
 ///
-/// Every event carries `eventTag` in `kCGEventSourceUserData`, so OBJ-40 can tell Yumi's input
+/// Every event carries `eventTag` in `kCGEventSourceUserData`, so OBJ-35 can tell Yumi's input
 /// from the user's (SPEC-06 r3). Text goes out in short chunks; between chunks the sender checks
 /// the cancel flag and that focus has not moved to a password field (SPEC-06 r4, SPEC-05 r7).
 @MainActor
@@ -44,7 +44,7 @@ final class KeystrokeSender {
         source?.userData = Self.eventTag
     }
 
-    /// Stops the typing in progress before its next chunk. OBJ-40 calls this when the user takes over.
+    /// Stops the typing in progress before its next chunk. OBJ-35 calls this when the user takes over.
     func cancelTyping() {
         cancelRequested = true
     }

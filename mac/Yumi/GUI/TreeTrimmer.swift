@@ -13,7 +13,7 @@ struct KeptElement<Node> {
     var node: Node
 }
 
-/// Walks an accessibility tree and keeps only what the model may act on (SPEC-05 r2, OBJ-44.1):
+/// Walks an accessibility tree and keeps only what the model may act on (SPEC-05 r2, OBJ-39.1):
 /// visible elements with an actionable role, plus the containers that scroll. Layout groups are
 /// walked through but never listed, so empty ones disappear. Stops at `limit` elements.
 @MainActor

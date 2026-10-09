@@ -20,7 +20,7 @@ final class HarnessLink {
 
     /// The cursors the harness drives (OBJ-18).
     let overlay: CursorOverlay
-    /// Reads and acts on other apps' windows for the harness (OBJ-44).
+    /// Reads and acts on other apps' windows for the harness (OBJ-39).
     let gui: GuiExecutor
     /// Arranges the task's windows with the user's yes, and puts them back (OBJ-20).
     let tiler: WindowTiler

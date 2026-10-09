@@ -81,7 +81,7 @@ The overlay must never get in the way of the user's own clicks.
   - and the commit that finishes this objective.
 - **Expectations:**
   - "Cursor moves smoothly to a target": moves animate on an ease-in-out curve over 0.3 s, starting from where the cursor is on screen, so they never teleport (`CursorOverlay.move`, `CursorOverlayTests`).
-    The "click happens after the cursor arrives" part belongs to executing actions (OBJ-44).
+    The "click happens after the cursor arrives" part belongs to executing actions (OBJ-39).
   - "Thinking state during a slow step": the thinking badge pulses for as long as the state lasts, checked in the `-YumiOverlayDemo` render.
   - "Ghost cursors are labeled": each ghost gets its own accent color and the label from `spawn` or `setLabel` (`CursorOverlayTests.harnessCommandsDriveTheCursors`, and the render).
   - "Overlay does not block the user" and "Clicks by the user anywhere reach the app underneath": every panel ignores mouse events (`CursorOverlayTests.oneClickThroughPanelPerDisplay`).
@@ -102,7 +102,7 @@ The overlay must never get in the way of the user's own clicks.
 - **Decisions and deviations:**
   - `ScreenPoint` is read as top-left global coordinates (y down, the Quartz and Accessibility convention), from its "negative on displays left of or above the main one".
   - Cursors carry no task id in the protocol, so "no cursor after its task ends" is enforced by fading every cursor when no task is active, plus the harness's own `fade` commands.
-  - Element targets go to the center of the target window, or the app's frontmost window, until element paths are resolved through the Accessibility API (OBJ-44).
+  - Element targets go to the center of the target window, or the app's frontmost window, until element paths are resolved through the Accessibility API (OBJ-39).
   - Helper chips come from `routeDecided` with the `helper` lane and leave when that subtask is done or failed.
     The event has no subtask title, so the chip says "Helper working" (placeholder copy).
   - Ghost accents are teal, orange, purple, green, blue, and pink, never red, so a ghost never looks like an error.
@@ -110,6 +110,6 @@ The overlay must never get in the way of the user's own clicks.
 - **For the next objectives:**
   - OBJ-19: replace `CursorLayer` with the Rive cat.
     It receives the cursor's state, label, and accent, and its position is the click point.
-  - OBJ-44: `CursorOverlay.clickPoint(of:)` gives the click point in protocol coordinates.
+  - OBJ-39: `CursorOverlay.clickPoint(of:)` gives the click point in protocol coordinates.
     Replace `WindowCenterLocator` with real element lookup behind `ElementLocating`, and click only after the 0.3 s move ends.
   - Protocol, for Jepoy: a subtask title on helper routes would let chips say what the helper does, and a task id on `spawn` would let cursors fade per task.

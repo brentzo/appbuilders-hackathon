@@ -4,7 +4,7 @@ import OSLog
 import YumiProtocol
 
 /// One look at a target window: the observation for the harness, and what the Mac side keeps to
-/// act on an element by its number later (OBJ-44.1, OBJ-44.2).
+/// act on an element by its number later (OBJ-39.1, OBJ-39.2).
 @MainActor
 struct WindowSnapshot {
     let observation: YumiProtocol.Observation
@@ -36,7 +36,7 @@ enum GuiFailure: Error, Equatable {
     }
 }
 
-/// Finds the target app and window and reads its trimmed tree (OBJ-44.1).
+/// Finds the target app and window and reads its trimmed tree (OBJ-39.1).
 ///
 /// What is read depends on what is in front (SPEC-05 r15):
 /// - An open menu: only its items, then the items of any open submenu, so "Export To" then
