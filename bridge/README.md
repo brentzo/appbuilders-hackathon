@@ -77,6 +77,7 @@ Status: relay implementation in progress (OBJ-13). Live VPS rollout is tracked b
 - Run `npm ci` and then `npm run dev` from `bridge/`.
 - Set `BRIDGE_DATABASE_PATH=./data/bridge.sqlite` and `BRIDGE_HOST=127.0.0.1` for local development.
 - Run `npm run verify` for typecheck and relay tests, or `npm run build` for the deployable bundle.
+- Run `npm run live-check` to check a deployed relay against SPEC-08 with stand-in devices (default `wss://yumibridge.studiokova.co`; `--url` for another, `--skip-slow` to leave out the 30-second pairing window). See [wiki/bridge-acceptance.md](../wiki/bridge-acceptance.md).
 - Run `docker compose -f docker-compose.yml config --quiet` from `bridge/` to validate the Compose service.
 
 ## Specs
