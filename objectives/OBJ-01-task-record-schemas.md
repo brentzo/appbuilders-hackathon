@@ -2,7 +2,7 @@
 id: OBJ-01
 title: Task record schemas and cross-team contracts
 product: protocol
-assignee: Brent
+assignee: Jepoy
 touches: []
 specs: [SPEC-02, SPEC-03, SPEC-05, SPEC-07, SPEC-11]
 status: in-progress
@@ -14,7 +14,7 @@ tags: [objective, p0, protocol]
 
 # OBJ-01 Task record schemas and cross-team contracts
 
-**Product:** [Yumi Protocol](../protocol/README.md) · **Specs:** [SPEC-02](../specs/02-task-lifecycle.md), [SPEC-03](../specs/03-lane-routing.md), [SPEC-05](../specs/05-mac-gui-control.md), [SPEC-07](../specs/07-safety.md), [SPEC-11](../specs/11-user-facing-errors.md) · **Assignee:** Brent
+**Product:** [Yumi Protocol](../protocol/README.md) · **Specs:** [SPEC-02](../specs/02-task-lifecycle.md), [SPEC-03](../specs/03-lane-routing.md), [SPEC-05](../specs/05-mac-gui-control.md), [SPEC-07](../specs/07-safety.md), [SPEC-11](../specs/11-user-facing-errors.md) · **Assignee:** Jepoy
 
 ## Project context
 

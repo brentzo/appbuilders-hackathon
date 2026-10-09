@@ -47,6 +47,6 @@ Status: empty scaffold, nothing built yet.
 
 | ID | Objective | Status |
 |---|---|---|
-| [OBJ-01](../objectives/OBJ-01-task-record-schemas.md) | Task record schemas and cross-team contracts (assigned to Brent) | in-progress |
+| [OBJ-01](../objectives/OBJ-01-task-record-schemas.md) | Task record schemas and cross-team contracts | in-progress |
 | [OBJ-02](../objectives/OBJ-02-bridge-envelope-and-crypto.md) | Bridge envelope and end-to-end crypto | todo |
 | [OBJ-25](../objectives/OBJ-25-cross-device-messages.md) | Cross-device message kinds | todo |

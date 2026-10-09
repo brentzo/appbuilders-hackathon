@@ -58,7 +58,7 @@ Update the tables in this file and in the product README in the same commit.
 
 | ID | Objective | Product | Assignee | Specs | Depends on | Integrates with | Status |
 |---|---|---|---|---|---|---|---|
-| [OBJ-01](OBJ-01-task-record-schemas.md) | Task record schemas and cross-team contracts | protocol | Brent | 02, 03, 05, 07, 11 | - | - | in-progress |
+| [OBJ-01](OBJ-01-task-record-schemas.md) | Task record schemas and cross-team contracts | protocol | Jepoy | 02, 03, 05, 07, 11 | - | - | in-progress |
 | [OBJ-02](OBJ-02-bridge-envelope-and-crypto.md) | Bridge envelope and end-to-end crypto | protocol | Jepoy | 08 | - | - | todo |
 | [OBJ-03](OBJ-03-harness-skeleton.md) | Harness skeleton and local model client | harness | Brent | 02 | 01 | - | todo |
 | [OBJ-04](OBJ-04-task-store.md) | Task store and history | harness | Brent | 02 | 01, 03 | - | todo |
@@ -90,7 +90,7 @@ Update the tables in this file and in the product README in the same commit.
 
 How the work is split so nobody waits on someone else:
 
-- **Contracts first.** [OBJ-01](OBJ-01-task-record-schemas.md) defines every interface between people's work and ships a mock harness and a mock Mac app. It is the top priority, and Brent does it first.
+- **Contracts first.** [OBJ-01](OBJ-01-task-record-schemas.md) defines every interface between people's work and ships a mock harness and a mock Mac app. It is the top priority, and Jepoy does it first.
 - **Build against stand-ins.** `integrates-with` lists work you connect to later, not work you wait for. Until it is done, use the stand-in named in the objective: the mock harness or mock Mac app, Whisper large-v3-turbo, an openWakeWord pre-trained model, or a placeholder cat.
 - **Each person writes code only in their own product.** Native Mac services for the harness and the bridge client live in Patrick's [OBJ-27](OBJ-27-mac-native-services.md).
 
@@ -98,7 +98,7 @@ Ranked by how many objectives each one holds up through hard dependencies:
 
 | Rank | Objective | Assignee | Holds up (hard) | Holds up another person |
 |---|---|---|---|---|
-| 1 | OBJ-01 Task record schemas and cross-team contracts | Brent | 16 | Jepoy, Patrick |
+| 1 | OBJ-01 Task record schemas and cross-team contracts | Jepoy | 16 | Brent, Patrick |
 | 2 | OBJ-03 Harness skeleton and local model client | Brent | 7 | Patrick |
 | 3 | OBJ-14 Mac app shell, permissions, and harness link | Patrick | 7 | No |
 | 4 | OBJ-04 Task store and history | Brent | 6 | Patrick |
@@ -116,19 +116,21 @@ Ranked by how many objectives each one holds up through hard dependencies:
 
 Hard dependencies that cross between people (everything else is within one person's queue):
 
-- OBJ-01 (Brent) before OBJ-14 (Patrick)
+- OBJ-01 (Jepoy) before OBJ-03 (Brent)
+- OBJ-01 (Jepoy) before OBJ-04 (Brent)
+- OBJ-01 (Jepoy) before OBJ-07 (Brent)
+- OBJ-01 (Jepoy) before OBJ-14 (Patrick)
 - OBJ-04 (Brent) before OBJ-17 (Patrick)
 - OBJ-02 (Jepoy) before OBJ-23 (Brent)
 - OBJ-13 (Jepoy) before OBJ-23 (Brent)
-- OBJ-01 (Brent) before OBJ-25 (Jepoy)
 
 Workload:
 
 | Person | Objectives | Count |
 |---|---|---|
-| Brent | 01, 03, 04, 05, 06, 07, 08, 09, 22, 23, 24 | 11 |
+| Brent | 03, 04, 05, 06, 07, 08, 09, 22, 23, 24 | 10 |
 | Patrick | 10, 14, 15, 16, 17, 18, 19, 20, 27 | 9 |
-| Jepoy | 02, 11, 12, 13, 21, 25, 26 | 7 |
+| Jepoy | 01, 02, 11, 12, 13, 21, 25, 26 | 8 |
 
 ## Suggested order
 
@@ -136,7 +138,7 @@ Waves come from hard dependencies only. Each person works their column top to bo
 
 | Wave | Brent | Patrick | Jepoy |
 |---|---|---|---|
-| 1 | OBJ-01, OBJ-22 | OBJ-10 | OBJ-02, OBJ-11, OBJ-12, OBJ-26 |
+| 1 | OBJ-22 | OBJ-10 | OBJ-01, OBJ-02, OBJ-11, OBJ-12, OBJ-26 |
 | 2 | OBJ-03, OBJ-24 | OBJ-14 | OBJ-13, OBJ-25 |
 | 3 | OBJ-04, OBJ-23 | OBJ-15, OBJ-18, OBJ-27 | OBJ-21 |
 | 4 | OBJ-05, OBJ-07 | OBJ-16, OBJ-17, OBJ-19, OBJ-20 | - |
