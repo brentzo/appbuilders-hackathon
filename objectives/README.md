@@ -58,7 +58,7 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 <!-- generated:objectives-index:start -->
 | ID | Objective | Product | Assignee | Specs | Depends on | Integrates with | Status |
 |---|---|---|---|---|---|---|---|
-| [OBJ-01](OBJ-01-task-record-schemas.md) | Task record schemas and cross-team contracts | protocol | Jepoy | 02, 03, 05, 07, 11 | - | - | in-progress |
+| [OBJ-01](OBJ-01-task-record-schemas.md) | Task record schemas and cross-team contracts | protocol | Jepoy | 02, 03, 05, 07, 11 | - | - | done |
 | [OBJ-02](OBJ-02-bridge-envelope-and-crypto.md) | Bridge envelope and end-to-end crypto | protocol | Jepoy | 08 | - | - | todo |
 | [OBJ-03](OBJ-03-harness-skeleton.md) | Harness skeleton and local model client | harness | Brent | 02 | 01 | - | todo |
 | [OBJ-04](OBJ-04-task-store.md) | Task store and history | harness | Brent | 02 | 01, 03 | - | todo |
