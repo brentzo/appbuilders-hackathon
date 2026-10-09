@@ -17,6 +17,8 @@ export interface RpcServerOptions {
   logger: Logger;
   /** More app-to-harness methods, added by later objectives. `hello` and `ping` are built in. */
   handlers?: Record<string, Handler>;
+  /** Called after an app completes the protocol handshake. */
+  onReady?: () => void;
 }
 
 interface Connection {
@@ -47,7 +49,7 @@ export class HarnessRpcServer {
 
     const server = createServer();
     const instance = new HarnessRpcServer(server, socketPath, logger);
-    server.on("connection", (socket) => instance.accept(socket, options.handlers ?? {}));
+    server.on("connection", (socket) => instance.accept(socket, options.handlers ?? {}, options.onReady));
     await new Promise<void>((resolve, reject) => server.once("error", reject).listen(socketPath, () => resolve()));
     // Only this user may connect.
     chmodSync(socketPath, 0o600);
@@ -85,14 +87,14 @@ export class HarnessRpcServer {
     this.logger.info("rpc.closed", { socketPath: this.socketPath });
   }
 
-  private accept(socket: Socket, extraHandlers: Record<string, Handler>): void {
+  private accept(socket: Socket, extraHandlers: Record<string, Handler>, onReady?: () => void): void {
     const id = this.nextId++;
     // Assigned right below; the handlers only run after a message arrives.
     // eslint-disable-next-line prefer-const
     let connection: Connection;
     const handlers: Record<string, Handler> = {
       ...extraHandlers,
-      hello: (params) => this.hello(connection, params as HelloParams),
+      hello: (params) => this.hello(connection, params as HelloParams, onReady),
       ping: () => ({}),
     };
     const peer = new RpcPeer({ role: "harness", socket, handlers });
@@ -106,7 +108,7 @@ export class HarnessRpcServer {
     });
   }
 
-  private hello(connection: Connection, params: HelloParams): HelloResult {
+  private hello(connection: Connection, params: HelloParams, onReady?: () => void): HelloResult {
     if (params.protocolVersion !== PROTOCOL_VERSION) {
       this.logger.warn("rpc.versionMismatch", {
         connection: connection.id,
@@ -120,6 +122,7 @@ export class HarnessRpcServer {
       );
     }
     connection.ready = true;
+    onReady?.();
     this.logger.info("rpc.hello", { connection: connection.id, protocolVersion: params.protocolVersion });
     return { protocolVersion: PROTOCOL_VERSION };
   }

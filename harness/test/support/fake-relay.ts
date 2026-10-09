@@ -54,7 +54,12 @@ export class FakeRelay {
     });
   }
 
-  private async receive(socket: WebSocket, device: Device | undefined, nonce: Uint8Array, text: string): Promise<Device | undefined> {
+  private async receive(
+    socket: WebSocket,
+    device: Device | undefined,
+    nonce: Uint8Array,
+    text: string,
+  ): Promise<Device | undefined> {
     let message: unknown;
     try {
       message = JSON.parse(text) as unknown;
@@ -109,7 +114,10 @@ export class FakeRelay {
       case "envelope": {
         const { envelope } = frame;
         if (envelope.from !== device.id) break;
-        if (this.holdNextEnvelope) { this.holdNextEnvelope = false; break; }
+        if (this.holdNextEnvelope) {
+          this.holdNextEnvelope = false;
+          break;
+        }
         if (this.nextNotice) {
           const notice = this.nextNotice;
           this.nextNotice = undefined;

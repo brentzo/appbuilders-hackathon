@@ -12,22 +12,37 @@ describe("bridge client smoke", () => {
     const relay = new FakeRelay();
     await relay.listen();
     const mac = await openMacRpcPair();
-    const client = new BridgeClient({ bridgeUrl: "wss://relay.test", relayUrl: relay.url, allowLoopbackWs: true, deviceName: "Test Mac", databasePath: join(dir, "bridge.sqlite"), rpcSocket: mac.socket });
+    const client = new BridgeClient({
+      bridgeUrl: "wss://relay.test",
+      relayUrl: relay.url,
+      allowLoopbackWs: true,
+      deviceName: "Test Mac",
+      databasePath: join(dir, "bridge.sqlite"),
+      rpc: mac.rpc,
+    });
     try {
+      Object.assign(mac.handlers, client.handlers);
       await client.start();
       await client.waitForState("connected");
-      await until(() => mac.events.some(({ event, payload }) => event === "bridgeStateChanged" && (payload as { state?: string }).state === "connected"));
-      const result = await mac.app.request("startPairing", {}) as { qrPayload: string; expiresAt: string };
+      await until(() =>
+        mac.events.some(
+          ({ event, payload }) => event === "bridgeStateChanged" && (payload as { state?: string }).state === "connected",
+        ),
+      );
+      const result = (await mac.app.request("startPairing", {})) as { qrPayload: string; expiresAt: string };
       const qr = JSON.parse(result.qrPayload) as { deviceId: string; pairingSecret: string; expiresAt: string; platform: string };
       expect(qr.platform).toBe("mac");
       expect(Date.parse(qr.expiresAt) - Date.now()).toBeGreaterThan(4 * 60_000);
-      expect((await mac.app.request("listPairedDevices", {}) as { devices: unknown[] }).devices).toEqual([]);
+      expect(((await mac.app.request("listPairedDevices", {})) as { devices: unknown[] }).devices).toEqual([]);
       expect(mac.secrets.has("bridge.device-seeds")).toBe(true);
       const files = await readFile(join(dir, "bridge.sqlite"));
       expect(files.includes(Buffer.from(qr.pairingSecret))).toBe(false);
       expect(JSON.stringify(files).includes(mac.secrets.get("bridge.device-seeds")!)).toBe(false);
     } finally {
-      client.stop(); await mac.close(); await relay.close(); await rm(dir, { recursive: true, force: true });
+      client.stop();
+      await mac.close();
+      await relay.close();
+      await rm(dir, { recursive: true, force: true });
     }
   });
 });

@@ -140,6 +140,11 @@ npm run --silent model:check -- --print-schema | ~/.venvs/yumi-model/bin/python 
 
 mlx-vlm 0.7.6 compiles schemas with llguidance 1.9.1, which rejects `uniqueItems`, so the harness removes that keyword from the schema it sends.
 
+## Device bridge
+
+- The harness starts the bridge client after the Mac app completes `hello`; device keys are stored through the Mac app Keychain RPC, and paired devices/outbox state is stored in `bridge.sqlite` in the support folder.
+- Set `YUMI_BRIDGE_URL` to override the default `wss://yumibridge.studiokova.co` endpoint.
+
 ## Local RPC
 
 - The harness listens on `harness.sock` in the support folder, readable only by this user, and replaces a stale socket left by a crash.
@@ -181,5 +186,5 @@ mlx-vlm 0.7.6 compiles schemas with llguidance 1.9.1, which rejects `uniqueItems
 | [OBJ-07](../objectives/OBJ-07-lane-router-core.md) | Lane router core | Brent | todo |
 | [OBJ-08](../objectives/OBJ-08-locks-busy-windows-cap.md) | Window locks, busy windows, and cursor cap | Brent | todo |
 | [OBJ-09](../objectives/OBJ-09-ghost-handoff.md) | Ghost handoff | Brent | todo |
-| [OBJ-21](../objectives/OBJ-21-mac-bridge-client-and-pairing.md) | Mac bridge client and pairing | Jepoy | in-progress |
+| [OBJ-21](../objectives/OBJ-21-mac-bridge-client-and-pairing.md) | Mac bridge client and pairing | Jepoy | done |
 <!-- generated:product-objectives:end -->

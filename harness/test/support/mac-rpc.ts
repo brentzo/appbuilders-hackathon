@@ -1,9 +1,10 @@
-import { createServer, connect, type Server, type Socket } from "node:net";
+import { createServer, connect, type Server } from "node:net";
 import { RpcPeer, type Handler } from "@yumi/protocol";
 
 export interface MacRpcPair {
   app: RpcPeer;
-  socket: Socket;
+  rpc: RpcPeer;
+  handlers: Record<string, Handler>;
   secrets: Map<string, string>;
   events: Array<{ event: string; payload: unknown }>;
   close(): Promise<void>;
@@ -12,6 +13,7 @@ export interface MacRpcPair {
 export async function openMacRpcPair(secrets = new Map<string, string>()): Promise<MacRpcPair> {
   const events: Array<{ event: string; payload: unknown }> = [];
   let app: RpcPeer | undefined;
+  const handlers: Record<string, Handler> = {};
   const server: Server = createServer((socket) => {
     app = new RpcPeer({
       role: "app",
@@ -34,10 +36,12 @@ export async function openMacRpcPair(secrets = new Map<string, string>()): Promi
   if (!address || typeof address === "string") throw new Error("Fake Mac RPC server has no TCP address");
   const socket = connect(address.port, "127.0.0.1");
   await new Promise<void>((resolve, reject) => socket.once("connect", resolve).once("error", reject));
+  const rpc = new RpcPeer({ role: "harness", socket, handlers });
   await waitFor(() => app !== undefined);
   return {
     app: app!,
-    socket,
+    rpc,
+    handlers,
     secrets,
     events,
     close: async () => {

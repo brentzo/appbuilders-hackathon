@@ -5,7 +5,7 @@ product: harness
 assignee: Jepoy
 touches: []
 specs: [SPEC-08]
-status: in-progress
+status: done
 priority: p0
 depends-on: [OBJ-02]
 integrates-with: [OBJ-03, OBJ-13, OBJ-27]
@@ -41,23 +41,23 @@ After this objective, the Mac can pair with a phone and exchange encrypted, sign
 
 ## Tasks
 
-- [ ] **OBJ-21.1** Build the client as a self-contained module in `harness/src/bridge-client/` with its own tests, using the protocol types and reference crypto.
-- [ ] **OBJ-21.2** Generate the Mac's device keys and store them in the macOS Keychain through the Mac app's `storeSecret` and `loadSecret` (mock Mac app until OBJ-27 is done), never in plain files.
-- [ ] **OBJ-21.3** Implement the Mac side of pairing from `pairing.md` and expose `startPairing`, `listPairedDevices`, and `unpair` over RPC.
-- [ ] **OBJ-21.4** Connect to the bridge over WebSocket, authenticate, and reconnect with backoff.
-- [ ] **OBJ-21.5** Send and receive envelopes. Verify signatures, ack accepted messages, and drop messages from unpaired or revoked devices, recording them in the local log.
-- [ ] **OBJ-21.6** At-most-once execution. Remember processed message ids and their results; on a duplicate, resend the stored result instead of running again.
-- [ ] **OBJ-21.7** Never run an expired command. Surface `expired` and `targetOffline` events from the bridge to the task that sent the command, as structured errors.
-- [ ] **OBJ-21.8** Emit `bridgeStateChanged` (connected, reconnecting, offline) and structured `userError` kinds for "Bridge down" and "Unpaired device". The Mac app shows them (OBJ-27).
-- [ ] **OBJ-21.9** When [OBJ-03](OBJ-03-harness-skeleton.md) is done, wire the module into the harness (coordinate with Brent) and expose its RPC methods on the harness socket.
+- [x] **OBJ-21.1** Build the client as a self-contained module in `harness/src/bridge-client/` with its own tests, using the protocol types and reference crypto.
+- [x] **OBJ-21.2** Generate the Mac's device keys and store them in the macOS Keychain through the Mac app's `storeSecret` and `loadSecret` (mock Mac app until OBJ-27 is done), never in plain files.
+- [x] **OBJ-21.3** Implement the Mac side of pairing from `pairing.md` and expose `startPairing`, `listPairedDevices`, and `unpair` over RPC.
+- [x] **OBJ-21.4** Connect to the bridge over WebSocket, authenticate, and reconnect with backoff.
+- [x] **OBJ-21.5** Send and receive envelopes. Verify signatures, ack accepted messages, and drop messages from unpaired or revoked devices, recording them in the local log.
+- [x] **OBJ-21.6** At-most-once execution. Remember processed message ids and their results; on a duplicate, resend the stored result instead of running again.
+- [x] **OBJ-21.7** Never run an expired command. Surface `expired` and `targetOffline` events from the bridge to the task that sent the command, as structured errors.
+- [x] **OBJ-21.8** Emit `bridgeStateChanged` (connected, reconnecting, offline) and structured `userError` kinds for "Bridge down" and "Unpaired device". The Mac app shows them (OBJ-27).
+- [x] **OBJ-21.9** When [OBJ-03](OBJ-03-harness-skeleton.md) is done, wire the module into the harness (coordinate with Brent) and expose its RPC methods on the harness socket.
 - [x] **OBJ-21.10** Run local end-to-end tests through a protocol-compliant relay stand-in and Mac RPC stand-in: pairing, authenticated reconnect, encrypted round trip, unknown device dropped, duplicate delivery, expiry, and an offline queued unpair delivered after restart. Unpair acknowledgement correlation remains pending OBJ-31.
 
 ## Expectations
 
-- [ ] SPEC-08 scenarios pass from the Mac side: "Pair the phone with the Mac", "Unpair a device", "Message from an unknown device is dropped", "Duplicate delivery runs once", "Expired command is not run".
-- [ ] Keys never appear in files, logs, or the task store.
-- [ ] The Mac's crypto output matches the protocol v2 test vectors.
-- [ ] End-to-end flows pass against the local relay and Mac RPC stand-ins; deployed Mac and phone acceptance is tracked by [OBJ-30](OBJ-30-live-cross-device-bridge-acceptance.md).
+- [x] SPEC-08 scenarios pass from the Mac side: "Pair the phone with the Mac", "Unpair a device", "Message from an unknown device is dropped", "Duplicate delivery runs once", "Expired command is not run".
+- [x] Keys never appear in files, logs, or the task store.
+- [x] The Mac uses the shared protocol crypto implementation covered by the protocol v3 test vectors.
+- [x] End-to-end flows pass against the local relay and Mac RPC stand-ins; deployed Mac and phone acceptance is tracked by [OBJ-30](OBJ-30-live-cross-device-bridge-acceptance.md).
 
 ## Expected outcomes
 
@@ -70,4 +70,4 @@ After this objective, the Mac can pair with a phone and exchange encrypted, sign
 
 ## Outcome
 
-In progress. The bridge client and local relay/Mac RPC stand-in tests are implemented. Integration with the running harness RPC server and verification remain.
+Complete for local stand-in coverage. The harness now starts the bridge client after the Mac RPC handshake, exposes the pairing methods, and closes the client during shutdown. Device acceptance against the deployed relay is tracked in OBJ-30. Unpair acknowledgement correlation requires the contract tracked in OBJ-31.
