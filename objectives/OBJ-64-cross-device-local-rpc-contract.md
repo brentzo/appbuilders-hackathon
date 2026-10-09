@@ -3,7 +3,7 @@ id: OBJ-64
 title: Local RPC for cross-device routing on the Mac
 product: protocol
 assignee: Jepoy
-touches: []
+touches: [mac]
 specs: [SPEC-09]
 status: in-progress
 priority: p0

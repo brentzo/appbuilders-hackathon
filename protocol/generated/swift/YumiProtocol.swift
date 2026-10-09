@@ -121,7 +121,7 @@ public struct ApprovalAnsweredElsewhere: Codable, Equatable, Sendable {
     }
 }
 
-/// A pause cancelled a pending approval (SPEC-06 r5).
+/// A pause cancelled a pending approval (SPEC-06 r5), including the pause after 5 minutes with no answer (SPEC-09 r10). It also closes an approvalWaitingElsewhere banner for the same approval.
 public struct ApprovalCancelled: Codable, Equatable, Sendable {
     public var approvalId: String
 

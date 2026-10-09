@@ -303,6 +303,8 @@ The harness applies them, and the schemas describe them:
 - **Key aliases.** The harness normalizes common aliases before validating a `key` action (for example `Cmd+S` to `cmd+s`, `esc` to `escape`, `backspace` to `delete`). The schema accepts only the canonical, lower-case form.
 - **Case-insensitive names.** Mac volumes are case-insensitive by default, so name clash checks (SPEC-07 r4) and checks for a file Yumi did not create compare names case-insensitively.
 - **Packages are folders.** Documents such as `.key` and `.pages` can be packages, so file tools handle a folder at a path that looks like a file.
+- **Approvals are asked on the origin device (SPEC-09 r10).** The harness calls `showApprovalCard` only for a task whose `originDeviceId` is this Mac.
+  For a task from another device it sends `approvalWaitingElsewhere` instead, then `approvalAnsweredElsewhere` or `approvalCancelled` for the same approval.
 
 ## How macOS roles map
 
