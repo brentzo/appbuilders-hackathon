@@ -69,7 +69,7 @@ The `gui_act` sub-agent is built ([OBJ-36](../objectives/OBJ-36-gui-act-sub-agen
 | `src/rpc/history.ts` | The `listTasks`, `searchTasks`, and `getTask` methods. |
 | `src/rpc/tasks.ts` | The `pause`, `resumeTask`, and `cancelTask` methods. `resumeTask` also answers "Keep going" on an open blocked-action card. |
 | `src/rpc/confirmation.ts` | The `submitGoal` and `replyToConfirmation` methods. |
-| `src/confirm/` | The goal confirmation loop (`confirmation.ts`), the repeat-back prompt and checks (`restate.ts`), and reading the user's answer (`classify.ts`). |
+| `src/confirm/` | The goal confirmation loop (`confirmation.ts`), the repeat-back prompt and checks (`restate.ts`), and reading the user's answer (`classify.ts`). A goal sent with `autoMode` skips the loop and starts in `planning` with the trimmed transcript as `confirmedGoal` (SPEC-01 r14). |
 | `src/errors.ts` | Maps failures to the protocol's `UserError` kinds. Never builds user-facing text. |
 | `src/log.ts` | The local log file. |
 | `scripts/model-check.ts` | Checks the harness against the real model server. |
@@ -364,7 +364,7 @@ One file a day, in local time, with lines like these:
 
 Ghost and main subtasks run through `gui_act` (below), unless a test gives the lane its own runner; helpers run the step loop in `subtask-runner.ts`.
 The planner names the app a UI subtask works in (`targetApp`); file work names none and runs as a helper.
-Nothing calls `runTask` in the running harness yet: the confirmation flow that moves a task to `planning` will, through `harness.tasks.start`.
+The confirmation flow (`src/confirm/`) starts it through `harness.tasks.start`, after the user confirms or, in Auto mode, right away.
 
 ## Resume and limits
 

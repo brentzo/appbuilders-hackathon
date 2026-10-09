@@ -25,7 +25,11 @@ import { confirmedGoalFrom, repeatBack, restateGoal } from "./restate.ts";
  * - Change it (the button): the app listens again, and the next spoken answer is the correction.
  * - Unclear: asked once more (the same repeat-back again); after that, Yumi waits for a button.
  *
- * Nothing plans or acts before a confirm (OBJ-17.7): the only call that starts work is in `confirm`. Answers for one
+ * Auto mode (SPEC-01 r14, OBJ-50): a goal sent with `autoMode` skips all of this. The task is created straight in
+ * planning with the transcript, trimmed, as its `confirmedGoal`, and its work starts at once. The app shows what it
+ * heard and says "On it."; approvals for sends and deletes still ask, since they are the scheduler's, not this loop's.
+ *
+ * Without Auto mode, nothing plans or acts before a confirm (OBJ-17.7): the only call that starts work is in `confirm`. Answers for one
  * task are handled one at a time, in order. The state of an open question lives only in memory; after a restart,
  * `abandonUnconfirmed` cancels the tasks still waiting, since nothing ran and the app's question is gone.
  */
@@ -65,7 +69,7 @@ export interface ConfirmationDeps {
 /** Why `submitGoal` or `replyToConfirmation` was refused; the app shows "Unexpected", the reason is in the log. */
 export class ConfirmationError extends Error {
   constructor(
-    readonly rule: "noModel" | "unknownTask",
+    readonly rule: "noModel" | "unknownTask" | "emptyGoal",
     message: string,
   ) {
     super(message);
@@ -95,13 +99,17 @@ export class GoalConfirmation {
     await this.open.get(taskId)?.queue;
   }
 
-  /** `submitGoal`: creates the task, spawns the cursor, and repeats the goal back. Returns before the repeat-back is ready. */
+  /**
+   * `submitGoal`: creates the task, spawns the cursor, and repeats the goal back. Returns before the repeat-back is
+   * ready. In Auto mode it starts the task instead, with no repeat-back.
+   */
   submit(params: SubmitGoalParams): Uuid {
     const { store, logger, client } = this.deps;
     if (!client) {
       logger.warn("confirm.refused", { rule: "noModel" });
       throw new ConfirmationError("noModel", "This harness was started without a model, so it cannot repeat a goal back");
     }
+    if (params.autoMode === true) return this.startRightAway(params);
     const task = store.createTask({ originDeviceId: params.originDeviceId, goal: params.transcript });
     const question: OpenQuestion = {
       taskId: task.id,
@@ -249,20 +257,44 @@ export class GoalConfirmation {
     this.deps.logger.info("confirm.waitingForButton", { taskId: question.taskId });
   }
 
-  /** The only place a task's work starts from a goal: after the user said yes to this exact repeat-back. */
+  /** Where a task's work starts from a goal, with the repeat-back: after the user said yes to this exact repeat-back. */
   private confirm(question: OpenQuestion): void {
-    const { store, logger, voice } = this.deps;
+    const { store, logger } = this.deps;
     const taskId = question.taskId;
     this.open.delete(taskId);
     store.setTaskStatus(taskId, "planning", { confirmedGoal: confirmedGoalFrom(question.goal!) });
     logger.info("confirm.confirmed", { taskId, corrections: question.corrections.length });
+    this.startWork(taskId, question.originDeviceId);
+  }
+
+  /** Where a task's work starts from a goal in Auto mode: the user asked for no repeat-back (SPEC-01 r14). */
+  private startRightAway(params: SubmitGoalParams): Uuid {
+    const { store, logger } = this.deps;
+    const confirmedGoal = params.transcript.trim();
+    if (confirmedGoal === "") {
+      logger.warn("confirm.refused", { rule: "emptyGoal" });
+      throw new ConfirmationError("emptyGoal", "The transcript is only whitespace, so there is no goal to start");
+    }
+    const task = store.createTask({
+      originDeviceId: params.originDeviceId,
+      goal: params.transcript,
+      confirmedGoal,
+      status: "planning",
+    });
+    logger.info("confirm.autoMode", { taskId: task.id, transcriptChars: params.transcript.length });
+    this.cursor({ command: "spawn", cursorId: MAIN_CURSOR_ID, cursorKind: "main" });
+    this.startWork(task.id, task.originDeviceId);
+    return task.id;
+  }
+
+  private startWork(taskId: Uuid, originDeviceId: string): void {
     try {
       void this.deps.tasks().start(taskId);
     } catch (error) {
       if (!(error instanceof TaskControlError)) throw error;
       // The harness has no model or lanes to run it. Logged by TaskControl; the user hears "Unexpected".
-      store.setTaskStatus(taskId, "failed");
-      voice.userError(question.originDeviceId, { kind: "unexpected", taskId });
+      this.deps.store.setTaskStatus(taskId, "failed");
+      this.deps.voice.userError(originDeviceId, { kind: "unexpected", taskId });
     }
   }
 

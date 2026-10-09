@@ -252,6 +252,36 @@ describe("SPEC-07 Strict delete", () => {
   });
 });
 
+describe("SPEC-01 r14 Auto mode still asks before a delete (OBJ-50.5)", () => {
+  it("a goal sent in Auto mode starts without a repeat-back and still shows the delete card, and nothing moves before a tap", async () => {
+    scriptModel(model, { plan: DELETE_PLAN, worker: trashOnce(invoicePaths()) });
+    const tapped = later<ApprovalDecision>();
+    await start({ showApprovalCard: () => tapped.promise });
+    const submitted = (await run!.mac.call("submitGoal", {
+      transcript: "delete my old invoices",
+      originDeviceId: "mac-brent",
+      autoMode: true,
+    })) as { taskId: string };
+    await until(() => cards().length === 1);
+
+    expect(run!.mac.events.some((e) => e.event === "goalRestated")).toBe(false);
+    expect(run!.harness.store.getTask(submitted.taskId)).toMatchObject({
+      confirmedGoal: "delete my old invoices",
+      status: "waitingForUser",
+    });
+    expect(cards()[0]!.text).toBe(
+      "I'm about to move 12 files from Downloads to the Trash, starting with old-invoice.pdf. Should I delete them?",
+    );
+    expect(trashCalls()).toEqual([]);
+    expect(downloads()).toEqual(INVOICES.slice().sort());
+
+    tapped.resolve(decided(false, "tap"));
+    await until(ended(submitted.taskId));
+    expect(trashCalls()).toEqual([]);
+    expect(downloads()).toEqual(INVOICES.slice().sort());
+  });
+});
+
 describe("SPEC-07 Blocked action is refused even with a yes (OBJ-38.4)", () => {
   it("records the step as blocked, sends blockedAction, and Keep going (resumeTask) carries on without running it", async () => {
     // The model asks to trash the Downloads folder itself, which SPEC-07 r9 blocks.

@@ -285,6 +285,95 @@ describe("SPEC-01 Voice intake and confirmation", () => {
   });
 });
 
+describe("SPEC-01 r14 Auto mode (OBJ-50)", () => {
+  it("starts the goal right away, with the transcript as heard as the confirmed goal", async () => {
+    const model = scriptedModel(server, {});
+    const h = await start();
+    const client = await app(h.server.socketPath);
+    const submitted = await client.call("submitGoal", {
+      transcript: `  ${INVOICES} `,
+      originDeviceId: "mac-brent",
+      autoMode: true,
+    });
+    const taskId = (submitted.result as { taskId: string }).taskId;
+    // The cursor spawns as it does with the repeat-back, and no repeat-back is said.
+    expect(client.named("cursorCommand")[0]).toEqual({ command: "spawn", cursorId: "main", cursorKind: "main" });
+    await until(() => h.store.getTask(taskId)!.status === "done");
+    expect(client.named("goalRestated")).toEqual([]);
+    const statuses = client
+      .named("taskStatusChanged")
+      .filter((e) => e.taskId === taskId && e.subtaskId === undefined)
+      .map((e) => e.status);
+    expect(statuses[0]).toBe("planning");
+    expect(statuses).not.toContain("awaitingConfirmation");
+    const task = h.store.getTask(taskId)!;
+    expect(task.confirmedGoal).toBe(INVOICES);
+    expect(task.goal).toBe(`  ${INVOICES} `);
+    // No model call to restate or read an answer: straight to the plan.
+    expect(model.purposes()).toEqual(["planner", "worker", "summary"]);
+    expect(model.seen[0]!.text).toContain(`Goal: ${INVOICES}`);
+    expect(h.store.listTasks().map((t) => t.id)).toContain(taskId);
+    client.close();
+  });
+
+  it("repeats the goal back as before when Auto mode is off", async () => {
+    const model = scriptedModel(server, { restate: [INVOICES_GOAL] });
+    const h = await start();
+    const client = await app(h.server.socketPath);
+    const submitted = await client.call("submitGoal", { transcript: INVOICES, originDeviceId: "mac-brent", autoMode: false });
+    const taskId = (submitted.result as { taskId: string }).taskId;
+    await until(() => client.named("goalRestated").length === 1);
+    expect(client.named("goalRestated")).toEqual([{ taskId, text: SAID_INVOICES }]);
+    await settle();
+    expect(h.store.getTask(taskId)!.status).toBe("awaitingConfirmation");
+    expect(model.purposes()).toEqual(["restate"]);
+    client.close();
+  });
+
+  it("an answer for an Auto mode task is ignored, since nothing waits for one", async () => {
+    scriptedModel(server, {});
+    const h = await start();
+    const client = await app(h.server.socketPath);
+    const submitted = await client.call("submitGoal", { transcript: INVOICES, originDeviceId: "mac-brent", autoMode: true });
+    const taskId = (submitted.result as { taskId: string }).taskId;
+    expect(h.confirmation.isOpen(taskId)).toBe(false);
+    const answered = await client.call("replyToConfirmation", { taskId, reply: spoken("never mind") });
+    expect(answered.result).toEqual({});
+    await until(() => h.store.getTask(taskId)!.status === "done");
+    client.close();
+  });
+
+  it("refuses a transcript that is only spaces, without making a task", async () => {
+    scriptedModel(server, {});
+    const h = await start();
+    const client = await app(h.server.socketPath);
+    const refused = await client.call("submitGoal", { transcript: "   ", originDeviceId: "mac-brent", autoMode: true });
+    expect(refused.error?.data).toEqual({ kind: "unexpected" });
+    expect(h.store.listTasks()).toEqual([]);
+    client.close();
+  });
+
+  it("refuses an Auto mode goal when the harness has no model, without making a task", async () => {
+    const h = await start({ work: false });
+    const client = await app(h.server.socketPath);
+    const refused = await client.call("submitGoal", { transcript: INVOICES, originDeviceId: "mac-brent", autoMode: true });
+    expect(refused.error?.data).toEqual({ kind: "unexpected" });
+    expect(h.store.listTasks()).toEqual([]);
+    client.close();
+  });
+
+  it("never logs what the user said", async () => {
+    scriptedModel(server, {});
+    const h = await start();
+    const client = await app(h.server.socketPath);
+    const submitted = await client.call("submitGoal", { transcript: INVOICES, originDeviceId: "mac-brent", autoMode: true });
+    await until(() => h.store.getTask((submitted.result as { taskId: string }).taskId)!.status === "done");
+    expect(logger.entries.some((e) => e.event === "confirm.autoMode")).toBe(true);
+    expect(JSON.stringify(logger.entries)).not.toContain("invoices");
+    client.close();
+  });
+});
+
 describe("OBJ-17 answers", () => {
   it("reads a yes the fixed list does not know with the model", async () => {
     const model = scriptedModel(server, { restate: [INVOICES_GOAL], classify: ["confirm"] });
