@@ -32,7 +32,10 @@
         "write-note"
       ],
       "proposedLane": "main",
-      "needsKeyboard": true
+      "needsKeyboard": true,
+      "targetApp": {
+        "name": "Notes"
+      }
     }
   ]
 }

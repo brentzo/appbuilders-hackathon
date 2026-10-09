@@ -146,6 +146,13 @@ describe("mock Mac app capability answers", () => {
     }
   });
 
+  it("resolves an installed app's name to its bundle id, ignoring case, and finds nothing for another name", async () => {
+    const harness = await harnessWithMockMac();
+    expect(await harness.request("resolveApp", { name: "Keynote" })).toEqual({ bundleId: "com.apple.Keynote" });
+    expect(await harness.request("resolveApp", { name: "google chrome" })).toEqual({ bundleId: "com.google.Chrome" });
+    expect(await harness.request("resolveApp", { name: "Final Cut Pro" })).toEqual({});
+  });
+
   it("answers an app that is not installed like the real Mac app: unsupportedRequest to a probe, no version", async () => {
     const harness = await harnessWithMockMac();
     const error = await harness.request("probeAppCapability", { bundleId: "com.example.NotInstalled" }).catch((e: unknown) => e);

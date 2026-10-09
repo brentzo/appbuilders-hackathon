@@ -9,6 +9,8 @@ import {
   type AppVersionResult,
   type GetAppVersionParams,
   type ProbeAppCapabilityParams,
+  type ResolveAppParams,
+  type ResolveAppResult,
 } from "../generated/ts/index.ts";
 import { loadRpcContract, RpcFailure, RpcPeer, type Handler } from "../src/index.ts";
 import { exampleOf, examplesOf } from "./examples.ts";
@@ -34,6 +36,17 @@ export interface MockMacApp {
  */
 const INSTALLED_APPS = new Map((examplesOf("AppCapability") as AppCapability[]).map((app) => [app.bundleId, app]));
 
+/**
+ * The names the user sees for the installed apps (kMDItemDisplayName of each app on the Mac the examples came from;
+ * Keynote's bundle is "Keynote Creator Studio.app" but shows as Keynote). Launch Services ignores case, so the mock
+ * does too.
+ */
+const APP_NAMES = new Map([
+  ["google chrome", "com.google.Chrome"],
+  ["keynote", "com.apple.Keynote"],
+  ["wezterm", "com.github.wez.wezterm"],
+]);
+
 /** Methods whose answer depends on the params. Every other method answers with its example result. */
 const ANSWERS: Record<string, Handler> = {
   probeAppCapability: (params) => {
@@ -42,6 +55,10 @@ const ANSWERS: Record<string, Handler> = {
     // The real Mac app's answer for an app that is not installed.
     if (!app) throw new RpcFailure({ kind: "unsupportedRequest" }, `Mock: ${bundleId} is not installed`);
     return app;
+  },
+  resolveApp: (params): ResolveAppResult => {
+    const bundleId = APP_NAMES.get((params as ResolveAppParams).name.toLowerCase());
+    return bundleId && INSTALLED_APPS.has(bundleId) ? { bundleId } : {};
   },
   getAppVersion: (params): AppVersionResult => {
     const app = INSTALLED_APPS.get((params as GetAppVersionParams).bundleId);

@@ -179,6 +179,22 @@ describe("StepSummary", () => {
   });
 });
 
+describe("TargetApp", () => {
+  it("names the app by exactly one of bundleId or name", () => {
+    expect(validate("TargetApp", { name: "Keynote" }).valid).toBe(true);
+    expect(validate("TargetApp", { bundleId: "com.apple.Keynote" }).valid).toBe(true);
+    expect(validate("TargetApp", { name: "Keynote", bundleId: "com.apple.Keynote" }).valid).toBe(false);
+    expect(validate("TargetApp", {}).valid).toBe(false);
+    expect(validate("TargetApp", { name: "" }).valid).toBe(false);
+  });
+
+  it("is optional on a planned subtask and on a subtask", () => {
+    const planned = { id: "a", title: "A", instruction: "Do a.", dependsOn: [], proposedLane: "ghost" };
+    expect(validate("Plan", { subtasks: [{ ...planned, targetApp: { name: "Google Chrome" } }] }).valid).toBe(true);
+    expect(validate("Plan", { subtasks: [{ ...planned, targetApp: "Google Chrome" }] }).valid).toBe(false);
+  });
+});
+
 describe("Plan", () => {
   const subtask = (id: string, dependsOn: string[] = []) => ({
     id,

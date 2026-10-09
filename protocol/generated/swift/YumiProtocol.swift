@@ -1242,15 +1242,18 @@ public struct PlannedSubtask: Codable, Equatable, Sendable {
     /// Ids of the subtasks in this plan that must be done before this one starts.
     public var dependsOn: [String]
     public var proposedLane: Lane
+    /// The app whose window the subtask works in. Leave it out for work with files and no app window.
+    public var targetApp: TargetApp?
     /// True when the subtask types or uses keyboard shortcuts, for example to paste. The router then sends it to main, the only lane that sends keystrokes (SPEC-03 r7 and r17). Absent means false.
     public var needsKeyboard: Bool?
 
-    public init(id: String, title: String, instruction: String, dependsOn: [String], proposedLane: Lane, needsKeyboard: Bool? = nil) {
+    public init(id: String, title: String, instruction: String, dependsOn: [String], proposedLane: Lane, targetApp: TargetApp? = nil, needsKeyboard: Bool? = nil) {
         self.id = id
         self.title = title
         self.instruction = instruction
         self.dependsOn = dependsOn
         self.proposedLane = proposedLane
+        self.targetApp = targetApp
         self.needsKeyboard = needsKeyboard
     }
 }
@@ -1368,6 +1371,26 @@ public struct ReplyToConfirmationParams: Codable, Equatable, Sendable {
     public init(taskId: String, reply: ConfirmationReply) {
         self.taskId = taskId
         self.reply = reply
+    }
+}
+
+/// An app name to find among the installed apps, so the router can probe the app a planned subtask names (TargetApp.name).
+public struct ResolveAppParams: Codable, Equatable, Sendable {
+    /// The app's name as the user sees it, for example Keynote.
+    public var name: String
+
+    public init(name: String) {
+        self.name = name
+    }
+}
+
+/// The installed app with that name, found through Launch Services as open_app does, without launching it.
+public struct ResolveAppResult: Codable, Equatable, Sendable {
+    /// The app's bundle id. Absent when no installed app has that name.
+    public var bundleId: String?
+
+    public init(bundleId: String? = nil) {
+        self.bundleId = bundleId
     }
 }
 
@@ -1707,6 +1730,8 @@ public struct Subtask: Codable, Equatable, Sendable {
     /// Set by the router.
     public var lane: Lane?
     public var routeReason: RouteReason?
+    /// The app the planner said the subtask works in. Absent for work with no app window.
+    public var targetApp: TargetApp?
     /// Absent for helpers.
     public var target: Target?
     public var status: SubtaskStatus
@@ -1718,7 +1743,7 @@ public struct Subtask: Codable, Equatable, Sendable {
     /// Where a handoff resumes from.
     public var lastGoodStep: String?
 
-    public init(id: String, taskId: String, title: String, instruction: String, dependsOn: [String], proposedLane: Lane, needsKeyboard: Bool? = nil, lane: Lane? = nil, routeReason: RouteReason? = nil, target: Target? = nil, status: SubtaskStatus, workerId: String? = nil, attempts: Int, result: SubtaskResult? = nil, lastGoodStep: String? = nil) {
+    public init(id: String, taskId: String, title: String, instruction: String, dependsOn: [String], proposedLane: Lane, needsKeyboard: Bool? = nil, lane: Lane? = nil, routeReason: RouteReason? = nil, targetApp: TargetApp? = nil, target: Target? = nil, status: SubtaskStatus, workerId: String? = nil, attempts: Int, result: SubtaskResult? = nil, lastGoodStep: String? = nil) {
         self.id = id
         self.taskId = taskId
         self.title = title
@@ -1728,6 +1753,7 @@ public struct Subtask: Codable, Equatable, Sendable {
         self.needsKeyboard = needsKeyboard
         self.lane = lane
         self.routeReason = routeReason
+        self.targetApp = targetApp
         self.target = target
         self.status = status
         self.workerId = workerId
@@ -1772,6 +1798,19 @@ public struct Target: Codable, Equatable, Sendable {
     public init(bundleId: String, windowId: Int? = nil) {
         self.bundleId = bundleId
         self.windowId = windowId
+    }
+}
+
+/// The app a subtask works in, as the planner names it: exactly one of bundleId or name, like open_app. The router resolves a name to a bundle id through the Mac app (resolveApp), then checks what the app supports (SPEC-03 r3). Absent for work with no app window, which runs as a helper (SPEC-03 r2).
+public struct TargetApp: Codable, Equatable, Sendable {
+    /// Only one the Mac app reported, never one from memory (see OpenAppCall).
+    public var bundleId: String?
+    /// The app's name as the user sees it, for example Keynote.
+    public var name: String?
+
+    public init(bundleId: String? = nil, name: String? = nil) {
+        self.bundleId = bundleId
+        self.name = name
     }
 }
 
@@ -2210,6 +2249,7 @@ public enum RpcMethod: String, CaseIterable, Sendable {
     case showApprovalCard
     case probeAppCapability
     case getAppVersion
+    case resolveApp
     case openNewWindow
     case moveToTrash
     case listWindows

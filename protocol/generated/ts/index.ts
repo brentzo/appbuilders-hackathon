@@ -608,6 +608,8 @@ export interface PlannedSubtask {
   /** Ids of the subtasks in this plan that must be done before this one starts. */
   dependsOn: PlannedSubtaskId[];
   proposedLane: Lane;
+  /** The app whose window the subtask works in. Leave it out for work with files and no app window. */
+  targetApp?: TargetApp;
   /** True when the subtask types or uses keyboard shortcuts, for example to paste. The router then sends it to main, the only lane that sends keystrokes (SPEC-03 r7 and r17). Absent means false. */
   needsKeyboard?: boolean;
 }
@@ -681,6 +683,18 @@ export const refusedReasonValues: readonly RefusedReason[] = ["badSignature", "d
 export interface ReplyToConfirmationParams {
   taskId: Uuid;
   reply: ConfirmationReply;
+}
+
+/** An app name to find among the installed apps, so the router can probe the app a planned subtask names (TargetApp.name). */
+export interface ResolveAppParams {
+  /** The app's name as the user sees it, for example Keynote. */
+  name: string;
+}
+
+/** The installed app with that name, found through Launch Services as open_app does, without launching it. */
+export interface ResolveAppResult {
+  /** The app's bundle id. Absent when no installed app has that name. */
+  bundleId?: string;
 }
 
 /** The real element behind an element number, resolved by the harness before acting. */
@@ -890,6 +904,8 @@ export interface Subtask {
   /** Set by the router. */
   lane?: Lane;
   routeReason?: RouteReason;
+  /** The app the planner said the subtask works in. Absent for work with no app window. */
+  targetApp?: TargetApp;
   /** Absent for helpers. */
   target?: Target;
   status: SubtaskStatus;
@@ -919,6 +935,14 @@ export interface Target {
   bundleId: string;
   /** CGWindowID on the Mac. */
   windowId?: number;
+}
+
+/** The app a subtask works in, as the planner names it: exactly one of bundleId or name, like open_app. The router resolves a name to a bundle id through the Mac app (resolveApp), then checks what the app supports (SPEC-03 r3). Absent for work with no app window, which runs as a helper (SPEC-03 r2). */
+export interface TargetApp {
+  /** Only one the Mac app reported, never one from memory (see OpenAppCall). */
+  bundleId?: string;
+  /** The app's name as the user sees it, for example Keynote. */
+  name?: string;
 }
 
 /** Relay to sender: a command's target is offline, so it was dropped, never queued (SPEC-08 r7). */
@@ -1148,6 +1172,7 @@ export interface RpcMethods {
   showApprovalCard: { direction: "harnessToApp"; params: ShowApprovalCardParams; result: ApprovalDecision };
   probeAppCapability: { direction: "harnessToApp"; params: ProbeAppCapabilityParams; result: AppCapability };
   getAppVersion: { direction: "harnessToApp"; params: GetAppVersionParams; result: AppVersionResult };
+  resolveApp: { direction: "harnessToApp"; params: ResolveAppParams; result: ResolveAppResult };
   openNewWindow: { direction: "harnessToApp"; params: OpenNewWindowParams; result: OpenNewWindowResult };
   moveToTrash: { direction: "harnessToApp"; params: MoveToTrashParams; result: MoveToTrashResult };
   listWindows: { direction: "harnessToApp"; params: ListWindowsParams; result: WindowList };

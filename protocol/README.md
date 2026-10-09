@@ -45,7 +45,7 @@ Cross-device message kinds are next ([OBJ-25](../objectives/OBJ-25-cross-device-
 | Schema file | Types |
 |---|---|
 | `common.json` | ProtocolVersion, PeerProtocolVersion, Uuid, DeviceId, Timestamp, Path, Lane, RouteReason, PermissionLevel, ResultStatus, StepOutcome |
-| `task.json` | Task, TaskStatus, Subtask, SubtaskStatus, SubtaskResult, Target, Step, ToolOutput, WindowLock, AppCapability |
+| `task.json` | Task, TaskStatus, Subtask, SubtaskStatus, SubtaskResult, TargetApp, Target, Step, ToolOutput, WindowLock, AppCapability |
 | `action.json` | ModelAction and its variants, AXRole, ResolvedElement, RecordedAction |
 | `tools.json` | ToolName, ToolCall and one call type per typed tool, PhoneToolCall |
 | `observation.json` | Observation, TreeElement, Layer, LayerKind |

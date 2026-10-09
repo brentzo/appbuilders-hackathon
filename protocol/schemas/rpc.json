@@ -26,6 +26,7 @@
       "showApprovalCard": { "direction": "harnessToApp", "params": "ShowApprovalCardParams", "result": "ApprovalDecision" },
       "probeAppCapability": { "direction": "harnessToApp", "params": "ProbeAppCapabilityParams", "result": "AppCapability" },
       "getAppVersion": { "direction": "harnessToApp", "params": "GetAppVersionParams", "result": "AppVersionResult" },
+      "resolveApp": { "direction": "harnessToApp", "params": "ResolveAppParams", "result": "ResolveAppResult" },
       "openNewWindow": { "direction": "harnessToApp", "params": "OpenNewWindowParams", "result": "OpenNewWindowResult" },
       "moveToTrash": { "direction": "harnessToApp", "params": "MoveToTrashParams", "result": "MoveToTrashResult" },
       "listWindows": { "direction": "harnessToApp", "params": "ListWindowsParams", "result": "WindowList" },
@@ -282,6 +283,21 @@
       "additionalProperties": false,
       "required": ["bundleId"],
       "properties": { "bundleId": { "type": "string", "minLength": 1 } }
+    },
+    "ResolveAppParams": {
+      "description": "An app name to find among the installed apps, so the router can probe the app a planned subtask names (TargetApp.name).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": { "name": { "description": "The app's name as the user sees it, for example Keynote.", "type": "string", "minLength": 1, "maxLength": 100 } }
+    },
+    "ResolveAppResult": {
+      "description": "The installed app with that name, found through Launch Services as open_app does, without launching it.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "bundleId": { "description": "The app's bundle id. Absent when no installed app has that name.", "type": "string", "minLength": 1 }
+      }
     },
     "AppVersionResult": {
       "description": "The installed version, read from the app bundle without launching the app.",

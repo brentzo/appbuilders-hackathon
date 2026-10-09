@@ -7,6 +7,9 @@
   "proposedLane": "main",
   "lane": "main",
   "routeReason": "appNotBackgroundCapable",
+  "targetApp": {
+    "name": "Keynote"
+  },
   "target": {
     "bundleId": "com.apple.Keynote",
     "windowId": 4182

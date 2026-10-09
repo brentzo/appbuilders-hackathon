@@ -52,6 +52,7 @@
         },
         "lane": { "description": "Set by the router.", "$ref": "common.json#/$defs/Lane" },
         "routeReason": { "$ref": "common.json#/$defs/RouteReason" },
+        "targetApp": { "description": "The app the planner said the subtask works in. Absent for work with no app window.", "$ref": "#/$defs/TargetApp" },
         "target": { "description": "Absent for helpers.", "$ref": "#/$defs/Target" },
         "status": { "$ref": "#/$defs/SubtaskStatus" },
         "workerId": { "description": "Which worker holds it right now.", "type": "string" },
@@ -59,6 +60,22 @@
         "result": { "$ref": "#/$defs/SubtaskResult" },
         "lastGoodStep": { "description": "Where a handoff resumes from.", "$ref": "common.json#/$defs/Uuid" }
       }
+    },
+    "TargetApp": {
+      "description": "The app a subtask works in, as the planner names it: exactly one of bundleId or name, like open_app. The router resolves a name to a bundle id through the Mac app (resolveApp), then checks what the app supports (SPEC-03 r3). Absent for work with no app window, which runs as a helper (SPEC-03 r2).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "bundleId": { "description": "Only one the Mac app reported, never one from memory (see OpenAppCall).", "type": "string", "minLength": 1 },
+        "name": { "description": "The app's name as the user sees it, for example Keynote.", "type": "string", "minLength": 1, "maxLength": 100 }
+      },
+      "allOf": [
+        {
+          "if": { "required": ["bundleId"] },
+          "then": { "not": { "required": ["name"] } },
+          "else": { "required": ["name"] }
+        }
+      ]
     },
     "Target": {
       "description": "The app and window a UI subtask works in.",

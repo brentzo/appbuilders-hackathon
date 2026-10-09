@@ -732,6 +732,8 @@ data class PlannedSubtask(
     /** Ids of the subtasks in this plan that must be done before this one starts. */
     val dependsOn: List<String>,
     val proposedLane: Lane,
+    /** The app whose window the subtask works in. Leave it out for work with files and no app window. */
+    val targetApp: TargetApp? = null,
     /** True when the subtask types or uses keyboard shortcuts, for example to paste. The router then sends it to main, the only lane that sends keystrokes (SPEC-03 r7 and r17). Absent means false. */
     val needsKeyboard: Boolean? = null,
 )
@@ -815,6 +817,20 @@ enum class RefusedReason {
 data class ReplyToConfirmationParams(
     val taskId: String,
     val reply: ConfirmationReply,
+)
+
+/** An app name to find among the installed apps, so the router can probe the app a planned subtask names (TargetApp.name). */
+@Serializable
+data class ResolveAppParams(
+    /** The app's name as the user sees it, for example Keynote. */
+    val name: String,
+)
+
+/** The installed app with that name, found through Launch Services as open_app does, without launching it. */
+@Serializable
+data class ResolveAppResult(
+    /** The app's bundle id. Absent when no installed app has that name. */
+    val bundleId: String? = null,
 )
 
 /** The real element behind an element number, resolved by the harness before acting. */
@@ -1064,6 +1080,8 @@ data class Subtask(
     /** Set by the router. */
     val lane: Lane? = null,
     val routeReason: RouteReason? = null,
+    /** The app the planner said the subtask works in. Absent for work with no app window. */
+    val targetApp: TargetApp? = null,
     /** Absent for helpers. */
     val target: AppTarget? = null,
     val status: SubtaskStatus,
@@ -1104,6 +1122,15 @@ data class AppTarget(
     val bundleId: String,
     /** CGWindowID on the Mac. */
     val windowId: Long? = null,
+)
+
+/** The app a subtask works in, as the planner names it: exactly one of bundleId or name, like open_app. The router resolves a name to a bundle id through the Mac app (resolveApp), then checks what the app supports (SPEC-03 r3). Absent for work with no app window, which runs as a helper (SPEC-03 r2). */
+@Serializable
+data class TargetApp(
+    /** Only one the Mac app reported, never one from memory (see OpenAppCall). */
+    val bundleId: String? = null,
+    /** The app's name as the user sees it, for example Keynote. */
+    val name: String? = null,
 )
 
 /** Relay to sender: a command's target is offline, so it was dropped, never queued (SPEC-08 r7). */
@@ -1366,6 +1393,7 @@ enum class RpcMethod(val wireName: String) {
     ShowApprovalCard("showApprovalCard"),
     ProbeAppCapability("probeAppCapability"),
     GetAppVersion("getAppVersion"),
+    ResolveApp("resolveApp"),
     OpenNewWindow("openNewWindow"),
     MoveToTrash("moveToTrash"),
     ListWindows("listWindows"),
