@@ -44,7 +44,8 @@ describe("OBJ-61 goal revision end to end", () => {
         if (system.includes("revising the goal of a task"))
           return content({ goal: "write a note about the launch", leftBehindSubtaskIds: [] });
         if (system === PLANNER_SYSTEM_PROMPT) {
-          revisedPlan = prompt.includes("write a note about the launch");
+          // The confirmed goal is stored in sentence case, so match it without regard to case.
+          revisedPlan = prompt.toLowerCase().includes("write a note about the launch");
           return {
             kind: "content",
             content: revisedPlan
@@ -74,7 +75,10 @@ describe("OBJ-61 goal revision end to end", () => {
       expect(await run.mac.call("reviseGoal", { taskId: task.id, transcript: "write a note about the launch" })).toEqual({});
       await until(() => run!.mac.events.some((event) => event.event === "goalRestated"));
       const restated = run.mac.events.find((event) => event.event === "goalRestated")!.payload as GoalRestated;
-      expect(restated.text).toBe("write a note about the launch");
+      expect(restated).toEqual({
+        taskId: task.id,
+        text: "Got it. You want me to write a note about the launch. Should I go ahead?",
+      });
 
       expect(
         await run.mac.call("replyToConfirmation", { taskId: task.id, reply: { kind: "button", choice: "goAhead" } }),
@@ -82,14 +86,14 @@ describe("OBJ-61 goal revision end to end", () => {
       await until(() => run!.harness.store.getTask(task.id)?.status === "done");
       const saved = run.harness.store.getTask(task.id)!;
       expect(revisedPlan).toBe(true);
-      expect(saved.confirmedGoal).toBe("write a note about the launch");
+      expect(saved.confirmedGoal).toBe("Write a note about the launch");
       expect(saved.goalRevisions).toHaveLength(1);
       expect(saved.goalRevisions[0]).toMatchObject({
         userSaid: "write a note about the launch",
-        goal: "write a note about the launch",
+        goal: "Write a note about the launch",
       });
       expect(run.harness.store.listActionLog(task.id).map((entry) => entry.description)).toContain(
-        "Changed the goal to: write a note about the launch",
+        "Goal changed to Write a note about the launch",
       );
     },
   );
