@@ -919,12 +919,11 @@ function stepOutcome(
   const ui = action.kind !== ACTION.tool;
   switch (ran.outcome) {
     case "ok":
-      // A vision click cannot be judged from the accessibility tree: a window with no accessible
-      // content has an empty element list and an unchanged title, so the same-tree rule would call
-      // every vision click "noEffect" (Brent's run, 2026-10-10). The same goes for typing into such
-      // a window (the search box Yumi clicked into). The Mac app's answer is all there is.
-      if (action.kind === ACTION.clickAt) return "ok";
-      if (action.kind === ACTION.type && before?.screenshotPath !== undefined) return "ok";
+      // A window with no accessible content cannot be judged by the tree: its element list is empty
+      // and its title does not change, so every UI action would look like no effect (Brent's run,
+      // 2026-10-10: a click, a type, and an enter in Spotify were each called noEffect, though the
+      // type worked). The Mac app's answer is all there is.
+      if (ui && before?.screenshotPath !== undefined) return "ok";
       return ui && before !== undefined && files.length === 0 && sameTreeAndTitle(before, after) ? "noEffect" : "ok";
     case "error":
       return ui ? "noEffect" : "error";

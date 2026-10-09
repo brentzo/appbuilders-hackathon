@@ -1,11 +1,9 @@
 import React from 'react';
 import {AbsoluteFill, Easing, interpolate, Series, spring, useCurrentFrame, useVideoConfig} from 'remotion';
-import {CatSpot, Chip, Check, Decor, Headline, Kicker, Lock, MonoTag, ON_ACCENT, Panel, Progress, SceneFade, Sub, Window, Button, INK} from './ShowreelKit';
+import {CatSpot, Chip, Check, Decor, Headline, Kicker, Lock, MonoTag, ON_ACCENT, ON_HUSH, Panel, Progress, SceneFade, Sub, Window, Button, INK, LINE, SURFACE, ACCENT_TEXT, MONO} from './ShowreelKit';
 import {CatState, mixPose, poseFor, wave} from '../cat/poses';
 import {COLOR, FONT, LITTERMATES} from '../theme';
-import {LandRing, SoundArcs, Sparkles, ThinkDots, Zzz} from './Extras';
-
-const fps = 30;
+import {LandRing, Question, SoundArcs, Sparkles, ThinkDots, Zzz} from './Extras';
 
 /** 60 second showreel: Yumi's voice loop, the cat at work, the phone remote, ghosts, control, and the local-first promise. */
 export const Showreel: React.FC = () => (
@@ -87,6 +85,7 @@ const Hook: React.FC = () => {
   if (f < 32) pose = {...pose, squashY: 1 - 0.14 * land, squashX: 1 + 0.1 * land};
 
   const bubble = spring({frame: f - 22, fps: fp, config: {damping: 12}});
+  const bubbleOut = interpolate(f, [92, 106], [1, 0], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const kicker = interpolate(f, [104, 124], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic)});
   const tagline = interpolate(f, [122, 140], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic)});
 
@@ -130,7 +129,7 @@ const Hook: React.FC = () => {
           color: INK,
           transform: `scale(${bubble})`,
           transformOrigin: '100% 100%',
-          opacity: bubble,
+          opacity: bubble * bubbleOut,
         }}
       >
         Hey Yumi!
@@ -191,7 +190,7 @@ const VoiceLoop: React.FC = () => {
           Every goal is repeated and confirmed before a single click, so nothing happens you did not ask for.
         </Sub>
 
-        <div style={{marginTop: 40, display: 'flex', flexDirection: 'column', gap: 30, alignItems: 'flex-start'}}>
+        <div style={{marginTop: 40, width: 820, display: 'flex', flexDirection: 'column', gap: 30, alignItems: 'flex-start'}}>
           <div style={{transform: `translateY(${(1 - wake) * 30}px)`, opacity: wake}}>
             <Chip dot={COLOR.orange}>Hey Yumi</Chip>
           </div>
@@ -211,7 +210,7 @@ const VoiceLoop: React.FC = () => {
             </div>
           </div>
           <div style={{opacity: onIt, transform: `translateY(${(1 - onIt) * 16}px)`}}>
-            <Chip dot={COLOR.coral}>On it.</Chip>
+            <Chip dot={COLOR.blush}>On it.</Chip>
           </div>
         </div>
       </div>
@@ -257,15 +256,15 @@ const CatAtWork: React.FC = () => {
   const f = useCurrentFrame();
   const {fps: fp} = useVideoConfig();
   const CAT = 118;
-  const WX = 370;
-  const WY = 196;
+  const WX = 340;
+  const WY = 200;
 
   const wps: Wp[] = [
-    {at: 22, x: WX + 560, y: WY + 560},
-    {at: 58, x: WX + 60, y: WY + 74, click: true},
-    {at: 112, x: WX + 220, y: WY + 330, click: true},
-    {at: 172, x: WX + 940, y: WY + 470, click: true},
-    {at: 214, x: WX + 560, y: WY + 560},
+    {at: 22, x: WX + 540, y: WY + 560},
+    {at: 58, x: WX + 43, y: WY + 77, click: true},
+    {at: 112, x: WX + 220, y: WY + 360, click: true},
+    {at: 172, x: WX + 785, y: WY + 494, click: true},
+    {at: 214, x: WX + 540, y: WY + 560},
   ];
   const pos = seg(f, wps);
   const clicks = wps.filter((w) => w.click).map((w) => w.at);
@@ -290,7 +289,7 @@ const CatAtWork: React.FC = () => {
   const clickRing = (p: Wp) => {
     if (!p.click) return null;
     const k = spring({frame: f - p.at + 6, fps: fp, config: {damping: 12}});
-    return <div style={{position: 'absolute', left: p.x - 15, top: p.y - 15, width: 30, height: 30, borderRadius: '50%', border: `4px solid ${COLOR.coral}`, transform: `scale(${k})`, opacity: 1 - k}} />;
+    return <div style={{position: 'absolute', left: p.x - 15, top: p.y - 15, width: 30, height: 30, borderRadius: '50%', border: `4px solid ${COLOR.blush}`, transform: `scale(${k})`, opacity: 1 - k}} />;
   };
 
   return (
@@ -317,7 +316,7 @@ const CatAtWork: React.FC = () => {
       </div>
 
       <div style={{position: 'absolute', left: WX, top: WY, transform: `scale(${0.9 + 0.1 * win})`, opacity: win}}>
-        <Window title="Keynote — Q3 Report" width={1180} height={640}>
+        <Window title="Keynote - Q3 Report" width={1100} height={640}>
           <div style={{display: 'flex', alignItems: 'center', gap: 30, padding: '12px 22px', borderBottom: `1.5px solid ${COLOR.paperDeep}`, fontFamily: FONT.text, fontSize: 24, color: COLOR.muted, position: 'relative'}}>
             {['File', 'Edit', 'Insert', 'Slide', 'Format', 'Arrange', 'Share'].map((m) => (
               <span key={m} style={{fontWeight: m === 'File' && f >= 58 && f < 112 ? 700 : 400, color: m === 'File' && f >= 58 && f < 112 ? INK : COLOR.muted, textDecoration: m === 'File' && f >= 58 && f < 112 ? 'underline' : 'none', textDecorationColor: COLOR.orange, textUnderlineOffset: 8}}>
@@ -376,7 +375,7 @@ const CatAtWork: React.FC = () => {
         <div key={i} style={{position: 'absolute', left: p.x - 15, top: p.y - 15}}>{clickRing(p)}</div>
       ))}
 
-      <div style={{position: 'absolute', left: pos.x - CAT / 2, top: pos.y - CAT * 0.82, width: CAT, height: CAT, zIndex: 5}}>
+      <div style={{position: 'absolute', left: pos.x - CAT / 2, top: pos.y - CAT * 0.92, width: CAT, height: CAT, zIndex: 5}}>
         <CatSpot size={CAT} pose={pose}>
           {state === 'acting' ? <LandRing f={f} size={CAT} period={18} /> : null}
           {state === 'done' ? <Sparkles f={f} size={CAT} /> : null}
@@ -463,7 +462,7 @@ const PhoneRemote: React.FC = () => {
           {f >= 118 ? (
             <div style={{transform: `translateY(${(1 - working) * 24}px)`, opacity: working, background: '#FFFFFF', borderRadius: 18, padding: '18px', display: 'flex', flexDirection: 'column', gap: 14}}>
               <div style={{fontFamily: FONT.text, fontSize: 25, fontWeight: 700, color: INK}}>Working on your Mac</div>
-              <MonoTag color={COLOR.muted}>{f < 236 ? 'Opening Spotify · step 3 of 5' : 'Done'}</MonoTag>
+              <MonoTag color={COLOR.muted}>{f < 236 ? 'Opening Spotify' : 'Done'}</MonoTag>
               <Progress value={progress} />
               <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
                 <span style={{fontFamily: FONT.text, fontSize: 20, color: COLOR.muted}}>{Math.round(progress * 100)}%</span>

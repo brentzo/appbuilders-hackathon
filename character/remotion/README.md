@@ -22,6 +22,7 @@ npm run render:all    # writes every video to out/
 | `YumiSticker` | 1080x1080 | 5 s | The same loop with a transparent background, rendered as VP9 WebM with alpha for overlays |
 | `YumiMoodLoop` | 512x512 | 4 s | One cursor state as a seamless, background-free loop (prop `state`) |
 | `YumiPose` | 256x256 | 4 s | One clean, background-free pose for stills (prop `state`) |
+| `Showreel` | 1920x1080 | 60 s | The full 60-second product showreel: the voice loop, the cat at work, the phone remote, ghosts, control, and the local-first promise |
 
 ## App assets
 

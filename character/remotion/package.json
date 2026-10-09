@@ -12,6 +12,7 @@
     "render:idle": "remotion render YumiIdleLoop out/yumi-idle.mp4",
     "render:sticker": "remotion render YumiSticker out/yumi-sticker.webm --codec=vp9 --image-format=png --pixel-format=yuva420p",
     "render:all": "npm run render:intro && npm run render:moods && npm run render:idle && npm run render:sticker",
+    "render:showreel": "remotion render Showreel out/yumi-showreel.mp4",
     "export:assets": "tsx scripts/export-assets.ts"
   },
   "dependencies": {
