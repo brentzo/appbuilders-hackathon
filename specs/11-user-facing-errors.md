@@ -54,6 +54,10 @@ Where a next step exists, it is a button, not a sentence telling them to go find
 | Didn't catch speech | "Sorry, I didn't catch that. Could you say it again?" | Try again, Type instead |
 | Model failed to load | "I couldn't start my brain on this device. Closing other apps usually helps." | Try again |
 | Unpaired device | "Your phone isn't paired with your Mac yet." | Pair now |
+| Pairing code expired | "That pairing code expired. Codes only last a few minutes to keep your devices safe. Show a new code on your Mac and scan it again." | Scan again, Cancel |
+| Not a pairing code | "That doesn't look like a Yumi pairing code. On your Mac, open Yumi and show the pairing code, then scan it again." | Scan again, Cancel |
+| Pairing versions differ | "Yumi on your phone and your Mac are different versions, so they can't pair yet. Update Yumi on both, then try again." | Okay |
+| Mac didn't answer pairing | "Your Mac didn't answer, so pairing didn't finish. Make sure Yumi is open on your Mac and showing a new code, then scan it again." | Scan again, Cancel |
 | Unexpected | "Something went wrong and I stopped to be safe. Here's the last thing I did: {last action}." | Show what I did, Try again, Stop |
 
 Notes:
@@ -102,3 +106,7 @@ Feature: User-facing errors
     When the error copy test runs
     Then every row in this table has the same text and buttons in code
 ```
+
+## Decisions
+
+- **Pairing failures** have their own copy, shown on the phone: expired code, not a Yumi code, different versions, and no answer from the Mac. The Mac silently drops a bad pairing request, so the phone shows "Mac didn't answer pairing" after waiting 30 seconds, which also covers a code that was already used. Decided 2026-10-09.
