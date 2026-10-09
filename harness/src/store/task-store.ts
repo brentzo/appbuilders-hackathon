@@ -18,6 +18,7 @@ import type {
   SubtaskStatus,
   Target,
   Task,
+  TaskDetail,
   TaskStatus,
   TaskStatusChanged,
   Uuid,
@@ -122,9 +123,8 @@ export type StepResult =
   | { outcome: "invalidOutput"; observation?: string; durationMs?: number }
   | { outcome: Exclude<StepOutcome, "invalidOutput">; observation?: string; durationMs?: number; log: StepLogLine };
 
-/** A task with everything recorded about it, for history. */
-export interface TaskHistory {
-  task: Task;
+/** A task with everything recorded about it: the protocol's `TaskDetail`, always with its action log. */
+export interface TaskHistory extends TaskDetail {
   /** In plan order. */
   subtasks: Subtask[];
   /** Grouped by subtask in plan order, then by step index. */

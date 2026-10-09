@@ -60,7 +60,8 @@ describe("the history methods over the local RPC", () => {
     client.close();
   });
 
-  it("searchTasks finds a task by text, and getTask returns it with its subtasks and steps", async () => {
+  // SPEC-02, "Finished tasks are kept", over the local RPC the Mac app uses.
+  it("searchTasks finds a task by text, and getTask returns it with its subtasks, steps, and action log", async () => {
     const { task, step } = invoicesTask();
     harness.store.createTask({ originDeviceId: "mac-brent", goal: "tidy my desktop" });
     const client = await app();
@@ -70,7 +71,11 @@ describe("the history methods over the local RPC", () => {
 
     const detail = await client.call("getTask", { taskId: task.id });
     expect(validate("TaskDetail", detail.result).errors).toEqual([]);
-    expect(detail.result).toMatchObject({ task: { id: task.id, status: "done" }, steps: [step] });
+    expect(detail.result).toMatchObject({
+      task: { id: task.id, status: "done" },
+      steps: [step],
+      actionLog: [{ taskId: task.id, lane: "main", description: "Clicked Export To in Keynote", outcome: "ok" }],
+    });
     client.close();
   });
 

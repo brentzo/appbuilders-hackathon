@@ -5,7 +5,7 @@ import type { TaskStore } from "../store/task-store.ts";
 
 /**
  * The history methods the Mac app calls for the past-tasks screen (SPEC-02 r11): `listTasks`, `searchTasks`, and
- * `getTask`. `RpcPeer` checks params and results against the contract.
+ * `getTask`, which returns the task with its subtasks, steps, and action log. `RpcPeer` checks params and results against the contract.
  */
 export function historyHandlers(store: TaskStore, logger: Logger): Record<string, Handler> {
   return {
@@ -28,7 +28,7 @@ export function historyHandlers(store: TaskStore, logger: Logger): Record<string
         logger.warn("history.taskNotFound", { taskId });
         throw new RpcFailure({ kind: "unexpected" }, "Task not found");
       }
-      return { task: history.task, subtasks: history.subtasks, steps: history.steps };
+      return history;
     },
   };
 }

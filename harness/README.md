@@ -200,7 +200,7 @@ A harness refuses a database written by a newer harness.
 
 `listTasks` and `searchTasks` answer newest first, 50 tasks by default.
 Search matches tasks whose goal, confirmed goal, summary, or subtask titles contain every word of the query, ignoring case and accents.
-`getTask` returns the task with its subtasks and steps.
+`getTask` returns the task with its subtasks, steps, and action log.
 
 ## Errors and the log
 

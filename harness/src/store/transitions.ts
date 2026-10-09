@@ -6,6 +6,9 @@ import type { SubtaskStatus, TaskStatus } from "@yumi/protocol/types";
  * SPEC-06 (pause, resume, cancel), and SPEC-09 r14 (queued delegated goals). Anything not listed is a bug in the
  * caller: the store logs it and refuses it. Changing a status to the one it already has is also refused, so every
  * accepted change is a real change and emits exactly one event.
+ *
+ * For OBJ-05 (approved as written for OBJ-04): the planner may need running -> planning to replan after a subtask
+ * fails, and planning -> waitingForUser to ask a clarifying question. Add them with a spec reference if needed.
  */
 
 /** Statuses a new task may start in: repeated back to the user, or already confirmed on the other device. */
