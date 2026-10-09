@@ -1,4 +1,4 @@
-import type { FoundList, ModelAction, Subtask } from "@yumi/protocol/types";
+import type { FoundList, ModelAction, Step, Subtask } from "@yumi/protocol/types";
 import type { NewSubtask } from "../store/task-store.ts";
 import type { Finding } from "./summary.ts";
 
@@ -49,6 +49,11 @@ export function listTitle(confirmedGoal: string): string {
     )?.[1];
   if (rest && rest.length >= 3) text = rest;
   if (text === "") return "List";
+  // The recognizer often writes "downloads folder"; the folder's name is "Downloads".
+  text = text.replace(
+    /\b(downloads|documents|desktop|pictures|movies|music|applications)\b/gi,
+    (name) => name[0]!.toUpperCase() + name.slice(1).toLowerCase(),
+  );
   return (text[0]!.toUpperCase() + text.slice(1)).slice(0, MAX_TITLE);
 }
 
@@ -121,4 +126,19 @@ export function expandNoteText(action: ModelAction, instruction: string): ModelA
 /** The note's title, from the note subtask's text. */
 export function noteTitleOf(instruction: string): string | undefined {
   return noteTextOf(instruction)?.split("\n")[0];
+}
+
+/**
+ * The note subtask's next action, without the model: press cmd+n, type the note, finish. Writing a note is the same
+ * three actions every time, and the model got it wrong in Brent's Auto mode run (2026-10-10, task e59c3d8f): it
+ * clicked Notes' "New Note" button, the window was rebuilt, and the subtask failed. Undefined for any other subtask.
+ * An action counts as done once a step ran it with an outcome; `gui_act`'s limits still end a script that is stuck.
+ */
+export function scriptedNoteAction(instruction: string, steps: readonly Step[]): ModelAction | undefined {
+  if (noteTextOf(instruction) === undefined) return undefined;
+  const ran = (kind: ModelAction["kind"]) =>
+    steps.some((step) => step.action.action.kind === kind && (step.outcome === "ok" || step.outcome === "noEffect"));
+  if (!ran("key")) return { kind: "key", combo: "cmd+n" };
+  if (!ran("type")) return { kind: "type", text: NOTE_TEXT };
+  return { kind: "finish", status: "done", note: "Wrote the list into a new note." };
 }

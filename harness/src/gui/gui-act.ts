@@ -26,7 +26,7 @@ import { describeSees } from "../debug/thoughts.ts";
 import { SubtaskTrail, type TrailDeps } from "../debug/trail.ts";
 import type { Logger } from "../log.ts";
 import type { ModelClient } from "../model/client.ts";
-import { expandNoteText } from "../planner/list-note.ts";
+import { expandNoteText, scriptedNoteAction } from "../planner/list-note.ts";
 import { checkAction } from "../safety/gate.ts";
 import { withPlainNames } from "../file-names.ts";
 import { describeGuiAction, describeNotDone, describeSkipped, type NotDone } from "../scheduler/describe.ts";
@@ -342,19 +342,23 @@ class Attempt {
       });
       this.cursorState("thinking");
       const lastAction = store.listActionLog(this.taskId).at(-1)?.description;
-      const step = await runWorkerStep(
-        input,
-        { client: this.deps.client, logger, debug: this.deps.debug },
-        {
-          lane: this.lane,
-          signal: this.options.signal,
-          taskId: this.taskId,
-          subtaskId: this.subtask.id,
-          ...(lastAction ? { lastAction } : {}),
-          secureFields: "handOff",
-          scrubber: this.trail.scrubber,
-        },
-      );
+      // A note subtask (OBJ-74) runs a fixed script instead of asking the model.
+      const scripted = scriptedNoteAction(this.subtask.instruction, steps);
+      const step = scripted
+        ? { outcome: "ok" as const, output: { action: scripted }, attempts: [] }
+        : await runWorkerStep(
+            input,
+            { client: this.deps.client, logger, debug: this.deps.debug },
+            {
+              lane: this.lane,
+              signal: this.options.signal,
+              taskId: this.taskId,
+              subtaskId: this.subtask.id,
+              ...(lastAction ? { lastAction } : {}),
+              secureFields: "handOff",
+              scrubber: this.trail.scrubber,
+            },
+          );
       switch (step.outcome) {
         case "aborted":
           return this.aborted();
@@ -418,20 +422,19 @@ class Attempt {
   }
 
   /**
-   * Looks at the window until it settles, after an action. After an action that opens an app, a file, or a page, the
-   * window may not be readable yet, so it is looked for until the settle timeout first (Brent's Save to Notes run,
-   * 2026-10-10: Notes' window could not be read 187 ms after open_app, and the attempt ended there).
+   * Looks at the window until it settles, after an action. An action can leave the window unreadable for a moment, so
+   * it is looked for until the settle timeout first: Notes' window could not be read 187 ms after open_app, and again
+   * right after a new note was made (Brent's runs, 2026-10-10), and each attempt ended there.
    */
-  private async look(opened = false): Promise<Observation> {
-    if (opened) {
-      const { looks } = await readableObservation(
-        () => this.deps.mac.observe(this.target, this.options.signal),
-        isMissingWindow,
-        this.settle,
-        this.options.signal,
-      );
-      if (looks > 1) this.deps.logger.info("gui.windowAppeared", { taskId: this.taskId, subtaskId: this.subtask.id, looks });
-    }
+  private async look(): Promise<Observation> {
+    const readable = await readableObservation(
+      () => this.deps.mac.observe(this.target, this.options.signal),
+      isMissingWindow,
+      this.settle,
+      this.options.signal,
+    );
+    if (readable.looks > 1)
+      this.deps.logger.info("gui.windowAppeared", { taskId: this.taskId, subtaskId: this.subtask.id, looks: readable.looks });
     const { observation, settled, looks } = await settledObservation(
       () => this.deps.mac.observe(this.target, this.options.signal),
       this.settle,
@@ -579,7 +582,7 @@ class Attempt {
 
     let after: Observation;
     try {
-      after = await this.look(opensWindow(action));
+      after = await this.look();
     } catch (error) {
       if (!(error instanceof MacGuiFailure)) throw error;
       this.finishStep(
@@ -993,11 +996,6 @@ function fit(line: string): string {
 }
 
 /** The Mac app could not find the target window or app: "Stuck on screen". */
-/** Actions after which an app's window may still be appearing. */
-function opensWindow(action: ModelAction): boolean {
-  return action.kind === ACTION.tool && ["open_app", "open_file", "open_url"].includes(action.call.tool);
-}
-
 function isMissingWindow(error: unknown): boolean {
   return error instanceof MacGuiFailure && error.userError?.kind === "stuckOnScreen";
 }

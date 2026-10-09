@@ -31,7 +31,7 @@ import { modelConfig, tempDir } from "./helpers.ts";
 import { startMockModelServer, type MockModelServer, type MockReply } from "./mock-model-server.ts";
 import { connectFakeMac, type FakeAppModel, type FakeMac, type FakeScreen } from "./support/fake-mac.ts";
 import { FakeKeynote, KEYNOTE, staticApp } from "./support/fake-keynote.ts";
-import { NOTE_TEXT, noteSubtask } from "../src/planner/list-note.ts";
+import { noteSubtask } from "../src/planner/list-note.ts";
 
 /**
  * `gui_act` (OBJ-36) end to end inside the harness: the real task store, permission gate, worker step, and local RPC
@@ -1602,25 +1602,25 @@ describe("gui_act in Debug mode (OBJ-52)", () => {
 // --- OBJ-74 lists in a new note --------------------------------------------------------------------------------
 
 describe("OBJ-74 the note subtask", () => {
-  it("types the list the harness found in place of the placeholder, so the model never writes it out", async () => {
-    const notes = staticApp("com.apple.Notes", {
-      app: "Notes",
-      title: "Notes",
-      elements: [{ role: "textArea", label: "Note body" }],
-    });
-    const fake = await connect(notes);
+  it("writes the note with a fixed script and no model: cmd+n, then the list the harness found", async () => {
+    // Brent's Auto mode run (task e59c3d8f, 2026-10-10): the model clicked "New Note", Notes rebuilt its window, the
+    // next look failed, and the subtask ended after one step. The note is the same three actions every time.
+    const screen = { app: "Notes", title: "Notes", elements: [{ role: "textArea" as const, label: "Note body" }] };
+    const fake = await connect(staticApp("com.apple.Notes", screen));
+    fake.onExecute = (params) => {
+      // Each action changes the window, as a new note and its text do in Notes.
+      screen.title = `Notes after ${params.action.action.kind}`;
+      // Right after the new note, the window cannot be read for a moment.
+      if (params.action.action.kind === "key") fake.failObserve("stuckOnScreen", 2);
+    };
+    const calls = scriptModel(() => reply({ kind: "click", element: 1 }));
     const list = { title: "Files in your Downloads folder", items: ["invoice-oct.pdf", "Receipts (folder)"], inNote: false };
-    scriptModel((_text, call) =>
-      call === 1
-        ? reply({ kind: "key", combo: "cmd+n" })
-        : call === 2
-          ? reply({ kind: "type", text: NOTE_TEXT })
-          : reply({ kind: "finish", status: "done", note: "Wrote the list into a new note." }),
-    );
     const { subtask } = guiSubtask({ bundleId: "com.apple.Notes", lane: "main", instruction: noteSubtask(list).instruction });
 
-    await act(subtask);
+    const run = ended(await act(subtask));
 
+    expect(run.result.status).toBe("done");
+    expect(calls).toHaveLength(0);
     expect(fake.executed.map((c) => c.params.action.action)).toEqual([
       { kind: "key", combo: "cmd+n" },
       { kind: "type", text: "Files in your Downloads folder\ninvoice-oct.pdf\nReceipts (folder)" },
