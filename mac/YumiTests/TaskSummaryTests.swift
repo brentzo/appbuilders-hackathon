@@ -17,11 +17,15 @@ struct TaskSummaryTests {
 
     final class FakePanel: SummaryPresenting {
         var shown: [(taskId: String, text: String)] = []
+        var lists: [FoundList?] = []
         var closed: [String] = []
         var closeButton: (() -> Void)?
-        func show(taskId: String, text: String, close: @escaping () -> Void) {
+        var saveButton: (() -> Void)?
+        func show(taskId: String, text: String, list: FoundList?, close: @escaping () -> Void, save: (() -> Void)?) {
             shown.append((taskId, text))
+            lists.append(list)
             closeButton = close
+            saveButton = save
         }
         func close(taskId: String) { closed.append(taskId) }
     }
@@ -128,6 +132,107 @@ struct TaskSummaryTests {
         #expect(rendered.size.width > 300 && rendered.size.height > 40)
         if let tiff = rendered.tiffRepresentation, let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) {
             try png.write(to: FileManager.default.temporaryDirectory.appendingPathComponent("yumi-summary-\(name.rawValue).png"))
+        }
+    }
+
+    // SPEC-02 r13 (OBJ-74): the card shows the full list, and saves it into a new note.
+
+    static let answer = "You have 3 files and 1 folder in Downloads. Some of them are invoice-oct.pdf, notes.txt and photo.jpg."
+    static let list = FoundList(
+        title: "Files in your Downloads folder", items: ["invoice-oct.pdf", "notes.txt", "photo.jpg", "Receipts (folder)"], inNote: false
+    )
+
+    @Test func aListIsShownInFullWithSaveToNotesAndStaysUp() async throws {
+        let speech = FakeSpeech()
+        let panel = FakePanel()
+        let wait = HeldWait()
+        let summary = TaskSummary(speech: speech, presenter: panel, wait: wait.wait)
+        var saved: [String] = []
+        summary.save = { saved.append($0) }
+        await summary.taskFinished(taskId: "t1", summary: Self.answer, list: Self.list)
+        #expect(panel.lists == [Self.list])
+        #expect(speech.said == [Self.answer], "only the sentence is said, never the list")
+        #expect(wait.waited.isEmpty, "a list stays until the user is done with it")
+        #expect(summary.showing == "t1")
+        #expect(summary.savable == "t1")
+
+        panel.saveButton?()
+        #expect(saved == ["t1"])
+        #expect(panel.closed == ["t1"])
+        panel.saveButton?()
+        #expect(saved == ["t1"], "a second tap saves nothing more")
+    }
+
+    @Test func aListAlreadyInANoteHasNoSaveButton() async {
+        let panel = FakePanel()
+        let summary = TaskSummary(speech: FakeSpeech(), presenter: panel, wait: { _ in })
+        var inNote = Self.list
+        inNote.inNote = true
+        await summary.taskFinished(taskId: "t1", summary: Self.answer, list: inNote)
+        #expect(panel.lists == [inNote])
+        #expect(panel.saveButton == nil)
+        #expect(summary.savable == nil)
+        #expect(!summary.takeSpokenSave("save it"))
+    }
+
+    @Test func sayingSaveItWhileTheCardIsUpSavesTheList() async {
+        let panel = FakePanel()
+        let summary = TaskSummary(speech: FakeSpeech(), presenter: panel, wait: { _ in })
+        var saved: [String] = []
+        summary.save = { saved.append($0) }
+        #expect(!summary.takeSpokenSave("save it"), "no card, so it is a goal")
+        await summary.taskFinished(taskId: "t1", summary: Self.answer, list: Self.list)
+        #expect(!summary.takeSpokenSave("save the invoice as a PDF"), "a new goal, not the card")
+        #expect(summary.takeSpokenSave("Save it."))
+        #expect(saved == ["t1"])
+        #expect(panel.closed == ["t1"])
+        #expect(!summary.takeSpokenSave("save it"), "already saved")
+    }
+
+    @Test func whatCountsAsSaveIt() {
+        for yes in ["save it", "Save it to Notes.", "yes, save the list", "okay save it in a new note", "save", "Save it please"] {
+            #expect(TaskSummary.isSaveRequest(yes), "\(yes)")
+        }
+        for no in ["don't save it", "save the PDF in Downloads", "list my Desktop", ""] {
+            #expect(!TaskSummary.isSaveRequest(no), "\(no)")
+        }
+    }
+
+    @Test func aSpeakEventCarriesTheList() throws {
+        let payload = Data(#"{"text":"You have 2 files.","taskId":"t","list":{"title":"Files","items":["a.pdf","b"],"more":3,"inNote":false}}"#.utf8)
+        guard case .speak(let line) = try HarnessEvent.decode(name: "speak", payload: payload) else {
+            Issue.record("not a speak event")
+            return
+        }
+        #expect(line.list == FoundList(title: "Files", items: ["a.pdf", "b"], more: 3, inNote: false))
+        #expect(SummaryListView.moreLine(3) == "and 3 more")
+        #expect(SummaryListView.moreLine(nil) == nil)
+    }
+
+    /// The card with a long list, before and after saving, in light and dark; written to the temporary folder.
+    @Test(arguments: [NSAppearance.Name.aqua, .darkAqua])
+    func theListCardRendersInLightAndDark(_ name: NSAppearance.Name) throws {
+        let appearance = try #require(NSAppearance(named: name))
+        let names = (1...30).map { "Screenshot 2026-10-\(String(format: "%02d", $0)) at 9.41.12 am.png" }
+        let long = FoundList(title: "Files in your Downloads folder", items: names, more: 12, inNote: false)
+        let cards: [(String, FoundList, (() -> Void)?)] = [
+            ("save", long, {}), ("saved", FoundList(title: long.title, items: names, inNote: true), nil),
+        ]
+        for (label, list, save) in cards {
+            // Drawn by a real hosting view, as the panel draws it: ImageRenderer leaves a ScrollView empty.
+            let view = SummaryView(text: Self.answer, list: list, close: {}, save: save)
+                .padding(YumiSpace.xl)
+                .background(YumiColor.paperDeep)
+            let hosting = NSHostingView(rootView: view)
+            hosting.appearance = appearance
+            hosting.frame = NSRect(origin: .zero, size: hosting.fittingSize)
+            hosting.layoutSubtreeIfNeeded()
+            let rep = try #require(hosting.bitmapImageRepForCachingDisplay(in: hosting.bounds))
+            hosting.cacheDisplay(in: hosting.bounds, to: rep)
+            #expect(hosting.bounds.height > 200, "the list is shown under the line")
+            if let png = rep.representation(using: .png, properties: [:]) {
+                try png.write(to: FileManager.default.temporaryDirectory.appendingPathComponent("yumi-summary-list-\(label)-\(name.rawValue).png"))
+            }
         }
     }
 

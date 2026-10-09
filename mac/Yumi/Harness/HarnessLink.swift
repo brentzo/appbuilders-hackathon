@@ -90,6 +90,7 @@ final class HarnessLink {
 
     func start() {
         overlay.start()
+        summary.save = { [weak self] taskId in self?.saveListToNote(taskId) }
         gui.onUserError = { [weak self] error in self?.onUserError?(error) }
         gui.onWindowWork = { [weak self] in self?.uiLaneStarted = true }
         questions.cancel = { [weak self] taskId in self?.cancelTask(taskId) }
@@ -179,7 +180,7 @@ final class HarnessLink {
             // A line with a task is that task's summary: said and shown on screen (SPEC-02 r9).
             if let taskId = line.taskId {
                 log.notice("Task summary, \(line.text.count, privacy: .public) characters")
-                Task { await summary.taskFinished(taskId: taskId, summary: line.text) }
+                Task { await summary.taskFinished(taskId: taskId, summary: line.text, list: line.list) }
             } else {
                 Task { await speech.speak(line.text) }
             }
@@ -255,6 +256,10 @@ final class HarnessLink {
             log.notice("Speech taken as the answer to the repeat-back")
             return
         }
+        guard !summary.takeSpokenSave(transcript) else {
+            log.notice("Speech taken as saving the summary card's list")
+            return
+        }
         submitGoal(transcript)
     }
 
@@ -308,6 +313,21 @@ final class HarnessLink {
                 _ = try await client.call(.resumeTask, TaskRef(taskId: taskId), returning: Empty.self)
             } catch {
                 report(error, from: "resumeTask")
+            }
+        }
+    }
+
+    /// "Save to Notes" on the summary card, or "save it" while it is up (SPEC-02 r13): the harness
+    /// starts a short task that writes the finished task's list into a new note (OBJ-74).
+    func saveListToNote(_ taskId: String) {
+        confirmation.goalSubmitted()
+        Task {
+            do {
+                let result = try await client.call(.saveListToNote, TaskRef(taskId: taskId), returning: SubmitGoalResult.self)
+                log.notice("Saving the list of task \(taskId, privacy: .public) in task \(result.taskId, privacy: .public)")
+            } catch {
+                overlay.fade(id: GoalConfirmation.mainCursorId)
+                report(error, from: "saveListToNote")
             }
         }
     }
