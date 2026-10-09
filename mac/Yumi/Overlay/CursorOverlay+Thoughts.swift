@@ -81,7 +81,7 @@ extension CursorOverlay {
     }
 
     /// What can be clicked now, in global AppKit coordinates: each cat's bubble or open panel
-    /// where it is drawn (it may be hopping out of the pointer's way), and each chip.
+    /// where it is drawn, and each chip.
     func thoughtsTargets() -> [(target: ThoughtTarget, frame: CGRect)] {
         thoughts.isEnabled ? drawnTargets() : []
     }
