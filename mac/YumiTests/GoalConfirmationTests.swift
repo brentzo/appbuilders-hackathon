@@ -132,6 +132,32 @@ struct GoalConfirmationTests {
         #expect(overlay.cursors["main"] == nil)
     }
 
+    @Test func pushToTalkWhileARepeatBackWaitsIsTheAnswer() async throws {
+        let sent = Sent()
+        // The hands-free listen hears nothing; the user then holds the shortcut and answers.
+        let flow = confirmation(FakeListener([nil]), sent: sent)
+        flow.goalSubmitted()
+        await flow.goalRestated(GoalRestated(taskId: Self.taskId, text: Self.restated))
+        #expect(flow.takeSpokenAnswer("no, only the ones from October"))
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(sent.replies == [.spoken(SpokenReply(text: "no, only the ones from October"))])
+        #expect(overlay.cursors["main"]?.state == .thinking)
+        #expect(flow.waitingTaskIds == [Self.taskId], "the same task is still being confirmed")
+    }
+
+    @Test func pushToTalkWithNothingWaitingIsANewGoal() async throws {
+        let sent = Sent()
+        let flow = confirmation(FakeListener([]), sent: sent)
+        #expect(!flow.takeSpokenAnswer("rename the invoices in Downloads by date"))
+        // Nor once the repeat-back was answered.
+        flow.goalSubmitted()
+        await flow.goalRestated(GoalRestated(taskId: Self.taskId, text: Self.restated))
+        flow.taskStatusChanged(Self.taskId, .cancelled)
+        #expect(!flow.takeSpokenAnswer("rename the invoices in Downloads by date"))
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(sent.replies.isEmpty)
+    }
+
     @Test func aCancelThatCameWithAnErrorSaysOnlyTheError() async throws {
         let sent = Sent()
         let flow = confirmation(FakeListener([]), sent: sent)

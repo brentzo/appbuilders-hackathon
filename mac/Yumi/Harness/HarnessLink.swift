@@ -202,6 +202,16 @@ final class HarnessLink {
         return !statuses.contains(.awaitingConfirmation) || statuses.contains(where: confirmed.contains)
     }
 
+    /// Speech from push-to-talk or the wake word: the answer to a repeat-back that is waiting, or
+    /// else a new goal (OBJ-17).
+    func submitSpeech(_ transcript: String) {
+        guard !confirmation.takeSpokenAnswer(transcript) else {
+            log.notice("Speech taken as the answer to the repeat-back")
+            return
+        }
+        submitGoal(transcript)
+    }
+
     /// Sends a spoken or typed goal to the harness. The main cursor appears next to the pointer at
     /// once (OBJ-17.3); the harness then restates the goal. Voice intake (OBJ-15) calls this.
     func submitGoal(_ transcript: String) {

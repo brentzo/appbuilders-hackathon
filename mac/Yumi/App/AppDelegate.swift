@@ -29,7 +29,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private(set) lazy var voice = VoiceIntake(
         model: model,
         overlay: harness.overlay,
-        submit: { [weak self] goal in self?.harness.submitGoal(goal) },
+        submit: { [weak self] speech in self?.harness.submitSpeech(speech) },
         showError: { [weak self] error in self?.showError(error) }
     )
     /// "Hey Yumi" hands-free (OBJ-16), handing over to the same capture path as push-to-talk.

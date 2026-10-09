@@ -144,6 +144,7 @@ Push-to-talk turns speech into a goal on the Mac ([OBJ-15](../objectives/OBJ-15-
 - While the microphone is on, the main cursor shows its listening state next to the pointer and the menu says "Yumi is listening".
 - The transcript goes to the harness with `HarnessLink.submitGoal`. Silence shows "Didn't catch speech", whose "Type instead" opens a box to type the goal.
 - Right after the repeat-back (and an approval card), the same path listens hands-free for the answer and stops after a short silence (`SpeechEndpoint`).
+- While a repeat-back waits for an answer, push-to-talk and the wake word answer it instead of starting a new goal (`HarnessLink.submitSpeech`). The typed-goal box always starts a new goal.
 - Recognizers, both on the device:
   - Apple's: SpeechAnalyzer on macOS 26, which works with Siri and Dictation off and downloads its English model once; `SFSpeechRecognizer` forced on-device on macOS 15.
   - Whisper large-v3-turbo through WhisperKit (`openai_whisper-large-v3-v20240930_turbo_632MB`), downloaded once to `~/Library/Application Support/Yumi/Models` and loaded when "I speak Taglish" is on.

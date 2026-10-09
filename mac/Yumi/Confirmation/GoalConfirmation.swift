@@ -44,6 +44,8 @@ final class GoalConfirmation {
     /// Tasks the harness reported an error for while confirming. The harness sends the error before
     /// the `cancelled` status, and the user hears only the error copy, not the cancel line.
     private var failed: Set<String> = []
+    /// The task whose repeat-back was shown last, which push-to-talk answers.
+    private var latest: String?
     private let log = Logger(subsystem: "ph.appbuilders.yumi", category: "confirmation")
 
     init(speech: SpeechOutput, listener: ReplyListening, presenter: ConfirmationPresenting, overlay: CursorOverlay, reply: @escaping Reply) {
@@ -70,12 +72,23 @@ final class GoalConfirmation {
         // The same sentence again means the harness is asking again after an unclear answer.
         let listensLeft = previous?.text == restated.text ? previous!.listensLeft : Self.listensPerRestatement
         waiting[taskId] = (restated.text, listensLeft)
+        latest = taskId
         presenter.show(taskId: taskId, text: restated.text) { [weak self] choice in
             Task { await self?.choose(choice, for: taskId) }
         }
         overlay.update(Self.mainCursorId) { $0.state = .listening }
         await speech.speak(restated.text)
         await listenOnce(for: taskId)
+    }
+
+    /// Speech from push-to-talk or the wake word while a repeat-back waits is the answer to it, not
+    /// a new goal: the user may answer with the shortcut after the hands-free listen ended. Returns
+    /// false when nothing waits, so the speech is a new goal.
+    func takeSpokenAnswer(_ text: String) -> Bool {
+        guard let taskId = latest, waiting[taskId] != nil else { return false }
+        overlay.update(Self.mainCursorId) { $0.state = .thinking }
+        Task { await send(.spoken(SpokenReply(text: text)), for: taskId) }
+        return true
     }
 
     /// A button in the panel.
