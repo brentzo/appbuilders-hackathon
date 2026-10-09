@@ -86,6 +86,7 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-26](OBJ-26-gui-smoke-test.md) | Qwen3.5-9B smoke test on the demo tasks | models | Brent | 05 | - | - | in-progress |
 | [OBJ-27](OBJ-27-mac-native-services.md) | Mac native services for the harness | mac | Patrick | 03, 08 | 14 | 07, 08, 21 | todo |
 | [OBJ-28](OBJ-28-android-whisper-bake-off.md) | Android Whisper bake-off | models | Jepoy | 01, 10 | - | 11, 24 | todo |
+| [OBJ-29](OBJ-29-protocol-mac-fixes.md) | Protocol v3, fit the contracts to real macOS | protocol | Brent | 05, 07 | 01 | 03, 26 | todo |
 <!-- generated:objectives-index:end -->
 
 ## Priority and blocking
@@ -101,7 +102,7 @@ Ranked by how many objectives each one holds up through hard dependencies:
 <!-- generated:objectives-priority:start -->
 | Rank | Objective | Assignee | Holds up (hard) | Holds up another person |
 |---|---|---|---|---|
-| 1 | OBJ-01 Task record schemas and cross-team contracts | Jepoy | 16 | Brent, Patrick |
+| 1 | OBJ-01 Task record schemas and cross-team contracts | Jepoy | 17 | Brent, Patrick |
 | 2 | OBJ-03 Harness skeleton and local model client | Brent | 7 | Patrick |
 | 3 | OBJ-14 Mac app shell, permissions, and harness link | Patrick | 7 | No |
 | 4 | OBJ-04 Task store and history | Brent | 6 | Patrick |
@@ -127,13 +128,14 @@ Hard dependencies that cross between people (everything else is within one perso
 - OBJ-04 (Brent) before OBJ-17 (Patrick)
 - OBJ-02 (Jepoy) before OBJ-23 (Brent)
 - OBJ-13 (Jepoy) before OBJ-23 (Brent)
+- OBJ-01 (Jepoy) before OBJ-29 (Brent)
 <!-- generated:objectives-cross:end -->
 Workload:
 
 <!-- generated:objectives-workload:start -->
 | Person | Objectives | Count |
 |---|---|---|
-| Brent | 03, 04, 05, 06, 07, 08, 09, 22, 23, 24, 26 | 11 |
+| Brent | 03, 04, 05, 06, 07, 08, 09, 22, 23, 24, 26, 29 | 12 |
 | Jepoy | 01, 02, 11, 12, 13, 21, 25, 28 | 8 |
 | Patrick | 10, 14, 15, 16, 17, 18, 19, 20, 27 | 9 |
 <!-- generated:objectives-workload:end -->
@@ -145,7 +147,7 @@ Waves come from hard dependencies only. Each person works their column top to bo
 | Wave | Brent | Jepoy | Patrick |
 |---|---|---|---|
 | 1 | OBJ-22, OBJ-26 | OBJ-01, OBJ-02, OBJ-11, OBJ-12, OBJ-28 | OBJ-10 |
-| 2 | OBJ-03, OBJ-24 | OBJ-13, OBJ-25 | OBJ-14 |
+| 2 | OBJ-03, OBJ-24, OBJ-29 | OBJ-13, OBJ-25 | OBJ-14 |
 | 3 | OBJ-04, OBJ-23 | OBJ-21 | OBJ-15, OBJ-18, OBJ-27 |
 | 4 | OBJ-05, OBJ-07 | - | OBJ-16, OBJ-17, OBJ-19, OBJ-20 |
 | 5 | OBJ-06, OBJ-08 | - | - |

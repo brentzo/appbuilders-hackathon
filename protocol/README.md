@@ -222,4 +222,5 @@ Our generator accepts only the schema subset that maps faithfully to all three l
 | [OBJ-01](../objectives/OBJ-01-task-record-schemas.md) | Task record schemas and cross-team contracts | Jepoy | done |
 | [OBJ-02](../objectives/OBJ-02-bridge-envelope-and-crypto.md) | Bridge envelope and end-to-end crypto | Jepoy | done |
 | [OBJ-25](../objectives/OBJ-25-cross-device-messages.md) | Cross-device message kinds | Jepoy | todo |
+| [OBJ-29](../objectives/OBJ-29-protocol-mac-fixes.md) | Protocol v3, fit the contracts to real macOS | Brent | todo |
 <!-- generated:product-objectives:end -->
