@@ -1,6 +1,7 @@
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { DEBUG_LOG_FOLDER } from "./debug/debug-log.ts";
+import { DEFAULT_MODEL_LOAD_TIMEOUT_MS } from "./model/readiness.ts";
 
 /** Settings for the local OpenAI-compatible model server. */
 export interface ModelConfig {
@@ -49,6 +50,8 @@ export interface HarnessConfig {
   limits: Limits;
   /** How many cursors may be visible at once, including `main` (SPEC-03 r6). More UI subtasks queue. */
   cursorCap: number;
+  /** How long the model server may take to start answering before the model state is `failed` (OBJ-47). */
+  modelLoadTimeoutMs: number;
 }
 
 export const DEFAULT_SUPPORT_DIR = join(homedir(), "Library", "Application Support", "Yumi");
@@ -83,7 +86,7 @@ export const MAX_ATTEMPTS_PER_SUBTASK = 3;
  * YUMI_SUPPORT_DIR, YUMI_MODEL_BASE_URL, YUMI_MODEL, YUMI_MODEL_TIMEOUT_MS, YUMI_MODEL_MAX_TOKENS,
  * YUMI_MODEL_STRUCTURED_OUTPUT ("0" turns schema-constrained decoding off), YUMI_MODEL_PARALLEL_SLOTS, and the
  * limits YUMI_STEPS_PER_SUBTASK, YUMI_ATTEMPTS_PER_SUBTASK (at most 3), and YUMI_SUBTASK_DEPTH, the cursor cap
- * YUMI_CURSOR_CAP, and YUMI_DEBUG_MODE ("0" starts with Debug mode off).
+ * YUMI_CURSOR_CAP, YUMI_DEBUG_MODE ("0" starts with Debug mode off), and YUMI_MODEL_LOAD_TIMEOUT_MS.
  */
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): HarnessConfig {
   const supportDir = resolve(env["YUMI_SUPPORT_DIR"] || DEFAULT_SUPPORT_DIR);
@@ -113,6 +116,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): HarnessConfig 
       subtaskDepth: positiveInteger(env, "YUMI_SUBTASK_DEPTH", DEFAULT_LIMITS.subtaskDepth),
     },
     cursorCap: positiveInteger(env, "YUMI_CURSOR_CAP", DEFAULT_CURSOR_CAP),
+    modelLoadTimeoutMs: positiveInteger(env, "YUMI_MODEL_LOAD_TIMEOUT_MS", DEFAULT_MODEL_LOAD_TIMEOUT_MS),
   };
 }
 

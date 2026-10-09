@@ -12,6 +12,7 @@ import type { AddressInfo, Socket } from "node:net";
  * - an unhandled exception: 500 with Starlette's plain-text "Internal Server Error";
  * - a crashed server: the connection drops without an answer.
  * The success body's fields and the 422 body were checked against the real server on 2026-10-09.
+ * GET /health answers like mlx-vlm's (`{"status":"healthy","loaded_model":...}`, with the model set by `loadedModel`).
  * Each request takes the next scripted reply and is recorded for assertions. When no reply is scripted, a responder
  * set with `respond` answers instead, so tests with concurrent requests can answer each by what it asks.
  */
@@ -34,18 +35,26 @@ export interface MockModelServer {
   reply(...replies: MockReply[]): void;
   /** Answers every request that has no scripted reply. It may wait, to stand in for decoding time. */
   respond(responder: MockResponder): void;
+  /** The model `/health` reports. Starts as the model the server was started with. */
+  loadedModel(model: string | null): void;
   close(): Promise<void>;
 }
 
 export type MockResponder = (body: Record<string, unknown>) => MockReply | Promise<MockReply>;
 
-export async function startMockModelServer(model = "mlx-community/Qwen3.5-9B-4bit"): Promise<MockModelServer> {
+export async function startMockModelServer(
+  model = "mlx-community/Qwen3.5-9B-4bit",
+  /** The port to listen on, so a test can start the server late or restart it at the same URL. 0 picks a free one. */
+  listenPort = 0,
+): Promise<MockModelServer> {
+  let loaded: string | null = model;
   const queue: MockReply[] = [];
   const requests: Record<string, unknown>[] = [];
   const sockets = new Set<Socket>();
   let responder: MockResponder | undefined;
 
   const server: Server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
+    if (req.method === "GET" && req.url === "/health") return send(res, 200, { status: "healthy", loaded_model: loaded });
     if (req.method !== "POST" || (req.url !== "/v1/chat/completions" && req.url !== "/chat/completions")) {
       return send(res, 404, { detail: "Not Found" });
     }
@@ -93,7 +102,7 @@ export async function startMockModelServer(model = "mlx-community/Qwen3.5-9B-4bi
     sockets.add(socket);
     socket.on("close", () => sockets.delete(socket));
   });
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  await new Promise<void>((resolve) => server.listen(listenPort, "127.0.0.1", resolve));
   const { port } = server.address() as AddressInfo;
 
   return {
@@ -102,6 +111,9 @@ export async function startMockModelServer(model = "mlx-community/Qwen3.5-9B-4bi
     reply: (...replies) => queue.push(...replies),
     respond: (next) => {
       responder = next;
+    },
+    loadedModel: (next) => {
+      loaded = next;
     },
     close: () =>
       new Promise((resolve) => {

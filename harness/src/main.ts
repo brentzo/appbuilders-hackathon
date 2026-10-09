@@ -9,6 +9,7 @@ import { DebugLog } from "./debug/debug-log.ts";
 import { describeError, FileLogger } from "./log.ts";
 import { startHarness } from "./harness.ts";
 import { ModelClient } from "./model/client.ts";
+import { ModelReadiness } from "./model/readiness.ts";
 import { fileHelperLane } from "./scheduler/lanes.ts";
 
 const config = loadConfig();
@@ -22,6 +23,8 @@ logger.info("harness.starting", {
 });
 // Shared by the model client and the harness, so `setDebugMode` turns every part of the debug log on or off.
 const debug = new DebugLog({ dir: config.debugLogDir, enabled: config.debugMode, logger });
+// Whether the model server answers with the configured model, for the Mac app's status line (OBJ-47).
+const model = new ModelReadiness({ config: config.model, logger, loadTimeoutMs: config.modelLoadTimeoutMs });
 
 try {
   const bridge = new BridgeClient({
@@ -44,7 +47,7 @@ try {
     phone: bridge,
     deviceId: () => bridge.deviceId,
     work: {
-      client: new ModelClient(config.model, logger, fetch, debug),
+      client: new ModelClient(config.model, logger, fetch, debug, (failure) => model.noteFailure(failure)),
       logger,
       // Until the bridge client has loaded this Mac's keys.
       deviceId: LEGACY_MAC_DEVICE_ID,
@@ -53,10 +56,12 @@ try {
       slots: config.model.parallelSlots,
     },
     debug,
+    model,
     onReady: () => {
       void bridge.start().catch((error: unknown) => logger.error("bridge.startFailed", { error: String(error) }));
     },
   });
+  model.start();
   console.log(
     `Yumi harness listening on ${config.socketPath}. Tasks: ${harness.store.dbPath}. Log: ${config.logPath}. ` +
       `Debug log (${debug.enabled ? "on" : "off"}): ${config.debugLogDir}`,
@@ -64,6 +69,7 @@ try {
   const stop = async (signal: string) => {
     logger.info("harness.stopping", { signal });
     bridge.stop();
+    model.stop();
     await harness.close();
     process.exit(0);
   };

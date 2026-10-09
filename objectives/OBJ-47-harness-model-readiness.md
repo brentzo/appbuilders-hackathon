@@ -39,10 +39,10 @@ The Mac app shows "Yumi is getting ready" only until the harness answers `hello`
 
 ## Tasks
 
-- [ ] **OBJ-47.1** Track the model state: `loading` from start until the model server's `/health` reports the configured model, `ready` after that, and `failed` when it stays unreachable past a timeout or reports another model.
-- [ ] **OBJ-47.2** Emit `modelStateChanged` on every change, and put the current state in `HelloResult.modelState`.
-- [ ] **OBJ-47.3** Go back to `loading` or `failed` when a request finds the server gone, so a server restarted during the demo is noticed.
-- [ ] **OBJ-47.4** Tests with the mock model server: slow start, ready, never starts, wrong model, and lost mid-run.
+- [x] **OBJ-47.1** Track the model state: `loading` from start until the model server's `/health` reports the configured model, `ready` after that, and `failed` when it stays unreachable past a timeout or reports another model.
+- [x] **OBJ-47.2** Emit `modelStateChanged` on every change, and put the current state in `HelloResult.modelState`.
+- [x] **OBJ-47.3** Go back to `loading` or `failed` when a request finds the server gone, so a server restarted during the demo is noticed.
+- [x] **OBJ-47.4** Tests with the mock model server: slow start, ready, never starts, wrong model, and lost mid-run.
 
 ## Expectations
 

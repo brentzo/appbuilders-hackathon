@@ -2,7 +2,7 @@ import { chmodSync, existsSync, mkdirSync, rmSync } from "node:fs";
 import { connect, createServer, type Server, type Socket } from "node:net";
 import { dirname } from "node:path";
 import { RpcFailure, RpcPeer, type Handler } from "@yumi/protocol";
-import { PROTOCOL_VERSION, type HelloParams, type HelloResult } from "@yumi/protocol/types";
+import { PROTOCOL_VERSION, type HelloParams, type HelloResult, type ModelState } from "@yumi/protocol/types";
 import { describeError, type Logger } from "../log.ts";
 
 /**
@@ -21,6 +21,8 @@ export interface RpcServerOptions {
   onReady?: () => void;
   /** This Mac's bridge device id, once known, for the `hello` answer (OBJ-64). */
   deviceId?: () => string | undefined;
+  /** The local model's state, for the `hello` answer (OBJ-47). Missing when the harness does not track it. */
+  modelState?: () => ModelState;
 }
 
 interface Connection {
@@ -43,6 +45,7 @@ export class HarnessRpcServer {
     readonly socketPath: string,
     private readonly logger: Logger,
     private readonly deviceId?: () => string | undefined,
+    private readonly modelState?: () => ModelState,
   ) {}
 
   static async start(options: RpcServerOptions): Promise<HarnessRpcServer> {
@@ -51,7 +54,7 @@ export class HarnessRpcServer {
     await removeStaleSocket(socketPath);
 
     const server = createServer();
-    const instance = new HarnessRpcServer(server, socketPath, logger, options.deviceId);
+    const instance = new HarnessRpcServer(server, socketPath, logger, options.deviceId, options.modelState);
     server.on("connection", (socket) => instance.accept(socket, options.handlers ?? {}, options.onReady));
     await new Promise<void>((resolve, reject) => server.once("error", reject).listen(socketPath, () => resolve()));
     // Only this user may connect.
@@ -128,7 +131,12 @@ export class HarnessRpcServer {
     onReady?.();
     this.logger.info("rpc.hello", { connection: connection.id, protocolVersion: params.protocolVersion });
     const deviceId = this.deviceId?.();
-    return { protocolVersion: PROTOCOL_VERSION, ...(deviceId ? { deviceId } : {}) };
+    const modelState = this.modelState?.();
+    return {
+      protocolVersion: PROTOCOL_VERSION,
+      ...(modelState ? { modelState } : {}),
+      ...(deviceId ? { deviceId } : {}),
+    };
   }
 }
 

@@ -66,6 +66,8 @@ export class ModelClient {
     private readonly fetchFn: FetchFn = fetch,
     /** The detailed debug log: every request and reply in full while Debug mode is on (SPEC-07 r22). */
     private readonly debug?: DebugLog,
+    /** Told about every failed request, so model readiness notices a server that went away (OBJ-47.3). */
+    private readonly onFailure?: (failure: ModelFailure) => void,
   ) {}
 
   async chat(options: ChatOptions): Promise<ChatResult> {
@@ -178,6 +180,7 @@ export class ModelClient {
     const level = failure.kind === "aborted" ? "info" : "error";
     this.logger[level]("model.failure", { failure: failure.kind, durationMs, ...fields });
     trace?.("model.failure", { durationMs, ...fields, failure: failure.kind });
+    this.onFailure?.(failure);
     return { ok: false, failure, durationMs };
   }
 

@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { RpcFailure, type Handler } from "@yumi/protocol";
-import type { AnswerQuestionParams, DeviceId, Empty, WorkerThought } from "@yumi/protocol/types";
+import type { AnswerQuestionParams, DeviceId, Empty, ModelState, WorkerThought } from "@yumi/protocol/types";
 import { ActionLogFile } from "./action-log/text-log.ts";
 import { ApprovalFlow } from "./approvals/approval-flow.ts";
 import { DelegatedGoals, type PhoneBridge } from "./bridge-client/delegated-goals.ts";
@@ -81,6 +81,11 @@ export interface HarnessOptions {
    * in new action log lines; until it is known, `work.deviceId` does.
    */
   deviceId?: () => DeviceId | undefined;
+  /**
+   * The local model's state (OBJ-47, `src/model/readiness.ts`). It goes to the app in the `hello` answer, and every
+   * change goes to every connected app as `modelStateChanged`.
+   */
+  model?: { readonly state: ModelState; onChange(listener: (state: ModelState) => void): () => void };
 }
 
 /**
@@ -155,6 +160,7 @@ export async function startHarness(
       logger,
       handlers: { ...ownHandlers, ...options.handlers },
       ...(options.deviceId ? { deviceId: options.deviceId } : {}),
+      ...(options.model ? { modelState: () => options.model!.state } : {}),
       onReady: () => {
         options.onReady?.();
         // After the hello answer is written, so the app knows the harness before it hears about a task.
@@ -162,6 +168,7 @@ export async function startHarness(
       },
     });
     store.onStatusChanged((event) => server.emit("taskStatusChanged", event));
+    const stopModelEvents = options.model?.onChange((state) => server.emit("modelStateChanged", { state }));
     const router = createLaneRouter({
       store,
       server,
@@ -240,6 +247,7 @@ export async function startHarness(
       recovery,
       debug,
       close: async () => {
+        stopModelEvents?.();
         delegated?.close();
         await confirming.close();
         await control.close();

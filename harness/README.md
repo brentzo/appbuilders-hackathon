@@ -105,6 +105,7 @@ Environment variables, all optional:
 | `YUMI_MODEL_BASE_URL` | `http://127.0.0.1:8080/v1` | The model server's OpenAI-compatible API. |
 | `YUMI_MODEL` | `mlx-community/Qwen3.5-9B-4bit` | Model name sent with every request. |
 | `YUMI_MODEL_TIMEOUT_MS` | `120000` | Give up on one model request after this long. |
+| `YUMI_MODEL_LOAD_TIMEOUT_MS` | `150000` | How long the model server may take to start answering before the model state is `failed` (OBJ-47). |
 | `YUMI_MODEL_MAX_TOKENS` | `1024` | Most tokens per reply. |
 | `YUMI_MODEL_STRUCTURED_OUTPUT` | on | `0` stops sending `response_format`. Replies are validated either way. |
 | `YUMI_MODEL_PARALLEL_SLOTS` | `3` | How many subtasks run at the same time, each as its own request. Start the model server with `--max-num-seqs` set to the same number. |
@@ -174,6 +175,19 @@ npm run --silent model:check -- --print-schema | ~/.venvs/yumi-model/bin/python 
 ```
 
 mlx-vlm 0.7.6 compiles schemas with llguidance 1.9.1, which rejects `uniqueItems`, so the harness removes that keyword from the schema it sends.
+
+### Model readiness
+
+The harness tells the Mac app whether the model is ready ([OBJ-47](../objectives/OBJ-47-harness-model-readiness.md), `src/model/readiness.ts`), so the status line says "Yumi is getting ready" instead of looking frozen while the model loads.
+mlx-vlm started with `--model` loads the model before it accepts connections, so while it loads, `/health` does not answer at all.
+- `loading`: from the start, and again whenever `/health` stops answering, until it names the configured model.
+- `ready`: `/health` names the configured model (or a local path that ends in it, or none, for a server started without `--model`).
+- `failed`: nothing answered within `YUMI_MODEL_LOAD_TIMEOUT_MS`, or the server serves another model. The app shows SPEC-11 "Model failed to load".
+
+It checks every second while loading or failed and every 3 seconds while ready, and at once when a model request finds the server unreachable, so a server restarted during a demo is noticed.
+A slow `/health` answer while the model is busy changes nothing.
+The state goes to the app in the `hello` answer (`HelloResult.modelState`) and every change as `modelStateChanged`.
+It keeps checking after `failed`, so a server started late still ends in `ready`.
 
 ## Device bridge
 
