@@ -69,6 +69,7 @@ Treat results as local until the transcripts are reviewed and consent to commit 
 python3 models/whisper/record/record.py
 ```
 
+- Everything happens in the terminal with the Enter key; there is nothing to click. A "pop" plays just before the microphone opens and a "tink" when the clip is saved.
 - It shows each goal, records while you speak, and lets you play it back, redo it, or type what you actually said.
 - Audio is saved as 16 kHz mono WAV in `~/Yumi recordings/whisper`, outside git. Pass `--out` to put it in shared storage instead.
 - It writes `transcripts.jsonl`, the manifest `benchmark.py` reads, after every clip, so you can stop and continue later.

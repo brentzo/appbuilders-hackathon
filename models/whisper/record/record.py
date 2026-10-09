@@ -76,7 +76,13 @@ def peak_level(path):
     return max((abs(s) for s in samples), default=0) / 32768
 
 
+def chime(name):
+    """A short system sound. Played before the microphone opens or after it closes, so it is never recorded."""
+    subprocess.run(["afplay", f"/System/Library/Sounds/{name}.aiff"], check=False)
+
+
 def record_once(recorder, path):
+    chime("Pop")
     proc = subprocess.Popen([recorder, path], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
     first = proc.stdout.readline().strip()
     if first != "RECORDING":
@@ -85,6 +91,7 @@ def record_once(recorder, path):
         return None
     input("  ● Recording. Say it now, then press Enter when you finish speaking. ")
     out, _ = proc.communicate("\n")
+    chime("Tink")
     for line in out.splitlines():
         if line.startswith("STOPPED"):
             return float(line.split()[1])
