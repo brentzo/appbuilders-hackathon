@@ -1,9 +1,9 @@
-import type { PauseScope, TaskStatus, Uuid } from "@yumi/protocol/types";
+import type { PauseScope, TaskStatus, Uuid, UserError } from "@yumi/protocol/types";
 import { RunControl } from "../control/run-control.ts";
 import { describeError, type Logger } from "../log.ts";
 import type { TaskStore } from "../store/task-store.ts";
 import { resetSubtasks } from "./recovery.ts";
-import { continueTask, runTask, type RunTaskDeps, type RunTaskOutcome } from "./run-task.ts";
+import { continueTask, prepareRevisedPlan, runTask, type RunTaskDeps, type RunTaskOutcome } from "./run-task.ts";
 
 /**
  * Starts, pauses, resumes, and cancels tasks, and keeps track of the ones running in this process (OBJ-06.3,
@@ -41,6 +41,13 @@ export class TaskControlError extends Error {
   ) {
     super(message);
     this.name = "TaskControlError";
+  }
+}
+
+export class GoalRevisionFailed extends Error {
+  constructor(readonly userError: UserError) {
+    super("Could not prepare the revised task plan");
+    this.name = "GoalRevisionFailed";
   }
 }
 
@@ -137,6 +144,25 @@ export class TaskControl {
     void this.track(taskId, (control) => (planned ? continueTask(taskId, work, control) : runTask(taskId, work, control)));
   }
 
+  /** Replans a paused task after the user confirmed a revised goal. */
+  async applyGoalRevision(taskId: Uuid, userSaid: string, goal: string, onApplied?: () => void): Promise<void> {
+    const task = this.store.getTask(taskId);
+    if (!task) throw this.refuse("unknownTask", taskId, `No task ${taskId}`);
+    if (task.status !== "paused") throw new Error(`Task ${taskId} must be paused before its goal can be revised`);
+    const work = this.requireWork(taskId);
+    const result = await prepareRevisedPlan(taskId, goal, work);
+    if (result.outcome !== "ok") throw new GoalRevisionFailed(result.userError);
+    const retained = new Set(result.subtasks.map((subtask) => subtask.id));
+    const run = this.active.get(taskId);
+    for (const subtask of this.store.listSubtasks(taskId)) {
+      if (retained.has(subtask.id) || ["done", "failed", "cancelled"].includes(subtask.status)) continue;
+      run?.control.cancelSubtask(subtask.id);
+    }
+    this.store.applyGoalRevision(taskId, userSaid, goal, result.subtasks);
+    onApplied?.();
+    this.resume(taskId);
+  }
+
   /**
    * Cancels a task (SPEC-06 r8): stops every lane, helpers included, drops every approval and card not yet answered,
    * waits for the step in progress to be recorded, marks every subtask that had started as failed and every queued
@@ -155,7 +181,7 @@ export class TaskControl {
       return;
     }
     for (const subtask of this.store.listSubtasks(taskId)) {
-      if (subtask.status === "done" || subtask.status === "failed") continue;
+      if (subtask.status === "done" || subtask.status === "failed" || subtask.status === "cancelled") continue;
       const started = subtask.attempts > 0;
       this.store.setSubtaskStatus(subtask.id, "failed", {
         result: {

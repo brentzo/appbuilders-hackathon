@@ -9,6 +9,7 @@ import type {
   Approval,
   ApprovalDecision,
   DeviceId,
+  GoalRevision,
   Lane,
   Path,
   RecordedAction,
@@ -286,6 +287,7 @@ export class TaskStore {
       id: input.id ?? randomUUID(),
       originDeviceId: input.originDeviceId,
       goal: input.goal,
+      goalRevisions: [],
       ...optional("confirmedGoal", input.confirmedGoal),
       status,
       plan: [],
@@ -294,8 +296,8 @@ export class TaskStore {
     };
     this.check("Task", task);
     this.stmt(
-      `INSERT INTO tasks (id, origin_device_id, goal, confirmed_goal, status, plan, summary, created_at, created_ms, updated_at)
-       VALUES ($id, $origin, $goal, $confirmed, $status, $plan, NULL, $createdAt, $createdMs, $updatedAt)`,
+      `INSERT INTO tasks (id, origin_device_id, goal, confirmed_goal, goal_revisions, status, plan, summary, created_at, created_ms, updated_at)
+       VALUES ($id, $origin, $goal, $confirmed, '[]', $status, $plan, NULL, $createdAt, $createdMs, $updatedAt)`,
     ).run({
       id: task.id,
       origin: task.originDeviceId,
@@ -365,6 +367,175 @@ export class TaskStore {
       return next;
     });
     this.emit({ taskId: task.id, status: task.status });
+    return task;
+  }
+
+  /** Records a confirmed revision and its audit line atomically. Proposed and cancelled revisions never call this. */
+  recordGoalRevision(id: Uuid, userSaid: string, goal: string): Task {
+    let logged: ActionLogEntry | undefined;
+    const next = this.transaction(() => {
+      const current = this.requireTask(id);
+      if (current.status !== "paused") throw new Error(`Task ${id} must be paused before its goal can be revised`);
+      const time = this.now();
+      const revision: GoalRevision = { userSaid, goal, confirmedAt: time.toISOString() };
+      const task: Task = {
+        ...current,
+        confirmedGoal: goal,
+        goalRevisions: [...current.goalRevisions, revision],
+        updatedAt: time.toISOString(),
+      };
+      this.check("Task", task);
+      this.stmt(
+        "UPDATE tasks SET confirmed_goal = $goal, goal_revisions = $revisions, updated_at = $updatedAt WHERE id = $id",
+      ).run({
+        id,
+        goal: goal,
+        revisions: JSON.stringify(task.goalRevisions),
+        updatedAt: task.updatedAt,
+      });
+      logged = this.insertActionLog(
+        {
+          time: time.toISOString(),
+          deviceId: current.originDeviceId,
+          taskId: id,
+          description: `Goal changed to ${goal}`,
+          outcome: "ok",
+        },
+        time,
+        undefined,
+      );
+      return task;
+    });
+    if (logged) this.emitLogged(logged);
+    return next;
+  }
+
+  /** Applies a confirmed goal and checked replacement plan without removing task history. */
+  applyGoalRevision(id: Uuid, userSaid: string, goal: string, plan: readonly NewSubtask[]): Task {
+    let logged: ActionLogEntry | undefined;
+    let cancelled: Subtask[] = [];
+    let added: Subtask[] = [];
+    const task = this.transaction(() => {
+      const current = this.requireTask(id);
+      if (current.status !== "paused") throw new Error(`Task ${id} must be paused before its goal can be revised`);
+      const existing = this.listSubtasks(id);
+      const existingById = new Map(existing.map((subtask) => [subtask.id, subtask]));
+      const nextSubtasks = plan.map((input) => {
+        if (input.taskId !== id) throw new Error(`Replanned subtask ${input.id ?? "(new)"} belongs to another task`);
+        const old = input.id ? existingById.get(input.id) : undefined;
+        if (!old) return this.newSubtask({ ...input, status: input.status ?? (input.dependsOn?.length ? "pending" : "ready") });
+        const next: Subtask = {
+          ...old,
+          title: input.title,
+          instruction: input.instruction,
+          dependsOn: input.dependsOn ?? [],
+          proposedLane: input.proposedLane,
+          ...optional("needsKeyboard", input.needsKeyboard),
+          ...optional("targetApp", input.targetApp),
+        };
+        this.check("Subtask", next);
+        return next;
+      });
+      const ids = new Set(nextSubtasks.map((subtask) => subtask.id));
+      if (ids.size !== nextSubtasks.length) throw new Error(`Replanned task ${id} contains duplicate subtasks`);
+      for (const subtask of nextSubtasks)
+        for (const dependency of subtask.dependsOn)
+          if (!ids.has(dependency)) throw new Error(`Replanned subtask ${subtask.id} depends on missing ${dependency}`);
+
+      const time = this.now();
+      const revision: GoalRevision = { userSaid, goal, confirmedAt: time.toISOString() };
+      const nextTask: Task = {
+        ...current,
+        confirmedGoal: goal,
+        goalRevisions: [...current.goalRevisions, revision],
+        plan: nextSubtasks.map((subtask) => subtask.id),
+        updatedAt: time.toISOString(),
+      };
+      this.check("Task", nextTask);
+      this.stmt("UPDATE subtasks SET position = position + 10000 WHERE task_id = ?").run(id);
+      const included = new Set(nextSubtasks.map((subtask) => subtask.id));
+      cancelled = existing.filter(
+        (subtask) => !included.has(subtask.id) && !["done", "failed", "cancelled"].includes(subtask.status),
+      );
+      for (const subtask of cancelled) {
+        if (!canChangeSubtaskStatus(subtask.status, "cancelled")) {
+          throw this.illegal(new IllegalTransitionError("subtask", subtask.id, subtask.status, "cancelled"));
+        }
+        this.stmt("UPDATE subtasks SET status = 'cancelled', result = $result WHERE id = $id").run({
+          id: subtask.id,
+          result: JSON.stringify({
+            status: "partial",
+            files: subtask.result?.files ?? [],
+            note: "No longer needed after the goal changed.",
+          }),
+        });
+        this.releaseWindowLocksOf(subtask.id);
+      }
+      added = [];
+      nextSubtasks.forEach((subtask, position) => {
+        const old = existingById.get(subtask.id);
+        if (old) {
+          this.stmt(
+            `UPDATE subtasks SET position = $position, title = $title, instruction = $instruction, depends_on = $dependsOn,
+            proposed_lane = $proposedLane, needs_keyboard = $needsKeyboard, target_app = $targetApp WHERE id = $id`,
+          ).run({
+            id: subtask.id,
+            position,
+            title: subtask.title,
+            instruction: subtask.instruction,
+            dependsOn: JSON.stringify(subtask.dependsOn),
+            proposedLane: subtask.proposedLane,
+            needsKeyboard: subtask.needsKeyboard === undefined ? null : Number(subtask.needsKeyboard),
+            targetApp: json(subtask.targetApp),
+          });
+        } else {
+          this.stmt(
+            `INSERT INTO subtasks (id, task_id, position, title, instruction, depends_on, proposed_lane, needs_keyboard, target_app,
+            target, status, worker_id, attempts, result, last_good_step, parent_subtask_id)
+            VALUES ($id, $taskId, $position, $title, $instruction, $dependsOn, $proposedLane, $needsKeyboard, $targetApp,
+            NULL, $status, NULL, 0, NULL, NULL, NULL)`,
+          ).run({
+            id: subtask.id,
+            taskId: id,
+            position,
+            title: subtask.title,
+            instruction: subtask.instruction,
+            dependsOn: JSON.stringify(subtask.dependsOn),
+            proposedLane: subtask.proposedLane,
+            needsKeyboard: subtask.needsKeyboard === undefined ? null : Number(subtask.needsKeyboard),
+            targetApp: json(subtask.targetApp),
+            status: subtask.status,
+          });
+          added.push(subtask);
+        }
+      });
+      this.stmt(
+        "UPDATE tasks SET confirmed_goal = $goal, goal_revisions = $revisions, plan = $plan, updated_at = $updatedAt WHERE id = $id",
+      ).run({
+        id,
+        goal,
+        revisions: JSON.stringify(nextTask.goalRevisions),
+        plan: JSON.stringify(nextTask.plan),
+        updatedAt: nextTask.updatedAt,
+      });
+      logged = this.insertActionLog(
+        {
+          time: time.toISOString(),
+          deviceId: current.originDeviceId,
+          taskId: id,
+          description: `Goal changed to ${goal}`,
+          outcome: "ok",
+        },
+        time,
+        undefined,
+      );
+      return nextTask;
+    });
+    for (const subtask of cancelled)
+      this.emit({ taskId: id, status: task.status, subtaskId: subtask.id, subtaskStatus: "cancelled" });
+    for (const subtask of added)
+      this.emit({ taskId: id, status: task.status, subtaskId: subtask.id, subtaskStatus: subtask.status });
+    if (logged) this.emitLogged(logged);
     return task;
   }
 
@@ -1061,6 +1232,7 @@ interface TaskRow {
   origin_device_id: string;
   goal: string;
   confirmed_goal: string | null;
+  goal_revisions: string;
   status: TaskStatus;
   plan: string;
   summary: string | null;
@@ -1134,6 +1306,7 @@ function taskFromRow(row: TaskRow): Task {
     id: row.id,
     originDeviceId: row.origin_device_id,
     goal: row.goal,
+    goalRevisions: JSON.parse(row.goal_revisions) as GoalRevision[],
     ...optional("confirmedGoal", row.confirmed_goal),
     status: row.status,
     plan: JSON.parse(row.plan) as Uuid[],

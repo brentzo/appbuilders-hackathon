@@ -114,6 +114,83 @@ describe("the database", () => {
 });
 
 describe("records follow the protocol", () => {
+  it("stores confirmed goal revisions and their action-log line atomically", () => {
+    const task = store.createTask({
+      originDeviceId: "mac-brent",
+      goal: "put a summary in Notes",
+      confirmedGoal: "Put a summary in Notes",
+      status: "planning",
+    });
+    store.setTaskStatus(task.id, "running");
+    store.setTaskStatus(task.id, "paused");
+    const revised = store.recordGoalRevision(task.id, "not Notes, put it in Keynote", "Put the summary in Keynote");
+    expect(revised.goal).toBe("put a summary in Notes");
+    expect(revised.confirmedGoal).toBe("Put the summary in Keynote");
+    expect(revised.goalRevisions).toHaveLength(1);
+    expect(store.listActionLog(task.id).at(-1)).toMatchObject({
+      deviceId: "mac-brent",
+      taskId: task.id,
+      description: "Goal changed to Put the summary in Keynote",
+      outcome: "ok",
+    });
+    expect(validate("Task", revised).errors).toEqual([]);
+    expect(validate("GoalRevision", revised.goalRevisions[0]).errors).toEqual([]);
+    reopen();
+    expect(store.getTask(task.id)?.goalRevisions).toEqual(revised.goalRevisions);
+  });
+
+  it("replaces a paused task plan, keeps selected work, and cancels obsolete subtasks", () => {
+    const task = store.createTask({
+      originDeviceId: "mac-brent",
+      goal: "make a note",
+      confirmedGoal: "Make a note",
+      status: "planning",
+    });
+    store.setTaskStatus(task.id, "running");
+    const keptHelper = store.addSubtask({
+      taskId: task.id,
+      title: "Find the facts",
+      instruction: "Read the source and collect the dates.",
+      proposedLane: "helper",
+      status: "ready",
+    });
+    store.setSubtaskStatus(keptHelper.id, "running");
+    const obsolete = store.addSubtask({
+      taskId: task.id,
+      title: "Open Notes",
+      instruction: "Open Notes and start a new note.",
+      proposedLane: "main",
+      status: "ready",
+    });
+    store.setTaskStatus(task.id, "paused");
+    const replanned = store.applyGoalRevision(task.id, "put it in Keynote instead", "Put the summary in Keynote", [
+      {
+        id: keptHelper.id,
+        taskId: task.id,
+        title: keptHelper.title,
+        instruction: keptHelper.instruction,
+        proposedLane: "helper",
+        status: "running",
+      },
+      {
+        taskId: task.id,
+        title: "Create the Keynote slide",
+        instruction: "Create one slide with the summary.",
+        proposedLane: "main",
+        status: "ready",
+      },
+    ]);
+    expect(replanned.plan).toHaveLength(2);
+    expect(replanned.goalRevisions).toHaveLength(1);
+    expect(store.getSubtask(keptHelper.id)?.status).toBe("running");
+    expect(store.getSubtask(obsolete.id)?.status).toBe("cancelled");
+    expect(
+      store
+        .listSubtasks(task.id)
+        .filter((subtask) => replanned.plan.includes(subtask.id))
+        .map((subtask) => subtask.status),
+    ).toEqual(["running", "ready"]);
+  });
   it("returns records that validate against the protocol schemas", () => {
     const { task, subtask } = runningSubtask(store);
     const step = store.beginStep({ subtaskId: subtask.id, lane: "main", action: exampleAction() });
@@ -147,7 +224,7 @@ describe("status transitions", () => {
     expect(Object.keys(TASK_TRANSITIONS).sort()).toEqual([...taskStatusValues].sort());
     expect(Object.keys(SUBTASK_TRANSITIONS).sort()).toEqual([...subtaskStatusValues].sort());
     for (const terminal of ["done", "failed", "cancelled"] as const) expect(TASK_TRANSITIONS[terminal]).toEqual([]);
-    for (const terminal of ["done", "failed"] as const) expect(SUBTASK_TRANSITIONS[terminal]).toEqual([]);
+    for (const terminal of ["done", "failed", "cancelled"] as const) expect(SUBTASK_TRANSITIONS[terminal]).toEqual([]);
   });
 
   it("applies a task's life from confirmation to done, with the summary", () => {

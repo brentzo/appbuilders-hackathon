@@ -90,6 +90,10 @@ export async function runSchedule(
   };
   let failure: Extract<ScheduleOutcome, { outcome: "failed" }> | undefined;
   let workers = 0;
+  const currentSubtasks = () => {
+    const ids = new Set(store.getTask(taskId)?.plan ?? []);
+    return store.listSubtasks(taskId).filter((subtask) => ids.has(subtask.id));
+  };
 
   const fail = (subtaskId: Uuid, userError?: UserError) => {
     failure ??= { outcome: "failed", subtaskId, ...(userError ? { userError } : {}) };
@@ -241,16 +245,21 @@ export async function runSchedule(
     let run: SubtaskRun;
     try {
       const runSignal = AbortSignal.any([subtaskSignal, stop.signal]);
+      const latestGoal = store.getTask(taskId)?.confirmedGoal ?? confirmedGoal;
       run = gui
-        ? await runGuiSubtask(running, confirmedGoal, { ...deps, ...gui }, runSignal, control, continues)
-        : await runSubtask(running, decision.lane, runner!, confirmedGoal, deps, runSignal, control);
+        ? await runGuiSubtask(running, latestGoal, { ...deps, ...gui }, runSignal, control, continues)
+        : await runSubtask(running, decision.lane, runner!, latestGoal, deps, runSignal, control);
     } finally {
       control.leave(subtask.id);
     }
     logger.info("schedule.finished", { taskId, subtaskId: subtask.id, outcome: run.outcome, status: run.result.status });
+    if (store.getSubtask(subtask.id)?.status === "cancelled") {
+      logger.info("schedule.cancelledAfterRevision", { taskId, subtaskId: subtask.id });
+      return;
+    }
     if (run.outcome === "finished" && run.result.status === "done") {
       store.setSubtaskStatus(subtask.id, "done", { result: run.result });
-      promoteReady(taskId);
+      promoteReady();
       return;
     }
     // Stopped from outside (a pause of every lane, or a cancel): the pause and cancel flow sets the statuses (OBJ-38),
@@ -275,8 +284,8 @@ export async function runSchedule(
   };
 
   /** Marks pending subtasks ready once every subtask they depend on is done. */
-  const promoteReady = (id: Uuid) => {
-    const subtasks = store.listSubtasks(id);
+  const promoteReady = () => {
+    const subtasks = currentSubtasks();
     const done = new Set(subtasks.filter((s) => s.status === "done").map((s) => s.id));
     for (const subtask of subtasks) {
       if (subtask.status === "pending" && subtask.dependsOn.every((dependency) => done.has(dependency))) {
@@ -285,11 +294,11 @@ export async function runSchedule(
     }
   };
 
-  promoteReady(taskId);
+  promoteReady();
   for (;;) {
     if (!control.uiLanesPaused) held.clear();
     if (!failure && !stopSignal.aborted) {
-      const ready = store.listSubtasks(taskId).filter((s) => s.status === "ready" && !active.has(s.id) && !held.has(s.id));
+      const ready = currentSubtasks().filter((s) => s.status === "ready" && !active.has(s.id) && !held.has(s.id));
       for (const subtask of ready.slice(0, Math.max(0, deps.slots - busy - slotWaiters.length))) start(subtask);
     }
     if (active.size === 0 && (held.size === 0 || failure || stopSignal.aborted)) break;
@@ -301,7 +310,7 @@ export async function runSchedule(
   // A pause or cancel from outside wins over a failure: the pause and cancel flow owns the statuses.
   if (signal.aborted) return { outcome: "aborted" };
   if (failure) return failure;
-  const left = store.listSubtasks(taskId).filter((s) => s.status !== "done");
+  const left = currentSubtasks().filter((s) => s.status !== "done" && s.status !== "cancelled");
   if (left.length > 0) {
     // Cannot happen with a checked plan: every dependency is in the plan and there are no cycles.
     logger.error("schedule.stuck", { taskId, left: left.map((s) => ({ id: s.id, status: s.status })) });

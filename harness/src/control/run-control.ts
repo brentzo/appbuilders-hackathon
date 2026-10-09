@@ -85,6 +85,12 @@ export class RunControl {
     this.waiting.delete(subtaskId);
   }
 
+  /** Stops one obsolete subtask while the rest of the revised task carries on. */
+  cancelSubtask(subtaskId: Uuid): void {
+    this.subtasks.get(subtaskId)?.controller.abort();
+    this.wake();
+  }
+
   /** Marks a subtask as waiting for the user (an approval card or the blocked-action card), or done waiting. */
   setWaiting(subtaskId: Uuid, waiting: boolean): void {
     if (waiting) this.waiting.add(subtaskId);

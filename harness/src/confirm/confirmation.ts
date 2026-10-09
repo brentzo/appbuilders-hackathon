@@ -1,13 +1,14 @@
-import type { ConfirmationReply, CursorCommand, SubmitGoalParams, UserError, Uuid } from "@yumi/protocol/types";
+import type { ConfirmationReply, CursorCommand, ReviseGoalParams, SubmitGoalParams, UserError, Uuid } from "@yumi/protocol/types";
 import type { DebugLog } from "../debug/debug-log.ts";
 import { userErrorForModelFailure } from "../errors.ts";
 import { describeError, type Logger } from "../log.ts";
 import type { ModelClient, ModelFailure } from "../model/client.ts";
 import type { TaskVoice } from "../scheduler/run-task.ts";
-import { TaskControlError, type TaskControl } from "../scheduler/task-control.ts";
+import { GoalRevisionFailed, TaskControlError, type TaskControl } from "../scheduler/task-control.ts";
 import type { TaskStore } from "../store/task-store.ts";
 import { classifyReply, fixedReply, type ReplyKind } from "./classify.ts";
 import { confirmedGoalFrom, repeatBack, restateGoal } from "./restate.ts";
+import { reviseGoalWords } from "./revision.ts";
 
 /**
  * The goal confirmation loop (OBJ-17, SPEC-01 r4 to r7). A goal arrives with `submitGoal`: the harness creates the
@@ -51,6 +52,9 @@ interface OpenQuestion {
   unclear: number;
   /** "Change it" was pressed: the next spoken answer is the correction. */
   expectCorrection: boolean;
+  kind: "goal" | "revision";
+  autoMode?: boolean;
+  revisionBaseGoal?: string;
   /** Answers for this task, handled one at a time. */
   queue: Promise<void>;
 }
@@ -72,7 +76,7 @@ export interface ConfirmationDeps {
 /** Why `submitGoal` or `replyToConfirmation` was refused; the app shows "Unexpected", the reason is in the log. */
 export class ConfirmationError extends Error {
   constructor(
-    readonly rule: "noModel" | "unknownTask" | "emptyGoal",
+    readonly rule: "noModel" | "unknownTask" | "emptyGoal" | "notPaused",
     message: string,
   ) {
     super(message);
@@ -121,6 +125,7 @@ export class GoalConfirmation {
       corrections: [],
       unclear: 0,
       expectCorrection: false,
+      kind: "goal",
       queue: Promise.resolve(),
     };
     this.open.set(task.id, question);
@@ -133,6 +138,32 @@ export class GoalConfirmation {
     this.cursor({ command: "spawn", cursorId: MAIN_CURSOR_ID, cursorKind: "main" });
     this.enqueue(question, () => this.restate(question, false));
     return task.id;
+  }
+
+  /** Accepts a revised-goal utterance for an existing paused task. */
+  revise(params: ReviseGoalParams): void {
+    const { store, logger, client } = this.deps;
+    if (!client) throw new ConfirmationError("noModel", "This harness was started without a model, so it cannot revise a goal");
+    const task = store.getTask(params.taskId);
+    if (!task) throw new ConfirmationError("unknownTask", `No task ${params.taskId}`);
+    if (task.status !== "paused" || !task.confirmedGoal)
+      throw new ConfirmationError("notPaused", `Task ${params.taskId} is not paused with a confirmed goal`);
+    const question: OpenQuestion = {
+      taskId: task.id,
+      originDeviceId: task.originDeviceId,
+      transcript: params.transcript,
+      corrections: [],
+      unclear: 0,
+      expectCorrection: false,
+      kind: "revision",
+      autoMode: params.autoMode === true,
+      revisionBaseGoal: task.confirmedGoal,
+      queue: Promise.resolve(),
+    };
+    this.open.set(task.id, question);
+    logger.info("revision.received", { taskId: task.id, transcriptChars: params.transcript.length, autoMode: question.autoMode });
+    this.deps.debug?.write("voice.revision", { taskId: task.id, transcript: params.transcript, autoMode: question.autoMode });
+    this.enqueue(question, () => this.restate(question, false));
   }
 
   /**
@@ -231,6 +262,7 @@ export class GoalConfirmation {
   }
 
   private async restate(question: OpenQuestion, afterCorrection: boolean): Promise<void> {
+    if (question.kind === "revision") return this.restateRevision(question);
     this.cursor({ command: "setState", cursorId: MAIN_CURSOR_ID, state: "thinking" });
     const result = await restateGoal(
       {
@@ -261,10 +293,69 @@ export class GoalConfirmation {
     this.ask(question);
   }
 
+  private async restateRevision(question: OpenQuestion): Promise<void> {
+    if (!question.revisionBaseGoal) return;
+    const result = await reviseGoalWords(
+      {
+        currentGoal: question.revisionBaseGoal,
+        transcript: question.transcript,
+        corrections: question.corrections,
+        subtasks: this.deps.store.listSubtasks(question.taskId),
+      },
+      this.model(),
+      { taskId: question.taskId, signal: this.stopping.signal },
+    );
+    if (!this.stillOpen(question)) return;
+    if (!result.ok) {
+      if (result.failure.kind === "invalidOutput") this.end(question, { kind: "unexpected", taskId: question.taskId });
+      else this.modelFailed(question, result.failure);
+      return;
+    }
+    question.goal = result.goal;
+    const leftBehind = result.leftBehindSubtaskIds
+      .map((id) => this.deps.store.getSubtask(id)?.result?.note)
+      .filter((note): note is string => !!note)
+      .map((note) => "I already " + note[0]!.toLowerCase() + note.slice(1).replace(/[.!?]+$/, "") + ". I'll leave it there.");
+    question.said = [...leftBehind, repeatBack(result.goal, true)].join(" ");
+    this.deps.debug?.write("revision.repeatBack", {
+      taskId: question.taskId,
+      previousGoal: question.revisionBaseGoal,
+      goal: result.goal,
+      leftBehind,
+    });
+    if (!question.autoMode) {
+      this.ask(question);
+      return;
+    }
+    this.open.delete(question.taskId);
+    try {
+      await this.deps
+        .tasks()
+        .applyGoalRevision(
+          question.taskId,
+          [question.transcript, ...question.corrections].join(" "),
+          confirmedGoalFrom(result.goal),
+          () => {
+            this.deps.app.emit("goalRestated", { taskId: question.taskId, text: result.goal, autoMode: true });
+            this.deps.voice.speak(question.originDeviceId, { text: "On it." });
+          },
+        );
+    } catch (error) {
+      this.deps.logger.error("revision.applyFailed", { taskId: question.taskId, ...describeError(error) });
+      const errorMessage =
+        error instanceof GoalRevisionFailed ? error.userError : { kind: "unexpected" as const, taskId: question.taskId };
+      this.deps.voice.userError(question.originDeviceId, errorMessage);
+    }
+  }
+
   /** Sends the repeat-back for the app to speak, show, and listen after. */
   private ask(question: OpenQuestion): void {
     // The app shows the listening state while it listens for the answer.
-    this.deps.app.emit("goalRestated", { taskId: question.taskId, text: question.said! });
+    this.deps.app.emit("goalRestated", {
+      taskId: question.taskId,
+      text: question.said!,
+      ...(question.autoMode ? { autoMode: true } : {}),
+    });
     this.deps.logger.info("confirm.asked", {
       taskId: question.taskId,
       corrections: question.corrections.length,
@@ -285,10 +376,22 @@ export class GoalConfirmation {
   }
 
   /** Where a task's work starts from a goal, with the repeat-back: after the user said yes to this exact repeat-back. */
-  private confirm(question: OpenQuestion): void {
+  private async confirm(question: OpenQuestion): Promise<void> {
     const { store, logger } = this.deps;
     const taskId = question.taskId;
     this.open.delete(taskId);
+    if (question.kind === "revision") {
+      try {
+        await this.deps
+          .tasks()
+          .applyGoalRevision(taskId, [question.transcript, ...question.corrections].join(" "), confirmedGoalFrom(question.goal!));
+      } catch (error) {
+        logger.error("revision.applyFailed", { taskId, ...describeError(error) });
+        const errorMessage = error instanceof GoalRevisionFailed ? error.userError : { kind: "unexpected" as const, taskId };
+        this.deps.voice.userError(question.originDeviceId, errorMessage);
+      }
+      return;
+    }
     store.setTaskStatus(taskId, "planning", { confirmedGoal: confirmedGoalFrom(question.goal!) });
     logger.info("confirm.confirmed", { taskId, corrections: question.corrections.length });
     this.deps.debug?.write("confirm.confirmed", { taskId, confirmedGoal: confirmedGoalFrom(question.goal!) });
@@ -332,8 +435,12 @@ export class GoalConfirmation {
     }
   }
 
-  private cancel(question: OpenQuestion): void {
+  private async cancel(question: OpenQuestion): Promise<void> {
     this.open.delete(question.taskId);
+    if (question.kind === "revision") {
+      await this.deps.tasks().cancel(question.taskId);
+      return;
+    }
     // The app says "Okay, I won't do anything." and fades the cursor when it sees the task cancelled.
     this.deps.store.setTaskStatus(question.taskId, "cancelled");
     this.deps.logger.info("confirm.cancelled", { taskId: question.taskId });
@@ -357,7 +464,8 @@ export class GoalConfirmation {
       // "Okay, I won't do anything." (Brent's decision, 2026-10-10).
       this.deps.voice.userError(question.originDeviceId, userError);
       const task = this.deps.store.getTask(question.taskId);
-      if (task?.status === "awaitingConfirmation") this.deps.store.setTaskStatus(question.taskId, "cancelled");
+      if (question.kind === "goal" && task?.status === "awaitingConfirmation")
+        this.deps.store.setTaskStatus(question.taskId, "cancelled");
     } catch (error) {
       this.deps.logger.error("confirm.endFailed", { taskId: question.taskId, ...describeError(error) });
     }

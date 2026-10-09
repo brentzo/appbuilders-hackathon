@@ -1,7 +1,8 @@
-import type { DeviceId, Speak, Task, UserError, Uuid } from "@yumi/protocol/types";
+import type { DeviceId, Speak, Subtask, Task, UserError, Uuid } from "@yumi/protocol/types";
 import { RunControl } from "../control/run-control.ts";
 import { orchestratorTools } from "../gui/orchestrator-tools.ts";
 import { makePlan, subtasksFromPlan } from "../planner/planner.ts";
+import type { NewSubtask } from "../store/task-store.ts";
 import { lookingOnlyFindings, summarizeTask } from "../planner/summary.ts";
 import { runSchedule, type ScheduleOptions, type SchedulerDeps } from "./scheduler.ts";
 
@@ -81,6 +82,98 @@ export async function continueTask(taskId: Uuid, deps: RunTaskDeps, control = ne
   return runPlan(task, task.confirmedGoal, deps, control, { continuing });
 }
 
+/** Plans a revised goal from recorded progress, retaining ids for completed or still-needed helpers. */
+export async function prepareRevisedPlan(
+  taskId: Uuid,
+  confirmedGoal: string,
+  deps: RunTaskDeps,
+): Promise<{ outcome: "ok"; subtasks: NewSubtask[] } | { outcome: "failed"; userError: UserError }> {
+  const task = deps.store.getTask(taskId);
+  if (!task) throw new Error(`No task ${taskId}`);
+  const old = deps.store.listSubtasks(taskId);
+  const context = JSON.stringify({
+    originalGoal: task.goal,
+    previouslyConfirmedGoal: task.confirmedGoal,
+    completed: old.filter((subtask) => subtask.status === "done").map(progressRecord),
+    continuingHelpers: old
+      .filter(
+        (subtask) =>
+          subtask.proposedLane === "helper" && ["running", "ready", "queued", "needsApproval"].includes(subtask.status),
+      )
+      .map(progressRecord),
+  });
+  const tools = orchestratorTools(
+    Object.values(deps.lanes).flatMap((lane) => lane?.tools.tools ?? []),
+    deps.gui !== undefined,
+  );
+  const planned = await makePlan(
+    confirmedGoal,
+    tools,
+    { client: deps.client, logger: deps.logger, home: deps.home, ...(deps.debug ? { debug: deps.debug } : {}) },
+    { taskId, context },
+  );
+  if (planned.outcome === "error") return { outcome: "failed", userError: planned.userError };
+  if (planned.outcome !== "ok") return { outcome: "failed", userError: { kind: "unexpected", taskId } };
+  const raw = subtasksFromPlan(planned.plan);
+  const used = new Set<Uuid>();
+  const oldByKey = new Map<string, Subtask[]>();
+  for (const subtask of old) {
+    if (subtask.status === "failed" || subtask.status === "cancelled") continue;
+    const key = reuseKey(subtask);
+    oldByKey.set(key, [...(oldByKey.get(key) ?? []), subtask]);
+  }
+  const idMap = new Map<string, Uuid>();
+  const matched = new Map<string, Subtask>();
+  for (const plannedSubtask of raw) {
+    const candidates = oldByKey.get(reuseKey(plannedSubtask)) ?? [];
+    const reuse = candidates.find((candidate) => !used.has(candidate.id) && canReuse(candidate, plannedSubtask));
+    const id = reuse?.id ?? plannedSubtask.id!;
+    idMap.set(plannedSubtask.id!, id);
+    if (reuse) {
+      used.add(reuse.id);
+      matched.set(plannedSubtask.id!, reuse);
+    }
+  }
+  return {
+    outcome: "ok",
+    subtasks: raw.map((subtask) => {
+      const previous = matched.get(subtask.id!);
+      return {
+        ...subtask,
+        taskId,
+        id: idMap.get(subtask.id!)!,
+        dependsOn: (subtask.dependsOn ?? []).map((dependency) => idMap.get(dependency)!),
+        ...(previous ? { status: previous.status } : {}),
+      };
+    }),
+  };
+}
+
+function progressRecord(subtask: Subtask) {
+  return {
+    id: subtask.id,
+    title: subtask.title,
+    instruction: subtask.instruction,
+    status: subtask.status,
+    note: subtask.result?.note,
+  };
+}
+
+function reuseKey(subtask: Pick<Subtask, "title" | "instruction" | "proposedLane">): string {
+  return `${subtask.proposedLane}\n${subtask.title.trim().toLocaleLowerCase()}\n${subtask.instruction.trim().toLocaleLowerCase()}`;
+}
+
+function canReuse(existing: Subtask, planned: Omit<NewSubtask, "taskId" | "parentSubtaskId">): boolean {
+  if (existing.status === "done") return true;
+  return (
+    planned.proposedLane === "helper" &&
+    existing.proposedLane === "helper" &&
+    existing.dependsOn.length === 0 &&
+    (planned.dependsOn?.length ?? 0) === 0 &&
+    ["running", "ready", "queued", "needsApproval"].includes(existing.status)
+  );
+}
+
 /** Runs a saved plan to the end: the schedule, then the summary, spoken on the device the user spoke to. */
 async function runPlan(
   task: Task,
@@ -108,7 +201,8 @@ async function runPlan(
 
   const subtasks = store.listSubtasks(taskId);
   const findings = lookingOnlyFindings(store, subtasks);
-  const summary = await summarizeTask(confirmedGoal, subtasks, model, { taskId, signal, ...(findings ? { findings } : {}) });
+  const latestGoal = store.getTask(taskId)?.confirmedGoal ?? confirmedGoal;
+  const summary = await summarizeTask(latestGoal, subtasks, model, { taskId, signal, ...(findings ? { findings } : {}) });
   if (summary === undefined) return { outcome: "aborted" };
   store.setTaskStatus(taskId, "done", { summary });
   deps.voice.speak(task.originDeviceId, { taskId, text: summary });

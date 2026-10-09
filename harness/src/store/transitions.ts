@@ -34,18 +34,19 @@ export const TASK_TRANSITIONS: Readonly<Record<TaskStatus, readonly TaskStatus[]
 export const INITIAL_SUBTASK_STATUSES: readonly SubtaskStatus[] = ["pending", "ready"];
 
 export const SUBTASK_TRANSITIONS: Readonly<Record<SubtaskStatus, readonly SubtaskStatus[]>> = {
-  pending: ["ready", "failed"],
+  pending: ["ready", "failed", "cancelled"],
   // Routed and waiting for a lock or capacity, or started right away.
-  ready: ["queued", "running", "failed"],
-  queued: ["running", "ready", "failed"],
+  ready: ["queued", "running", "failed", "cancelled"],
+  queued: ["running", "ready", "failed", "cancelled"],
   // Back to ready when its lane is paused or its lock is lost, so it is routed again on resume.
-  running: ["needsApproval", "handoff", "ready", "queued", "done", "failed"],
+  running: ["needsApproval", "handoff", "ready", "queued", "done", "failed", "cancelled"],
   // Approved, declined into another attempt, or a pause cancelled the approval (SPEC-06 r5).
-  needsApproval: ["running", "ready", "failed"],
+  needsApproval: ["running", "ready", "failed", "cancelled"],
   // Moving to the main lane (SPEC-03 r8): queued for the main cursor or started on it.
-  handoff: ["queued", "running", "failed"],
+  handoff: ["queued", "running", "failed", "cancelled"],
   done: [],
   failed: [],
+  cancelled: [],
 };
 
 export function canChangeTaskStatus(from: TaskStatus, to: TaskStatus): boolean {

@@ -27,6 +27,8 @@ export type PlanResult =
 export interface PlanOptions {
   taskId?: Uuid;
   signal?: AbortSignal;
+  /** Existing work that the planner should account for when revising a task. */
+  context?: string;
 }
 
 /** One retry after the first rejected plan (OBJ-05.2). */
@@ -38,7 +40,7 @@ export async function makePlan(
   deps: { client: ModelClient; logger: Logger; home: string; debug?: DebugLog | undefined },
   options: PlanOptions = {},
 ): Promise<PlanResult> {
-  const first = buildPlannerMessages(confirmedGoal, tools, deps.home);
+  const first = buildPlannerMessages(confirmedGoal, tools, deps.home, options.context);
   let messages = first;
   for (let reply = 1; ; reply++) {
     const answer = await deps.client.chat({

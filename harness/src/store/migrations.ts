@@ -145,6 +145,10 @@ export const MIGRATIONS: readonly string[] = [
   ALTER TABLE window_locks ADD COLUMN expires_ms INTEGER NOT NULL DEFAULT 0;
   CREATE INDEX window_locks_by_subtask ON window_locks (subtask_id);
   `,
+  // 8: confirmed goal revisions (OBJ-61). Earlier tasks keep their original goal and start with no revisions.
+  `
+  ALTER TABLE tasks ADD COLUMN goal_revisions TEXT NOT NULL DEFAULT '[]';
+  `,
 ];
 
 /** Thrown when the database was written by a newer harness, whose schema this one does not know. */
