@@ -10,7 +10,8 @@ import OSLog
 /// - `-YumiOpen settings|onboarding` opens a window at launch instead of the usual onboarding check.
 /// - `-YumiPermissions mixed|granted` pretends permissions are in that state, without asking macOS.
 ///   `mixed` has the microphone allowed and the other two missing.
-/// - `-YumiSnapshotDir <dir>` renders the opened window to PNG files at 1x and 2x scale, then quits.
+/// - `-YumiSnapshotDir <dir>` makes the opened window key and active, renders it to PNG files at
+///   1x and 2x scale, then quits. If the window cannot become key, it writes nothing.
 ///   Yumi draws its own window, so this needs no Screen Recording permission. The window's
 ///   translucent materials may render flatter than on screen.
 enum DebugLaunchOptions {
@@ -47,10 +48,9 @@ enum DebugLaunchOptions {
         }
 
         if let directory = arguments.string(forKey: "YumiSnapshotDir"), let opened {
+            let prefix = "\(opened.name)-\(appearance ?? "system")"
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                let prefix = "\(opened.name)-\(appearance ?? "system")"
-                snapshot(opened.window, to: URL(fileURLWithPath: directory), prefix: prefix)
-                NSApp.terminate(nil)
+                snapshotWhenKey(opened.window, to: URL(fileURLWithPath: directory), prefix: prefix, attemptsLeft: 10)
             }
         }
         return opened != nil
@@ -67,6 +67,37 @@ enum DebugLaunchOptions {
         }
         func request(_ permission: Permission) async {}
         func open(_ url: URL) { NSWorkspace.shared.open(url) }
+    }
+
+    /// Snapshots show the window as the user sees it while using it: key and active, so accent
+    /// colors and selected states render. A launch through `open` may not get focus by itself.
+    private static func makeKeyAndActive(_ window: NSWindow) {
+        if !NSApp.isActive {
+            // Deprecated, but the newer cooperative activate() is refused when launched via `open`.
+            NSApp.activate(ignoringOtherApps: true)
+        }
+        window.makeKeyAndOrderFront(nil)
+    }
+
+    /// Activation from a background launch does not always stick on the first try, so this asks
+    /// again every half second. A snapshot of an inactive window would pass for a check it is not,
+    /// so if the window never becomes key, nothing is written.
+    private static func snapshotWhenKey(_ window: NSWindow, to directory: URL, prefix: String, attemptsLeft: Int) {
+        makeKeyAndActive(window)
+        // Key state reaches SwiftUI asynchronously; give it a moment to redraw accents.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            if NSApp.isActive, window.isKeyWindow {
+                snapshot(window, to: directory, prefix: prefix)
+                NSApp.terminate(nil)
+            } else if attemptsLeft > 1 {
+                snapshotWhenKey(window, to: directory, prefix: prefix, attemptsLeft: attemptsLeft - 1)
+            } else {
+                let message = "Snapshot skipped: \(prefix) never became the key, active window"
+                Logger(subsystem: "ph.appbuilders.yumi", category: "debug").error("\(message, privacy: .public)")
+                FileHandle.standardError.write(Data((message + "\n").utf8))
+                NSApp.terminate(nil)
+            }
+        }
     }
 
     private static func snapshot(_ window: NSWindow, to directory: URL, prefix: String) {

@@ -105,8 +105,10 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 - `-YumiOpen settings|onboarding` opens that window at launch.
 - `-YumiPermissions mixed|granted` pretends permissions are in that state, without asking macOS.
 - `-YumiStatus ready|listening|working|paused` sets the menu's status line.
-- `-YumiSnapshotDir <dir>` writes the opened window as PNG files at 1x and 2x, then quits.
+- `-YumiSnapshotDir <dir>` makes the opened window the key, active window, writes it as PNG files at 1x and 2x, then quits.
+  If the window never becomes key, it writes nothing and says so on standard error.
   It needs no Screen Recording permission.
+  The yellow and green title bar buttons render gray in these files even when the window is key.
 
 ## Code layout
 
