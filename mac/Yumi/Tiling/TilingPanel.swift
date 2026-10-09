@@ -59,7 +59,7 @@ struct TilingQuestionView: View {
                 .font(YumiFont.body)
                 .foregroundStyle(YumiColor.ink)
                 .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: 260, alignment: .leading)
+                .frame(width: 260, alignment: .leading)
             HStack(spacing: YumiSpace.s) {
                 Button(TilingCopy.leave) { answer(false) }
                     .buttonStyle(YumiSecondaryButtonStyle())
