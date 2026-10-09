@@ -21,10 +21,19 @@ struct ErrorPresenterTests {
         #expect(presented.message == "Something went wrong and I stopped to be safe. Here's the last thing I did: Clicked Export in Keynote.")
     }
 
-    @Test func unexpectedWithoutALastActionKeepsTheFirstSentence() {
+    @Test func unexpectedBeforeAnyAction() {
+        // SPEC-11 "Unexpected error before any action".
         let presented = ErrorPresenter.present(UserError(kind: .unexpected))
         #expect(presented.message == "Something went wrong and I stopped to be safe.")
-        #expect(!presented.message.contains("{"))
+        #expect(presented.buttons.map(\.label) == ["Try again", "Stop"])
+    }
+
+    @Test func permissionCopyNamesThePermission() {
+        // SPEC-11 "Permission copy names the permission".
+        let presented = ErrorPresenter.present(UserError(kind: .androidPermissionMissing, permission: "camera"))
+        #expect(presented.message == "I need permission to use your camera for this.")
+        #expect(presented.buttons.map(\.label) == ["Allow", "Not now"])
+        #expect(ErrorPresenter.present(UserError(kind: .androidPermissionMissing)).kind == .unexpected)
     }
 
     @Test func otherDeviceIsYourPhone() {
@@ -38,7 +47,7 @@ struct ErrorPresenterTests {
 
     @Test(arguments: ErrorKind.allCases)
     func noPlaceholderOrDeviceIdReachesTheUser(kind: ErrorKind) {
-        let presented = ErrorPresenter.present(UserError(kind: kind, taskId: "t-1", device: "phone-ana", lastAction: "Opened Mail"))
+        let presented = ErrorPresenter.present(UserError(kind: kind, taskId: "t-1", device: "phone-ana", lastAction: "Opened Mail", permission: "location"))
         #expect(!presented.message.contains("{"))
         #expect(!presented.message.contains("phone-ana"))
         #expect(!presented.buttons.isEmpty)

@@ -9,7 +9,8 @@ struct UserErrorCopy: Equatable, Sendable {
     /// Where the copy comes from: the SPEC-11 "Failure" column, or the SPEC-07 requirement.
     /// Never shown to the user.
     let source: Source
-    /// What the user hears and sees. `{device}` and `{last action}` are filled in by `ErrorPresenter`.
+    /// What the user hears and sees. `{device}`, `{last action}` and `{permission}` are filled in
+    /// by `ErrorPresenter`.
     let message: String
     /// Exactly as the spec lists them.
     let buttons: [String]
@@ -48,7 +49,7 @@ struct UserErrorCopy: Equatable, Sendable {
         case .microphonePermissionMissing:
             row("Microphone permission missing", "I need permission to use the microphone so I can hear you.", ["Open settings", "Type instead"])
         case .androidPermissionMissing:
-            row("Permission missing (Android)", "I need permission to use your location for this.", ["Allow", "Not now"])
+            row("Permission missing (Android)", "I need permission to use your {permission} for this.", ["Allow", "Not now"])
         case .androidAccessibilityServiceOff:
             row("Accessibility service off (Android, p1)", "I need you to turn on my accessibility access before I can use other apps on your phone.", ["Open settings", "Not now"])
         case .phoneTooHot:
@@ -61,6 +62,14 @@ struct UserErrorCopy: Equatable, Sendable {
             row("Model failed to load", "I couldn't start my brain on this device. Closing other apps usually helps.", ["Try again"])
         case .unpairedDevice:
             row("Unpaired device", "Your phone isn't paired with your Mac yet.", ["Pair now"])
+        case .pairingCodeExpired:
+            row("Pairing code expired", "That pairing code expired. Codes only last a few minutes to keep your devices safe. Show a new code on your Mac and scan it again.", ["Scan again", "Cancel"])
+        case .notAPairingCode:
+            row("Not a pairing code", "That doesn't look like a Yumi pairing code. On your Mac, open Yumi and show the pairing code, then scan it again.", ["Scan again", "Cancel"])
+        case .pairingVersionsDiffer:
+            row("Pairing versions differ", "Yumi on your phone and your Mac are different versions, so they can't pair yet. Update Yumi on both, then try again.", ["Okay"])
+        case .macDidNotAnswerPairing:
+            row("Mac didn't answer pairing", "Your Mac didn't answer, so pairing didn't finish. Make sure Yumi is open on your Mac and showing a new code, then scan it again.", ["Scan again", "Cancel"])
         case .unexpected:
             row("Unexpected", "Something went wrong and I stopped to be safe. Here's the last thing I did: {last action}.", ["Show what I did", "Try again", "Stop"])
         case .blockedAction:
@@ -71,6 +80,14 @@ struct UserErrorCopy: Equatable, Sendable {
             )
         }
     }
+
+    /// SPEC-11 "Unexpected" before Yumi has done anything in the task: the second sentence and
+    /// "Show what I did" are dropped (scenario "Unexpected error before any action").
+    static let unexpectedBeforeAnyAction = UserErrorCopy(
+        source: .spec11Row("Unexpected"),
+        message: "Something went wrong and I stopped to be safe.",
+        buttons: ["Try again", "Stop"]
+    )
 
     private static func row(_ name: String, _ message: String, _ buttons: [String]) -> UserErrorCopy {
         UserErrorCopy(source: .spec11Row(name), message: message, buttons: buttons)

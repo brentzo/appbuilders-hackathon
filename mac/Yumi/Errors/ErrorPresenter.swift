@@ -36,30 +36,34 @@ enum ErrorPresenter {
     private static let log = Logger(subsystem: "ph.appbuilders.yumi", category: "errors")
 
     static func present(_ error: UserError) -> PresentedError {
-        let copy = UserErrorCopy.copy(for: error.kind)
+        if error.kind == .androidPermissionMissing, error.permission?.isEmpty ?? true {
+            // The copy cannot name the permission, and a raw placeholder must never show.
+            log.error("androidPermissionMissing arrived without a permission name; showing Unexpected")
+            return present(UserError(kind: .unexpected, taskId: error.taskId))
+        }
+        var copy = UserErrorCopy.copy(for: error.kind)
+        if error.kind == .unexpected, error.lastAction?.isEmpty ?? true {
+            copy = UserErrorCopy.unexpectedBeforeAnyAction
+        }
         return PresentedError(
             kind: error.kind,
-            message: fill(copy.message, lastAction: error.lastAction),
+            message: fill(copy.message, lastAction: error.lastAction, permission: error.permission),
             detail: error.kind == .taskTookTooLong ? error.finishedSoFar : nil,
             buttons: copy.buttons.compactMap { button(for: $0, error: error) }
         )
     }
 
-    private static func fill(_ template: String, lastAction: String?) -> String {
+    private static func fill(_ template: String, lastAction: String?, permission: String?) -> String {
         var text = template
         if text.hasPrefix("{device}") {
             text = otherDevice.prefix(1).uppercased() + otherDevice.dropFirst() + text.dropFirst("{device}".count)
         }
         text = text.replacingOccurrences(of: "{device}", with: otherDevice)
-        if text.contains("{last action}") {
-            if let lastAction, !lastAction.isEmpty {
-                text = text.replacingOccurrences(of: "{last action}", with: lastAction)
-            } else {
-                // SPEC-11 has no copy for an unknown last action. Keep the first sentence rather
-                // than show a placeholder or claim that nothing happened. Raised with Patrick.
-                log.error("An Unexpected error arrived without lastAction")
-                text = String(text[..<text.range(of: ". ")!.lowerBound]) + "."
-            }
+        if let lastAction {
+            text = text.replacingOccurrences(of: "{last action}", with: lastAction)
+        }
+        if let permission {
+            text = text.replacingOccurrences(of: "{permission}", with: permission)
         }
         return text
     }

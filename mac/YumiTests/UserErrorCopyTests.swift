@@ -65,6 +65,20 @@ struct UserErrorCopyTests {
         #expect(copy.buttons == expected.buttons)
     }
 
+    /// The "Unexpected" variant defined by SPEC-11's scenario "Unexpected error before any action".
+    @Test func unexpectedBeforeAnyActionMatchesTheScenario() throws {
+        let text = try String(contentsOf: Self.repoRoot.appendingPathComponent("specs/11-user-facing-errors.md"), encoding: .utf8)
+        let scenario = try #require(text.components(separatedBy: "Scenario: Unexpected error before any action").dropFirst().first)
+        let steps = scenario.components(separatedBy: "Scenario:")[0].split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }
+        let quoted = { (prefix: String) -> [String] in
+            let line = steps.first { $0.hasPrefix(prefix) } ?? ""
+            return line.split(separator: "\"", omittingEmptySubsequences: false).enumerated()
+                .filter { $0.offset % 2 == 1 }.map { String($0.element) }
+        }
+        #expect([UserErrorCopy.unexpectedBeforeAnyAction.message] == quoted("Then the user sees"))
+        #expect(UserErrorCopy.unexpectedBeforeAnyAction.buttons == quoted("And the buttons are"))
+    }
+
     @Test func everySpec11RowIsInCode() throws {
         let inCode = Set(ErrorKind.allCases.compactMap { kind -> String? in
             if case .spec11Row(let name) = UserErrorCopy.copy(for: kind).source { return name }
