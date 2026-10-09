@@ -8,7 +8,8 @@ It is built in two parts ([SPEC-10](../specs/10-android-companion.md)):
 
 Owner: Brent.
 
-Status: empty scaffold, nothing built yet.
+Status: app shell built ([OBJ-22](../objectives/OBJ-22-android-app-shell.md)): home screen with a placeholder cat, permission onboarding, settings, the foreground service, and the error presenter.
+The bridge, voice, and the Rive cat are stand-ins until their objectives land.
 
 ## Devices
 
@@ -51,6 +52,76 @@ Status: empty scaffold, nothing built yet.
 - Cat: Rive's Android runtime playing the `.riv` file from [character](../character/README.md).
 - Model runtime (Part B): MNN or llama.cpp, chosen after benchmarking.
 - Sideloaded for the hackathon. See the setup checklist in SPEC-10.
+
+## Build, install, and sideload
+
+The project is a standard Gradle build in this folder (Kotlin, Jetpack Compose, minimum Android 12, target Android 16).
+
+### What you need
+
+- JDK 17 or newer (21 works).
+- The Android SDK with platform 36 and build-tools 36. Android Studio installs both.
+- No global Gradle. Use the wrapper (`./gradlew`), which downloads the pinned Gradle version.
+
+### First-time setup
+
+Tell Gradle where the SDK is, either with `ANDROID_HOME` or a `local.properties` file in this folder (not committed):
+
+```sh
+echo "sdk.dir=$HOME/Library/Android/sdk" > local.properties
+```
+
+### Build and test
+
+```sh
+./gradlew assembleDebug        # app/build/outputs/apk/debug/app-debug.apk
+./gradlew testDebugUnitTest    # unit tests, including the SPEC-11 copy check
+./gradlew lintDebug            # Android lint
+```
+
+### Install on a phone over USB
+
+1. On the phone, turn on Developer options (Settings, About phone, Software information, tap "Build number" seven times), then turn on "USB debugging".
+2. Connect the phone and tap "Allow" on the USB debugging prompt.
+3. Check it shows as `device`: `adb devices -l`.
+4. Install and open:
+
+```sh
+ANDROID_SERIAL=<serial> ./gradlew installDebug
+adb -s <serial> shell am start -n ai.yumi.android/.MainActivity
+```
+
+On a phone with a second profile (for example Samsung Secure Folder), install for the main user only: `adb -s <serial> install -r --user 0 app/build/outputs/apk/debug/app-debug.apk`.
+
+### Sideload without a computer
+
+Copy `app-debug.apk` to the phone (for example over a shared drive or chat), open it in the Files app, and allow "Install unknown apps" for that app when Android asks.
+
+### First run
+
+Follow the in-app setup: microphone, notifications, and "Stop optimising battery usage".
+Then work through the [SPEC-10 setup checklist](../specs/10-android-companion.md#setup-checklist).
+Some phone makers add their own battery saver on top of Android's.
+If Yumi stops when the phone is locked, open Yumi's app settings from Yumi's Settings screen and set battery use to Unrestricted.
+
+### Debug-only test hooks
+
+- Settings shows a "Testing" section in debug builds, with a background permission test and a list of the stand-ins in the build.
+- The same test tool can run from a computer: `adb shell am broadcast -a ai.yumi.android.debug.RUN_TEST_TOOL -p ai.yumi.android`.
+- Logs: `adb logcat -s YumiService YumiError YumiTestTool YumiNotifications Yumi`.
+
+### Code map
+
+| Path under `app/src/main/java/ai/yumi/android/` | What it is |
+|---|---|
+| `AppGraph.kt` | The single object graph. Swap stand-ins here |
+| `service/` | `YumiService` (foreground service), the `BridgeConnection` and `WakeWordDetector` seams, and their stand-ins |
+| `errors/` | `ErrorKind`, the SPEC-11 copy in `ErrorCopy.kt`, and `ErrorPresenter` |
+| `permissions/` | `PermissionCoordinator`: tools ask for permissions from anywhere, including the background |
+| `notifications/` | Notification channels, the service notification, and permission request notifications |
+| `ui/` | Compose screens: onboarding, home, settings, the cat renderer, and the theme |
+| `voice/` | The `VoiceInput` and `GoalSink` seams for OBJ-24 |
+| `protocol/TemporaryTypes.kt` | Temporary local types until the generated protocol types land (OBJ-01) |
 
 ## Decisions
 
