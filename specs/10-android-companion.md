@@ -4,34 +4,58 @@ title: Yumi on Android
 priority: p0
 devices: [android]
 status: draft
-tags: [spec, p0, gui, harness, android]
+tags: [spec, p0, p1, gui, harness, android]
 ---
 
 # SPEC-10 Yumi on Android
 
 ## Summary
 
-Our Android app runs its own model on the phone, controls other apps, offers phone tools to the Mac, and stays connected in the background.
-Demo phone: 18 GB RAM, running Qwen3.5-4B (9B to be tested).
-Development phone: 8 GB RAM, running 4B or 2B.
+Our Android app is built in two parts.
+
+- **Part A (p0), tool host and voice remote.** No model. It listens on the device, offers phone tools to the Mac, runs a few phone-only jobs through intents, and delegates everything else to the Mac ([SPEC-09](09-cross-device-routing.md)).
+- **Part B (p1), phone brain.** A fixed local model plans phone goals, controls other apps through accessibility, and takes over as brain when the Mac is unreachable.
+
+Demo phone: 18 GB RAM. Development phone: 8 GB RAM, Part A only.
 
 ## Requirements
 
-1. The model runs fully on the phone through MNN or llama.cpp, chosen after benchmarking with image input.
-2. The app controls other apps through an Accessibility Service: read the element tree, tap, swipe, and enter text.
-3. The element tree is used first. Screenshots are used only when the tree is not enough.
-4. Common jobs use standard Android intents instead of the GUI, for example `AlarmClock.ACTION_SET_ALARM`.
-5. A foreground service keeps the bridge connection alive while the app is in the background, with a persistent notification that includes "Stop".
-6. Phone tools offered to the Mac at launch: `set_alarm`, `get_location`, `read_recent_photos`, `open_app`, `phone_gui_act`.
-7. Each tool asks for its Android permission the first time it is needed, with an explanation of why.
-8. Phone UI control stops after 10 steps and returns what it got done.
-9. If memory runs short, the app falls back to the next smaller model instead of crashing.
+### Part A (p0)
+
+1. Speech is transcribed with Android's on-device recognizer (`createOnDeviceSpeechRecognizer`, Android 12+), English only. It must fail rather than fall back to a cloud recognizer.
+2. Phone-only goals in the p0 rule run through standard intents, never the GUI: `AlarmClock.ACTION_SET_ALARM`, `AlarmClock.ACTION_SET_TIMER`, and the app's launch intent.
+3. Phone tools offered to the Mac: `set_alarm`, `set_timer`, `open_app`.
+4. A foreground service keeps the bridge connected in the background.
+   - Service type `specialUse` or `connectedDevice`. Not `dataSync`, which has a daily time limit on Android 15.
+   - Its persistent notification has a **Stop** button.
+5. First-run setup asks to ignore battery optimization, so Doze and phone-maker battery savers do not drop the connection.
+6. Each tool asks for its Android permission the first time it is needed, with a reason. If the app is in the background, it posts a notification that opens the app to ask, since Android cannot show a permission dialog from the background.
+7. While a delegated goal runs, the app shows progress and Stop, as in [SPEC-09](09-cross-device-routing.md).
+
+### Part B (p1)
+
+8. The phone runs one fixed model, around 8 GB class (Qwen3.5-9B at 4-bit, about 6 GB plus context), through MNN or llama.cpp, chosen after benchmarking. It runs on the 18 GB demo phone only. There is no automatic switch to a smaller model.
+9. The model replaces the p0 rule for deciding phone versus Mac, and is the brain when the Mac is unreachable.
+10. Speech uses Whisper on the phone (whisper.cpp), so Taglish works on the phone too.
+11. The app controls other apps through an Accessibility Service: read the element tree, tap, swipe, and enter text.
+12. The element tree is used first. Screenshots (`takeScreenshot`, Android 11+, about one per second at most) only when the tree is not enough.
+13. Phone UI control stops after 10 steps and returns what it got done.
+14. Extra phone tools: `get_location`, `read_recent_photos`, `phone_gui_act`.
+15. Before loading, the app checks free memory. If the model will not fit, it shows the "Model failed to load" error from [SPEC-11](11-user-facing-errors.md) instead of loading and being killed.
+
+## Setup checklist
+
+- Sideload the app. Accessibility Service apps face Play Store review limits.
+- Android 13+: App info, then the menu, then "Allow restricted settings". Without it the Accessibility Service switch is greyed out for a sideloaded app (Part B).
+- Turn on the Accessibility Service (Part B).
+- Allow ignoring battery optimization.
+- Test the background connection with the screen off.
 
 ## Scenarios
 
 ```gherkin
 @p0 @android
-Feature: Yumi on Android
+Feature: Android tool host
 
   Scenario: Alarm uses an intent, not the GUI
     Given the goal is "set an alarm for 6:30 am"
@@ -39,11 +63,39 @@ Feature: Yumi on Android
     Then the alarm is created with the set-alarm intent
     And no taps are made in the Clock app
 
+  Scenario: English speech is transcribed on the phone
+    Given the Yumi app is open on the phone
+    When the user taps the mic and says "set a timer for 10 minutes"
+    Then the goal is transcribed by the on-device recognizer
+    And no audio is sent to a cloud recognizer
+
+  Scenario: No on-device model for the language
+    Given the on-device recognizer has no model for the spoken language
+    When the user speaks a goal
+    Then the phone shows the "Language not supported on this phone" error from SPEC-11
+    And no audio is sent to a cloud recognizer
+
+  Scenario: Stays connected in the background with the screen off
+    Given the Yumi app is in the background and the screen is off
+    When the Mac calls the phone tool "set_alarm"
+    Then the phone runs it within 2 seconds
+
+  Scenario: Permission asked from the background
+    Given the app is in the background
+    When a tool needs a permission for the first time
+    Then the phone posts a notification explaining why
+    And tapping it opens the app and shows the Android permission dialog
+```
+
+```gherkin
+@p1 @android
+Feature: Android phone brain
+
   Scenario: Control another app through accessibility
-    Given the goal is "turn on dark mode in Spotify"
+    Given the goal is "turn on battery saver"
     When the phone runs it
-    Then it reads Spotify's element tree
-    And taps through to the dark mode setting
+    Then it reads the Settings element tree
+    And taps through to battery saver
     And no screenshot is used when the tree has the needed elements
 
   Scenario: Screenshot fallback
@@ -51,23 +103,19 @@ Feature: Yumi on Android
     When the phone needs to act on it
     Then it captures a screenshot and sends it to the phone model
 
-  Scenario: Stays connected in the background
-    Given the Yumi app is in the background
-    When the Mac sends a command
-    Then the phone receives and runs it within 2 seconds
+  Scenario: Taglish on the phone
+    Given the phone model is loaded
+    When the user says "pakigising yung Mac ko"
+    Then the goal is transcribed with Whisper on the phone
 
-  Scenario: First-time permission request
-    Given the Mac calls get_location for the first time
-    Then the phone shows "Your Mac asked for your location. Allow Yumi to use your location?"
-    And the location is sent only if the user allows it
-
-  Scenario: Memory pressure fallback
-    Given the phone is low on memory while loading the 4B model
-    Then the app loads the 2B model instead
-    And keeps working
+  Scenario: Model does not fit in memory
+    Given the phone does not have enough free memory for the model
+    When the app tries to load it
+    Then it does not load the model
+    And shows the "Model failed to load" error from SPEC-11
 ```
 
 ## Open questions
 
-- Accessibility Service apps face Play Store review limits. Sideload for the hackathon, and decide distribution later.
 - Which phone runtime is fastest with image input on the demo phone?
+- How do we tell the user's own touches from the app's accessibility gestures, to pause on touch ([SPEC-06](06-user-control.md))? Prototype before committing.

@@ -30,7 +30,7 @@ Scenarios carry the same tags as Gherkin `@tags`, so they can later move into `.
 | SPEC-07 | [Safety and action log](07-safety.md) | p0 | mac, android |
 | SPEC-08 | [Device bridge](08-device-bridge.md) | p0 | mac, android |
 | SPEC-09 | [Cross-device routing](09-cross-device-routing.md) | p0 | mac, android |
-| SPEC-10 | [Yumi on Android](10-android-companion.md) | p0 | android |
+| SPEC-10 | [Yumi on Android](10-android-companion.md) | p0 (part A), p1 (part B) | android |
 | SPEC-11 | [User-facing errors](11-user-facing-errors.md) | p0 | mac, android |
 | SPEC-12 | [Yumi on iPhone](12-iphone-companion.md) | p2 | iphone |
 
