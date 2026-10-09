@@ -72,7 +72,7 @@ MAX_ELEMENTS = 200  # SPEC-05 r2
 SETTLE_SECONDS = 1.0  # wait after an action before observing again
 HISTORY = 5  # last 3-5 steps go into the prompt
 
-FIXTURE_DIR = Path.home() / "Downloads" / "Yumi smoke test"
+FIXTURE_DIR = Path.home() / "Yumi smoke test"
 FIXTURE_PDF = FIXTURE_DIR / "Q3 Report.pdf"
 ANA = "ana@example.com"  # example.com never receives mail, and the run stops before Send anyway
 
