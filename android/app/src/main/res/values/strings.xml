@@ -30,6 +30,8 @@
     <string name="home_mic_start">Start talking</string>
     <string name="home_mic_stop">Stop listening</string>
     <string name="home_you_said">You said</string>
+    <!-- The accessibility action for tapping the cat, which makes it hop. -->
+    <string name="cat_pet">Pet Yumi</string>
     <string name="home_stopped_title">Yumi isn\'t running in the background</string>
     <string name="home_stopped_body">You stopped it, so your Mac can\'t reach this phone until you start it again.</string>
     <string name="home_stopped_action">Start again</string>
@@ -88,5 +90,5 @@
     <string name="settings_test_tool_body">Runs a test tool that needs your location 5 seconds after you tap. Leave the app right away to see the notification.</string>
     <string name="settings_test_tool_run">Run test</string>
     <string name="settings_stand_ins">Stand-ins in this build</string>
-    <string name="settings_stand_ins_body">Placeholder cat, no Mac connection, and \"%1$s\" as the wake word until the \"Hey\u00A0Yumi\" model is ready.</string>
+    <string name="settings_stand_ins_body">The Yumi mark instead of the animated cat, no Mac connection, and \"%1$s\" as the wake word until the \"Hey\u00A0Yumi\" model is ready.</string>
 </resources>

@@ -5,15 +5,16 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 
 /** The cat states the Android app shows today. Grows with the character state machine contract (OBJ-10). */
-enum class CatState { Idle, Listening }
+enum class CatState { Idle, Listening, Stuck }
 
 /**
- * Draws Yumi. The home screen only talks to this interface, so the Rive cat (`character/yumi-cat.riv`, OBJ-10)
- * replaces [PlaceholderCatRenderer] by providing a different [LocalCatRenderer], with no screen changes.
+ * Draws Yumi. The screens only talk to this interface, so the Rive cat (`character/yumi-cat.riv`, OBJ-10)
+ * replaces [MarkCatRenderer] by providing a different [LocalCatRenderer], with no screen changes.
  */
 interface CatRenderer {
+    /** [playful] lets the user tap the cat for a short happy reaction, on the home screen. */
     @Composable
-    fun Cat(state: CatState, modifier: Modifier)
+    fun Cat(state: CatState, modifier: Modifier, playful: Boolean = false)
 }
 
-val LocalCatRenderer = staticCompositionLocalOf<CatRenderer> { PlaceholderCatRenderer }
+val LocalCatRenderer = staticCompositionLocalOf<CatRenderer> { MarkCatRenderer }
