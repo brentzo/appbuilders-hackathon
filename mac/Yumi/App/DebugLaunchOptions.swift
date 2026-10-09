@@ -6,6 +6,7 @@ import OSLog
 ///     open Yumi.app --args -YumiAppearance dark -YumiOpen settings -YumiSnapshotDir /tmp/shots
 ///
 /// - `-YumiAppearance light|dark` forces the app's appearance without changing the system's.
+/// - `-YumiStatus ready|listening|working|paused` sets the menu's status line.
 /// - `-YumiOpen settings` opens a window at launch.
 /// - `-YumiSnapshotDir <dir>` renders the opened window to PNG files at 1x and 2x scale, then quits.
 ///   Yumi draws its own window, so this needs no Screen Recording permission. The window's
@@ -19,6 +20,10 @@ enum DebugLaunchOptions {
         case "light": NSApp.appearance = NSAppearance(named: .aqua)
         case "dark": NSApp.appearance = NSAppearance(named: .darkAqua)
         default: break
+        }
+
+        if let status = arguments.string(forKey: "YumiStatus").flatMap(AppStatus.init(rawValue:)) {
+            app.model.status = status
         }
 
         let opened: (name: String, window: NSWindow)?

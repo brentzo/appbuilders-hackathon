@@ -6,6 +6,11 @@ struct MenuContent: View {
     let windows: WindowCoordinator
 
     var body: some View {
+        // A plain Text is shown as a disabled menu item: information, not an action.
+        Text(model.status.menuTitle)
+
+        Divider()
+
         Button("Settings…") {
             windows.showSettings()
         }
