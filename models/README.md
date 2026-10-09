@@ -53,7 +53,7 @@ The public GUI scores (ScreenSpot-Pro, OSWorld) measure vision, which p0 does no
 | ID | Objective | Assignee | Status |
 |---|---|---|---|
 | [OBJ-11](../objectives/OBJ-11-whisper-bake-off.md) | Whisper bake-off | Jepoy | in-progress |
-| [OBJ-12](../objectives/OBJ-12-hey-yumi-wake-word.md) | "Hey Yumi" wake word model | Jepoy | todo |
+| [OBJ-12](../objectives/OBJ-12-hey-yumi-wake-word.md) | "Hey Yumi" wake word model | Jepoy | in-progress |
 | [OBJ-26](../objectives/OBJ-26-gui-smoke-test.md) | Qwen3.5-9B smoke test on the demo tasks | Brent | in-progress |
 | [OBJ-28](../objectives/OBJ-28-android-whisper-bake-off.md) | Android Whisper bake-off | Jepoy | todo |
 <!-- generated:product-objectives:end -->

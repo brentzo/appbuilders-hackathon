@@ -5,7 +5,7 @@ product: models
 assignee: Jepoy
 touches: [mac, android]
 specs: [SPEC-01]
-status: todo
+status: in-progress
 priority: p0
 depends-on: []
 integrates-with: []
@@ -68,3 +68,4 @@ Push-to-talk is the fallback if the wake word is not reliable by demo day.
 ## Outcome
 
 _Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._
+
