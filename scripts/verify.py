@@ -116,12 +116,13 @@ def protocol_native():
 def android():
     cwd = os.path.join(ROOT, "android")
     env = dict(os.environ)
-    if "ANDROID_HOME" not in env and not os.path.exists(os.path.join(cwd, "local.properties")):
+    if not os.path.isdir(env.get("ANDROID_HOME", "")) and not os.path.exists(os.path.join(cwd, "local.properties")):
         default = os.path.expanduser("~/Library/Android/sdk")
         if not os.path.isdir(default):
             return None, "no Android SDK (set ANDROID_HOME or android/local.properties)"
         env["ANDROID_HOME"] = default
-    gradlew = "gradlew.bat" if WINDOWS else "./gradlew"
+    # An absolute path: Windows shells with NoDefaultCurrentDirectoryInExePath set do not look in the current folder.
+    gradlew = os.path.join(cwd, "gradlew.bat" if WINDOWS else "gradlew")
     # --rerun-tasks is not needed: specs/ is a declared test input, so a spec change reruns the copy test.
     return run("android build, tests, lint", [gradlew, "--no-daemon", "assembleDebug", "testDebugUnitTest", "lintDebug"], cwd, env), None
 
