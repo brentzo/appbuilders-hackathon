@@ -30,7 +30,7 @@ const WEZTERM = "com.github.wez.wezterm";
 
 const CAPABILITIES: Record<string, Omit<AppCapability, "probedAt">> = {
   [CHROME]: { bundleId: CHROME, appVersion: "141.0 (141.0.7390.55)", accessibility: false, devtools: true },
-  [KEYNOTE]: { bundleId: KEYNOTE, appVersion: "14.2 (7041.0.109)", accessibility: true, devtools: false },
+  [KEYNOTE]: { bundleId: KEYNOTE, appVersion: "15.2.1 (7048.0.3)", accessibility: true, devtools: false },
   [CANVAS]: { bundleId: CANVAS, appVersion: "3.1 (310)", accessibility: false, devtools: false },
 };
 
@@ -254,14 +254,14 @@ describe("the capability cache", () => {
     expect(logger.entries).toContainEqual(expect.objectContaining({ event: "router.capabilityCached", bundleId: KEYNOTE }));
 
     // Keynote updated.
-    installed[KEYNOTE] = "14.3 (7043.0.93)";
-    fake.versions[KEYNOTE] = "14.3 (7043.0.93)";
+    installed[KEYNOTE] = "15.3 (7050.0.1)";
+    fake.versions[KEYNOTE] = "15.3 (7050.0.1)";
     const updated = routerWith({ installedVersion });
     await updated.route(subtask("chart 3", "main", { bundleId: KEYNOTE }), "main");
     await updated.route(subtask("chart 4", "main", { bundleId: KEYNOTE }), "main");
     expect(fake.calls).toEqual([KEYNOTE, KEYNOTE]);
-    expect(store.getAppCapability(KEYNOTE, "14.2 (7041.0.109)")).toBeDefined();
-    expect(store.getAppCapability(KEYNOTE, "14.3 (7043.0.93)")).toBeDefined();
+    expect(store.getAppCapability(KEYNOTE, "15.2.1 (7048.0.3)")).toBeDefined();
+    expect(store.getAppCapability(KEYNOTE, "15.3 (7050.0.1)")).toBeDefined();
   });
 
   it("probes once per run when the version lookup has no answer, for example a Mac app without getAppVersion", async () => {
@@ -273,13 +273,17 @@ describe("the capability cache", () => {
   });
 
   it("probes once per run, and warns, when the version lookup and the probe disagree on the format", async () => {
-    const installedVersion: InstalledVersion = async () => "14.2";
+    const installedVersion: InstalledVersion = async () => "15.2.1";
     const mismatched = routerWith({ installedVersion });
     await mismatched.route(subtask("chart 1", "main", { bundleId: KEYNOTE }), "main");
     await mismatched.route(subtask("chart 2", "main", { bundleId: KEYNOTE }), "main");
     expect(fake.calls).toEqual([KEYNOTE]);
     expect(logger.entries).toContainEqual(
-      expect.objectContaining({ event: "router.versionMismatch", installedVersion: "14.2", probedVersion: "14.2 (7041.0.109)" }),
+      expect.objectContaining({
+        event: "router.versionMismatch",
+        installedVersion: "15.2.1",
+        probedVersion: "15.2.1 (7048.0.3)",
+      }),
     );
   });
 
@@ -353,7 +357,7 @@ describe("the probe through the Mac app", () => {
 describe("the version lookup through the Mac app", () => {
   it("asks getAppVersion and returns the version, or nothing when the app is not installed", async () => {
     const calls: unknown[] = [];
-    const versions: Record<string, string> = { [KEYNOTE]: "14.2 (7041.0.109)" };
+    const versions: Record<string, string> = { [KEYNOTE]: "15.2.1 (7048.0.3)" };
     const lookup = macAppVersion(
       {
         request: async (method, params) => {
@@ -364,7 +368,7 @@ describe("the version lookup through the Mac app", () => {
       },
       logger,
     );
-    expect(await lookup(KEYNOTE)).toBe("14.2 (7041.0.109)");
+    expect(await lookup(KEYNOTE)).toBe("15.2.1 (7048.0.3)");
     expect(await lookup("com.example.NotInstalled")).toBeUndefined();
     expect(calls[0]).toEqual(["getAppVersion", { bundleId: KEYNOTE }]);
   });
@@ -463,7 +467,7 @@ describe.skipIf(process.platform === "win32")("over the local RPC with the proto
       { lane: "main", reason: "needsKeyboard" },
     ]);
     expect(store.getAppCapability(CHROME, "154.0.8037.99 (8037.99)")).toMatchObject({ devtools: true });
-    expect(store.getAppCapability(KEYNOTE, "14.2 (7041.0.109)")).toMatchObject({ accessibility: true, devtools: false });
+    expect(store.getAppCapability(KEYNOTE, "15.2.1 (7048.0.3)")).toMatchObject({ accessibility: true, devtools: false });
     expect(store.getAppCapability(WEZTERM, "0.1.0 (1)")).toMatchObject({ accessibility: false, devtools: false });
     const event = { taskId: shell.taskId, subtaskId: shell.id, lane: "main", reason: "appNotBackgroundCapable" };
     await waitFor(() => output.includes(`[mock Mac app] event routeDecided ${JSON.stringify(event)}`));

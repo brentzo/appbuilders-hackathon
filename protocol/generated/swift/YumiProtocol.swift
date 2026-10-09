@@ -50,7 +50,7 @@ public struct AnswerQuestionParams: Codable, Equatable, Sendable {
 /// Cached probe result per app version (SPEC-03 r4).
 public struct AppCapability: Codable, Equatable, Sendable {
     public var bundleId: String
-    /// The bundle's CFBundleShortVersionString, then its CFBundleVersion in parentheses, for example "14.2 (7041.0.109)". getAppVersion returns the same string.
+    /// The bundle's CFBundleShortVersionString, then its CFBundleVersion in parentheses, for example "15.2.1 (7048.0.3)". getAppVersion returns the same string.
     public var appVersion: String
     /// An actionable accessibility tree was found.
     public var accessibility: Bool

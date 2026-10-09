@@ -29,7 +29,7 @@ export interface AnswerQuestionParams {
 /** Cached probe result per app version (SPEC-03 r4). */
 export interface AppCapability {
   bundleId: string;
-  /** The bundle's CFBundleShortVersionString, then its CFBundleVersion in parentheses, for example "14.2 (7041.0.109)". getAppVersion returns the same string. */
+  /** The bundle's CFBundleShortVersionString, then its CFBundleVersion in parentheses, for example "15.2.1 (7048.0.3)". getAppVersion returns the same string. */
   appVersion: string;
   /** An actionable accessibility tree was found. */
   accessibility: boolean;

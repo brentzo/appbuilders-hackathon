@@ -41,7 +41,7 @@ data class AnswerQuestionParams(
 @Serializable
 data class AppCapability(
     val bundleId: String,
-    /** The bundle's CFBundleShortVersionString, then its CFBundleVersion in parentheses, for example "14.2 (7041.0.109)". getAppVersion returns the same string. */
+    /** The bundle's CFBundleShortVersionString, then its CFBundleVersion in parentheses, for example "15.2.1 (7048.0.3)". getAppVersion returns the same string. */
     val appVersion: String,
     /** An actionable accessibility tree was found. */
     val accessibility: Boolean,
