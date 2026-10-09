@@ -5,20 +5,27 @@ import YumiProtocol
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let model = AppModel(permissions: DebugLaunchOptions.permissionCenter())
     private(set) lazy var windows = WindowCoordinator(model: model)
-    /// Until OBJ-27.8 the harness is always the mock. `-YumiMockScript <name>` picks its event
-    /// script (default `keynote-export`), `-YumiMockFail method=kind,...` makes methods fail, and
-    /// `-YumiSendSampleGoal YES` submits the sample goal once connected. All work in Release too,
-    /// which is what smoke tests run. They are read from the launch arguments only, and only the
-    /// mock harness uses them.
+    /// The real harness (OBJ-03) by default. `-YumiMockHarness YES` uses the mock harness instead,
+    /// and so does any mock option: `-YumiMockScript <name>` picks its event script (default
+    /// `keynote-export`), `-YumiMockFail method=kind,...` makes methods fail, and
+    /// `-YumiSendSampleGoal YES` submits the sample goal once connected. All are read from the launch
+    /// arguments only, and work in Release too, which is what smoke tests run.
     private(set) lazy var harness = HarnessLink(
         model: model,
-        launcher: MockHarnessLauncher(
-            script: LaunchArguments.string("YumiMockScript") ?? "keynote-export",
-            failures: LaunchArguments.string("YumiMockFail"),
-            socketPath: HarnessSocket.defaultPath
-        ),
+        launcher: Self.usesMockHarness
+            ? MockHarnessLauncher(
+                script: LaunchArguments.string("YumiMockScript") ?? "keynote-export",
+                failures: LaunchArguments.string("YumiMockFail"),
+                socketPath: HarnessSocket.defaultPath
+            )
+            : RealHarnessLauncher(),
         socketPath: HarnessSocket.defaultPath
     )
+
+    static var usesMockHarness: Bool {
+        LaunchArguments.bool("YumiMockHarness") || LaunchArguments.bool("YumiSendSampleGoal")
+            || LaunchArguments.string("YumiMockScript") != nil || LaunchArguments.string("YumiMockFail") != nil
+    }
     private var terminationSignal: DispatchSourceSignal?
     private let log = Logger(subsystem: "ph.appbuilders.yumi", category: "app")
 
