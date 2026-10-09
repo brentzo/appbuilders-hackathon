@@ -15,6 +15,13 @@
     <!-- Asked only when a tool first needs it (SPEC-10 requirement 6). -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
+    <!-- Lets the app find the phone's speech recognition service (required from Android 11). -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+    </queries>
+
     <application
         android:name=".YumiApplication"
         android:allowBackup="false"

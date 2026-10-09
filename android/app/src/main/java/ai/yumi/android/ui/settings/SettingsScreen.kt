@@ -39,6 +39,8 @@ data class SettingsState(
     val runInBackground: Boolean,
     val batteryUnrestricted: Boolean,
     val showTesting: Boolean,
+    /** The wake word as the user says it. A stand-in until the "Hey Yumi" model exists. */
+    val wakePhrase: String,
 )
 
 class SettingsActions(
@@ -78,11 +80,14 @@ fun SettingsScreen(state: SettingsState, actions: SettingsActions) {
             Section(R.string.settings_section_voice)
             SwitchRow(
                 title = R.string.settings_wake_word,
-                body = if (state.wakeWordEnabled && !state.microphoneAllowed) {
-                    R.string.settings_wake_word_needs_mic
-                } else {
-                    R.string.settings_wake_word_body
-                },
+                body = stringResource(
+                    if (state.wakeWordEnabled && !state.microphoneAllowed) {
+                        R.string.settings_wake_word_needs_mic
+                    } else {
+                        R.string.settings_wake_word_body
+                    },
+                    state.wakePhrase,
+                ),
                 checked = state.wakeWordEnabled,
                 onCheckedChange = actions.onWakeWordChange,
             )
@@ -91,7 +96,7 @@ fun SettingsScreen(state: SettingsState, actions: SettingsActions) {
             Section(R.string.settings_section_mac)
             Row(
                 title = R.string.settings_pairing,
-                body = R.string.settings_pairing_body,
+                body = stringResource(R.string.settings_pairing_body),
                 trailing = {
                     OutlinedButton(onClick = {}, enabled = false) { Text(stringResource(R.string.settings_pair_now)) }
                 },
@@ -101,13 +106,15 @@ fun SettingsScreen(state: SettingsState, actions: SettingsActions) {
             Section(R.string.settings_section_background)
             SwitchRow(
                 title = R.string.settings_run_in_background,
-                body = R.string.settings_run_in_background_body,
+                body = stringResource(R.string.settings_run_in_background_body, state.wakePhrase),
                 checked = state.runInBackground,
                 onCheckedChange = actions.onRunInBackgroundChange,
             )
             Row(
                 title = R.string.settings_battery,
-                body = if (state.batteryUnrestricted) R.string.settings_battery_unrestricted else R.string.settings_battery_limited,
+                body = stringResource(
+                    if (state.batteryUnrestricted) R.string.settings_battery_unrestricted else R.string.settings_battery_limited,
+                ),
                 trailing = if (state.batteryUnrestricted) {
                     null
                 } else {
@@ -136,10 +143,14 @@ fun SettingsScreen(state: SettingsState, actions: SettingsActions) {
                 Section(R.string.settings_section_testing)
                 Row(
                     title = R.string.settings_test_tool,
-                    body = R.string.settings_test_tool_body,
+                    body = stringResource(R.string.settings_test_tool_body),
                     trailing = { TextButton(onClick = actions.onRunTestTool) { Text(stringResource(R.string.settings_test_tool_run)) } },
                 )
-                Row(title = R.string.settings_stand_ins, body = R.string.settings_stand_ins_body, trailing = null)
+                Row(
+                    title = R.string.settings_stand_ins,
+                    body = stringResource(R.string.settings_stand_ins_body, state.wakePhrase),
+                    trailing = null,
+                )
             }
             Spacer(Modifier.height(24.dp))
         }
@@ -160,20 +171,20 @@ private fun Section(title: Int) {
 private fun Divider() = HorizontalDivider(Modifier.padding(top = 12.dp), color = MaterialTheme.colorScheme.outlineVariant)
 
 @Composable
-private fun Row(title: Int, body: Int, trailing: (@Composable () -> Unit)?) {
+private fun Row(title: Int, body: String, trailing: (@Composable () -> Unit)?) {
     ListItem(
         headlineContent = { Text(stringResource(title)) },
-        supportingContent = { Text(stringResource(body)) },
+        supportingContent = { Text(body) },
         trailingContent = trailing,
         colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.background),
     )
 }
 
 @Composable
-private fun SwitchRow(title: Int, body: Int, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+private fun SwitchRow(title: Int, body: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     ListItem(
         headlineContent = { Text(stringResource(title)) },
-        supportingContent = { Text(stringResource(body)) },
+        supportingContent = { Text(body) },
         trailingContent = { Switch(checked = checked, onCheckedChange = null) },
         colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.background),
         modifier = Modifier.toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange),

@@ -52,6 +52,9 @@ fun YumiApp(graph: AppGraph) {
     val loaded by graph.settings.settings.collectAsStateWithLifecycle()
     val status by graph.status.collectAsStateWithLifecycle()
     val listening by graph.voice.listening.collectAsStateWithLifecycle()
+    val voiceActive by graph.voice.active.collectAsStateWithLifecycle()
+    val heard by graph.voice.partial.collectAsStateWithLifecycle()
+    val voiceFailure by graph.voice.failure.collectAsStateWithLifecycle()
     val lastGoal by graph.goals.text.collectAsStateWithLifecycle()
     val resumeCount = rememberResumeCount()
 
@@ -92,6 +95,14 @@ fun YumiApp(graph: AppGraph) {
         if (micAllowed && error?.kind == ErrorKind.MicrophonePermissionMissing) error = null
     }
 
+    // Voice failures can happen with the app closed, after the wake word. They stay until the app shows them.
+    LaunchedEffect(voiceFailure) {
+        voiceFailure?.let {
+            error = graph.errors.present(it)
+            graph.voice.clearFailure()
+        }
+    }
+
     val askMic = rememberPermissionAsker(Manifest.permission.RECORD_AUDIO, settings.askedPermissions, markAsked) {}
     val askNotifications = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         rememberPermissionAsker(Manifest.permission.POST_NOTIFICATIONS, settings.askedPermissions, markAsked) {}
@@ -103,6 +114,8 @@ fun YumiApp(graph: AppGraph) {
     when (screen) {
         Screen.Home -> HomeScreen(
             listening = listening,
+            voiceActive = voiceActive,
+            heard = heard,
             connection = status.connection,
             notices = buildList {
                 if (!settings.runInBackground) {
@@ -122,17 +135,16 @@ fun YumiApp(graph: AppGraph) {
                 when (button.action) {
                     ErrorButton.OpenSettings -> context.startActivity(SystemSettings.appDetailsIntent(context))
                     ErrorButton.TypeInstead -> typing = true
+                    ErrorButton.TryAgain -> graph.voice.start()
                     else -> Unit
                 }
             },
             onMic = {
-                when {
-                    listening -> graph.voice.stop()
-                    !micAllowed -> error = graph.errors.present(ErrorKind.MicrophonePermissionMissing)
-                    else -> {
-                        error = null
-                        graph.voice.start()
-                    }
+                if (voiceActive) {
+                    graph.voice.stop()
+                } else {
+                    error = null
+                    graph.voice.start()
                 }
             },
             onOpenSettings = { screen = Screen.Settings },
@@ -148,6 +160,7 @@ fun YumiApp(graph: AppGraph) {
                     runInBackground = settings.runInBackground,
                     batteryUnrestricted = batteryUnrestricted,
                     showTesting = BuildConfig.DEBUG,
+                    wakePhrase = graph.wakeWordConfig.phrase,
                 ),
                 actions = SettingsActions(
                     onBack = { screen = Screen.Home },

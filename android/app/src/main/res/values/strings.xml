@@ -1,17 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- "Hey\u00A0Yumi" uses a non-breaking space so the wake word never splits across lines. -->
+    <!-- "Hey\u00A0Yumi" uses a non-breaking space so the wake word never splits across lines.
+         %1$s is the wake word phrase from WakeWordConfig, which is a stand-in until the "Hey Yumi" model exists. -->
     <string name="app_name">Yumi</string>
 
     <!-- Notification channels -->
     <string name="channel_running_name">Yumi running in the background</string>
-    <string name="channel_running_description">Shows while Yumi stays connected to your Mac and listens for \"Hey\u00A0Yumi\".</string>
+    <string name="channel_running_description">Shows while Yumi stays connected to your Mac and listens for \"%1$s\".</string>
     <string name="channel_requests_name">Requests from Yumi</string>
     <string name="channel_requests_description">When Yumi needs your OK to do something.</string>
 
     <!-- Service notification -->
     <string name="notification_title_running">Yumi is running</string>
-    <string name="notification_title_listening">Listening for \"Hey\u00A0Yumi\"</string>
+    <string name="notification_title_listening">Listening for \"%1$s\"</string>
+    <string name="notification_title_hearing">Listening…</string>
     <string name="notification_action_stop">Stop</string>
     <string name="notification_permission_title">Yumi needs your OK</string>
 
@@ -45,7 +47,7 @@
     <string name="onboarding_allow">Allow</string>
     <string name="onboarding_not_now">Not now</string>
     <string name="onboarding_mic_title">Let Yumi hear you</string>
-    <string name="onboarding_mic_body">Yumi needs the microphone to hear \"Hey\u00A0Yumi\" and what you ask for.</string>
+    <string name="onboarding_mic_body">Yumi needs the microphone to hear \"%1$s\" and what you ask for.</string>
     <string name="onboarding_notifications_title">Know when Yumi is on</string>
     <string name="onboarding_notifications_body">Yumi shows a small notification while it runs, so you can always see it and stop it.</string>
     <string name="onboarding_battery_title">Stay connected when locked</string>
@@ -60,15 +62,15 @@
     <string name="settings_back">Back</string>
     <string name="settings_section_voice">Voice</string>
     <string name="settings_wake_word">Wake word</string>
-    <string name="settings_wake_word_body">Say \"Hey\u00A0Yumi\" to start talking, even when the screen is off.</string>
-    <string name="settings_wake_word_needs_mic">Yumi needs the microphone to hear \"Hey\u00A0Yumi\".</string>
+    <string name="settings_wake_word_body">Say \"%1$s\" to start talking, even when the screen is off.</string>
+    <string name="settings_wake_word_needs_mic">Yumi needs the microphone to hear \"%1$s\".</string>
     <string name="settings_section_mac">Your Mac</string>
     <string name="settings_pairing">Pairing</string>
     <string name="settings_pairing_body">Not paired with your Mac yet. Pairing comes in a later version of this app.</string>
     <string name="settings_pair_now">Pair now</string>
     <string name="settings_section_background">Running in the background</string>
     <string name="settings_run_in_background">Keep Yumi running</string>
-    <string name="settings_run_in_background_body">Lets your Mac reach this phone and Yumi hear \"Hey\u00A0Yumi\" while you use other apps.</string>
+    <string name="settings_run_in_background_body">Lets your Mac reach this phone and Yumi hear \"%1$s\" while you use other apps.</string>
     <string name="settings_battery">Battery</string>
     <string name="settings_battery_unrestricted">Unrestricted, so Yumi stays connected when your phone is locked.</string>
     <string name="settings_battery_limited">Limited, so Yumi may disconnect when your phone is locked.</string>
@@ -86,5 +88,5 @@
     <string name="settings_test_tool_body">Runs a test tool that needs your location 5 seconds after you tap. Leave the app right away to see the notification.</string>
     <string name="settings_test_tool_run">Run test</string>
     <string name="settings_stand_ins">Stand-ins in this build</string>
-    <string name="settings_stand_ins_body">Placeholder cat, no Mac connection, and a mic button that does not record yet.</string>
+    <string name="settings_stand_ins_body">Placeholder cat, no Mac connection, and \"%1$s\" as the wake word until the \"Hey\u00A0Yumi\" model is ready.</string>
 </resources>

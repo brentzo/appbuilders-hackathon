@@ -8,6 +8,7 @@ import ai.yumi.android.ui.components.isGranted
 import ai.yumi.android.ui.components.rememberPermissionAsker
 import android.Manifest
 import android.os.Build
+import ai.yumi.android.voice.wakeword.WakeWordConfig
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
@@ -119,7 +120,12 @@ fun OnboardingScreen(
                         textAlign = TextAlign.Center,
                     )
                     Text(
-                        stringResource(shown.body),
+                        // The microphone step names the wake word, which differs while it is a stand-in.
+                        if (shown == Step.Microphone) {
+                            stringResource(shown.body, WakeWordConfig.Current.phrase)
+                        } else {
+                            stringResource(shown.body)
+                        },
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,

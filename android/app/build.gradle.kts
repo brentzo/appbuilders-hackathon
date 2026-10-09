@@ -15,6 +15,11 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+
+        ndk {
+            // Real phones are arm64. x86_64 keeps the emulator working. Each ONNX Runtime ABI adds about 35 MB.
+            abiFilters += listOf("arm64-v8a", "x86_64")
+        }
     }
 
     buildTypes {
@@ -40,6 +45,8 @@ android {
             it.systemProperty("yumi.specsDir", rootProject.file("../specs").absolutePath)
             // Declared as an input so editing a spec reruns the test instead of reusing a cached pass.
             it.inputs.dir(rootProject.file("../specs")).withPropertyName("specs")
+            // The wake word parity test runs the real models from the app's assets.
+            it.systemProperty("yumi.assetsDir", file("src/main/assets").absolutePath)
         }
     }
 }
@@ -67,6 +74,17 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.core)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
+    implementation(libs.onnxruntime.android)
+
     testImplementation(libs.junit)
+    testImplementation(libs.onnxruntime.jvm)
     testImplementation(libs.kotlinx.coroutines.test)
+}
+
+// Unit tests run on the JVM, so they use the desktop build of ONNX Runtime (same version, same Java API)
+// instead of the Android one, whose native libraries only load on Android.
+configurations.configureEach {
+    if (name.endsWith("UnitTestRuntimeClasspath")) {
+        exclude(group = "com.microsoft.onnxruntime", module = "onnxruntime-android")
+    }
 }

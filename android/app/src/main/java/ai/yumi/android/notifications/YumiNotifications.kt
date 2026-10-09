@@ -14,6 +14,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import ai.yumi.android.voice.wakeword.WakeWordConfig
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -35,7 +36,7 @@ object YumiNotifications {
                     context.getString(R.string.channel_running_name),
                     NotificationManager.IMPORTANCE_LOW,
                 ).apply {
-                    description = context.getString(R.string.channel_running_description)
+                    description = context.getString(R.string.channel_running_description, WakeWordConfig.Current.phrase)
                     setShowBadge(false)
                 },
                 NotificationChannel(
@@ -51,10 +52,10 @@ object YumiNotifications {
 
     /** The persistent notification of the foreground service: Yumi's state and a Stop button. */
     fun service(context: Context, status: YumiStatus): Notification {
-        val title = if (status.wakeWordListening) {
-            context.getString(R.string.notification_title_listening)
-        } else {
-            context.getString(R.string.notification_title_running)
+        val title = when {
+            status.voiceListening -> context.getString(R.string.notification_title_hearing)
+            status.wakeWordListening -> context.getString(R.string.notification_title_listening, WakeWordConfig.Current.phrase)
+            else -> context.getString(R.string.notification_title_running)
         }
         val stop = PendingIntent.getService(
             context,

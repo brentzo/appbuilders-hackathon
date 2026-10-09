@@ -62,6 +62,8 @@ data class HomeNotice(val title: Int, val body: Int, val action: Int, val onActi
 @Composable
 fun HomeScreen(
     listening: Boolean,
+    voiceActive: Boolean,
+    heard: String?,
     connection: ConnectionState,
     notices: List<HomeNotice>,
     lastGoal: String?,
@@ -104,12 +106,12 @@ fun HomeScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
                 ) {
-                    HomeContent(listening, notices, lastGoal, error, onErrorButton)
+                    HomeContent(listening, heard, notices, lastGoal, error, onErrorButton)
                 }
             }
             ConnectionLine(connection)
             Spacer(Modifier.height(20.dp))
-            MicButton(listening, onMic)
+            MicButton(voiceActive, onMic)
             Spacer(Modifier.height(32.dp))
         }
     }
@@ -118,6 +120,7 @@ fun HomeScreen(
 @Composable
 private fun ColumnScope.HomeContent(
     listening: Boolean,
+    heard: String?,
     notices: List<HomeNotice>,
     lastGoal: String?,
     error: PresentedError?,
@@ -130,9 +133,11 @@ private fun ColumnScope.HomeContent(
             Modifier.size(220.dp),
         )
         Text(
-            stringResource(if (listening) R.string.home_hint_listening else R.string.home_hint_idle),
+            // While listening, show what the phone has heard so far, so the user can see it is working.
+            if (listening && heard != null) heard else stringResource(if (listening) R.string.home_hint_listening else R.string.home_hint_idle),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
         )
         if (lastGoal != null) GoalCard(lastGoal)
@@ -202,13 +207,13 @@ private fun ConnectionLine(connection: ConnectionState) {
 }
 
 @Composable
-private fun MicButton(listening: Boolean, onClick: () -> Unit) {
+private fun MicButton(active: Boolean, onClick: () -> Unit) {
     val container by animateColorAsState(
-        if (listening) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
+        if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
         label = "micContainer",
     )
     val content by animateColorAsState(
-        if (listening) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer,
+        if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer,
         label = "micContent",
     )
     FilledIconButton(
@@ -218,8 +223,8 @@ private fun MicButton(listening: Boolean, onClick: () -> Unit) {
         colors = IconButtonDefaults.filledIconButtonColors(containerColor = container, contentColor = content),
     ) {
         Icon(
-            painterResource(if (listening) R.drawable.ic_stop else R.drawable.ic_mic),
-            contentDescription = stringResource(if (listening) R.string.home_mic_stop else R.string.home_mic_start),
+            painterResource(if (active) R.drawable.ic_stop else R.drawable.ic_mic),
+            contentDescription = stringResource(if (active) R.string.home_mic_stop else R.string.home_mic_start),
             modifier = Modifier.size(32.dp),
         )
     }

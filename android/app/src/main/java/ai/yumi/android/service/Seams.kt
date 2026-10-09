@@ -17,7 +17,8 @@ interface BridgeConnection {
 }
 
 /**
- * The "Hey Yumi" detector that runs inside [YumiService] (SPEC-01 requirement 12). OBJ-24 provides the real one.
+ * The "Hey Yumi" detector that runs inside [YumiService] (SPEC-01 requirement 12).
+ * The real one is `voice/wakeword/OpenWakeWordDetector`.
  * The service only calls [start] while it holds the microphone service type and the wake word setting is on.
  */
 interface WakeWordDetector {
@@ -30,13 +31,6 @@ interface WakeWordDetector {
 /** Stand-in until OBJ-23: never paired, never connects. */
 class UnpairedBridgeConnection : BridgeConnection {
     override val state: StateFlow<ConnectionState> = MutableStateFlow(ConnectionState.NotPaired).asStateFlow()
-    override fun start(scope: CoroutineScope) = Unit
-    override fun stop() = Unit
-}
-
-/** Stand-in until OBJ-24: never opens the microphone. */
-class NoWakeWordDetector : WakeWordDetector {
-    override val listening: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
     override fun start(scope: CoroutineScope) = Unit
     override fun stop() = Unit
 }

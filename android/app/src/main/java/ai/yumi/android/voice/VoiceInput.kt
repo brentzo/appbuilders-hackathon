@@ -1,30 +1,37 @@
 package ai.yumi.android.voice
 
+import ai.yumi.android.errors.YumiException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-/** Push-to-talk behind the mic button. OBJ-24 provides the real on-device recognizer. */
+/** How a listening session was started. */
+enum class VoiceTrigger { PushToTalk, WakeWord }
+
+/** Push-to-talk behind the mic button, and listening after the wake word. */
 interface VoiceInput {
-    /** True only while the microphone is on. Drives the listening cat. */
+    /** True only while the microphone is on. Drives the listening cat and the notification. */
     val listening: StateFlow<Boolean>
-    fun start()
+
+    /** True from [start] until the session ends, including the moments before and after the microphone is on. */
+    val active: StateFlow<Boolean>
+
+    /** What the recognizer has heard so far in this session, if anything. */
+    val partial: StateFlow<String?>
+
+    /** The last failure, with its SPEC-11 kind, until [clearFailure]. Present it with `ErrorPresenter`. */
+    val failure: StateFlow<YumiException?>
+
+    fun start(trigger: VoiceTrigger = VoiceTrigger.PushToTalk)
+
+    /** Stops listening. What was heard so far is still transcribed. */
     fun stop()
+    fun clearFailure()
 }
 
-/** Where every goal goes, spoken or typed. OBJ-24 hands transcripts here; routing objectives connect it. */
+/** Where every goal goes, spoken or typed. Routing (SPEC-09, SPEC-10 Part A) connects it. */
 fun interface GoalSink {
     fun onGoal(text: String)
-}
-
-/**
- * Stand-in until OBJ-24: switches the cat to listening and back, without opening the microphone.
- */
-class StandInVoiceInput : VoiceInput {
-    private val _listening = MutableStateFlow(false)
-    override val listening: StateFlow<Boolean> = _listening.asStateFlow()
-    override fun start() { _listening.value = true }
-    override fun stop() { _listening.value = false }
 }
 
 /** Stand-in until routing exists: keeps the last goal so the home screen can show it. */
