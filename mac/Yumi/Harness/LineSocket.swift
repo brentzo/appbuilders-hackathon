@@ -3,8 +3,10 @@ import Foundation
 
 /// A connected Unix domain socket that sends and receives one message per line.
 ///
-/// All socket work runs on a private serial queue. `onLine` and `onClose` are called on the main
-/// actor; `onClose` is called once.
+/// All socket work runs on a private serial queue. `onLine` and `onClose` reach the main actor
+/// through `DispatchQueue.main`, one serial path, so lines arrive in the order they were read and
+/// the close always comes after the last line. `onClose` is called once. Both pass the socket, so
+/// the owner can ignore a socket it has already replaced.
 nonisolated final class LineSocket: @unchecked Sendable {
     enum ConnectError: Error, CustomStringConvertible {
         case pathTooLong
@@ -25,14 +27,14 @@ nonisolated final class LineSocket: @unchecked Sendable {
     private var source: DispatchSourceRead?
     private var buffer = Data()
     private var closed = false
-    private let onLine: @MainActor @Sendable (Data) -> Void
-    private let onClose: @MainActor @Sendable () -> Void
+    private let onLine: @MainActor @Sendable (LineSocket, Data) -> Void
+    private let onClose: @MainActor @Sendable (LineSocket) -> Void
 
     /// Connects, blocking the calling thread briefly. Call it off the main actor.
     static func connect(
         path: String,
-        onLine: @escaping @MainActor @Sendable (Data) -> Void,
-        onClose: @escaping @MainActor @Sendable () -> Void
+        onLine: @escaping @MainActor @Sendable (LineSocket, Data) -> Void,
+        onClose: @escaping @MainActor @Sendable (LineSocket) -> Void
     ) throws -> LineSocket {
         let fd = socket(AF_UNIX, SOCK_STREAM, 0)
         guard fd >= 0 else { throw ConnectError.socketFailed(errno) }
@@ -65,8 +67,8 @@ nonisolated final class LineSocket: @unchecked Sendable {
 
     private init(
         fd: Int32,
-        onLine: @escaping @MainActor @Sendable (Data) -> Void,
-        onClose: @escaping @MainActor @Sendable () -> Void
+        onLine: @escaping @MainActor @Sendable (LineSocket, Data) -> Void,
+        onClose: @escaping @MainActor @Sendable (LineSocket) -> Void
     ) {
         self.fd = fd
         self.onLine = onLine
@@ -121,7 +123,9 @@ nonisolated final class LineSocket: @unchecked Sendable {
             buffer.removeSubrange(buffer.startIndex...newline)
             if !line.allSatisfy({ $0 == 0x20 || $0 == 0x0D }) {
                 let message = Data(line)
-                Task { @MainActor [onLine] in onLine(message) }
+                DispatchQueue.main.async { [self, onLine] in
+                    MainActor.assumeIsolated { onLine(self, message) }
+                }
             }
         }
     }
@@ -131,6 +135,8 @@ nonisolated final class LineSocket: @unchecked Sendable {
         closed = true
         source?.cancel()
         source = nil
-        Task { @MainActor [onClose] in onClose() }
+        DispatchQueue.main.async { [self, onClose] in
+            MainActor.assumeIsolated { onClose(self) }
+        }
     }
 }

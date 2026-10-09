@@ -157,8 +157,8 @@ final class HarnessClient {
             connected = try await Task.detached {
                 try LineSocket.connect(
                     path: path,
-                    onLine: { [weak self] line in self?.receive(line) },
-                    onClose: { [weak self] in self?.connectionClosed() }
+                    onLine: { [weak self] socket, line in self?.receive(line, from: socket) },
+                    onClose: { [weak self] socket in self?.connectionClosed(socket) }
                 )
             }.value
         } catch {
@@ -208,8 +208,10 @@ final class HarnessClient {
         }
     }
 
-    private func connectionClosed() {
-        guard socket != nil else { return }
+    /// Only the current socket's close matters. A socket already replaced (a failed handshake, or a
+    /// close that arrives after reconnecting) must not tear down the new link.
+    private func connectionClosed(_ closed: LineSocket) {
+        guard let current = socket, current === closed else { return }
         log.notice("Lost the link to the harness; reconnecting")
         socket = nil
         pingTask?.cancel()
@@ -222,7 +224,10 @@ final class HarnessClient {
 
     // MARK: Incoming
 
-    private func receive(_ line: Data) {
+    private func receive(_ line: Data, from source: LineSocket) {
+        // Lines from a socket already replaced are dropped: its calls were already failed, and its
+        // events belong to a link that is gone.
+        guard source === socket else { return }
         guard let message = (try? JSONSerialization.jsonObject(with: line)) as? [String: Any] else {
             log.error("The harness sent a line that is not a JSON object")
             return
