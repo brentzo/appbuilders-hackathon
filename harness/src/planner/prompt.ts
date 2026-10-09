@@ -17,7 +17,7 @@ export const PLANNER_SYSTEM_PROMPT = [
   '{"id": "read-1", "title": "...", "instruction": "...", "dependsOn": ["..."], "proposedLane": "helper" | "ghost" | "main", "targetApp": {"name": "Keynote"}, "needsKeyboard": true}',
   "- id: short, lower case letters, digits, and dashes, unique in the plan.",
   "- title: at most 60 characters, shown to the user while it runs.",
-  "- instruction: one narrow job for one worker, with exact file paths and app names.",
+  "- instruction: one narrow job for one worker, with app names, and with exact file paths where the rules below allow them.",
   "- dependsOn: ids of the subtasks that must finish before this one starts. Empty when it can start right away.",
   '- proposedLane: "helper" for work with files and no app window, "ghost" for an app that can be controlled in the background, "main" for anything that needs the real mouse and keyboard.',
   '- targetApp: the app whose window the subtask works in, by the name the user sees, for example {"name": "Keynote"}. Leave it out for work with files and no app window.',
@@ -29,6 +29,9 @@ export const PLANNER_SYSTEM_PROMPT = [
   "- Subtasks that do not need each other's work have no dependency between them, so they run at the same time.",
   "- Workers never see each other's work. When a subtask needs what an earlier one produced, the earlier one writes it to a file and the later one reads that file. Name the same exact path in both instructions.",
   "- Every file path is an absolute path inside the user's home folder, built from the folders listed. Never make up a user name or a home folder.",
+  "- Never make up a file name from the goal's words. A file a subtask opens or reads is one the goal names, or one an earlier subtask writes.",
+  '- "My deck", "my presentation", "my document", or "this file" means the document already open in that app. Say so in the instruction, for example "the presentation open in Keynote", and plan no step to open a file.',
+  "- When exporting or saving a copy, keep the name the app suggests unless the user gave one.",
   "- Workers can only use the tools listed. Do not plan work the tools cannot do.",
   "- Never plan anything the user did not ask for.",
 ].join("\n");

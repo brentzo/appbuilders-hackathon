@@ -1,11 +1,14 @@
-import { posix } from "node:path";
+import { existsSync } from "node:fs";
+import { extname, posix } from "node:path";
 import { validate } from "@yumi/protocol";
 import type { Plan, PlannedSubtask } from "@yumi/protocol/types";
+import { pathsIn } from "../file-names.ts";
 
 /**
  * Checks the planner's reply (OBJ-05.1, OBJ-05.2): one JSON object that matches the protocol's `Plan` schema, with
  * no duplicate ids, no dependency on an id that is not in the plan, no dependency cycle, no more than
- * `MAX_PLAN_SUBTASKS` subtasks, and no absolute path outside the user's home folder. A plan that fails never reaches the scheduler. The error text goes back to the
+ * `MAX_PLAN_SUBTASKS` subtasks, no absolute path outside the user's home folder, and no document the user did not
+ * name and that does not exist. A plan that fails never reaches the scheduler. The error text goes back to the
  * planner on its one retry and into the log; it never reaches the user and never quotes the reply.
  */
 
@@ -17,8 +20,11 @@ export const MAX_PLAN_SUBTASKS = 12;
 
 export type PlanCheck = { ok: true; plan: Plan } | { ok: false; error: string };
 
-/** `home` is the user's real home folder: every absolute path in a title or instruction must be inside it. */
-export function checkPlan(raw: string | null, home: string): PlanCheck {
+/**
+ * `home` is the user's real home folder: every absolute path in a title or instruction must be inside it. `goal` is
+ * the confirmed goal, the user's own words for the files they mean.
+ */
+export function checkPlan(raw: string | null, home: string, goal: string): PlanCheck {
   if (raw === null || raw.trim() === "") return { ok: false, error: "The reply was empty." };
 
   let value: unknown;
@@ -31,29 +37,45 @@ export function checkPlan(raw: string | null, home: string): PlanCheck {
   const result = validate("Plan", value);
   if (!result.valid) return { ok: false, error: `The plan does not match the plan schema: ${result.errors.join("; ")}.` };
   const plan = value as Plan;
-  const problem = graphProblem(plan.subtasks) ?? pathProblem(plan.subtasks, home);
+  const problem = graphProblem(plan.subtasks) ?? pathProblem(plan.subtasks, home) ?? madeUpFileProblem(plan.subtasks, home, goal);
   return problem ? { ok: false, error: problem } : { ok: true, plan };
 }
-
-/**
- * Absolute paths in free text: a `/` at the start or after a space, quote, bracket, `=`, or `,`, and not `//` (a
- * link). The path ends at the next space or quote, so a name with spaces is cut short, which is enough to see where
- * it is. `~/...` paths are inside the home folder by definition and are not matched.
- */
-const ABSOLUTE_PATH = /(?:^|[\s"'`([=,])(\/(?!\/)[^\s"'`)\],;]+)/g;
 
 /** The first subtask that names an absolute path outside the home folder (Brent's run, 2026-10-10). */
 function pathProblem(subtasks: readonly PlannedSubtask[], home: string): string | undefined {
   const root = posix.normalize(home).replace(/\/+$/, "");
   for (const subtask of subtasks) {
     for (const text of [subtask.title, subtask.instruction]) {
-      for (const match of text.matchAll(ABSOLUTE_PATH)) {
-        const path = posix.normalize(match[1]!.replace(/[.:]+$/, ""));
+      // `~/...` paths are inside the home folder by definition.
+      for (const found of pathsIn(text).filter((path) => path.startsWith("/"))) {
+        const path = posix.normalize(found);
         if (path !== root && !path.startsWith(`${root}/`)) {
           // The path itself is not quoted: it may be the user's own words.
           return `Subtask "${subtask.id}" names a path outside the user's home folder. Use only paths inside ${root}, built from the folders listed.`;
         }
       }
+    }
+  }
+  return undefined;
+}
+
+/** Documents an app opens. A plan may only name one that exists or that the user named. */
+const DOCUMENT_EXTENSIONS = new Set([".key", ".pages", ".numbers", ".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx", ".rtf"]);
+
+/**
+ * The first subtask that names a document that does not exist and that the goal does not name by its file name. The
+ * planner built such names from the goal's words: a misheard "Export my Keynote deck as a PDF" became
+ * `~/Documents/Expert my keynote tech.key`, and the worker failed to open it and asked the user for a path (Brent's
+ * live run, task d608891a, 2026-10-10). "My deck" means the document open in the app.
+ */
+function madeUpFileProblem(subtasks: readonly PlannedSubtask[], home: string, goal: string): string | undefined {
+  const said = goal.toLowerCase();
+  for (const subtask of subtasks) {
+    for (const found of pathsIn(`${subtask.title}\n${subtask.instruction}`)) {
+      const path = posix.normalize(found.replace(/^~(?=\/)/, home));
+      if (!DOCUMENT_EXTENSIONS.has(extname(path).toLowerCase())) continue;
+      if (said.includes(posix.basename(path).toLowerCase()) || existsSync(path)) continue;
+      return `Subtask "${subtask.id}" names a document that does not exist and that the user did not name. Never make up a file name from the goal's words. When the user means a document open in an app, such as "my deck" or "my presentation", say "the presentation open in Keynote" (or the document open in that app) without a path.`;
     }
   }
   return undefined;

@@ -41,66 +41,102 @@ const sub = (id: string, dependsOn: string[] = []) => ({
 const planJson = (...subtasks: ReturnType<typeof sub>[]) => JSON.stringify({ subtasks });
 /** The user's home folder the planner is given. */
 const HOME = "/Users/brent";
+const GOAL = "Tidy my notes";
+/** The misheard goal from Brent's live run (task d608891a, 2026-10-10): "Export my Keynote deck as a PDF." */
+const MISHEARD = "Expert my keynote tech as a PDF.";
 
 describe("plan checks (OBJ-05.2)", () => {
   it("accepts a plan with dependencies", () => {
-    const check = checkPlan(planJson(sub("a"), sub("b"), sub("note", ["a", "b"])), HOME);
+    const check = checkPlan(planJson(sub("a"), sub("b"), sub("note", ["a", "b"])), HOME, GOAL);
     expect(check.ok).toBe(true);
   });
 
   it("rejects a dependency cycle and names it", () => {
-    const check = checkPlan(planJson(sub("a", ["c"]), sub("b", ["a"]), sub("c", ["b"])), HOME);
+    const check = checkPlan(planJson(sub("a", ["c"]), sub("b", ["a"]), sub("c", ["b"])), HOME, GOAL);
     expect(check).toEqual({ ok: false, error: expect.stringContaining("a -> c -> b -> a") });
   });
 
   it("rejects a subtask that depends on itself", () => {
-    expect(checkPlan(planJson(sub("a", ["a"])), HOME)).toEqual({
+    expect(checkPlan(planJson(sub("a", ["a"])), HOME, GOAL)).toEqual({
       ok: false,
       error: expect.stringContaining("depends on itself"),
     });
   });
 
   it("rejects an unknown dependency id", () => {
-    expect(checkPlan(planJson(sub("a"), sub("b", ["z"])), HOME)).toEqual({ ok: false, error: expect.stringContaining('"z"') });
+    expect(checkPlan(planJson(sub("a"), sub("b", ["z"])), HOME, GOAL)).toEqual({
+      ok: false,
+      error: expect.stringContaining('"z"'),
+    });
   });
 
   it("rejects a repeated id", () => {
-    expect(checkPlan(planJson(sub("a"), sub("a")), HOME)).toEqual({ ok: false, error: expect.stringContaining("more than one") });
+    expect(checkPlan(planJson(sub("a"), sub("a")), HOME, GOAL)).toEqual({
+      ok: false,
+      error: expect.stringContaining("more than one"),
+    });
   });
 
   it(`rejects more than ${MAX_PLAN_SUBTASKS} subtasks`, () => {
     const many = Array.from({ length: MAX_PLAN_SUBTASKS + 1 }, (_, i) => sub(`s${i}`));
-    expect(checkPlan(planJson(...many), HOME)).toEqual({
+    expect(checkPlan(planJson(...many), HOME, GOAL)).toEqual({
       ok: false,
       error: expect.stringContaining(`most is ${MAX_PLAN_SUBTASKS}`),
     });
-    expect(checkPlan(planJson(...many.slice(0, MAX_PLAN_SUBTASKS)), HOME).ok).toBe(true);
+    expect(checkPlan(planJson(...many.slice(0, MAX_PLAN_SUBTASKS)), HOME, GOAL).ok).toBe(true);
   });
 
   it("rejects replies that are not a Plan", () => {
-    expect(checkPlan(null, HOME).ok).toBe(false);
-    expect(checkPlan("here is my plan: ...", HOME).ok).toBe(false);
-    expect(checkPlan(JSON.stringify({ subtasks: [] }), HOME).ok).toBe(false);
-    expect(checkPlan(JSON.stringify({ subtasks: [{ ...sub("a"), proposedLane: "cloud" }] }), HOME).ok).toBe(false);
+    expect(checkPlan(null, HOME, GOAL).ok).toBe(false);
+    expect(checkPlan("here is my plan: ...", HOME, GOAL).ok).toBe(false);
+    expect(checkPlan(JSON.stringify({ subtasks: [] }), HOME, GOAL).ok).toBe(false);
+    expect(checkPlan(JSON.stringify({ subtasks: [{ ...sub("a"), proposedLane: "cloud" }] }), HOME, GOAL).ok).toBe(false);
   });
 
   it("rejects a path outside the user's home folder, without quoting it (Brent's run, 2026-10-10)", () => {
     const at = (instruction: string) => planJson({ ...sub("note"), instruction });
-    const made = checkPlan(at('write_new_file(path="/Users/Yumi/Documents/Yumi test", content="hello")'), HOME);
+    const made = checkPlan(at('write_new_file(path="/Users/Yumi/Documents/Yumi test", content="hello")'), HOME, GOAL);
     expect(made).toEqual({ ok: false, error: expect.stringContaining('Subtask "note" names a path outside') });
     expect(JSON.stringify(made)).not.toContain("/Users/Yumi");
-    expect(checkPlan(at("Read /etc/hosts."), HOME).ok).toBe(false);
-    expect(checkPlan(at("Read /Users/brent/../other/notes.txt."), HOME).ok).toBe(false);
-    expect(checkPlan(at("Read /Users/brenda/notes.txt."), HOME).ok).toBe(false);
+    expect(checkPlan(at("Read /etc/hosts."), HOME, GOAL).ok).toBe(false);
+    expect(checkPlan(at("Read /Users/brent/../other/notes.txt."), HOME, GOAL).ok).toBe(false);
+    expect(checkPlan(at("Read /Users/brenda/notes.txt."), HOME, GOAL).ok).toBe(false);
   });
 
   it("accepts paths inside the home folder, ~ paths, and links", () => {
     const at = (instruction: string) => planJson({ ...sub("note"), instruction });
-    expect(checkPlan(at('Write "Yumi test.txt" in /Users/brent/Documents/ saying hello.'), HOME).ok).toBe(true);
-    expect(checkPlan(at("List /Users/brent."), HOME).ok).toBe(true);
-    expect(checkPlan(at("Write ~/Documents/Yumi test.txt saying hello."), HOME).ok).toBe(true);
-    expect(checkPlan(at("Open https://example.com/a/b in Safari."), HOME).ok).toBe(true);
-    expect(checkPlan(at("Copy the notes and/or the slides."), HOME).ok).toBe(true);
+    expect(checkPlan(at('Write "Yumi test.txt" in /Users/brent/Documents/ saying hello.'), HOME, GOAL).ok).toBe(true);
+    expect(checkPlan(at("List /Users/brent."), HOME, GOAL).ok).toBe(true);
+    expect(checkPlan(at("Write ~/Documents/Yumi test.txt saying hello."), HOME, GOAL).ok).toBe(true);
+    expect(checkPlan(at("Open https://example.com/a/b in Safari."), HOME, GOAL).ok).toBe(true);
+    expect(checkPlan(at("Copy the notes and/or the slides."), HOME, GOAL).ok).toBe(true);
+  });
+
+  it("rejects a document built from the goal's words, without quoting it (task d608891a)", () => {
+    const at = (instruction: string) => planJson({ ...sub("open"), instruction });
+    const made = checkPlan(
+      at("Open the file /Users/brent/Documents/Expert my keynote tech.key in the app Keynote."),
+      HOME,
+      MISHEARD,
+    );
+    expect(made).toEqual({ ok: false, error: expect.stringContaining('Subtask "open" names a document that does not exist') });
+    expect(JSON.stringify(made)).not.toContain("Expert my keynote");
+    expect(checkPlan(at("Open ~/Desktop/Budget.numbers in Numbers."), HOME, "update the budget").ok).toBe(false);
+  });
+
+  it("accepts a document that exists, one the user named, the document open in an app, and a new PDF", () => {
+    const home = tempDir();
+    try {
+      mkdirSync(join(home.path, "Documents"));
+      writeFileSync(join(home.path, "Documents", "Q3 Report.key"), "");
+      const at = (instruction: string) => planJson({ ...sub("export"), instruction });
+      expect(checkPlan(at(`Open ${home.path}/Documents/Q3 Report.key in Keynote.`), home.path, MISHEARD).ok).toBe(true);
+      expect(checkPlan(at("Open ~/Desktop/Plan.pages in Pages."), home.path, "open Plan.pages on my desktop").ok).toBe(true);
+      expect(checkPlan(at("Export the presentation open in Keynote as a PDF."), home.path, MISHEARD).ok).toBe(true);
+      expect(checkPlan(at(`Save the PDF as ${home.path}/Documents/Deck.pdf.`), home.path, MISHEARD).ok).toBe(true);
+    } finally {
+      home.cleanup();
+    }
   });
 
   it("finds no cycle in a diamond", () => {
@@ -165,6 +201,24 @@ describe("the planner (OBJ-05.1)", () => {
     expect(result.outcome).toBe("ok");
     const retry = (server.requests[1] as unknown as ChatRequest).messages;
     expect(retry[3]!.content).toContain("outside the user's home folder");
+  });
+
+  it("sends a plan that opens a made-up document back once, and accepts the open document instead (task d608891a)", async () => {
+    const open = (instruction: string) => planJson({ ...sub("export"), instruction });
+    server.reply(
+      { kind: "content", content: open("Open the file /Users/brent/Documents/Expert my keynote tech.key in the app Keynote.") },
+      { kind: "content", content: open("Export the presentation open in Keynote as a PDF.") },
+    );
+    const result = await makePlan(MISHEARD, tools, { client, logger, home: HOME });
+    expect(result).toMatchObject({
+      outcome: "ok",
+      plan: { subtasks: [{ instruction: "Export the presentation open in Keynote as a PDF." }] },
+    });
+    const first = (server.requests[0] as unknown as ChatRequest).messages[0]!.content as string;
+    expect(first).toContain("Never make up a file name from the goal's words.");
+    expect(first).toContain('"My deck", "my presentation", "my document", or "this file" means the document already open');
+    const retry = (server.requests[1] as unknown as ChatRequest).messages;
+    expect(retry[3]!.content).toContain("names a document that does not exist and that the user did not name");
   });
 
   it("asks once to fix a broken plan, with the reason, and accepts the fixed one", async () => {

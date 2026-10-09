@@ -27,6 +27,7 @@ import { SubtaskTrail, type TrailDeps } from "../debug/trail.ts";
 import type { Logger } from "../log.ts";
 import type { ModelClient } from "../model/client.ts";
 import { checkAction } from "../safety/gate.ts";
+import { withPlainNames } from "../file-names.ts";
 import { describeGuiAction, describeNotDone, describeSkipped, type NotDone } from "../scheduler/describe.ts";
 import { buildSubtaskResult } from "../scheduler/result.ts";
 import { describeFinished } from "../scheduler/subtask-runner.ts";
@@ -368,7 +369,9 @@ class Attempt {
       if (action.kind === ACTION.finish) return this.finish(action.status);
       let outcome: ActResult;
       if (needsPassword(action, observation)) outcome = await this.ask(PASSWORD_QUESTION, observation);
-      else if (action.kind === ACTION.ask) outcome = await this.ask(action.question, observation);
+      // The user never sees a path: the worker asked for "/Users/brent/Documents/Expert my keynote tech.key"
+      // (task d608891a, 2026-10-10). Each one becomes the file's plain name.
+      else if (action.kind === ACTION.ask) outcome = await this.ask(withPlainNames(action.question, this.deps.home), observation);
       else outcome = await this.act(action, observation);
       if ("end" in outcome) return outcome.end;
       observation = outcome.next;

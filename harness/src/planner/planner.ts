@@ -55,7 +55,7 @@ export async function makePlan(
       return userError ? { outcome: "error", userError } : { outcome: "aborted" };
     }
 
-    const check = checkPlan(answer.content, deps.home);
+    const check = checkPlan(answer.content, deps.home, confirmedGoal);
     if (check.ok) {
       deps.logger.info("plan.ok", { taskId: options.taskId, reply, subtasks: check.plan.subtasks.length });
       deps.debug?.write("plan.made", { taskId: options.taskId, reply, plan: check.plan });

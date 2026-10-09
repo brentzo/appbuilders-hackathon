@@ -1,3 +1,4 @@
+import { workerSystemPrompt } from "../src/worker/prompt.ts";
 import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -490,6 +491,33 @@ describe("SPEC-05 Mac GUI control", () => {
     expect(calls[1]!.text).toContain(`The user was asked to type the password themselves and answered: "Done"`);
     expect(statuses.filter((e) => e.subtaskId === undefined).map((e) => e.status)).toEqual(["waitingForUser", "running"]);
     expect(statuses.some((e) => e.status === "paused")).toBe(false);
+  });
+
+  it("asks with a file's plain name, never its path (task d608891a)", async () => {
+    const fake = await connect(
+      staticApp(KEYNOTE, { app: "Keynote", title: "Q3 Report.key", elements: [{ role: "button", label: "Play" }] }),
+    );
+    const calls = scriptModel((text, call) =>
+      call === 1
+        ? reply({
+            kind: "ask",
+            question: `The file '${home}/Documents/Expert my keynote tech.key' was not found. Is it the one open in Keynote, or one in ${home}/Desktop?`,
+          })
+        : reply({ kind: "finish", status: "done", note: "Used the open presentation." }),
+    );
+    const { task, subtask } = guiSubtask();
+    const running = act(subtask);
+    await until(() => fake.events.some((e) => e.event === "questionAsked"));
+    const asked = fake.events.find((e) => e.event === "questionAsked")!.payload as QuestionAsked;
+    expect(asked.question).toBe(
+      "The file 'Expert my keynote tech' was not found. Is it the one open in Keynote, or one in Desktop?",
+    );
+    await fake.peer.request("answerQuestion", { taskId: task.id, subtaskId: subtask.id, answer: "The open one" });
+    expect(ended(await running).result.status).toBe("done");
+    expect(calls).toHaveLength(2);
+    expect(workerSystemPrompt("ghost")).toContain(
+      "name a file by its name only, never by its path, and never ask the user for a path",
+    );
   });
 
   it("Scenario: Accessibility permission is missing", async () => {
