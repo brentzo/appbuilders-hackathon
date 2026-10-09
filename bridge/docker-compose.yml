@@ -1,0 +1,23 @@
+services:
+  bridge:
+    build:
+      context: ..
+      dockerfile: bridge/Dockerfile
+    image: yumi-bridge:local
+    restart: unless-stopped
+    init: true
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    environment:
+      BRIDGE_HOST: 0.0.0.0
+      BRIDGE_PORT: 8787
+      BRIDGE_DATABASE_PATH: /data/bridge.sqlite
+    ports:
+      - "127.0.0.1:8787:8787"
+    volumes:
+      - ./data:/data

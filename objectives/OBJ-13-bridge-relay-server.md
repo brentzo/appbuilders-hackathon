@@ -8,7 +8,7 @@ specs: [SPEC-08]
 status: in-progress
 priority: p0
 depends-on: [OBJ-02]
-integrates-with: [OBJ-31]
+integrates-with: [OBJ-31, OBJ-33]
 tags: [objective, p0, bridge]
 ---
 
@@ -40,26 +40,27 @@ It never sees plaintext, which keeps the "local AI" claim honest.
 
 ## Tasks
 
-- [ ] **OBJ-13.1** Set up `bridge/` as a TypeScript project on Node.js LTS, using the envelope types and reference crypto from `protocol/`.
-- [ ] **OBJ-13.2** Implement the device registry in SQLite: device id, public signing key, and the pairings between two devices. Implement the pairing steps from `protocol/docs/pairing.md`: remember a `pairRequest` for 5 minutes, and record the pairing when the matching `pairAccept` passes through.
-- [ ] **OBJ-13.3** Accept WebSocket connections and authenticate each device with a signed challenge, as in `pairing.md` "Connecting". Register a new device id on first use when it is derived from its key, and refuse with the `RefusedReason` values otherwise.
-- [ ] **OBJ-13.4** Route each envelope to its `to` device if online. Only allow routing between paired devices, and answer anything else with `notPaired`.
-- [ ] **OBJ-13.5** Commands are never queued. If a command's target is offline, send the sender a `targetOffline` event at once. Hold results and events for a device that dropped off in SQLite until they expire, deliver them in order on reconnect, and delete each one after the receiver acknowledges it.
-- [ ] **OBJ-13.6** Expiry: never deliver an expired envelope. Send the sender an `expired` event for it (when the sender is online, or queued for it).
+- [x] **OBJ-13.1** Set up `bridge/` as a TypeScript project on Node.js LTS, using the envelope types and reference crypto from `protocol/`.
+- [x] **OBJ-13.2** Implement the device registry in SQLite: device id, public signing key, and the pairings between two devices. Implement the pairing steps from `protocol/docs/pairing.md`: remember a `pairRequest` for 5 minutes, and record the pairing when the matching `pairAccept` passes through. The interaction between this 5-minute window and SPEC-08's 30-second Mac response scenario is tracked in [OBJ-33](OBJ-33-pairing-response-timeout-contract.md).
+- [x] **OBJ-13.3** Accept WebSocket connections and authenticate each device with a signed challenge, as in `pairing.md` "Connecting". Register a new device id on first use when it is derived from its key, and refuse with the `RefusedReason` values otherwise.
+- [x] **OBJ-13.4** Route each envelope to its `to` device if online. Only allow routing between paired devices, and answer anything else with `notPaired`.
+- [x] **OBJ-13.5** Commands are never queued. If a command's target is offline, send the sender a `targetOffline` event at once. Hold results and events for a device that dropped off in SQLite until they expire, deliver them in order on reconnect, and delete each one after the receiver acknowledges it.
+- [x] **OBJ-13.6** Expiry: never deliver an expired envelope. Send the sender an `expired` event for it (when the sender is online, or queued for it).
 - [ ] **OBJ-13.7** Unpairing, as in `pairing.md` "Unpairing": remove the pairing at once, delete every message held between the two devices, and hold the signed `unpair` frame until the other device acks it. The current frame has no correlatable acknowledgement id; finish ACK deletion against the contract in [OBJ-31](OBJ-31-unpair-delivery-ack-contract.md).
-- [ ] **OBJ-13.8** Logging: routing fields, connection events, and errors only. Never log payloads.
-- [ ] **OBJ-13.9** Package the relay in a Docker image and Compose service that binds only `127.0.0.1:8787`, persists SQLite in a mounted `data/` folder, and restarts unless stopped. Document configuration, deploy steps, and log access in `bridge/README.md`. The VPS rollout and live check are tracked in [OBJ-32](OBJ-32-production-bridge-deployment.md).
-- [ ] **OBJ-13.10** Tests: auth success and failure, routing, cross-group routing refused, offline notice for commands, result held through a short reconnect, expiry with sender notice, revocation.
+- [x] **OBJ-13.8** Logging: routing fields, connection events, and errors only. Never log payloads.
+- [x] **OBJ-13.9** Package the relay in a Docker image and Compose service that binds only `127.0.0.1:8787`, persists SQLite in a mounted `data/` folder, and restarts unless stopped. Document configuration, deploy steps, and log access in `bridge/README.md`. The VPS rollout and live check are tracked in [OBJ-32](OBJ-32-production-bridge-deployment.md).
+- [x] **OBJ-13.10** Tests: auth success and failure, routing, cross-group routing refused, offline notice for commands, result held through a short reconnect, expiry with sender notice, revocation.
 
 ## Expectations
 
 - [ ] SPEC-08 scenarios pass at the bridge level: "VPS cannot read messages", "Message from an unknown device is dropped" (bridge refuses it; the device-side check is in client objectives), "Command to an offline device fails at once", "Result survives a short reconnect", "Expired command is not run", "Unpair a device".
-- [ ] A test client using the protocol's test vectors can authenticate, pair, send, and receive through a local relay. Production endpoint acceptance is tracked in [OBJ-30](OBJ-30-live-cross-device-bridge-acceptance.md).
-- [ ] Database and logs contain no plaintext payloads.
+- [x] A test client using the protocol's test vectors can authenticate, pair, send, and receive through a local relay. Production endpoint acceptance is tracked in [OBJ-30](OBJ-30-live-cross-device-bridge-acceptance.md).
+- [x] Database and logs contain no plaintext payloads.
 
 ## Expected outcomes
 
-- A deployed bridge on the VPS, with registry, routing, queue, expiry, and revocation.
+- A locally tested, packaged bridge with registry, routing, queue, expiry, and revocation.
+- VPS deployment and public endpoint acceptance, tracked by [OBJ-32](OBJ-32-production-bridge-deployment.md) and [OBJ-30](OBJ-30-live-cross-device-bridge-acceptance.md).
 - Deploy and operations notes in `bridge/README.md`.
 
 ## Out of scope
@@ -70,4 +71,4 @@ It never sees plaintext, which keeps the "local AI" claim honest.
 
 ## Outcome
 
-In progress. The relay is being implemented against the protocol contract. Unpair acknowledgement correlation is tracked in OBJ-31, and production rollout is tracked in OBJ-32.
+In progress. The local relay implementation, container build, and bridge-level test suite are complete. Unpair acknowledgement correlation is tracked in OBJ-31, the pairing response timeout mismatch is tracked in OBJ-33, and VPS deployment acceptance is tracked in OBJ-32. The relay has not been deployed to the VPS.
