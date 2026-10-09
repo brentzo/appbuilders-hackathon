@@ -174,7 +174,7 @@ final class HarnessLink {
         case .workerThought(let thought):
             overlay.receive(thought)
         default:
-            // questionAsked, interruptedTaskFound and waitingForWindow are consumed in later objectives.
+            // questionAsked, interruptedTaskFound, waitingForWindow and modelStateChanged (OBJ-46) are consumed in later objectives.
             log.info("Not handled yet: \(event.name, privacy: .public)")
         }
     }
