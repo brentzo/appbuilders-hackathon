@@ -1,0 +1,18 @@
+{
+  "images": [
+    {
+      "filename": "cat-sky-paused@1x.png",
+      "idiom": "mac",
+      "scale": "1x"
+    },
+    {
+      "filename": "cat-sky-paused@2x.png",
+      "idiom": "mac",
+      "scale": "2x"
+    }
+  ],
+  "info": {
+    "author": "xcode",
+    "version": 1
+  }
+}
