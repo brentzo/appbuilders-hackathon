@@ -131,9 +131,11 @@ nonisolated enum NativeRecognizer {
         if #available(macOS 26, *) { await AnalyzerRecognitionSession.prepare() }
     }
 
+    /// For goals and answers: expecting the demo's words (`GoalVocabulary`), so "export my Keynote
+    /// deck" is not heard as "expert my keynote tech".
     static func makeSession() throws -> RecognitionSession {
-        if #available(macOS 26, *) { return try AnalyzerRecognitionSession() }
-        return try NativeRecognitionSession()
+        if #available(macOS 26, *) { return try AnalyzerRecognitionSession(contextualStrings: GoalVocabulary.contextualStrings) }
+        return try NativeRecognitionSession(contextualStrings: GoalVocabulary.contextualStrings)
     }
 
     /// For spotting "Hey Yumi" (OBJ-58): the quickest guesses, expecting the word "Yumi".

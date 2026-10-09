@@ -48,7 +48,8 @@ actor WhisperModel {
         }
     }
 
-    /// Transcribes 16 kHz mono samples. The language is detected, so Taglish stays as spoken.
+    /// Transcribes 16 kHz mono samples. The language is detected, so Taglish stays as spoken. The
+    /// demo's words go in as Whisper's prompt (`GoalVocabulary`), so it spells them the way goals use them.
     func transcribe(_ samples: [Float]) async throws -> String {
         guard let whisper else { throw RecognitionFailure.modelNotReady }
         let options = DecodingOptions(
@@ -56,10 +57,20 @@ actor WhisperModel {
             task: .transcribe,
             detectLanguage: true,
             skipSpecialTokens: true,
-            withoutTimestamps: true
+            withoutTimestamps: true,
+            promptTokens: whisper.tokenizer.map { Self.promptTokens(GoalVocabulary.whisperPrompt, tokenizer: $0) }
         )
         let results = try await whisper.transcribe(audioArray: samples, decodeOptions: options)
         return results.map(\.text).joined(separator: " ")
+    }
+}
+
+extension WhisperModel {
+    /// The prompt's text tokens, with a leading space as Whisper expects for earlier text. Special
+    /// tokens are dropped; WhisperKit puts the "previous text" marker in front itself.
+    static func promptTokens(_ prompt: String, tokenizer: WhisperTokenizer) -> [Int] {
+        tokenizer.encode(text: " " + prompt.trimmingCharacters(in: .whitespaces))
+            .filter { $0 < tokenizer.specialTokens.specialTokenBegin }
     }
 }
 
