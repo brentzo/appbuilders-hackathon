@@ -8,6 +8,7 @@ Owner: Brent.
 
 Status: the skeleton is built ([OBJ-03](../objectives/OBJ-03-harness-skeleton.md)): the forked agent loop, the local model client, the tool registry, output validation with one retry, the local RPC server with `hello`, `ping`, and events, and the log.
 The task store is built ([OBJ-04](../objectives/OBJ-04-task-store.md)): tasks, subtasks, steps, screenshots, and the action log in SQLite, kept forever, with the history methods and the `taskStatusChanged` event.
+The planner, scheduler, and task summary are built ([OBJ-05](../objectives/OBJ-05-planner-and-scheduler.md)), with every subtask running as a helper on test-only file tools until the lane router and the typed file tools land.
 
 ## Responsibilities
 
@@ -52,6 +53,8 @@ The task store is built ([OBJ-04](../objectives/OBJ-04-task-store.md)): tasks, s
 | `src/router/` | The lane router (`router.ts`), the app capability probe and cache (`capability.ts`), and each lane's actions (`lanes.ts`). |
 | `src/schema/bundle.ts` | Turns a protocol type into one self-contained JSON Schema. |
 | `src/harness.ts` | Opens the task store, starts the RPC server with the history methods, and sends status changes as events. |
+| `src/planner/` | The planner prompt (`prompt.ts`), the plan checks (`check.ts`), `makePlan` with its one retry (`planner.ts`), and the spoken summary (`summary.ts`). |
+| `src/scheduler/` | `runTask` (`run-task.ts`), the scheduler (`scheduler.ts`), one subtask's step loop (`subtask-runner.ts`), the worker input (`worker-input.ts`), the structured result (`result.ts`), and the route and lane seams (`lanes.ts`). |
 | `src/store/task-store.ts` | The task store: the only module with SQL. Tasks, subtasks, steps, screenshots, the action log, history queries, window locks, and app capabilities. |
 | `src/store/migrations.ts` | The database schema as ordered migrations, and the triggers that refuse deletes. |
 | `src/store/transitions.ts` | The allowed task and subtask status changes. |
@@ -89,6 +92,7 @@ Environment variables, all optional:
 | `YUMI_MODEL_TIMEOUT_MS` | `120000` | Give up on one model request after this long. |
 | `YUMI_MODEL_MAX_TOKENS` | `1024` | Most tokens per reply. |
 | `YUMI_MODEL_STRUCTURED_OUTPUT` | on | `0` stops sending `response_format`. Replies are validated either way. |
+| `YUMI_MODEL_PARALLEL_SLOTS` | `3` | How many subtasks run at the same time, each as its own request. Start the model server with `--max-num-seqs` set to the same number. |
 
 Sampling uses the Qwen3.5 model card's instruct settings (temperature 0.7, top_p 0.8, top_k 20), with thinking off.
 
@@ -239,6 +243,27 @@ Only `allowed` may run without the user; asking and the Trash are [OBJ-38](../ob
 - The file tools never replace a file: a taken name gets a number ("Report.pdf" becomes "Report 2.pdf").
 - There is no shell, AppleScript, or edit tool, and a test fails if the harness ever imports `child_process` or mentions `osascript`.
 
+## Planner and scheduler
+
+`runTask(taskId, deps)` in `src/scheduler/run-task.ts` carries a confirmed task from `planning` to `done` ([SPEC-02](../specs/02-task-lifecycle.md) r1, r5, r7, r9).
+
+1. **Plan.** The planner sees the confirmed goal and the tool list, never the screen, and returns a protocol `Plan`.
+   The harness rejects schema errors, repeated or unknown ids, dependency cycles, and more than 12 subtasks, and asks the planner once to fix a broken plan.
+   A second broken plan fails the task with the `unexpected` error before anything runs.
+2. **Save.** `TaskStore.savePlan` adds every subtask and moves the task to `running` in one transaction.
+3. **Schedule.** A subtask is `ready` when everything it depends on is `done`.
+   Ready subtasks run at the same time, up to `YUMI_MODEL_PARALLEL_SLOTS`, each routed through a `route(subtask)` function first.
+   If one fails, the others are stopped and the task fails; there is no replanning yet.
+4. **Work.** Each step's worker input is exactly the confirmed goal, the subtask instruction, the subtask's last 5 finished steps, a fresh observation, and the lane's tools.
+   A helper has no window, so its observation is empty.
+   Workers never see each other's steps, so the planner is told to pass work between subtasks through files named in both instructions.
+5. **Result.** Each subtask stores a `SubtaskResult`: done or stuck from the worker's `finish`, the files from its successful steps, and a note of at most 200 characters.
+6. **Summary.** The model writes one or two sentences from the goal and the results, retried once.
+   The task is set to `done` with the summary, and the summary is sent as a `speak` event.
+
+Stand-ins: `routeEverythingAsHelper` in `src/scheduler/lanes.ts` until [OBJ-07](../objectives/OBJ-07-lane-router-core.md), and the stand-in file tools until [OBJ-37](../objectives/OBJ-37-permission-gate-and-file-tools.md).
+Nothing calls `runTask` in the running harness yet: the confirmation flow that moves a task to `planning` will.
+
 ## Errors and the log
 
 - The log is `harness.log` in the support folder, one JSON object per line: model errors with the server's detail and status, timing, and token counts.
@@ -271,7 +296,7 @@ Only `allowed` may run without the user; asking and the Trash are [OBJ-38](../ob
 |---|---|---|---|
 | [OBJ-03](../objectives/OBJ-03-harness-skeleton.md) | Harness skeleton and local model client | Brent | done |
 | [OBJ-04](../objectives/OBJ-04-task-store.md) | Task store and history | Brent | done |
-| [OBJ-05](../objectives/OBJ-05-planner-and-scheduler.md) | Planner, scheduler, and task summary | Brent | in-progress |
+| [OBJ-05](../objectives/OBJ-05-planner-and-scheduler.md) | Planner, scheduler, and task summary | Brent | done |
 | [OBJ-06](../objectives/OBJ-06-resume-and-limits.md) | Resume and limits | Brent | todo |
 | [OBJ-07](../objectives/OBJ-07-lane-router-core.md) | Lane router core | Brent | in-progress |
 | [OBJ-08](../objectives/OBJ-08-locks-busy-windows-cap.md) | Window locks, busy windows, and cursor cap | Brent | todo |
