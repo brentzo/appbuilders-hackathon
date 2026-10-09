@@ -2521,16 +2521,20 @@ public struct UserError: Codable, Equatable, Sendable {
     }
 }
 
-/// A subtask has waited 2 minutes for a busy window (SPEC-03 r13). The spoken copy lives in the app.
+/// A subtask has waited 2 minutes for a busy window or for a free cursor (SPEC-03 r13). The spoken copy lives in the app.
 public struct WaitingForWindow: Codable, Equatable, Sendable {
     public var taskId: String
     public var subtaskId: String
+    /// The app the subtask waits to work in.
     public var appName: String
+    /// The waiting subtask's title (Subtask.title), so the app can say what Yumi will do, for example "Add the chart". The harness always sends it; absent from older harnesses.
+    public var title: String?
 
-    public init(taskId: String, subtaskId: String, appName: String) {
+    public init(taskId: String, subtaskId: String, appName: String, title: String? = nil) {
         self.taskId = taskId
         self.subtaskId = subtaskId
         self.appName = appName
+        self.title = title
     }
 }
 

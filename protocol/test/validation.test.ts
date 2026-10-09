@@ -430,3 +430,18 @@ describe("Subtask and routing (SPEC-03 r17)", () => {
     expect(validate("RouteDecided", decided).errors).toEqual([]);
   });
 });
+
+describe("waitingForWindow", () => {
+  const notice = { taskId: "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8", subtaskId: "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e", appName: "Keynote" };
+
+  it("carries the waiting subtask's title, and leaving it out stays valid for older harnesses", () => {
+    expect(validate("WaitingForWindow", notice).errors).toEqual([]);
+    expect(validate("WaitingForWindow", { ...notice, title: "Add the chart" }).errors).toEqual([]);
+  });
+
+  it("holds a title only as long as a subtask's", () => {
+    expect(validate("WaitingForWindow", { ...notice, title: "" }).valid).toBe(false);
+    expect(validate("WaitingForWindow", { ...notice, title: "x".repeat(60) }).errors).toEqual([]);
+    expect(validate("WaitingForWindow", { ...notice, title: "x".repeat(61) }).valid).toBe(false);
+  });
+});

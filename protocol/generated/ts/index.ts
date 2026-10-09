@@ -1280,11 +1280,14 @@ export interface UserError {
 /** A UUID in its canonical text form. */
 export type Uuid = string;
 
-/** A subtask has waited 2 minutes for a busy window (SPEC-03 r13). The spoken copy lives in the app. */
+/** A subtask has waited 2 minutes for a busy window or for a free cursor (SPEC-03 r13). The spoken copy lives in the app. */
 export interface WaitingForWindow {
   taskId: Uuid;
   subtaskId: Uuid;
+  /** The app the subtask waits to work in. */
   appName: string;
+  /** The waiting subtask's title (Subtask.title), so the app can say what Yumi will do, for example "Add the chart". The harness always sends it; absent from older harnesses. */
+  title?: string;
 }
 
 export type Weekday = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";

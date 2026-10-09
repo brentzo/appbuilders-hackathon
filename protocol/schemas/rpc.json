@@ -477,14 +477,20 @@
       "properties": { "approvalId": { "$ref": "common.json#/$defs/Uuid" } }
     },
     "WaitingForWindow": {
-      "description": "A subtask has waited 2 minutes for a busy window (SPEC-03 r13). The spoken copy lives in the app.",
+      "description": "A subtask has waited 2 minutes for a busy window or for a free cursor (SPEC-03 r13). The spoken copy lives in the app.",
       "type": "object",
       "additionalProperties": false,
       "required": ["taskId", "subtaskId", "appName"],
       "properties": {
         "taskId": { "$ref": "common.json#/$defs/Uuid" },
         "subtaskId": { "$ref": "common.json#/$defs/Uuid" },
-        "appName": { "type": "string", "minLength": 1 }
+        "appName": { "description": "The app the subtask waits to work in.", "type": "string", "minLength": 1 },
+        "title": {
+          "description": "The waiting subtask's title (Subtask.title), so the app can say what Yumi will do, for example \"Add the chart\". The harness always sends it; absent from older harnesses.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        }
       }
     },
     "TilingSuggested": {

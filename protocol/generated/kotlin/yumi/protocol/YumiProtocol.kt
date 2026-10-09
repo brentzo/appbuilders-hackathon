@@ -1519,12 +1519,15 @@ data class UserError(
     val finishedSoFar: String? = null,
 )
 
-/** A subtask has waited 2 minutes for a busy window (SPEC-03 r13). The spoken copy lives in the app. */
+/** A subtask has waited 2 minutes for a busy window or for a free cursor (SPEC-03 r13). The spoken copy lives in the app. */
 @Serializable
 data class WaitingForWindow(
     val taskId: String,
     val subtaskId: String,
+    /** The app the subtask waits to work in. */
     val appName: String,
+    /** The waiting subtask's title (Subtask.title), so the app can say what Yumi will do, for example "Add the chart". The harness always sends it; absent from older harnesses. */
+    val title: String? = null,
 )
 
 @Serializable
