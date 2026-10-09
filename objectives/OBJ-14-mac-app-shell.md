@@ -77,41 +77,43 @@ Permission onboarding is the first thing users see, so it must be clear and frie
   - `mac/Yumi/Errors/`: the error copy for every protocol `ErrorKind`, the error presenter, and the error window.
   - `mac/README.md`: build, run, test, signing, harness, and UI check instructions.
 - **Commits:**
-  - `d346251 build(mac): add the Yumi menu bar app Xcode project`
-  - `076564a feat(mac): add the settings window with local storage`
-  - `7010f1d feat(mac): show Yumi's status at the top of the menu`
-  - `edf7dc8 feat(mac): add permission onboarding for microphone, accessibility and screen recording`
-  - `ec75ddc docs(mac): add build, run, test and UI check instructions`
-  - `509e1a0 fix(mac): poll permissions only while onboarding is open`
-  - `3828bb5 docs(mac): mark UserErrorKind as temporary until the OBJ-01 ErrorKind exists`
-  - `a0fcce7 docs(mac): explain Debug vs Release signing and add the Release build command`
-  - `d0a1bad fix(mac): snapshot windows as the key, active window`
-  - `0f89c23 docs(objectives): start OBJ-14`
-  - `d4b2443 build(mac): compile the generated protocol types into a YumiProtocol framework`
-  - `1e261af fix(mac): link YumiProtocol statically so Release builds launch`
-  - `30f2c89 feat(mac): start and supervise the mock harness`
-  - `cc7179f feat(mac): connect to the harness over JSON-RPC with reconnect`
-  - `6ff662f feat(mac): show harness errors through one SPEC-11 error presenter`
-  - `67be409 fix(mac): refresh permissions when the menu opens`
-  - `01b953f docs(mac): document the harness link, protocol types, and mock launch options`
-  - `2c3d81e docs(objectives): tick OBJ-14.1, 14.5 and 14.6`
-  - `497a03b fix(mac): let -YumiSendSampleGoal work in Release builds`
-  - `9cce36e build(mac): sign with each person's team through Signing.xcconfig`
-  - `7e9f03a fix(mac): read mock options from launch arguments only`
-  - `a3924d3 fix(mac): deliver socket lines in order and ignore a replaced socket`
-  - `7bcb2bd fix(mac): time-limit the node lookup and try the interactive shell`
-  - `b76c1da test(mac): fail the harness tests loudly when the mock cannot run`
-  - `2d4d929 docs(mac): name the right file in the repo root comment`
-  - `23258ac docs(objectives): tick OBJ-14.1 now that signing is set up`
-  - `67655d7 docs(objectives): move the real-harness switch from OBJ-14 to OBJ-27`
-  - `ffb94f7 docs(mac): point the mock-harness notes at OBJ-27.8`
-  - `938f387 fix(mac): make the socket current before it starts reading`
-  - `972aec5 fix(mac): set up socket reading on the socket's own queue`
-  - `d866a5b fix(mac): stop the whole process group when the node lookup times out`
-  - `ed482c1 test(mac): check hello sends the generated protocol version instead of pinning it`
-  - `f1d8b4b test(mac): stop the first mock even when the reconnect test fails early`
-  - `0ec93da test(mac): keep tests out of the app's real preferences`
-  - and the commit that finishes this objective.
+  - `cdd4fae build(mac): add the Yumi menu bar app Xcode project`
+  - `79df9e3 feat(mac): add the settings window with local storage`
+  - `2bed92a feat(mac): show Yumi's status at the top of the menu`
+  - `9ad0e5c feat(mac): add permission onboarding for microphone, accessibility and screen recording`
+  - `f8d951f docs(mac): add build, run, test and UI check instructions`
+  - `08b1101 fix(mac): poll permissions only while onboarding is open`
+  - `88006c9 docs(mac): mark UserErrorKind as temporary until the OBJ-01 ErrorKind exists`
+  - `653aaa9 docs(mac): explain Debug vs Release signing and add the Release build command`
+  - `2308b5d fix(mac): snapshot windows as the key, active window`
+  - `85039c2 docs(objectives): start OBJ-14`
+  - `87f7c87 build(mac): compile the generated protocol types into a YumiProtocol framework`
+  - `88b2e7e fix(mac): link YumiProtocol statically so Release builds launch`
+  - `5f48992 feat(mac): start and supervise the mock harness`
+  - `524215f feat(mac): connect to the harness over JSON-RPC with reconnect`
+  - `e81bd89 feat(mac): show harness errors through one SPEC-11 error presenter`
+  - `7f92cbb fix(mac): refresh permissions when the menu opens`
+  - `1698830 docs(mac): document the harness link, protocol types, and mock launch options`
+  - `588f1a6 docs(objectives): tick OBJ-14.1, 14.5 and 14.6`
+  - `63c4e71 fix(mac): let -YumiSendSampleGoal work in Release builds`
+  - `13cd877 build(mac): sign with each person's team through Signing.xcconfig`
+  - `aebfa8b fix(mac): read mock options from launch arguments only`
+  - `7ed9432 fix(mac): deliver socket lines in order and ignore a replaced socket`
+  - `b5bbca1 fix(mac): time-limit the node lookup and try the interactive shell`
+  - `57127ff test(mac): fail the harness tests loudly when the mock cannot run`
+  - `f41c417 docs(mac): name the right file in the repo root comment`
+  - `304567c docs(objectives): tick OBJ-14.1 now that signing is set up`
+  - `489eee4 docs(objectives): move the real-harness switch from OBJ-14 to OBJ-27`
+  - `5ce1eeb docs(mac): point the mock-harness notes at OBJ-27.8`
+  - `bd48044 fix(mac): make the socket current before it starts reading`
+  - `da4200f fix(mac): set up socket reading on the socket's own queue`
+  - `48b7220 fix(mac): stop the whole process group when the node lookup times out`
+  - `d69e51e test(mac): check hello sends the generated protocol version instead of pinning it`
+  - `54e7028 test(mac): stop the first mock even when the reconnect test fails early`
+  - `2968f04 test(mac): keep tests out of the app's real preferences`
+  - `16601f5 docs(objectives): finish OBJ-14`
+  - `422b26a feat(mac): follow the new SPEC-11 permission, pairing and Unexpected copy`
+  - and the commit that updates this Outcome.
 - **Expectations:**
   - "Missing screen permission": verified in code and tests, not by hand.
     `ErrorPresenterTests.screenPermissionScenario` checks the exact SPEC-11 copy and that "Open settings" maps to the Screen Recording permission.
@@ -126,9 +128,8 @@ Permission onboarding is the first thing users see, so it must be clear and frie
     `HarnessClientTests.reconnectsAfterTheHarnessIsKilled` covers the reconnect.
   - "The app calls the harness `ping` and receives events": verified live against the mock while the protocol was at version 1.
     `hello` and `ping` answered, the app pinged every 5 seconds, all 12 `keynote-export` events and all 8 `windows-and-bridge` events arrived and decoded, and `HarnessClientTests` passed.
-    On the final tree, `HelloVersionTests` checks connect, `hello` with the generated `PROTOCOL_VERSION`, and `ping` against a fake harness in the test.
-    The mock itself refuses every version but 1 (`protocol/mocks/mock-harness.ts`), so after the protocol moved to version 2 this cannot be re-run against the mock until that is fixed.
-    See "Not verified".
+    Re-verified at protocol version 2 against the mock, once it accepted the real `PROTOCOL_VERSION`: `HarnessClientTests.helloPingAndEvents` connects, calls `hello` and `ping`, and receives all 8 `windows-and-bridge` events.
+    `HelloVersionTests` checks that `hello` sends the generated `PROTOCOL_VERSION` and that a harness answering another version is refused.
   - "No raw error text from the harness or macOS reaches the user": verified by tests and live.
     `ErrorPresenterTests` and `HarnessClientTests.failedMethodCarriesAUserError` check that the mock's error message never reaches the presented copy, and that unknown kinds and unreadable errors show the "Unexpected" copy.
     Live in round 2, a forced `submitGoal` failure showed the "Stuck on screen" copy, and "Mock failure for submitGoal" appeared only in the log.
@@ -137,10 +138,7 @@ Permission onboarding is the first thing users see, so it must be clear and frie
   - Patrick's hands-on checks: the menu itself in light and dark mode; that each "Open settings" button opens the right System Settings pane on macOS 26 (run `tccutil reset All <bundle identifier>`, launch Yumi, click each button); scaled display modes and a non-Retina external display (System Settings > Displays, then reopen the onboarding and settings windows); and recording a push-to-talk shortcut by hand.
   - The real harness: everything above ran against the mock.
     OBJ-27.8 switches to the real harness when OBJ-03 is done and re-checks these expectations.
-  - "The app calls `ping` and receives events" against the mock at protocol version 2: blocked until the mock harness accepts version 2.
-    Until then the three `HarnessClientTests` fail with "Protocol version 2 does not match 1" from the mock.
-    Re-run `xcodebuild -project Yumi.xcodeproj -scheme Yumi -derivedDataPath build test` in `mac/` once it is fixed.
-  - Error buttons whose feature is not built or not decided are shown disabled: "Try again", "Stop", "Keep going", "Type instead", "Show what I did", "I'll show you", "Skip this step", "Run it now", "Run it when it's back", "Work on this device only", "Pair now", and "Allow".
+  - Error buttons whose feature is not built or not decided are shown disabled: "Try again", "Stop", "Keep going", "Type instead", "Show what I did", "I'll show you", "Skip this step", "Run it now", "Run it when it's back", "Work on this device only", "Pair now", "Scan again", and "Allow".
     Esc and the close button dismiss the window.
 - **Decisions and deviations:**
   - The generated types compile into a separate `YumiProtocol` static library, force-loaded into the app.
@@ -158,6 +156,8 @@ Permission onboarding is the first thing users see, so it must be clear and frie
   - Settings are stored locally and handed to `PendingHarnessSettingsSink`, which only logs, because the protocol has no settings method.
   - Harness-to-app methods (`executeAction` and the rest) answer "method not found" until OBJ-27 serves them.
   - "Cancel" in an error window calls `cancelTask` when the error has a task.
+  - An "Unexpected" error without a last action uses SPEC-11's nothing-done-yet copy: "Something went wrong and I stopped to be safe." with Try again and Stop.
+  - An Android permission error without a permission name shows the "Unexpected" copy, so a raw `{permission}` placeholder never reaches the user.
 - **Open questions:**
   - Model readiness (Jepoy and Brent): the proposal is option A, a `modelStateChanged` event (`loading`, `ready`, `failed`) plus the same state in `HelloResult`, so a reconnecting app knows it right away.
     Who starts the model server, and how, is also undecided.
@@ -167,8 +167,6 @@ Permission onboarding is the first thing users see, so it must be clear and frie
     - The wake word default (on) and the push-to-talk default (Option-Space).
     - The bundle identifier prefix: `ph.appbuilders.yumi` (placeholder) or `co.studiokova.yumi` from Brent's example in "Signing".
     - What "Stop" does in an error window: pause, as SPEC-06 says for the menu, or cancel.
-    - The "Unexpected" copy when the error has no last action.
-      Today only the first sentence shows: "Something went wrong and I stopped to be safe."
     - Copy for a harness that will not start or keeps refusing to connect.
       Today the status line stays "Yumi is getting ready" and the details go to the log.
   - The speech recognition usage description for Info.plist lands with OBJ-15, where speech recognition is first used.
