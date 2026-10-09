@@ -2,7 +2,8 @@
 // harness's own task store, gate, and step loop. Prints one JSON line per run: status, steps, attempts, seconds, the
 // files it reported, and each step's action kind and outcome. Screen text stays in the task store and the log.
 //
-// Run: npm run gui:run -- --app Keynote --instruction "In Keynote, export ..." [--goal "..."] [--runs 5]
+// Run: npm run gui:run -- --app Keynote --instruction "In Keynote, export ..." [--goal "..."] [--runs 5] [--first 41]
+// "{run}" in the instruction becomes the run's number, from --first on, so each run can name its own file.
 // The lane router picks the lane, as in a real task.
 // Start the model server first (README, "The local model server"), then this script, then the Mac app, which
 // connects to harness.sock in YUMI_SUPPORT_DIR (default ~/Library/Application Support/Yumi). The script refuses to
@@ -21,6 +22,7 @@ const { values } = parseArgs({
     instruction: { type: "string" },
     goal: { type: "string" },
     runs: { type: "string", default: "1" },
+    first: { type: "string", default: "1" },
   },
 });
 if (!values.app || !values.instruction) {
@@ -49,14 +51,16 @@ for (let waited = 0; harness.server.readyConnections === 0; waited += 250) {
   await new Promise((resolve) => setTimeout(resolve, 250));
 }
 
-const goal = values.goal ?? values.instruction;
-for (let run = 1; run <= Number(values.runs); run++) {
+const first = Number(values.first);
+for (let run = first; run < first + Number(values.runs); run++) {
+  const instruction = values.instruction.replaceAll("{run}", String(run));
+  const goal = values.goal ?? instruction;
   const task = harness.store.createTask({ originDeviceId: "mac", goal });
   harness.store.setTaskStatus(task.id, "planning", { confirmedGoal: goal });
   const { subtasks } = harness.store.savePlan(task.id, [
     {
-      title: values.instruction.slice(0, 60),
-      instruction: values.instruction,
+      title: instruction.slice(0, 60),
+      instruction,
       proposedLane: "ghost",
       targetApp: { name: values.app },
       status: "ready",

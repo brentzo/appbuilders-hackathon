@@ -93,7 +93,7 @@ Run from `harness/` after `npm install` here and in `protocol/`.
 | `npm run format` / `npm run format:check` | Prettier. Markdown is not formatted. |
 | `npm run verify` | Typecheck, lint, format check, and tests. Run it before every commit that touches `harness/`. |
 | `npm run model:check` | Sends the protocol's example step to the real model server and prints the validated action. See below. |
-| `npm run gui:run -- --app Keynote --instruction "..." --runs 5` | Runs a GUI subtask on the real Mac app and model server. Start the model server, then this, then the Mac app (see "gui_act"). |
+| `npm run gui:run -- --app Keynote --instruction "..." --runs 5 --first 41` | Runs a GUI subtask on the real Mac app and model server. `{run}` in the instruction becomes the run number, counting from `--first`. Start the model server, then this, then the Mac app (see "gui_act"). |
 
 ## Configuration
 
