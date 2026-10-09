@@ -57,7 +57,8 @@ export class BridgeClient {
     this.db.exec(`CREATE TABLE IF NOT EXISTS peers (device_id TEXT PRIMARY KEY, name TEXT NOT NULL, platform TEXT NOT NULL, signing_key TEXT NOT NULL, kx_key TEXT NOT NULL, paired_at TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS processed (message_id TEXT PRIMARY KEY, result TEXT NOT NULL, created_at TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS outbox (message_id TEXT PRIMARY KEY, frame TEXT NOT NULL, expires_at TEXT NOT NULL);
-      CREATE TABLE IF NOT EXISTS message_tasks (message_id TEXT PRIMARY KEY, task_id TEXT NOT NULL);`);
+      CREATE TABLE IF NOT EXISTS message_tasks (message_id TEXT PRIMARY KEY, task_id TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS pending_unpairs (device_id TEXT PRIMARY KEY, frame TEXT NOT NULL);`);
     this.db.prepare("DELETE FROM processed WHERE julianday(created_at) < julianday('now', '-1 day')").run();
     this.rpc = new RpcPeer({ role: "harness", socket: options.rpcSocket, handlers: {
       startPairing: (async () => this.startPairing()) as Handler,
@@ -94,25 +95,28 @@ export class BridgeClient {
   }
 
   listPairedDevices(): { devices: PairedDevice[] } {
-    const devices = this.db.prepare("SELECT device_id AS deviceId, name, paired_at AS pairedAt FROM peers ORDER BY paired_at").all() as PairedDevice[];
+    const devices = this.db.prepare(`SELECT p.device_id AS deviceId, p.name, p.paired_at AS pairedAt FROM peers p
+      WHERE NOT EXISTS (SELECT 1 FROM pending_unpairs u WHERE u.device_id = p.device_id) ORDER BY p.paired_at`).all() as PairedDevice[];
     return { devices };
   }
 
   async unpair(deviceId: string): Promise<Record<string, never>> {
     const peer = this.peer(deviceId);
     if (!peer || !this.keys) throw new RpcFailure({ kind: "unpairedDevice", device: deviceId });
-    if (this.state !== "connected" || this.socket?.readyState !== WebSocket.OPEN) throw new RpcFailure({ kind: "bridgeDown" });
+    if (this.db.prepare("SELECT 1 FROM pending_unpairs WHERE device_id = ?").get(deviceId)) return {};
     const at = new Date().toISOString();
     const frame: UnpairFrame = { frame: "unpair", from: this.keys.deviceId, to: deviceId, at,
       signature: toBase64(sign(unpairSigningBytes({ from: this.keys.deviceId, to: deviceId, at }), this.keys.signing.secretKey)) };
-    if (!this.send(frame)) throw new Error("Unpair frame could not be sent");
-    this.db.prepare("DELETE FROM peers WHERE device_id = ?").run(deviceId);
+    this.db.prepare("INSERT INTO pending_unpairs VALUES (?, ?)").run(deviceId, JSON.stringify(frame));
+    this.send(frame);
     return {};
   }
 
   async sendMessage(deviceId: string, type: "command" | "result" | "event", payload: unknown, replyTo?: string, taskId?: string): Promise<string> {
     const peer = this.peer(deviceId);
-    if (!peer || !this.keys) throw new Error("Unknown paired device");
+    if (!peer || !this.keys || this.db.prepare("SELECT 1 FROM pending_unpairs WHERE device_id = ?").get(deviceId)) {
+      throw new RpcFailure({ kind: "unpairedDevice", device: deviceId });
+    }
     if (taskId !== undefined && !validate("Uuid", taskId).valid) throw new TypeError("taskId must be a UUID");
     const envelope = sealEnvelope({ sender: this.keys, recipient: { deviceId, signingPublicKey: fromBase64(peer.signing_key), kxPublicKey: fromBase64(peer.kx_key) },
       type, expiresAt: expiresAt(type), payload, ...(replyTo ? { replyTo } : {}) });
@@ -157,6 +161,7 @@ export class BridgeClient {
       this.offlineErrorReported = false;
       this.notifyState("connected");
       this.resendOutbox();
+      this.resendPendingUnpairs();
     } else if (frame.frame === "refused") {
       this.rpc.notify("userError", { kind: "bridgeDown" });
       this.socket?.close();
@@ -200,6 +205,7 @@ export class BridgeClient {
     const at = new Date().toISOString();
     this.db.prepare("INSERT OR REPLACE INTO peers VALUES (?, ?, ?, ?, ?, ?)").run(frame.from, request.deviceName, request.platform,
       request.signingPublicKey, request.kxPublicKey, at);
+    this.db.prepare("DELETE FROM pending_unpairs WHERE device_id = ?").run(frame.from);
     const accept = { signature: toBase64(sign(pairAcceptSigningBytes({ from: this.keys.deviceId, to: frame.from,
       signingPublicKey: fromBase64(request.signingPublicKey), kxPublicKey: fromBase64(request.kxPublicKey) }), this.keys.signing.secretKey)) };
     this.send({ frame: "pairAccept", from: this.keys.deviceId, to: frame.from, accept });
@@ -210,6 +216,7 @@ export class BridgeClient {
     if (!peer || !this.keys || Date.parse(frame.at) <= Date.parse(peer.pairedAt) ||
       !verify(fromBase64(frame.signature), unpairSigningBytes(frame), fromBase64(peer.signing_key))) return;
     this.db.prepare("DELETE FROM peers WHERE device_id = ?").run(frame.from);
+    this.db.prepare("DELETE FROM pending_unpairs WHERE device_id = ?").run(frame.from);
     // The current schema has no message id on UnpairFrame, so a correlatable ACK cannot be formed.
     this.options.onLog?.("unpair-ack-contract-pending");
   }
@@ -234,6 +241,10 @@ export class BridgeClient {
     if (!this.keys) return;
     const peer = this.peer(envelope.from);
     if (!peer) { this.options.onLog?.("dropped-unpaired-envelope"); return; }
+    if (this.db.prepare("SELECT 1 FROM pending_unpairs WHERE device_id = ?").get(envelope.from)) {
+      this.options.onLog?.("dropped-unpaired-envelope");
+      return;
+    }
     const sender = { deviceId: envelope.from, signingPublicKey: fromBase64(peer.signing_key), kxPublicKey: fromBase64(peer.kx_key) };
     const opened = openEnvelope(envelope, this.keys, sender);
     if (!opened.ok) {
@@ -247,19 +258,23 @@ export class BridgeClient {
       return;
     }
     const seen = this.db.prepare("SELECT result FROM processed WHERE message_id = ?").get(envelope.id) as { result: string } | undefined;
-    if (seen) { if (seen.result) this.send(JSON.parse(seen.result) as unknown); this.send({ frame: "ack", messageId: envelope.id }); return; }
+    if (seen) {
+      if (seen.result) this.send(JSON.parse(seen.result) as unknown);
+      else this.options.onLog?.("message-interrupted-before-ack");
+      this.send({ frame: "ack", messageId: envelope.id });
+      return;
+    }
     if (envelope.type === "event" || envelope.type === "result") {
       this.db.prepare("INSERT INTO processed VALUES (?, ?, ?)").run(envelope.id, "", new Date().toISOString());
-      this.send({ frame: "ack", messageId: envelope.id });
       try { await this.options.onMessage?.(opened.payload, { deviceId: peer.deviceId, name: peer.name, pairedAt: peer.pairedAt }); }
       catch { this.options.onLog?.("message-handler-failed"); }
+      this.send({ frame: "ack", messageId: envelope.id });
       return;
     }
     let resultFrame: BridgeFrame | undefined;
     const fallback = { frame: "envelope", envelope: sealEnvelope({ sender: this.keys, recipient: sender, type: "result",
       expiresAt: expiresAt("result"), payload: { ok: false }, replyTo: envelope.id }) } satisfies BridgeFrame;
     this.db.prepare("INSERT INTO processed VALUES (?, ?, ?)").run(envelope.id, JSON.stringify(fallback), new Date().toISOString());
-    this.send({ frame: "ack", messageId: envelope.id });
     let output: unknown;
     try { output = await this.options.onMessage?.(opened.payload, { deviceId: peer.deviceId, name: peer.name, pairedAt: peer.pairedAt }); }
     catch { output = { ok: false }; this.options.onLog?.("message-handler-failed"); }
@@ -268,6 +283,7 @@ export class BridgeClient {
     const serialized = JSON.stringify(resultFrame);
     this.db.prepare("UPDATE processed SET result = ?, created_at = ? WHERE message_id = ?").run(serialized, new Date().toISOString(), envelope.id);
     this.send(resultFrame);
+    this.send({ frame: "ack", messageId: envelope.id });
   }
 
   private peer(id: string): (PairedDevice & { signing_key: string; kx_key: string; platform: string }) | undefined {
@@ -302,12 +318,19 @@ export class BridgeClient {
     for (const row of rows) {
       if (Date.parse(row.expires_at) <= now) {
         const frame = JSON.parse(row.frame) as Extract<BridgeFrame, { frame: "envelope" }>;
+        const task = this.db.prepare("SELECT task_id FROM message_tasks WHERE message_id = ?").get(frame.envelope.id) as { task_id: string } | undefined;
+        if (frame.envelope.type === "command") this.rpc.notify("userError", { kind: "commandExpired", device: frame.envelope.to, ...(task ? { taskId: task.task_id } : {}) });
         this.db.prepare("DELETE FROM outbox WHERE message_id = ?").run(frame.envelope.id);
         this.db.prepare("DELETE FROM message_tasks WHERE message_id = ?").run(frame.envelope.id);
         continue;
       }
       this.send(JSON.parse(row.frame) as unknown);
     }
+  }
+
+  private resendPendingUnpairs(): void {
+    const rows = this.db.prepare("SELECT frame FROM pending_unpairs").all() as { frame: string }[];
+    for (const row of rows) this.send(JSON.parse(row.frame) as unknown);
   }
 
   private notifyState(state: "connected" | "reconnecting" | "offline"): void {

@@ -50,7 +50,7 @@ After this objective, the Mac can pair with a phone and exchange encrypted, sign
 - [ ] **OBJ-21.7** Never run an expired command. Surface `expired` and `targetOffline` events from the bridge to the task that sent the command, as structured errors.
 - [ ] **OBJ-21.8** Emit `bridgeStateChanged` (connected, reconnecting, offline) and structured `userError` kinds for "Bridge down" and "Unpaired device". The Mac app shows them (OBJ-27).
 - [ ] **OBJ-21.9** When [OBJ-03](OBJ-03-harness-skeleton.md) is done, wire the module into the harness (coordinate with Brent) and expose its RPC methods on the harness socket.
-- [ ] **OBJ-21.10** Run local end-to-end tests through a protocol-compliant relay stand-in and Mac RPC stand-in: pairing, authenticated reconnect, encrypted round trip, unknown device dropped, duplicate delivery, expiry, and unpair.
+- [x] **OBJ-21.10** Run local end-to-end tests through a protocol-compliant relay stand-in and Mac RPC stand-in: pairing, authenticated reconnect, encrypted round trip, unknown device dropped, duplicate delivery, expiry, and an offline queued unpair delivered after restart. Unpair acknowledgement correlation remains pending OBJ-31.
 
 ## Expectations
 
@@ -70,4 +70,4 @@ After this objective, the Mac can pair with a phone and exchange encrypted, sign
 
 ## Outcome
 
-In progress. Building the client against a local relay stand-in while OBJ-13 is incomplete. OBJ-21.10 now covers local end-to-end flows; deployed relay and real-device acceptance moved to OBJ-29.
+In progress. The bridge client and local relay/Mac RPC stand-in tests are implemented. Integration with the running harness RPC server and verification remain.

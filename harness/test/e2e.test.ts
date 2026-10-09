@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomBytes } from "node:crypto";
 import { randomUUID } from "node:crypto";
+import Database from "better-sqlite3";
 import { describe, expect, it } from "vitest";
 import { WebSocket } from "ws";
 import { BridgeClient } from "../src/bridge-client/client.ts";
@@ -15,13 +16,20 @@ describe("bridge client end-to-end", () => {
   it("pairs a phone, authenticates it, and exchanges an encrypted command and result", async () => {
     const dir = await mkdtemp(join(tmpdir(), "yumi-bridge-e2e-"));
     const relay = new FakeRelay(); await relay.listen();
-    const macRpc = await openMacRpcPair();
+    let macRpc = await openMacRpcPair();
     let ran = 0;
+    let invocations = 0;
+    let restarting = false;
     const logs: string[] = [];
-    const client = new BridgeClient({ bridgeUrl: "wss://relay.test", relayUrl: relay.url, allowLoopbackWs: true, deviceName: "Test Mac", databasePath: join(dir, "mac.sqlite"), rpcSocket: macRpc.socket,
-      onMessage: async (value) => { expect(value).toEqual({ action: "ping" }); ran++; await wait(40); return { ran }; }, onLog: (event) => logs.push(event) });
+    const clientOptions = (rpcSocket: import("node:net").Socket) => ({ bridgeUrl: "wss://relay.test", relayUrl: relay.url, allowLoopbackWs: true,
+      deviceName: "Test Mac", databasePath: join(dir, "mac.sqlite"), rpcSocket,
+      onMessage: async (value: unknown) => { invocations++; if (restarting) throw new Error("duplicate was executed again"); expect(value).toEqual({ action: "ping" }); ran++; await wait(40); return { ran }; },
+      onLog: (event: string) => logs.push(event) });
+    let client = new BridgeClient(clientOptions(macRpc.socket));
     const phoneKeys = deviceKeysFromSeeds(randomBytes(32), randomBytes(32));
     const phone = new WebSocket(relay.url);
+    const phoneFrames: BridgeFrame[] = [];
+    phone.on("message", (data) => phoneFrames.push(JSON.parse(data.toString()) as BridgeFrame));
     const challengePromise = nextFrame(phone);
     try {
       await client.start(); await client.waitForState("connected");
@@ -54,6 +62,34 @@ describe("bridge client end-to-end", () => {
       const opened = openEnvelope(resultFrame.envelope, phoneKeys, { deviceId: offer.deviceId, signingPublicKey: fromBase64(offer.signingPublicKey), kxPublicKey: fromBase64(offer.kxPublicKey) });
       expect(opened.ok && opened.replyTo).toBe(command.id);
       expect(ran).toBe(1);
+
+      await wait(60);
+      client.stop();
+      await macRpc.close();
+      await until(() => !relay.clients.has(offer.deviceId));
+      restarting = true;
+      macRpc = await openMacRpcPair(macRpc.secrets);
+      client = new BridgeClient(clientOptions(macRpc.socket));
+      await client.start(); await client.waitForState("connected");
+      const phoneFrameMarker = phoneFrames.length;
+      relay.inject(offer.deviceId, { frame: "envelope", envelope: command });
+      await until(() => phoneFrames.slice(phoneFrameMarker).some((frame) => frame.frame === "envelope"));
+      expect(ran).toBe(1);
+      expect(invocations).toBe(1);
+
+      const offlineExpiryTaskId = randomUUID();
+      relay.holdNextEnvelope = true;
+      const queuedId = await client.sendMessage(phoneKeys.deviceId, "command", { action: "queued-expiry" }, undefined, offlineExpiryTaskId);
+      await wait(20);
+      const db = new Database(join(dir, "mac.sqlite"));
+      db.prepare("UPDATE outbox SET expires_at = ? WHERE message_id = ?").run(new Date(Date.now() - 1000).toISOString(), queuedId);
+      db.close();
+      relay.clients.get(offer.deviceId)!.socket.terminate();
+      await client.waitForState("reconnecting");
+      await client.waitForState("connected", 5000);
+      await until(() => macRpc.events.some(({ event, payload }) => event === "userError" && (payload as { taskId?: string }).taskId === offlineExpiryTaskId));
+      expect(macRpc.events.find(({ event, payload }) => event === "userError" && (payload as { taskId?: string }).taskId === offlineExpiryTaskId)?.payload)
+        .toMatchObject({ kind: "commandExpired", taskId: offlineExpiryTaskId });
 
       relay.inject(offer.deviceId, { frame: "ack", messageId: "invalid" } as unknown as BridgeFrame);
       await wait(20);
@@ -92,7 +128,16 @@ describe("bridge client end-to-end", () => {
         .toMatchObject({ kind: "unpairedDevice", taskId: unpairedTaskId });
       relay.pair(offer.deviceId, phoneKeys.deviceId);
 
+      relay.clients.get(offer.deviceId)!.socket.terminate();
+      await client.waitForState("reconnecting");
       await macRpc.app.request("unpair", { deviceId: phoneKeys.deviceId });
+      expect((await macRpc.app.request("listPairedDevices", {}) as { devices: unknown[] }).devices).toEqual([]);
+      client.stop();
+      await macRpc.close();
+      await until(() => !relay.clients.has(offer.deviceId));
+      macRpc = await openMacRpcPair(macRpc.secrets);
+      client = new BridgeClient(clientOptions(macRpc.socket));
+      await client.start(); await client.waitForState("connected");
       let unpairFrame: Extract<BridgeFrame, { frame: "unpair" }> | undefined;
       while (!unpairFrame) {
         const frame = await nextFrame(phone);

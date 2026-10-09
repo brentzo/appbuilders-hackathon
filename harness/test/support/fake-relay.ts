@@ -13,6 +13,7 @@ export class FakeRelay {
   readonly clients = new Map<string, Device>();
   url = "";
   nextNotice: "targetOffline" | "expired" | "notPaired" | undefined = undefined;
+  holdNextEnvelope = false;
 
   async listen(): Promise<void> {
     await new Promise<void>((resolve, reject) => {
@@ -108,6 +109,7 @@ export class FakeRelay {
       case "envelope": {
         const { envelope } = frame;
         if (envelope.from !== device.id) break;
+        if (this.holdNextEnvelope) { this.holdNextEnvelope = false; break; }
         if (this.nextNotice) {
           const notice = this.nextNotice;
           this.nextNotice = undefined;

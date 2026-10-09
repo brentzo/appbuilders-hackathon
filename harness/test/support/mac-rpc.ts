@@ -9,8 +9,7 @@ export interface MacRpcPair {
   close(): Promise<void>;
 }
 
-export async function openMacRpcPair(): Promise<MacRpcPair> {
-  const secrets = new Map<string, string>();
+export async function openMacRpcPair(secrets = new Map<string, string>()): Promise<MacRpcPair> {
   const events: Array<{ event: string; payload: unknown }> = [];
   let app: RpcPeer | undefined;
   const server: Server = createServer((socket) => {
