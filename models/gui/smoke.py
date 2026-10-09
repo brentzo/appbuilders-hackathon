@@ -743,7 +743,7 @@ def keynote_pdf(run):
 
 TASKS = {
     "keynote": {
-        "bundle": "com.apple.iWork.Keynote",
+        "bundle": "com.apple.Keynote",
         "goal": "Export my deck as a PDF.",
         "instruction": "In Keynote, export the open deck as a PDF named \"{name}\", saved in the same folder as the deck. Keep the default export options.",
     },
