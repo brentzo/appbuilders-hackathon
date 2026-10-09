@@ -34,6 +34,7 @@ Design: [lane-router](../docs/lane-router.md).
 14. Before tiling windows, Yumi asks the user. It never rearranges windows without a yes.
 15. When the task ends or is cancelled, every window Yumi moved or resized goes back to where it was.
 16. A "demo mode" setting tiles windows without asking. It is off by default.
+17. The planner can mark a subtask as needing the keyboard, for example to paste or use a shortcut. Such a subtask goes to `main` even when its app supports background control, with reason `needsKeyboard`, because only `main` sends keystrokes (requirement 7).
 
 ## Scenarios
 
@@ -93,7 +94,7 @@ Feature: Lane routing
     When routing finishes
     Then the sheets subtask runs as a helper
     And the Chrome form runs as a ghost
-    And the Keynote subtask runs on the main cursor
+    And the Keynote subtask runs on the main cursor, because the planner marked it as needing the keyboard to paste the chart
 ```
 
 ```gherkin
@@ -151,3 +152,4 @@ Feature: Window tiling
 
 - Busy window: open a second window when the app allows it, otherwise wait, and tell the user after 2 minutes. Decided 2026-10-09.
 - Tiling: ask first, restore the layout afterward, and offer a demo mode that tiles without asking. Decided 2026-10-09.
+- Keyboard subtasks: the "Parallel goal splits into lanes" scenario put Keynote on `main` while requirement 3 sent it to a ghost. The planner now marks subtasks that need the keyboard, and those go to `main` with reason `needsKeyboard` (requirement 17). Brent chose this; the cheapest-lane rule stays the default. Decided 2026-10-09.
