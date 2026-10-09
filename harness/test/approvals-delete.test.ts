@@ -253,7 +253,7 @@ describe("SPEC-07 Strict delete", () => {
 });
 
 describe("SPEC-07 Blocked action is refused even with a yes (OBJ-38.4)", () => {
-  it("records the step as blocked, sends blockedAction with the step, and Keep going carries on without running it", async () => {
+  it("records the step as blocked, sends blockedAction, and Keep going (resumeTask) carries on without running it", async () => {
     // The model asks to trash the Downloads folder itself, which SPEC-07 r9 blocks.
     const worker = scriptModel(model, { plan: DELETE_PLAN, worker: trashOnce(["~/Downloads"]) });
     await start();
@@ -262,13 +262,13 @@ describe("SPEC-07 Blocked action is refused even with a yes (OBJ-38.4)", () => {
 
     const error = run!.mac.events.find((e) => e.event === "userError")!.payload as UserError;
     const blocked = steps(task.id).find((s) => s.outcome === "blocked")!;
-    expect(error).toEqual({ kind: "blockedAction", taskId: task.id, stepId: blocked.id });
+    expect(error).toEqual({ kind: "blockedAction", taskId: task.id });
     expect(blocked.action.permission).toBe("blocked");
     // Yumi waits for "Keep going" or "Stop"
     expect(run!.harness.store.getTask(task.id)!.status).toBe("waitingForUser");
 
-    // The user says yes, keep going: the blocked action still never runs
-    expect(await run!.mac.call("replyToBlockedAction", { taskId: task.id, stepId: blocked.id, choice: "keepGoing" })).toEqual({});
+    // The user says yes, keep going, which the app sends as resumeTask: the blocked action still never runs
+    expect(await run!.mac.call("resumeTask", { taskId: task.id })).toEqual({});
     await until(ended(task.id));
     expect(run!.harness.store.getTask(task.id)!.status).toBe("done");
     expect(downloads()).toEqual(INVOICES.slice().sort());
@@ -279,21 +279,17 @@ describe("SPEC-07 Blocked action is refused even with a yes (OBJ-38.4)", () => {
       outcome: "blocked",
     });
     expect(worker.at(-1)!.text).toContain("Not done: Yumi's safety rules do not allow this move_to_trash.");
-    // A second, late answer is ignored.
-    expect(await run!.mac.call("replyToBlockedAction", { taskId: task.id, stepId: blocked.id, choice: "keepGoing" })).toEqual({});
   });
 
-  it("Stop pauses the task, and nothing else runs", async () => {
+  it("Stop (cancelTask) cancels the task, and nothing else runs", async () => {
     const worker = scriptModel(model, { plan: DELETE_PLAN, worker: trashOnce(["~/Downloads"]) });
     await start();
     const task = run!.startTask("clear out Downloads");
     await until(() => run!.mac.events.some((e) => e.event === "userError"));
-    const { stepId } = run!.mac.events.find((e) => e.event === "userError")!.payload as UserError;
     const requests = worker.length;
 
-    await run!.mac.call("replyToBlockedAction", { taskId: task.id, stepId, choice: "stop" });
-    expect(run!.harness.store.getTask(task.id)!.status).toBe("paused");
-    expect(run!.harness.store.listSubtasks(task.id)[0]!.status).toBe("ready");
+    await run!.mac.call("cancelTask", { taskId: task.id });
+    expect(run!.harness.store.getTask(task.id)!.status).toBe("cancelled");
     await new Promise((resolve) => setTimeout(resolve, 200));
     expect(worker.length).toBe(requests);
     expect(downloads()).toEqual(INVOICES.slice().sort());

@@ -1,5 +1,5 @@
 import { RpcFailure, type Handler } from "@yumi/protocol";
-import type { Empty, PauseParams, ReplyToBlockedActionParams, TaskRef, UserError } from "@yumi/protocol/types";
+import type { Empty, PauseParams, TaskRef, UserError } from "@yumi/protocol/types";
 import type { Logger } from "../log.ts";
 import type { TaskStore } from "../store/task-store.ts";
 import { TaskControl, TaskControlError } from "../scheduler/task-control.ts";
@@ -7,13 +7,14 @@ import { TaskControl, TaskControlError } from "../scheduler/task-control.ts";
 /**
  * The task control methods the Mac app calls: `resumeTask` and `cancelTask` (OBJ-06.3) when the user answers "Want
  * me to pick up where I left off?" or presses Resume or Cancel; `pause` (OBJ-38.5) for the stop shortcut, the menu
- * bar "Stop", and a take-over; and `replyToBlockedAction` (OBJ-38.4) for the blocked-action card. `RpcPeer` checks
+ * bar "Stop", and a take-over. The blocked-action card (OBJ-38.4) has no method of its own: "Keep going" calls
+ * `resumeTask` and "Stop" calls `cancelTask` (gap G6, resolved in OBJ-45). `RpcPeer` checks
  * params and results against the contract. A refused request answers the "Unexpected" kind; the reason is in the log.
  */
 export function taskControlHandlers(
   control: () => TaskControl,
   store: TaskStore,
-  blocked: () => { keepGoing(stepId: string): boolean } | undefined,
+  blocked: () => { keepGoing(taskId: string): boolean } | undefined,
   logger: Logger,
 ): Record<string, Handler> {
   /** Every task whose work is under way, for a pause with no task id. */
@@ -30,23 +31,13 @@ export function taskControlHandlers(
       }
       return {};
     },
-    replyToBlockedAction: async (params): Promise<Empty> => {
-      const { taskId, stepId, choice } = params as ReplyToBlockedActionParams;
-      if (choice === "stop") {
-        // "Stop" pauses the task like the menu bar "Stop", which also closes the card. A late Stop still pauses.
-        try {
-          await control().pause(taskId, "everyLane");
-        } catch (error) {
-          throw refused(error, store, taskId);
-        }
-        return {};
-      }
-      // A late "Keep going" for a card a pause or cancel already closed changes nothing.
-      if (!blocked()?.keepGoing(stepId)) logger.info("blocked.lateAnswer", { taskId, stepId });
-      return {};
-    },
     resumeTask: (params): Empty => {
       const { taskId } = params as TaskRef;
+      // "Keep going" on an open blocked-action card answers the card; otherwise this is an ordinary resume.
+      if (blocked()?.keepGoing(taskId)) {
+        logger.info("blocked.keepGoing", { taskId });
+        return {};
+      }
       try {
         control().resume(taskId);
       } catch (error) {

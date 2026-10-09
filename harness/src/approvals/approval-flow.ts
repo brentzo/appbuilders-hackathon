@@ -4,7 +4,6 @@ import type {
   Approval,
   ApprovalCancelled,
   ApprovalDecision,
-  BlockedActionChoice,
   FileSummary,
   Lane,
   MoveToTrashResult,
@@ -95,8 +94,11 @@ export type ApprovalAnswer =
   | { outcome: "cancelled" }
   | { outcome: "unavailable"; reason: Unavailable };
 
-/** "Keep going" or "Stop" on the blocked-action card, or "cancelled" when a pause or cancel came first. */
-export type BlockedAnswer = BlockedActionChoice | "cancelled";
+/**
+ * "Keep going" on the blocked-action card, which the app sends as `resumeTask`, or "cancelled" when the user pressed
+ * "Stop" (`cancelTask`) or a pause or cancel closed the card first (gap G6, resolved in OBJ-45).
+ */
+export type BlockedAnswer = "keepGoing" | "cancelled";
 
 export interface ApprovalGate {
   /** Asks the user about one action the gate said asks for (`decision.level === "ask"`). */
@@ -118,7 +120,7 @@ export interface ApprovalFlowDeps {
   /** Sends an event to the apps: `approvalCancelled`. */
   emit(event: string, payload: unknown): unknown;
   /** Sends a `userError` to the device the user spoke to. */
-  userError(originDeviceId: string, error: { kind: "blockedAction"; taskId: Uuid; stepId: Uuid }): void;
+  userError(originDeviceId: string, error: { kind: "blockedAction"; taskId: Uuid }): void;
   /** The user's home folder, for listing the files again. Tests pass a temporary one. */
   home: string;
   now?: () => Date;
@@ -217,7 +219,7 @@ export class ApprovalFlow implements ApprovalGate {
       const answer = new Promise<BlockedAnswer>((resolve) =>
         this.blockedCards.set(step.id, { taskId: subtask.taskId, answer: resolve }),
       );
-      this.deps.userError(task.originDeviceId, { kind: "blockedAction", taskId: task.id, stepId: step.id });
+      this.deps.userError(task.originDeviceId, { kind: "blockedAction", taskId: task.id });
       logger.info("blocked.asked", { taskId: task.id, subtaskId: subtask.id, stepId: step.id });
       const choice = await Promise.race([answer, aborted(signal).then(() => "cancelled" as const)]);
       logger.info("blocked.answered", { taskId: task.id, stepId: step.id, choice });
@@ -229,15 +231,18 @@ export class ApprovalFlow implements ApprovalGate {
   }
 
   /**
-   * The user's "Keep going" on a blocked-action card. Returns false when no card for that step is waiting (it was
-   * answered already, or a pause or cancel closed it), and the answer is ignored. "Stop" is the pause path, not
-   * this: the RPC handler pauses the task, which closes the card.
+   * The user's "Keep going" on a task's blocked-action card, which the app sends as `resumeTask`. Returns false when
+   * no card of that task is waiting, so the call is an ordinary resume. "Stop" is `cancelTask`, which closes the card
+   * through `cancelAll`.
    */
-  keepGoing(stepId: Uuid): boolean {
-    const card = this.blockedCards.get(stepId);
-    if (!card) return false;
-    card.answer("keepGoing");
-    return true;
+  keepGoing(taskId: Uuid): boolean {
+    for (const [stepId, card] of this.blockedCards) {
+      if (card.taskId !== taskId) continue;
+      this.blockedCards.delete(stepId);
+      card.answer("keepGoing");
+      return true;
+    }
+    return false;
   }
 
   /**
