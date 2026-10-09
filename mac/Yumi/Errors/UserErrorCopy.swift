@@ -9,8 +9,8 @@ struct UserErrorCopy: Equatable, Sendable {
     /// Where the copy comes from: the SPEC-11 "Failure" column, or the SPEC-07 requirement.
     /// Never shown to the user.
     let source: Source
-    /// What the user hears and sees. `{device}`, `{last action}`, `{permission}` and `{step}` are
-    /// filled in by `ErrorPresenter`.
+    /// What the user hears and sees. `{device}`, `{last action}`, `{permission}`, `{step}` and
+    /// `{action}` are filled in by `ErrorPresenter`.
     let message: String
     /// Exactly as the spec lists them.
     let buttons: [String]
@@ -81,7 +81,7 @@ struct UserErrorCopy: Equatable, Sendable {
         case .blockedAction:
             UserErrorCopy(
                 source: .spec07Requirement5,
-                message: "I can't do that. It's blocked to keep your Mac safe, so I skipped it. Want me to keep going with the rest?",
+                message: "I can't {action}. It's blocked to keep your Mac safe, so I skipped it. Want me to keep going with the rest?",
                 buttons: ["Keep going", "Stop"]
             )
         }

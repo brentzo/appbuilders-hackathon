@@ -55,14 +55,23 @@ enum ErrorPresenter {
         }
         return PresentedError(
             kind: error.kind,
-            message: fill(copy.message, lastAction: error.lastAction, permission: error.permission, step: error.step),
+            message: fill(
+                copy.message, lastAction: error.lastAction, permission: error.permission, step: error.step,
+                skippedAction: error.skippedAction
+            ),
             detail: error.kind == .taskTookTooLong ? error.finishedSoFar : nil,
             buttons: copy.buttons.compactMap { button(for: $0, error: error) }
         )
     }
 
-    private static func fill(_ template: String, lastAction: String?, permission: String?, step: String?) -> String {
+    /// What a blocked-action message says when the harness gives no plain name for the action.
+    static let unnamedAction = "do that"
+
+    private static func fill(_ template: String, lastAction: String?, permission: String?, step: String?, skippedAction: String?) -> String {
         var text = template
+        // "I can't click File in Keynote." (SPEC-07 r5), or "I can't do that." without a name.
+        let action = skippedAction?.trimmingCharacters(in: .whitespaces.union(CharacterSet(charactersIn: ".")))
+        text = text.replacingOccurrences(of: "{action}", with: action.flatMap { $0.isEmpty ? nil : $0 } ?? unnamedAction)
         if text.hasPrefix("{device}") {
             text = otherDevice.prefix(1).uppercased() + otherDevice.dropFirst() + text.dropFirst("{device}".count)
         }

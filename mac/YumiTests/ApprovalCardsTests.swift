@@ -132,11 +132,24 @@ struct ApprovalCardsTests {
 
     @Test func theBlockedActionCardKeepsGoingOrStops() {
         let presented = ErrorPresenter.present(UserError(kind: .blockedAction, taskId: "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8"))
+        // An older harness names no action: the message still reads as a sentence.
         #expect(presented.message == "I can't do that. It's blocked to keep your Mac safe, so I skipped it. Want me to keep going with the rest?")
         #expect(presented.buttons == [
             ErrorButton(label: "Keep going", action: .resumeTask("6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8")),
             ErrorButton(label: "Stop", action: .cancelTask("6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8")),
         ])
+    }
+
+    /// SPEC-07 r5: the card names what it skipped, from the harness's plain-language action.
+    @Test func theBlockedActionCardNamesWhatItSkipped() throws {
+        let data = try Data(contentsOf: ProtocolTypesTests.examples.appendingPathComponent("UserError.blocked-action-named.json"))
+        let error = UserErrorDecoding.decode(data)
+        #expect(error.skippedAction == "press Command-Q in Keynote")
+        #expect(ErrorPresenter.present(error).message == "I can't press Command-Q in Keynote. It's blocked to keep your Mac safe, so I skipped it. Want me to keep going with the rest?")
+        let file = ErrorPresenter.present(UserError(kind: .blockedAction, taskId: "t", skippedAction: "click File in Keynote"))
+        #expect(file.message.hasPrefix("I can't click File in Keynote. It's blocked"))
+        // A placeholder never reaches the user.
+        #expect(!ErrorPresenter.present(UserError(kind: .blockedAction, skippedAction: " ")).message.contains("{"))
     }
 
     /// Records instead of touching the real Trash. FileManager is nonisolated, so this is too.

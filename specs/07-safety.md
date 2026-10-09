@@ -31,7 +31,8 @@ Deleting is allowed only with a strict confirmation, screen content can never gi
 2. Secret locations are `~/.ssh`, `~/.gnupg`, `~/.aws`, `~/Library/Keychains`, and browser profile folders.
 3. Yumi has no free-form shell or AppleScript. File work goes through typed tools only: `read_file`, `list_dir`, `write_new_file`, `copy`, `move`, `open`, and `move_to_trash`. The harness checks every call. Apps that are a shell or an installer by another route are blocked: Yumi never opens them, opens files with them, or acts in them. They are Terminal, iTerm, Script Editor, Automator, and Installer, and installer files (`.pkg`, `.mpkg`, `.dmg`) and app bundles cannot be opened as files.
 4. `copy` and `move` never replace an existing file. If a name is taken, the new file gets a numbered name. Names are compared without regard to case, because Mac volumes are case-insensitive by default: `Report.pdf` takes the name `report.pdf`.
-5. A blocked action never runs, even if the user says yes. Yumi says "I can't do that. It's blocked to keep your Mac safe, so I skipped it. Want me to keep going with the rest?" with "Keep going" and "Stop" buttons.
+5. A blocked action never runs, even if the user says yes. Yumi says "I can't {action}. It's blocked to keep your Mac safe, so I skipped it. Want me to keep going with the rest?" with "Keep going" and "Stop" buttons.
+   - `{action}` names what was skipped in plain language, built like its action log line (requirement 18), for example click File in Keynote. When Yumi has no plain name for it, `{action}` is do that.
 6. Risk is read from the action itself:
    - For accessibility actions, from the element's label. "Send", "Delete", and "Move to Trash" ask. "Empty Trash", "Buy", "Pay", "Install", "Quit", and "Force Quit" are blocked.
    - For key presses, from a per-app list. Return in Messages, Command-Return and Command-Shift-D in Mail ask. Command-Delete in Finder asks. Command-Shift-Delete in Finder is blocked. Command-Q and Command-Option-Escape are blocked in every app.
@@ -89,7 +90,7 @@ Feature: Permission levels
     Given the next action is pressing "Install" in an installer
     When the harness checks the action
     Then it does not run
-    And Yumi says "I can't do that. It's blocked to keep your Mac safe, so I skipped it. Want me to keep going with the rest?"
+    And Yumi says "I can't click Install in Installer. It's blocked to keep your Mac safe, so I skipped it. Want me to keep going with the rest?"
 
   Scenario: Copy never replaces a file
     Given "Report.pdf" already exists in Documents
@@ -248,6 +249,7 @@ Until it is reviewed, objectives may build against it but must not treat it as f
 - System Settings leaves the risky-app list: every action there is blocked, matching the table. Yumi never needs it; the user grants permissions. Decided 2026-10-09.
 - The shell and installer apps in requirement 3 are written into the spec, since they are how "no shell" is enforced. Decided 2026-10-09.
 - Risky apps get a short per-app list of safe click labels, which are allowed. Other unlisted clicks in a risky app still ask. Mail starts with "New Message" and "Attach", so demo task 2 in [SPEC-05](05-mac-gui-control.md) asks only before Send. The list lives with the permission table in code, and a label is added only with a change to this spec. Brent chose this over allowing every unlisted click in risky apps. Decided 2026-10-09.
+- The blocked-action message names what it skipped ("I can't click File in Keynote.") instead of "I can't do that.", so the user knows which step Yumi left out before choosing "Keep going" or "Stop". The harness sends the plain-language action as the optional `skippedAction` of the `blockedAction` user error, without a protocol version change; without it the message says "I can't do that." Decided 2026-10-10 by Brent.
 - Debug mode keeps full local logs and shows each worker's reasoning (requirements 22 and 23), so failures can be diagnosed on the device without guessing. Everything runs locally, so the logs stay local too. Decided 2026-10-10 by Brent.
 
 ## Open questions
