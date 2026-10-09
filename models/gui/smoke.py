@@ -18,6 +18,7 @@ Commands (run with models/gui/.venv/bin/python):
   ping  --mode M            send a canned observation to the model, no screen access
   bench                     model-only latency, validity, and peak memory at a realistic prompt size
   setup                     write the fixture PDF used by the Mail task
+  reset --task T            close menus and cancel dialogs (Escape and Cancel only)
   run   --task T --run N --mode M   one live run (acts on the screen)
   report                    aggregate results/runs.jsonl into Markdown tables
 
@@ -276,9 +277,10 @@ def app_for(bundle_id):
 
 
 def target_window(app_el):
+    # While a sheet is open, Keynote's AXFocusedWindow is not a window, so require the AXWindow role.
     for attr in ("AXFocusedWindow", "AXMainWindow"):
         w = ax(app_el, attr)
-        if w is not None:
+        if w is not None and ax(w, "AXRole") == "AXWindow":
             return w
     windows = ax(app_el, "AXWindows") or []
     return windows[0] if windows else None
@@ -323,6 +325,9 @@ def observe(app_el):
             root = inner[-1]
         if not menus:
             col_win.walk(root, ax_rect(window) or SCREEN)
+        if root is not window:
+            heading = next((text(ax(c, "AXValue"), 60) for c in ax(root, "AXChildren") or [] if ax(c, "AXRole") == "AXStaticText" and ax(c, "AXValue")), "")
+            title = f"{title} (dialog open: {heading})" if heading else f"{title} (dialog open)"
 
     if menu_bar is not None:
         for item in ax(menu_bar, "AXChildren") or []:
@@ -718,8 +723,12 @@ def environment():
     free = re.search(r"free percentage: (\d+)%", mp)
     swap = subprocess.run(["sysctl", "-n", "vm.swapusage"], capture_output=True, text=True).stdout.strip()
     level = subprocess.run(["sysctl", "-n", "kern.memorystatus_vm_pressure_level"], capture_output=True, text=True).stdout.strip()
+    vm = subprocess.run(["pgrep", "-f", "com.apple.Virtualization.VirtualMachine"], capture_output=True, text=True).stdout.split()
+    full = subprocess.run(["ps", "-axo", "command="], capture_output=True, text=True).stdout.splitlines()
     return {
         "java_running": sum(1 for n in names if n == "java"),
+        "gradle_running": sum(1 for c in full if "GradleDaemon" in c or "KotlinCompileDaemon" in c),
+        "vm_running": len(vm),
         "qemu_running": sum(1 for n in names if n.startswith("qemu")),
         "memory_free_percent": int(free.group(1)) if free else None,
         "pressure_level": {"1": "normal", "2": "warn", "4": "critical"}.get(level, level),
@@ -986,6 +995,50 @@ def cmd_setup(args):
     print(f"wrote {FIXTURE_PDF}")
 
 
+def reset_start_state(pid, app_el):
+    """Return the app to its starting state without changing any document: close open menus, cancel sheets.
+
+    Only Escape and buttons labelled Cancel are used, so nothing is saved, sent, or deleted.
+    """
+    for _ in range(4):
+        menu_bar = ax(app_el, "AXMenuBar")
+        if menu_bar is not None and open_menus(menu_bar):
+            post_key(pid, 0, KEYCODES["escape"])
+            time.sleep(0.5)
+            continue
+        w = target_window(app_el)
+        sheets = [c for c in ax(w, "AXChildren") or [] if ax(c, "AXRole") == "AXSheet"] if w is not None else []
+        if not sheets:
+            return True
+        sheet = sheets[-1]
+        cancel = next((b for b in Collector_buttons(sheet) if (ax(b, "AXTitle") or "").lower() == "cancel"), None)
+        if cancel is not None:
+            AXUIElementPerformAction(cancel, "AXPress")
+        else:
+            post_key(pid, 0, KEYCODES["escape"])
+        time.sleep(1.0)
+    return False
+
+
+def Collector_buttons(root, depth=0):
+    out = []
+    if depth > 30:
+        return out
+    for c in ax(root, "AXChildren") or []:
+        if ax(c, "AXRole") == "AXButton":
+            out.append(c)
+        out += Collector_buttons(c, depth + 1)
+    return out
+
+
+def cmd_reset(args):
+    require_trust()
+    pid, app_el = app_for(TASKS[args.task]["bundle"])
+    bring_to_front(app_el)
+    time.sleep(0.5)
+    print("starting state" if reset_start_state(pid, app_el) else "could not reach the starting state")
+
+
 def cmd_run(args):
     require_trust()
     task, run, mode = args.task, args.run, args.mode
@@ -1004,6 +1057,8 @@ def cmd_run(args):
 
     bring_to_front(app_el)
     time.sleep(0.5)
+    if not reset_start_state(pid, app_el):
+        sys.exit("could not reach the starting state; fix it by hand")
     before = snapshot_state(task, app_el, run)
     history, steps = [], []
     status, end_reason = "partial", "step limit"
@@ -1176,13 +1231,15 @@ def main():
     s.add_argument("-n", type=int, default=5)
     s.add_argument("--modes", nargs="+", default=["constrained", "free"])
     sub.add_parser("setup")
+    s = sub.add_parser("reset")
+    s.add_argument("--task", choices=TASKS, required=True)
     s = sub.add_parser("run")
     s.add_argument("--task", choices=TASKS, required=True)
     s.add_argument("--run", type=int, required=True)
     s.add_argument("--mode", choices=["constrained", "free"], required=True)
     sub.add_parser("report")
     args = p.parse_args()
-    {"env": cmd_env, "tree": cmd_tree, "prompt": cmd_prompt, "ping": cmd_ping, "bench": cmd_bench, "setup": cmd_setup, "run": cmd_run, "report": cmd_report}[args.cmd](args)
+    {"env": cmd_env, "tree": cmd_tree, "prompt": cmd_prompt, "ping": cmd_ping, "bench": cmd_bench, "setup": cmd_setup, "run": cmd_run, "reset": cmd_reset, "report": cmd_report}[args.cmd](args)
 
 
 if __name__ == "__main__":
