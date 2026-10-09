@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yumi.local/protocol/worker.json",
+  "title": "Worker",
+  "description": "The input a worker gives the model for one step, and the one action it must return (SPEC-02 r5 and r6).",
+  "$defs": {
+    "WorkerInput": {
+      "description": "A fresh, short context for one step. Workers never share conversations, only the task record.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["confirmedGoal", "instruction", "recentSteps", "observation", "allowedTools"],
+      "properties": {
+        "confirmedGoal": { "type": "string", "minLength": 1 },
+        "instruction": { "description": "The subtask instruction.", "type": "string", "minLength": 1 },
+        "recentSteps": {
+          "description": "The last 3-5 steps, oldest first.",
+          "type": "array",
+          "maxItems": 5,
+          "items": { "$ref": "#/$defs/StepSummary" }
+        },
+        "observation": { "$ref": "observation.json#/$defs/Observation" },
+        "allowedTools": {
+          "description": "Only the tools allowed for this lane.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "tools.json#/$defs/ToolName" }
+        },
+        "validationError": {
+          "description": "Set only on the one retry after an invalid output (SPEC-02).",
+          "type": "string"
+        }
+      }
+    },
+    "StepSummary": {
+      "description": "One earlier step, as the next worker sees it.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action", "observation", "outcome"],
+      "properties": {
+        "action": { "$ref": "action.json#/$defs/ModelAction" },
+        "observation": { "description": "One line: what changed.", "type": "string", "maxLength": 300 },
+        "outcome": { "$ref": "common.json#/$defs/StepOutcome" }
+      }
+    },
+    "WorkerOutput": {
+      "description": "Exactly one action. This is the JSON the model must return.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action"],
+      "properties": {
+        "action": { "$ref": "action.json#/$defs/ModelAction" }
+      }
+    }
+  }
+}

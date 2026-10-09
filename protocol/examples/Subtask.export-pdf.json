@@ -1,0 +1,25 @@
+{
+  "id": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+  "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+  "title": "Export deck as PDF",
+  "instruction": "In Keynote, export the open deck to PDF in Downloads.",
+  "dependsOn": [],
+  "proposedLane": "main",
+  "lane": "main",
+  "routeReason": "appNotBackgroundCapable",
+  "target": {
+    "bundleId": "com.apple.iWork.Keynote",
+    "windowId": 4182
+  },
+  "status": "done",
+  "workerId": "main-1",
+  "attempts": 1,
+  "result": {
+    "status": "done",
+    "files": [
+      "~/Downloads/Q3 Report.pdf"
+    ],
+    "note": "Exported Q3 Report.pdf to Downloads."
+  },
+  "lastGoodStep": "3c4d5e6f-7a8b-4c9d-8e1f-2a3b4c5d6e7f"
+}

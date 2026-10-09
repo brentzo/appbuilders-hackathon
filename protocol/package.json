@@ -1,0 +1,32 @@
+{
+  "name": "@yumi/protocol",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Yumi shared contracts: JSON Schemas, validation, and generated TypeScript, Swift, and Kotlin types.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./types": "./generated/ts/index.ts"
+  },
+  "scripts": {
+    "generate": "tsx scripts/generate.ts",
+    "check:generated": "tsx scripts/generate.ts --check",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "compile:swift": "tsx scripts/compile-check.ts swift",
+    "compile:kotlin": "tsx scripts/compile-check.ts kotlin",
+    "mock:harness": "tsx mocks/mock-harness.ts",
+    "mock:mac": "tsx mocks/mock-mac-app.ts",
+    "verify": "npm run typecheck && npm test"
+  },
+  "dependencies": {
+    "ajv": "8.17.1",
+    "ajv-formats": "3.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.2",
+    "tsx": "4.19.2",
+    "typescript": "5.7.2",
+    "vitest": "2.1.8"
+  }
+}

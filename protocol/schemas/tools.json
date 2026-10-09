@@ -1,0 +1,213 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yumi.local/protocol/tools.json",
+  "title": "Tools",
+  "description": "Typed tools. There is no shell or AppleScript tool (SPEC-05 r1, SPEC-07 r3). Every tool has its own arguments so the harness can check every call.",
+  "$defs": {
+    "ToolName": {
+      "description": "Every tool name, used to tell a worker which tools its lane allows.",
+      "type": "string",
+      "enum": [
+        "open_app",
+        "open_file",
+        "open_url",
+        "reveal_in_finder",
+        "read_file",
+        "list_dir",
+        "write_new_file",
+        "copy",
+        "move",
+        "move_to_trash",
+        "phone"
+      ]
+    },
+    "ToolCall": {
+      "description": "One call to a typed tool.",
+      "type": "object",
+      "discriminator": { "propertyName": "tool" },
+      "oneOf": [
+        { "$ref": "#/$defs/OpenAppCall" },
+        { "$ref": "#/$defs/OpenFileCall" },
+        { "$ref": "#/$defs/OpenUrlCall" },
+        { "$ref": "#/$defs/RevealInFinderCall" },
+        { "$ref": "#/$defs/ReadFileCall" },
+        { "$ref": "#/$defs/ListDirCall" },
+        { "$ref": "#/$defs/WriteNewFileCall" },
+        { "$ref": "#/$defs/CopyCall" },
+        { "$ref": "#/$defs/MoveCall" },
+        { "$ref": "#/$defs/MoveToTrashCall" },
+        { "$ref": "#/$defs/PhoneCall" }
+      ]
+    },
+    "OpenAppCall": {
+      "description": "Open or bring forward an app. Allowed.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool", "bundleId"],
+      "properties": {
+        "tool": { "const": "open_app" },
+        "bundleId": { "type": "string", "minLength": 1 }
+      }
+    },
+    "OpenFileCall": {
+      "description": "Open a file in its default app. Allowed.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool", "path"],
+      "properties": {
+        "tool": { "const": "open_file" },
+        "path": { "$ref": "common.json#/$defs/Path" }
+      }
+    },
+    "OpenUrlCall": {
+      "description": "Open a URL in the default browser. Allowed.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool", "url"],
+      "properties": {
+        "tool": { "const": "open_url" },
+        "url": { "type": "string", "format": "uri", "pattern": "^https?://" }
+      }
+    },
+    "RevealInFinderCall": {
+      "description": "Show a file or folder in Finder. Allowed.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool", "path"],
+      "properties": {
+        "tool": { "const": "reveal_in_finder" },
+        "path": { "$ref": "common.json#/$defs/Path" }
+      }
+    },
+    "ReadFileCall": {
+      "description": "Read a file in the home folder. Blocked for secret locations (SPEC-07 r2).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool", "path"],
+      "properties": {
+        "tool": { "const": "read_file" },
+        "path": { "$ref": "common.json#/$defs/Path" }
+      }
+    },
+    "ListDirCall": {
+      "description": "List a folder. Blocked for secret locations.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool", "path"],
+      "properties": {
+        "tool": { "const": "list_dir" },
+        "path": { "$ref": "common.json#/$defs/Path" }
+      }
+    },
+    "WriteNewFileCall": {
+      "description": "Create a new file. Never replaces an existing file.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool", "path", "content"],
+      "properties": {
+        "tool": { "const": "write_new_file" },
+        "path": { "$ref": "common.json#/$defs/Path" },
+        "content": { "type": "string" }
+      }
+    },
+    "CopyCall": {
+      "description": "Copy a file. A taken name gets a number instead of replacing (SPEC-07 r4).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool", "from", "to"],
+      "properties": {
+        "tool": { "const": "copy" },
+        "from": { "$ref": "common.json#/$defs/Path" },
+        "to": { "$ref": "common.json#/$defs/Path" }
+      }
+    },
+    "MoveCall": {
+      "description": "Move a file. A taken name gets a number instead of replacing (SPEC-07 r4).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool", "from", "to"],
+      "properties": {
+        "tool": { "const": "move" },
+        "from": { "$ref": "common.json#/$defs/Path" },
+        "to": { "$ref": "common.json#/$defs/Path" }
+      }
+    },
+    "MoveToTrashCall": {
+      "description": "Move exact paths to the Trash. Asks every time and needs a tap (SPEC-07 r7-r12).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool", "paths"],
+      "properties": {
+        "tool": { "const": "move_to_trash" },
+        "paths": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "common.json#/$defs/Path" }
+        }
+      }
+    },
+    "PhoneCall": {
+      "description": "Call a tool on the paired phone (SPEC-09 r2).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool", "call"],
+      "properties": {
+        "tool": { "const": "phone" },
+        "call": { "$ref": "#/$defs/PhoneToolCall" }
+      }
+    },
+    "PhoneToolCall": {
+      "description": "A p0 phone tool (SPEC-10 r3). A closed union: p1 tools are added here as new variants, so the Mac brain only ever calls tools whose arguments it can check.",
+      "type": "object",
+      "discriminator": { "propertyName": "tool" },
+      "oneOf": [
+        { "$ref": "#/$defs/SetAlarmCall" },
+        { "$ref": "#/$defs/SetTimerCall" },
+        { "$ref": "#/$defs/PhoneOpenAppCall" }
+      ]
+    },
+    "SetAlarmCall": {
+      "description": "Set an alarm through the Android set-alarm intent.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool", "time"],
+      "properties": {
+        "tool": { "const": "set_alarm" },
+        "time": { "description": "Local time on the phone, 24-hour HH:MM, for example 06:30.", "type": "string", "pattern": "^(?:[01][0-9]|2[0-3]):[0-5][0-9]$" },
+        "label": { "type": "string", "maxLength": 100 },
+        "days": {
+          "description": "Repeat days. Omitted means the next occurrence only.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/Weekday" }
+        }
+      }
+    },
+    "SetTimerCall": {
+      "description": "Start a timer through the Android set-timer intent.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool", "seconds"],
+      "properties": {
+        "tool": { "const": "set_timer" },
+        "seconds": { "type": "integer", "minimum": 1, "maximum": 86400 },
+        "label": { "type": "string", "maxLength": 100 }
+      }
+    },
+    "PhoneOpenAppCall": {
+      "description": "Open an app on the phone.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool", "app"],
+      "properties": {
+        "tool": { "const": "open_app" },
+        "app": { "description": "The app's name as the user said it, or its package name, for example com.spotify.music.", "type": "string", "minLength": 1 }
+      }
+    },
+    "Weekday": {
+      "type": "string",
+      "enum": ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    }
+  }
+}

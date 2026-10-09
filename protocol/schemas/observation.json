@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yumi.local/protocol/observation.json",
+  "title": "Observation",
+  "description": "What the model sees of the target window. In p0 this is the trimmed accessibility tree; screenshots are p1 (SPEC-05).",
+  "$defs": {
+    "Observation": {
+      "description": "One look at the target window.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["windowTitle", "elements"],
+      "properties": {
+        "windowTitle": { "type": "string" },
+        "elements": {
+          "description": "Visible, actionable elements only, numbered from 1, at most 200 (SPEC-05 r2).",
+          "type": "array",
+          "maxItems": 200,
+          "items": { "$ref": "#/$defs/TreeElement" }
+        },
+        "screenshotPath": {
+          "description": "p1 vision fallback only.",
+          "$ref": "common.json#/$defs/Path"
+        }
+      }
+    },
+    "TreeElement": {
+      "description": "One element of the trimmed accessibility tree.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["n", "role", "label", "enabled"],
+      "properties": {
+        "n": { "$ref": "action.json#/$defs/ElementNumber" },
+        "role": { "$ref": "action.json#/$defs/AXRole" },
+        "label": { "type": "string" },
+        "value": { "description": "Current text or state. Never present for secure text fields (SPEC-05 r7).", "type": "string" },
+        "enabled": { "type": "boolean" }
+      },
+      "if": { "properties": { "role": { "const": "secureTextField" } } },
+      "then": { "properties": { "value": false } }
+    }
+  }
+}

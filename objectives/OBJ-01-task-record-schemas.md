@@ -58,9 +58,10 @@ It also defines every contract between people's work (harness and Mac app, harne
 - [ ] **OBJ-01.9** Write `ActionLogEntry` (time, device id, lane, plain-language description, paths for deletes, outcome).
 - [ ] **OBJ-01.10** Write `ErrorKind`: one value per row of the SPEC-11 error table, plus `blockedAction` for SPEC-07 requirement 5. Every product maps these values to copy; nothing maps raw error text.
 - [ ] **OBJ-01.11** Write the local RPC schemas between the harness and the native apps. List every method now, so later objectives implement them instead of inventing them:
-  - Harness to Mac app: `executeAction`, `observeWindow` (returns `Observation`), `animateCursorTo`, `readFieldValues` (for To and Cc, SPEC-07 r13), `showApprovalCard` (returns `ApprovalDecision`), `probeAppCapability`, `openNewWindow`, `moveToTrash`.
-  - Mac app to harness: `submitGoal`, `pause`, `resumeTask`, `cancelTask`, `listTasks`, `searchTasks`, `getTask`, `startPairing`, `listPairedDevices`, `unpair`.
-  - Events from the harness: `taskStatusChanged`, `cursorCommand`, `progress`, `approvalCancelled`.
+  - Harness to Mac app: `executeAction` (takes a cursor id; the Mac app animates that cursor to the element and acts after it arrives, SPEC-04 and SPEC-05 r3), `observeWindow` (returns `Observation`), `readFieldValues` (for To and Cc, SPEC-07 r13), `showApprovalCard` (returns `ApprovalDecision`), `probeAppCapability`, `openNewWindow`, `moveToTrash`.
+  - Mac app to harness: `hello` (protocol version check), `ping`, `submitGoal`, `replyToConfirmation` (button or spoken reply, OBJ-17), `pause`, `resumeTask`, `cancelTask`, `listTasks`, `searchTasks`, `getTask`, `startPairing`, `listPairedDevices`, `unpair`.
+  - Events from the harness: `taskStatusChanged`, `goalRestated` (OBJ-17), `cursorCommand`, `approvalCancelled`, `interruptedTaskFound` (OBJ-06), `userError`, `waitingForWindow` (OBJ-08), `tilingSuggested` (OBJ-20), `routeDecided` (OBJ-07), `speak` (OBJ-05 summary).
+  - Cross-device progress is a bridge message, not an RPC event. It is defined in [OBJ-25](OBJ-25-cross-device-messages.md).
 - [ ] **OBJ-01.12** Add a `protocolVersion` field, and a versioning section in `protocol/README.md`: how to bump the version, and what counts as a breaking change. Add the rule: an objective that adds or changes an RPC method updates the schema in `protocol/` in the same commit.
 - [ ] **OBJ-01.13** Generate TypeScript, Swift, and Kotlin types with one command, and add a check that fails if generated files are out of date.
 - [ ] **OBJ-01.14** Add example JSON files for each schema and a test that validates every example.

@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yumi.local/protocol/task.json",
+  "title": "Task record",
+  "description": "The single source of truth for long-running work, stored in SQLite by the harness (SPEC-02, docs/task-record-schema.md).",
+  "$defs": {
+    "Task": {
+      "description": "One per confirmed goal.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "originDeviceId", "goal", "status", "plan", "createdAt", "updatedAt"],
+      "properties": {
+        "id": { "$ref": "common.json#/$defs/Uuid" },
+        "originDeviceId": {
+          "description": "Where the user spoke. Confirmation, approvals, progress, and the result go here (SPEC-09).",
+          "$ref": "common.json#/$defs/DeviceId"
+        },
+        "goal": { "description": "What the user said, transcribed.", "type": "string", "minLength": 1 },
+        "confirmedGoal": {
+          "description": "What Yumi repeated back and the user accepted. Set when the task leaves awaitingConfirmation.",
+          "type": "string",
+          "minLength": 1
+        },
+        "status": { "$ref": "#/$defs/TaskStatus" },
+        "plan": { "description": "Subtask ids in plan order.", "type": "array", "items": { "$ref": "common.json#/$defs/Uuid" } },
+        "summary": { "description": "Final summary spoken on the origin device.", "type": "string" },
+        "createdAt": { "$ref": "common.json#/$defs/Timestamp" },
+        "updatedAt": { "$ref": "common.json#/$defs/Timestamp" }
+      },
+      "if": { "properties": { "status": { "enum": ["awaitingConfirmation", "cancelled"] } } },
+      "else": { "required": ["confirmedGoal"] }
+    },
+    "TaskStatus": {
+      "type": "string",
+      "enum": ["awaitingConfirmation", "queued", "planning", "running", "waitingForUser", "paused", "done", "failed", "cancelled"]
+    },
+    "Subtask": {
+      "description": "One per plan item, routed to a lane.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "taskId", "title", "instruction", "dependsOn", "proposedLane", "status", "attempts"],
+      "properties": {
+        "id": { "$ref": "common.json#/$defs/Uuid" },
+        "taskId": { "$ref": "common.json#/$defs/Uuid" },
+        "title": { "description": "Short, shown on the dashboard and the cursor label.", "type": "string", "minLength": 1, "maxLength": 60 },
+        "instruction": { "description": "Narrow prompt for the worker.", "type": "string", "minLength": 1 },
+        "dependsOn": { "type": "array", "uniqueItems": true, "items": { "$ref": "common.json#/$defs/Uuid" } },
+        "proposedLane": { "description": "From the planner.", "$ref": "common.json#/$defs/Lane" },
+        "lane": { "description": "Set by the router.", "$ref": "common.json#/$defs/Lane" },
+        "routeReason": { "$ref": "common.json#/$defs/RouteReason" },
+        "target": { "description": "Absent for helpers.", "$ref": "#/$defs/Target" },
+        "status": { "$ref": "#/$defs/SubtaskStatus" },
+        "workerId": { "description": "Which worker holds it right now.", "type": "string" },
+        "attempts": { "description": "One gui_act call is one attempt, at most 3.", "type": "integer", "minimum": 0, "maximum": 3 },
+        "result": { "$ref": "#/$defs/SubtaskResult" },
+        "lastGoodStep": { "description": "Where a handoff resumes from.", "$ref": "common.json#/$defs/Uuid" }
+      }
+    },
+    "Target": {
+      "description": "The app and window a UI subtask works in.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bundleId"],
+      "properties": {
+        "bundleId": { "description": "For example com.apple.mail.", "type": "string", "minLength": 1 },
+        "windowId": { "description": "CGWindowID on the Mac.", "type": "integer", "minimum": 0 }
+      }
+    },
+    "SubtaskStatus": {
+      "type": "string",
+      "enum": ["pending", "ready", "queued", "running", "needsApproval", "handoff", "done", "failed"]
+    },
+    "SubtaskResult": {
+      "description": "Structured result for the planner, built by the harness from the step log. Never a transcript (SPEC-05 r4).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "files", "note"],
+      "properties": {
+        "status": { "$ref": "common.json#/$defs/ResultStatus" },
+        "files": { "description": "Paths created or changed.", "type": "array", "items": { "$ref": "common.json#/$defs/Path" } },
+        "note": { "type": "string", "maxLength": 200 }
+      }
+    },
+    "Step": {
+      "description": "One row per model action. Written before the action runs; the outcome is written after (SPEC-02 r3).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "subtaskId", "index", "lane", "action", "startedAt"],
+      "properties": {
+        "id": { "$ref": "common.json#/$defs/Uuid" },
+        "subtaskId": { "$ref": "common.json#/$defs/Uuid" },
+        "index": { "type": "integer", "minimum": 0 },
+        "lane": { "$ref": "common.json#/$defs/Lane" },
+        "action": { "$ref": "action.json#/$defs/RecordedAction" },
+        "observation": { "description": "One line: what changed after the action. Absent until the action finished.", "type": "string", "maxLength": 300 },
+        "outcome": { "description": "Absent until the action finished.", "$ref": "common.json#/$defs/StepOutcome" },
+        "screenshotPath": { "description": "p1, for debugging and the dashboard.", "$ref": "common.json#/$defs/Path" },
+        "startedAt": { "$ref": "common.json#/$defs/Timestamp" },
+        "durationMs": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "WindowLock": {
+      "description": "Only one cursor works in a window at a time (SPEC-03 r5).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["windowId", "subtaskId", "lane", "acquiredAt", "expiresAt"],
+      "properties": {
+        "windowId": { "type": "integer", "minimum": 0 },
+        "subtaskId": { "$ref": "common.json#/$defs/Uuid" },
+        "lane": { "$ref": "common.json#/$defs/Lane" },
+        "acquiredAt": { "$ref": "common.json#/$defs/Timestamp" },
+        "expiresAt": { "description": "Stale locks expire, so a crashed worker cannot block a window.", "$ref": "common.json#/$defs/Timestamp" }
+      }
+    },
+    "AppCapability": {
+      "description": "Cached probe result per app version (SPEC-03 r4).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bundleId", "appVersion", "accessibility", "devtools", "probedAt"],
+      "properties": {
+        "bundleId": { "type": "string", "minLength": 1 },
+        "appVersion": { "type": "string" },
+        "accessibility": { "description": "An actionable accessibility tree was found.", "type": "boolean" },
+        "devtools": { "description": "Chromium DevTools protocol is available.", "type": "boolean" },
+        "probedAt": { "$ref": "common.json#/$defs/Timestamp" }
+      }
+    }
+  }
+}

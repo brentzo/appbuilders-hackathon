@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yumi.local/protocol/action.json",
+  "title": "Actions",
+  "description": "What the model outputs (ModelAction) and what the harness records after resolving and checking it (RecordedAction).",
+  "$defs": {
+    "ModelAction": {
+      "description": "Exactly one action chosen by the model. Element actions refer to the element's short number from the trimmed tree (SPEC-05 r2).",
+      "type": "object",
+      "discriminator": { "propertyName": "kind" },
+      "oneOf": [
+        { "$ref": "#/$defs/AxPressAction" },
+        { "$ref": "#/$defs/SetValueAction" },
+        { "$ref": "#/$defs/TypeTextAction" },
+        { "$ref": "#/$defs/KeyAction" },
+        { "$ref": "#/$defs/ScrollAction" },
+        { "$ref": "#/$defs/ToolAction" },
+        { "$ref": "#/$defs/AskAction" },
+        { "$ref": "#/$defs/FinishAction" },
+        { "$ref": "#/$defs/ClickAction" }
+      ]
+    },
+    "ElementNumber": {
+      "description": "The short number of an element in the trimmed tree the model saw.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200
+    },
+    "AxPressAction": {
+      "description": "Press an element through the accessibility API.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "element"],
+      "properties": {
+        "kind": { "const": "axPress" },
+        "element": { "$ref": "#/$defs/ElementNumber" }
+      }
+    },
+    "SetValueAction": {
+      "description": "Set an element's text through the accessibility API. Never used on secure text fields (SPEC-05 r7).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "element", "text"],
+      "properties": {
+        "kind": { "const": "setValue" },
+        "element": { "$ref": "#/$defs/ElementNumber" },
+        "text": { "type": "string" }
+      }
+    },
+    "TypeTextAction": {
+      "description": "Type text with the real keyboard. Main lane only (SPEC-03 r7).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "text"],
+      "properties": {
+        "kind": { "const": "type" },
+        "text": { "type": "string", "minLength": 1 }
+      }
+    },
+    "KeyAction": {
+      "description": "Press a key combination, for example cmd+shift+e. Main lane only. Risk comes from a per-app list (SPEC-07 r6).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "combo"],
+      "properties": {
+        "kind": { "const": "key" },
+        "combo": {
+          "description": "Modifiers joined with +, then one key: a letter, digit, punctuation, f1-f19, or a named key.",
+          "type": "string",
+          "pattern": "^(?:(?:cmd|ctrl|opt|shift|fn)\\+)*(?:[a-z0-9]|[-=\\[\\];',./\\\\`]|f(?:[1-9]|1[0-9])|return|tab|space|escape|delete|forwardDelete|up|down|left|right|home|end|pageUp|pageDown)$"
+        }
+      }
+    },
+    "ScrollAction": {
+      "description": "Scroll inside an element.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "element", "direction"],
+      "properties": {
+        "kind": { "const": "scroll" },
+        "element": { "$ref": "#/$defs/ElementNumber" },
+        "direction": { "$ref": "#/$defs/ScrollDirection" }
+      }
+    },
+    "ScrollDirection": {
+      "type": "string",
+      "enum": ["up", "down", "left", "right"]
+    },
+    "ToolAction": {
+      "description": "Call a typed tool.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "call"],
+      "properties": {
+        "kind": { "const": "tool" },
+        "call": { "$ref": "tools.json#/$defs/ToolCall" }
+      }
+    },
+    "AskAction": {
+      "description": "Ask the user a question. The task waits for the answer.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "question"],
+      "properties": {
+        "kind": { "const": "ask" },
+        "question": { "type": "string", "minLength": 1, "maxLength": 300 }
+      }
+    },
+    "FinishAction": {
+      "description": "End this gui_act attempt. The harness sets partial and blocked itself.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "status", "note"],
+      "properties": {
+        "kind": { "const": "finish" },
+        "status": { "$ref": "#/$defs/FinishStatus" },
+        "note": { "type": "string", "maxLength": 200 }
+      }
+    },
+    "FinishStatus": {
+      "type": "string",
+      "enum": ["done", "stuck"]
+    },
+    "ClickAction": {
+      "description": "p1 vision fallback only: click at coordinates in the screenshot the model saw (SPEC-05 r12).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "x", "y"],
+      "properties": {
+        "kind": { "const": "click" },
+        "x": { "type": "integer", "minimum": 0 },
+        "y": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "AXRole": {
+      "description": "Actionable roles kept in the trimmed tree (SPEC-05 r2). Secure text fields are listed so Yumi can ask the user to type there, but their value is never read (SPEC-05 r7).",
+      "type": "string",
+      "enum": ["button", "menuItem", "textField", "secureTextField", "link", "checkbox", "popUpButton"]
+    },
+    "ResolvedElement": {
+      "description": "The real element behind an element number, resolved by the harness before acting.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "role", "label"],
+      "properties": {
+        "path": { "description": "Stable accessibility path, built by the Mac app.", "type": "string", "minLength": 1 },
+        "role": { "$ref": "#/$defs/AXRole" },
+        "label": { "description": "Used by the risk check (SPEC-07 r6).", "type": "string" }
+      }
+    },
+    "RecordedAction": {
+      "description": "A model action after the harness resolved its element and decided its permission level.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action", "permission"],
+      "properties": {
+        "action": { "$ref": "#/$defs/ModelAction" },
+        "element": { "description": "Required for element actions, whose risk is read from the element's label (SPEC-07 r6).", "$ref": "#/$defs/ResolvedElement" },
+        "permission": { "$ref": "common.json#/$defs/PermissionLevel" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "action": { "type": "object", "properties": { "kind": { "enum": ["axPress", "setValue", "scroll"] } } } } },
+          "then": { "required": ["element"] },
+          "else": { "properties": { "element": false } }
+        },
+        {
+          "if": { "properties": { "action": { "type": "object", "properties": { "kind": { "const": "setValue" } } } } },
+          "then": { "properties": { "element": { "type": "object", "properties": { "role": { "not": { "const": "secureTextField" } } } } } }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,28 @@
+name: protocol
+
+on:
+  push:
+    paths: ["protocol/**", "specs/11-user-facing-errors.md", "objectives/OBJ-01-*.md", ".github/workflows/protocol.yml"]
+  pull_request:
+    paths: ["protocol/**", "specs/11-user-facing-errors.md", "objectives/OBJ-01-*.md", ".github/workflows/protocol.yml"]
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: protocol
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: protocol/package-lock.json
+      - run: npm ci
+      - name: Generated types are up to date, typecheck, tests
+        run: npm run verify
+      - name: Swift compiles and round-trips every example
+        run: npm run compile:swift
+      - name: Kotlin compiles and round-trips every example
+        run: npm run compile:kotlin

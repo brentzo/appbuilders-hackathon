@@ -1,0 +1,12 @@
+{
+  "fields": [
+    {
+      "elementPath": "AXWindow/AXTextField[To]",
+      "value": "ana@example.com"
+    },
+    {
+      "elementPath": "AXWindow/AXTextField[Cc]",
+      "value": ""
+    }
+  ]
+}

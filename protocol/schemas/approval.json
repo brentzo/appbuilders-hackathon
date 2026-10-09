@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yumi.local/protocol/approval.json",
+  "title": "Approvals",
+  "description": "A risky action waiting for the user on the origin device (SPEC-07, SPEC-09 r10). The text is built by the harness from real data, never from model text.",
+  "$defs": {
+    "Approval": {
+      "description": "One approval request, and the decision once the user answered.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "stepId", "kind", "text", "requestedAt", "expiresAt"],
+      "properties": {
+        "id": { "$ref": "common.json#/$defs/Uuid" },
+        "stepId": { "$ref": "common.json#/$defs/Uuid" },
+        "kind": { "$ref": "#/$defs/ApprovalKind" },
+        "recipients": {
+          "description": "Send: read from the real To and Cc fields (SPEC-07 r13).",
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "files": { "$ref": "#/$defs/FileSummary" },
+        "text": { "description": "What the user hears and sees.", "type": "string", "minLength": 1 },
+        "requestedAt": { "$ref": "common.json#/$defs/Timestamp" },
+        "expiresAt": { "description": "5 minutes after the request; then the task pauses.", "$ref": "common.json#/$defs/Timestamp" },
+        "decision": { "$ref": "#/$defs/ApprovalDecision" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "send" } } },
+          "then": { "required": ["recipients"], "properties": { "files": false } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "delete" } } },
+          "then": {
+            "required": ["files"],
+            "properties": {
+              "recipients": false,
+              "decision": {
+                "type": "object",
+                "if": { "properties": { "approved": { "const": true } } },
+                "then": { "properties": { "method": { "const": "tap" } } }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "ApprovalKind": {
+      "type": "string",
+      "enum": ["send", "delete"]
+    },
+    "FileSummary": {
+      "description": "Delete: built from the real file list (SPEC-07 r10).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["folder", "count", "firstNames", "allPaths"],
+      "properties": {
+        "folder": { "$ref": "common.json#/$defs/Path" },
+        "count": { "type": "integer", "minimum": 1 },
+        "firstNames": { "description": "At most 5 names; the card adds \"and N more\".", "type": "array", "maxItems": 5, "items": { "type": "string" } },
+        "allPaths": {
+          "description": "The exact list the approval covers, checked again right before acting (SPEC-07 r12).",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "common.json#/$defs/Path" }
+        }
+      }
+    },
+    "ApprovalDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["approved", "method", "decidedAt"],
+      "properties": {
+        "approved": { "type": "boolean" },
+        "method": { "$ref": "#/$defs/ApprovalMethod" },
+        "decidedAt": { "$ref": "common.json#/$defs/Timestamp" }
+      }
+    },
+    "ApprovalMethod": {
+      "description": "A delete is approved only by a tap or click (SPEC-07 r11). A send may be approved by voice (SPEC-07 r15).",
+      "type": "string",
+      "enum": ["tap", "voice"]
+    }
+  }
+}

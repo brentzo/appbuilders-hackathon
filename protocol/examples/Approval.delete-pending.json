@@ -1,0 +1,28 @@
+{
+  "id": "4d5e6f7a-8b9c-4d0e-9f2a-3b4c5d6e7f80",
+  "stepId": "3c4d5e6f-7a8b-4c9d-8e1f-2a3b4c5d6e7f",
+  "kind": "delete",
+  "files": {
+    "folder": "~/Downloads",
+    "count": 7,
+    "firstNames": [
+      "a.pdf",
+      "b.pdf",
+      "c.pdf",
+      "d.pdf",
+      "e.pdf"
+    ],
+    "allPaths": [
+      "~/Downloads/a.pdf",
+      "~/Downloads/b.pdf",
+      "~/Downloads/c.pdf",
+      "~/Downloads/d.pdf",
+      "~/Downloads/e.pdf",
+      "~/Downloads/f.pdf",
+      "~/Downloads/g.pdf"
+    ]
+  },
+  "text": "I'm about to move 7 files from Downloads to the Trash, starting with a.pdf. Should I delete them?",
+  "requestedAt": "2026-10-09T15:42:00+08:00",
+  "expiresAt": "2026-10-09T15:47:00+08:00"
+}

@@ -1,0 +1,12 @@
+{
+  "description": "A running task asks the user a question, then a pause cancels a pending approval, as SPEC-06 r5 requires.",
+  "trigger": "submitGoal",
+  "events": [
+    { "afterMs": 500, "event": "taskStatusChanged", "payload": { "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8", "status": "running" } },
+    { "afterMs": 800, "event": "questionAsked", "example": "QuestionAsked.which-deck" },
+    { "afterMs": 300, "event": "taskStatusChanged", "payload": { "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8", "status": "waitingForUser" } },
+    { "afterMs": 3000, "event": "taskStatusChanged", "payload": { "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8", "status": "paused" } },
+    { "afterMs": 100, "event": "approvalCancelled", "example": "ApprovalCancelled.paused" },
+    { "afterMs": 100, "event": "cursorCommand", "payload": { "command": "setState", "cursorId": "main", "state": "paused" } }
+  ]
+}

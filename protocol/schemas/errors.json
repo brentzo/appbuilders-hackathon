@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yumi.local/protocol/errors.json",
+  "title": "Errors",
+  "description": "Structured failure kinds. Every product maps these to the copy and buttons in SPEC-11; no raw error text ever reaches the user (SPEC-11 r1 and r5).",
+  "$defs": {
+    "ErrorKind": {
+      "description": "One kind per row of the SPEC-11 error table, plus blockedAction from SPEC-07 r5. x-specRows maps each kind to its SPEC-11 row and is checked by a test.",
+      "type": "string",
+      "enum": [
+        "otherDeviceOffline",
+        "otherDeviceBusy",
+        "otherDeviceLocked",
+        "bridgeDown",
+        "cannotPauseOtherDevice",
+        "noReply",
+        "commandExpired",
+        "stuckOnScreen",
+        "taskTookTooLong",
+        "unsupportedRequest",
+        "screenPermissionMissing",
+        "accessibilityPermissionMissing",
+        "microphonePermissionMissing",
+        "androidPermissionMissing",
+        "androidAccessibilityServiceOff",
+        "phoneTooHot",
+        "languageNotSupported",
+        "didNotCatchSpeech",
+        "modelFailedToLoad",
+        "unpairedDevice",
+        "unexpected",
+        "blockedAction"
+      ],
+      "x-specRows": {
+        "otherDeviceOffline": "Other device offline",
+        "otherDeviceBusy": "Other device busy",
+        "otherDeviceLocked": "Other device locked (p1)",
+        "bridgeDown": "Bridge down",
+        "cannotPauseOtherDevice": "Can't pause the other device",
+        "noReply": "No reply",
+        "commandExpired": "Command expired",
+        "stuckOnScreen": "Stuck on screen",
+        "taskTookTooLong": "Task took too long",
+        "unsupportedRequest": "Unsupported request",
+        "screenPermissionMissing": "Screen permission missing (Mac)",
+        "accessibilityPermissionMissing": "Accessibility permission missing (Mac)",
+        "microphonePermissionMissing": "Microphone permission missing",
+        "androidPermissionMissing": "Permission missing (Android)",
+        "androidAccessibilityServiceOff": "Accessibility service off (Android, p1)",
+        "phoneTooHot": "Phone too hot or battery low (p1)",
+        "languageNotSupported": "Language not supported on this phone",
+        "didNotCatchSpeech": "Didn't catch speech",
+        "modelFailedToLoad": "Model failed to load",
+        "unpairedDevice": "Unpaired device",
+        "unexpected": "Unexpected"
+      }
+    },
+    "UserError": {
+      "description": "An error the user will see. Apps turn it into the SPEC-11 copy. Technical details go to the local log, not here.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": { "$ref": "#/$defs/ErrorKind" },
+        "taskId": { "$ref": "common.json#/$defs/Uuid" },
+        "device": { "description": "Fills {device} in the copy: the other device.", "$ref": "common.json#/$defs/DeviceId" },
+        "lastAction": { "description": "Fills {last action} in the Unexpected copy, from the action log.", "type": "string", "maxLength": 200 },
+        "finishedSoFar": { "description": "For taskTookTooLong: what was finished.", "type": "string", "maxLength": 500 }
+      }
+    }
+  }
+}

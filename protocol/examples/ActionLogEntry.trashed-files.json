@@ -1,0 +1,12 @@
+{
+  "time": "2026-10-09T15:43:00+08:00",
+  "deviceId": "mac-brent",
+  "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+  "lane": "helper",
+  "description": "Moved 2 files from Downloads to the Trash",
+  "paths": [
+    "~/Downloads/old-invoice.pdf",
+    "~/Downloads/old-receipt.pdf"
+  ],
+  "outcome": "ok"
+}

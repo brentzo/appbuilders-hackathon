@@ -1,0 +1,4 @@
+protocol/schemas/** text eol=lf
+protocol/examples/** text eol=lf
+protocol/generated/** text eol=lf
+*.md text eol=lf

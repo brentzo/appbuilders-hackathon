@@ -1,0 +1,10 @@
+{
+  "kind": "tool",
+  "call": {
+    "tool": "move_to_trash",
+    "paths": [
+      "~/Downloads/old-invoice.pdf",
+      "~/Downloads/old-receipt.pdf"
+    ]
+  }
+}

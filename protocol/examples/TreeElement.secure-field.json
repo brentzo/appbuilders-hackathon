@@ -1,0 +1,6 @@
+{
+  "n": 3,
+  "role": "secureTextField",
+  "label": "Password",
+  "enabled": true
+}

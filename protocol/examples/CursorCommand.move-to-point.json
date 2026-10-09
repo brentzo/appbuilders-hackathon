@@ -1,0 +1,9 @@
+{
+  "command": "move",
+  "cursorId": "main",
+  "to": {
+    "kind": "point",
+    "x": -340.5,
+    "y": 212
+  }
+}

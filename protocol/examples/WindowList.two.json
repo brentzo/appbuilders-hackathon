@@ -1,0 +1,30 @@
+{
+  "windows": [
+    {
+      "windowId": 4182,
+      "bundleId": "com.apple.iWork.Keynote",
+      "appName": "Keynote",
+      "title": "Q3 Report.key",
+      "frame": {
+        "x": 0,
+        "y": 25,
+        "width": 1512,
+        "height": 920
+      },
+      "minimized": false
+    },
+    {
+      "windowId": 977,
+      "bundleId": "com.google.Chrome",
+      "appName": "Google Chrome",
+      "title": "Expenses",
+      "frame": {
+        "x": -1920,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      },
+      "minimized": false
+    }
+  ]
+}

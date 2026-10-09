@@ -128,7 +128,7 @@ struct Observation: Codable {
 
 struct TreeElement: Codable {
     let n: Int                       // short number the model answers with
-    let role: AXRole                 // button, menuItem, textField, link, checkbox, popUpButton
+    let role: AXRole                 // button, menuItem, textField, secureTextField, link, checkbox, popUpButton
     let label: String
     var value: String?               // never set for secure text fields
     var enabled: Bool
@@ -136,6 +136,7 @@ struct TreeElement: Codable {
 ```
 
 The trimmed tree holds visible, actionable elements only, and skips empty layout groups.
+Secure text fields are listed so Yumi can ask the user to type there, but their value is never read (SPEC-05 r7).
 A step has no effect when the trimmed tree and the window title are the same before and after the action (SPEC-05 r6).
 
 ## Actions
@@ -153,7 +154,7 @@ enum ModelAction: Codable {
     case scroll(element: Int, direction: ScrollDirection)
     case tool(ToolCall)              // typed tools only, see below
     case ask(question: String)       // pauses for the user
-    case finish(status: ResultStatus, note: String)  // ends this gui_act attempt
+    case finish(status: FinishStatus, note: String)  // ends this gui_act attempt: done or stuck; the harness sets partial and blocked
     case click(x: Int, y: Int)       // p1 vision fallback only
 }
 

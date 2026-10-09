@@ -91,6 +91,7 @@ enum RouteReason: String, Codable {
     case backgroundCapable
     case appNotBackgroundCapable
     case windowLocked
+    case openedSecondWindow          // the window was busy, so a second window was opened (SPEC-03 r11)
     case atCapacity
     case promotedAfterFailure
 }

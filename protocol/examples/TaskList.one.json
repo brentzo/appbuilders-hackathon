@@ -1,0 +1,17 @@
+{
+  "tasks": [
+    {
+      "id": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+      "originDeviceId": "phone-ana",
+      "goal": "export my Keynote deck as a PDF",
+      "confirmedGoal": "export my Keynote deck as a PDF",
+      "status": "running",
+      "plan": [
+        "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+        "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e"
+      ],
+      "createdAt": "2026-10-09T15:40:00+08:00",
+      "updatedAt": "2026-10-09T15:41:10+08:00"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "action": {
+    "kind": "scroll",
+    "element": 2,
+    "direction": "down"
+  },
+  "observation": "The list scrolled to the October invoices.",
+  "outcome": "ok"
+}

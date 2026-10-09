@@ -1,0 +1,11 @@
+{
+  "kind": "tool",
+  "call": {
+    "tool": "phone",
+    "call": {
+      "tool": "set_alarm",
+      "time": "06:30",
+      "label": "Gym"
+    }
+  }
+}

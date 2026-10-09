@@ -1,0 +1,12 @@
+{
+  "folder": "~/Downloads",
+  "count": 2,
+  "firstNames": [
+    "old-invoice.pdf",
+    "old-receipt.pdf"
+  ],
+  "allPaths": [
+    "~/Downloads/old-invoice.pdf",
+    "~/Downloads/old-receipt.pdf"
+  ]
+}

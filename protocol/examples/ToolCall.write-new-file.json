@@ -1,0 +1,5 @@
+{
+  "tool": "write_new_file",
+  "path": "~/Documents/PDF Summary.txt",
+  "content": "Summary of the 5 PDFs."
+}

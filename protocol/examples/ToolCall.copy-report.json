@@ -1,0 +1,5 @@
+{
+  "tool": "copy",
+  "from": "~/Downloads/Q3 Report.pdf",
+  "to": "~/Documents/Reports/Q3 Report.pdf"
+}

@@ -1,0 +1,11 @@
+{
+  "command": "spawn",
+  "cursorId": "ghost-1",
+  "cursorKind": "ghost",
+  "label": "Fill expense form",
+  "at": {
+    "kind": "element",
+    "target": { "bundleId": "com.google.Chrome", "windowId": 977 },
+    "elementPath": "AXWebArea/AXTextField[Amount]"
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yumi.local/protocol/common.json",
+  "title": "Common",
+  "description": "Small shared types used by every other schema file.",
+  "$defs": {
+    "ProtocolVersion": {
+      "description": "Version of these schemas. Bump it on every breaking change; see protocol/README.md.",
+      "type": "integer",
+      "const": 1
+    },
+    "Uuid": {
+      "description": "A UUID in its canonical text form.",
+      "type": "string",
+      "format": "uuid"
+    },
+    "DeviceId": {
+      "description": "Stable id of a paired device, created at pairing.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "Timestamp": {
+      "description": "An ISO 8601 date and time with a time zone, for example 2026-10-09T15:42:00+08:00.",
+      "type": "string",
+      "format": "date-time"
+    },
+    "Path": {
+      "description": "An exact file path, absolute or starting with ~/. The wildcard characters * and ? are rejected (SPEC-07 r8); brackets and braces are allowed because they are common in real file names.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "pattern": "^(?:/|~/)[^*?]*$"
+    },
+    "Lane": {
+      "description": "How a subtask runs (SPEC-03).",
+      "type": "string",
+      "enum": ["helper", "ghost", "main"]
+    },
+    "RouteReason": {
+      "description": "Why the router picked a lane, shown on the dashboard (SPEC-03 r10).",
+      "type": "string",
+      "enum": [
+        "noUI",
+        "backgroundCapable",
+        "appNotBackgroundCapable",
+        "windowLocked",
+        "openedSecondWindow",
+        "atCapacity",
+        "promotedAfterFailure"
+      ]
+    },
+    "PermissionLevel": {
+      "description": "Decided by the harness for every action, never by the model (SPEC-07 r1).",
+      "type": "string",
+      "enum": ["allowed", "ask", "blocked"]
+    },
+    "ResultStatus": {
+      "description": "Outcome of a subtask attempt (SPEC-05 r4).",
+      "type": "string",
+      "enum": ["done", "partial", "stuck", "blocked"]
+    },
+    "StepOutcome": {
+      "description": "What happened when a step ran.",
+      "type": "string",
+      "enum": ["ok", "noEffect", "invalidOutput", "blocked", "declined", "error"]
+    }
+  }
+}

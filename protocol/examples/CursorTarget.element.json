@@ -1,0 +1,8 @@
+{
+  "kind": "element",
+  "target": {
+    "bundleId": "com.apple.mail",
+    "windowId": 5120
+  },
+  "elementPath": "AXWindow/AXButton[Send]"
+}

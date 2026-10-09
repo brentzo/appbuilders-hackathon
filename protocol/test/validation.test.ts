@@ -1,0 +1,195 @@
+import { describe, expect, it } from "vitest";
+import { validate } from "../src/index.ts";
+
+describe("ModelAction", () => {
+  it("accepts a press on a numbered element", () => {
+    expect(validate("ModelAction", { kind: "axPress", element: 3 }).valid).toBe(true);
+  });
+
+  it("rejects fields that belong to another variant", () => {
+    expect(validate("ModelAction", { kind: "finish", status: "done", note: "ok", element: 3 }).valid).toBe(false);
+  });
+
+  it("rejects an element given as a path instead of a number", () => {
+    expect(validate("ModelAction", { kind: "axPress", element: "AXWindow/AXMenuBar/AXMenuItem[Export]" }).valid).toBe(
+      false,
+    );
+  });
+
+  it("has no shell or AppleScript action (SPEC-05 'Raw shell is not available')", () => {
+    expect(validate("ModelAction", { kind: "shell", command: "rm -rf ~/Downloads/old" }).valid).toBe(false);
+    expect(validate("ModelAction", { kind: "tool", call: { tool: "shell", command: "ls" } }).valid).toBe(false);
+    expect(validate("ModelAction", { kind: "tool", call: { tool: "applescript", script: "beep" } }).valid).toBe(false);
+  });
+});
+
+describe("KeyAction", () => {
+  it("accepts punctuation and named keys", () => {
+    for (const combo of ["cmd+,", "cmd+/", "cmd+shift+d", "return", "cmd+delete", "cmd+shift+delete", "escape", "f5"]) {
+      expect(validate("ModelAction", { kind: "key", combo }).valid, combo).toBe(true);
+    }
+  });
+
+  it("rejects unknown modifiers and text", () => {
+    expect(validate("ModelAction", { kind: "key", combo: "hyper+a" }).valid).toBe(false);
+    expect(validate("ModelAction", { kind: "key", combo: "hello world" }).valid).toBe(false);
+  });
+});
+
+describe("RecordedAction", () => {
+  const element = (role: string) => ({ path: "AXWindow/AXTextField[To]", role, label: "To" });
+
+  it("always carries the resolved element for element actions (SPEC-07 r6 reads its label)", () => {
+    expect(validate("RecordedAction", { action: { kind: "axPress", element: 2 }, permission: "allowed" }).valid).toBe(false);
+    expect(
+      validate("RecordedAction", { action: { kind: "axPress", element: 2 }, element: element("button"), permission: "ask" }).valid,
+    ).toBe(true);
+  });
+
+  it("never sets a value in a secure text field (SPEC-05 r7)", () => {
+    const fill = { kind: "setValue", element: 2, text: "hunter2" };
+    expect(validate("RecordedAction", { action: fill, element: element("secureTextField"), permission: "allowed" }).valid).toBe(false);
+    expect(validate("RecordedAction", { action: fill, element: element("textField"), permission: "allowed" }).valid).toBe(true);
+  });
+});
+
+describe("move_to_trash", () => {
+  const trash = (paths: unknown[]) => ({ kind: "tool", call: { tool: "move_to_trash", paths } });
+
+  it("accepts exact paths", () => {
+    expect(validate("ModelAction", trash(["~/Downloads/old-invoice.pdf", "/Users/ana/Downloads/a.pdf"])).valid).toBe(
+      true,
+    );
+  });
+
+  it("rejects wildcards (SPEC-07 'Wildcards are rejected')", () => {
+    expect(validate("ModelAction", trash(["~/Downloads/*.pdf"])).valid).toBe(false);
+  });
+
+  it("accepts real file names with brackets and braces", () => {
+    expect(validate("ModelAction", trash(["~/Downloads/Invoice [2024].pdf", "~/Notes/{draft}.txt"])).valid).toBe(true);
+  });
+
+  it("rejects relative paths and an empty list", () => {
+    expect(validate("ModelAction", trash(["Downloads/a.pdf"])).valid).toBe(false);
+    expect(validate("ModelAction", trash([])).valid).toBe(false);
+  });
+});
+
+describe("WorkerOutput", () => {
+  const press = { kind: "axPress", element: 1 };
+
+  it("holds exactly one action", () => {
+    expect(validate("WorkerOutput", { action: press }).valid).toBe(true);
+  });
+
+  it("rejects zero actions or two (SPEC-02 'Worker returns an invalid action')", () => {
+    expect(validate("WorkerOutput", {}).valid).toBe(false);
+    expect(validate("WorkerOutput", { action: [press, press] }).valid).toBe(false);
+    expect(validate("WorkerOutput", { action: press, action2: press }).valid).toBe(false);
+  });
+});
+
+describe("Task", () => {
+  const task = (status: string, confirmedGoal?: string) => ({
+    id: "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+    originDeviceId: "mac-brent",
+    goal: "rename the invoices in Downloads by date",
+    status,
+    plan: [],
+    createdAt: "2026-10-09T15:40:00+08:00",
+    updatedAt: "2026-10-09T15:40:00+08:00",
+    ...(confirmedGoal ? { confirmedGoal } : {}),
+  });
+
+  it("has no confirmed goal while waiting for confirmation, or after a cancel before work", () => {
+    expect(validate("Task", task("awaitingConfirmation")).valid).toBe(true);
+    expect(validate("Task", task("cancelled")).valid).toBe(true);
+  });
+
+  it("keeps the confirmed goal separate from the transcript once work starts (SPEC-01 r7)", () => {
+    expect(validate("Task", task("planning")).valid).toBe(false);
+    expect(validate("Task", task("planning", "rename the October invoices in Downloads by date")).valid).toBe(true);
+  });
+
+  it("lets a step be written before its action runs, with no observation or outcome yet (SPEC-02 r3)", () => {
+    const step = {
+      id: "3c4d5e6f-7a8b-4c9d-8e1f-2a3b4c5d6e7f",
+      subtaskId: "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+      index: 0,
+      lane: "main",
+      action: { action: { kind: "ask", question: "Which deck?" }, permission: "allowed" },
+      startedAt: "2026-10-09T15:41:05+08:00",
+    };
+    expect(validate("Step", step).errors).toEqual([]);
+  });
+
+  it("always records the origin device (SPEC-09)", () => {
+    const { originDeviceId: _origin, ...withoutOrigin } = task("awaitingConfirmation");
+    expect(validate("Task", withoutOrigin).valid).toBe(false);
+  });
+});
+
+describe("Approval", () => {
+  const deleteApproval = (decision?: unknown) => ({
+    id: "3f1c2a9e-8b7d-4c6e-9a1f-2d3e4f5a6b7c",
+    stepId: "8a7b6c5d-4e3f-4a1b-9c8d-7e6f5a4b3c2d",
+    kind: "delete",
+    files: {
+      folder: "~/Downloads",
+      count: 2,
+      firstNames: ["old-invoice.pdf", "old-receipt.pdf"],
+      allPaths: ["~/Downloads/old-invoice.pdf", "~/Downloads/old-receipt.pdf"],
+    },
+    text: "I'm about to move 2 files from Downloads to the Trash, starting with old-invoice.pdf. Should I delete them?",
+    requestedAt: "2026-10-09T15:42:00+08:00",
+    expiresAt: "2026-10-09T15:47:00+08:00",
+    ...(decision ? { decision } : {}),
+  });
+
+  it("accepts a delete approved by a tap", () => {
+    const tapped = { approved: true, method: "tap", decidedAt: "2026-10-09T15:43:00+08:00" };
+    expect(validate("Approval", deleteApproval(tapped)).valid).toBe(true);
+  });
+
+  it("rejects a delete approved by voice (SPEC-07 'Saying yes is not enough to delete')", () => {
+    const spoken = { approved: true, method: "voice", decidedAt: "2026-10-09T15:43:00+08:00" };
+    expect(validate("Approval", deleteApproval(spoken)).valid).toBe(false);
+  });
+
+  it("accepts a delete declined by voice", () => {
+    const declined = { approved: false, method: "voice", decidedAt: "2026-10-09T15:43:00+08:00" };
+    expect(validate("Approval", deleteApproval(declined)).valid).toBe(true);
+  });
+
+  it("requires the file list for a delete and the recipients for a send", () => {
+    const { files: _files, ...withoutFiles } = deleteApproval();
+    expect(validate("Approval", withoutFiles).valid).toBe(false);
+    expect(validate("Approval", { ...withoutFiles, kind: "send" }).valid).toBe(false);
+    expect(validate("Approval", { ...withoutFiles, kind: "send", recipients: ["ana@example.com"] }).valid).toBe(true);
+  });
+});
+
+describe("Observation", () => {
+  const element = (n: number) => ({ n, role: "button", label: `Button ${n}`, enabled: true });
+  const observation = (count: number) => ({
+    windowTitle: "Q3 Report.key",
+    elements: Array.from({ length: count }, (_, i) => element(i + 1)),
+  });
+
+  it("allows up to 200 elements", () => {
+    expect(validate("Observation", observation(200)).valid).toBe(true);
+  });
+
+  it("rejects 201 elements (SPEC-05 r2)", () => {
+    expect(validate("Observation", observation(201)).valid).toBe(false);
+  });
+
+  it("never carries a secure text field's value (SPEC-05 r7)", () => {
+    const withSecret = {
+      windowTitle: "Sign in",
+      elements: [{ n: 1, role: "secureTextField", label: "Password", value: "hunter2", enabled: true }],
+    };
+    expect(validate("Observation", withSecret).valid).toBe(false);
+  });
+});

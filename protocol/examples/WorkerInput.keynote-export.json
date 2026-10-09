@@ -1,0 +1,66 @@
+{
+  "confirmedGoal": "export my Keynote deck as a PDF",
+  "instruction": "In Keynote, export the open deck to PDF in Downloads.",
+  "recentSteps": [
+    {
+      "action": {
+        "kind": "tool",
+        "call": {
+          "tool": "open_app",
+          "bundleId": "com.apple.iWork.Keynote"
+        }
+      },
+      "observation": "Keynote is in front.",
+      "outcome": "ok"
+    },
+    {
+      "action": {
+        "kind": "axPress",
+        "element": 1
+      },
+      "observation": "The File menu opened.",
+      "outcome": "ok"
+    }
+  ],
+  "observation": {
+    "windowTitle": "Q3 Report.key",
+    "elements": [
+      {
+        "n": 1,
+        "role": "menuItem",
+        "label": "File",
+        "enabled": true
+      },
+      {
+        "n": 2,
+        "role": "menuItem",
+        "label": "Edit",
+        "enabled": true
+      },
+      {
+        "n": 3,
+        "role": "button",
+        "label": "Play",
+        "enabled": true
+      },
+      {
+        "n": 4,
+        "role": "menuItem",
+        "label": "Export To",
+        "enabled": true
+      },
+      {
+        "n": 5,
+        "role": "textField",
+        "label": "Search",
+        "value": "",
+        "enabled": true
+      }
+    ]
+  },
+  "allowedTools": [
+    "open_app",
+    "open_file",
+    "reveal_in_finder"
+  ]
+}

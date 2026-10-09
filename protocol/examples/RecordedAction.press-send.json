@@ -1,0 +1,12 @@
+{
+  "action": {
+    "kind": "axPress",
+    "element": 7
+  },
+  "element": {
+    "path": "AXWindow/AXToolbar/AXButton[Send]",
+    "role": "button",
+    "label": "Send"
+  },
+  "permission": "ask"
+}

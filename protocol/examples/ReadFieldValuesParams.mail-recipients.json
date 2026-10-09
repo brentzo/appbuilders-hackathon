@@ -1,0 +1,10 @@
+{
+  "target": {
+    "bundleId": "com.apple.mail",
+    "windowId": 5120
+  },
+  "elementPaths": [
+    "AXWindow/AXTextField[To]",
+    "AXWindow/AXTextField[Cc]"
+  ]
+}

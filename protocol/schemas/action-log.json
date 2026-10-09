@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yumi.local/protocol/action-log.json",
+  "title": "Action log",
+  "description": "Every action Yumi ran, blocked, or was told not to run, in plain language (SPEC-07 r18).",
+  "$defs": {
+    "ActionLogEntry": {
+      "description": "One line of the action log. Text typed into password fields is never logged.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["time", "deviceId", "description", "outcome"],
+      "properties": {
+        "time": { "description": "Shown to users as am/pm.", "$ref": "common.json#/$defs/Timestamp" },
+        "deviceId": { "$ref": "common.json#/$defs/DeviceId" },
+        "taskId": { "$ref": "common.json#/$defs/Uuid" },
+        "lane": { "$ref": "common.json#/$defs/Lane" },
+        "description": { "description": "For example \"Clicked Export in Keynote\".", "type": "string", "minLength": 1, "maxLength": 300 },
+        "paths": {
+          "description": "Every path, for deletes.",
+          "type": "array",
+          "items": { "$ref": "common.json#/$defs/Path" }
+        },
+        "outcome": { "$ref": "common.json#/$defs/StepOutcome" }
+      }
+    }
+  }
+}

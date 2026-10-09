@@ -1,0 +1,14 @@
+{
+  "description": "Window and bridge notices on connect: the bridge drops and comes back, a subtask waits for a busy window, tiling is suggested, and a crash leaves a task to resume.",
+  "trigger": "connect",
+  "events": [
+    { "afterMs": 200, "event": "bridgeStateChanged", "payload": { "state": "connected", "peerDeviceId": "phone-ana" } },
+    { "afterMs": 200, "event": "interruptedTaskFound", "example": "TaskRef.keynote" },
+    { "afterMs": 1000, "event": "bridgeStateChanged", "example": "BridgeStateChanged.reconnecting" },
+    { "afterMs": 500, "event": "userError", "payload": { "kind": "bridgeDown", "device": "phone-ana" } },
+    { "afterMs": 1500, "event": "bridgeStateChanged", "payload": { "state": "connected", "peerDeviceId": "phone-ana" } },
+    { "afterMs": 500, "event": "tilingSuggested", "example": "TilingSuggested.two-windows" },
+    { "afterMs": 2000, "event": "waitingForWindow", "example": "WaitingForWindow.keynote" },
+    { "afterMs": 500, "event": "userError", "example": "UserError.unexpected" }
+  ]
+}

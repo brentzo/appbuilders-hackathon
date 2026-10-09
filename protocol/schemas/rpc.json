@@ -1,0 +1,585 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yumi.local/protocol/rpc.json",
+  "title": "Local RPC",
+  "description": "JSON-RPC 2.0 between the harness and the Mac app over a Unix socket, one JSON message per line. The harness listens; the Mac app connects and sends hello first. Either side may call the other's methods on the same connection. x-rpc lists every method with its direction, params, and result type, and every event (a JSON-RPC notification from the harness) with its payload type. A method that fails returns a JSON-RPC error whose data is the type named in x-rpc errorData, so failures are structured kinds and never text meant for users. An objective that adds or changes a method updates this file in the same commit.",
+  "x-rpc": {
+    "errorData": "UserError",
+    "methods": {
+      "hello": { "direction": "appToHarness", "params": "HelloParams", "result": "HelloResult" },
+      "ping": { "direction": "appToHarness", "params": "Empty", "result": "Empty" },
+      "submitGoal": { "direction": "appToHarness", "params": "SubmitGoalParams", "result": "SubmitGoalResult" },
+      "replyToConfirmation": { "direction": "appToHarness", "params": "ReplyToConfirmationParams", "result": "Empty" },
+      "answerQuestion": { "direction": "appToHarness", "params": "AnswerQuestionParams", "result": "Empty" },
+      "pause": { "direction": "appToHarness", "params": "PauseParams", "result": "Empty" },
+      "resumeTask": { "direction": "appToHarness", "params": "TaskRef", "result": "Empty" },
+      "cancelTask": { "direction": "appToHarness", "params": "TaskRef", "result": "Empty" },
+      "listTasks": { "direction": "appToHarness", "params": "ListTasksParams", "result": "TaskList" },
+      "searchTasks": { "direction": "appToHarness", "params": "SearchTasksParams", "result": "TaskList" },
+      "getTask": { "direction": "appToHarness", "params": "TaskRef", "result": "TaskDetail" },
+      "startPairing": { "direction": "appToHarness", "params": "Empty", "result": "StartPairingResult" },
+      "listPairedDevices": { "direction": "appToHarness", "params": "Empty", "result": "PairedDeviceList" },
+      "unpair": { "direction": "appToHarness", "params": "UnpairParams", "result": "Empty" },
+      "executeAction": { "direction": "harnessToApp", "params": "ExecuteActionParams", "result": "ExecuteActionResult" },
+      "observeWindow": { "direction": "harnessToApp", "params": "ObserveWindowParams", "result": "Observation" },
+      "readFieldValues": { "direction": "harnessToApp", "params": "ReadFieldValuesParams", "result": "ReadFieldValuesResult" },
+      "showApprovalCard": { "direction": "harnessToApp", "params": "ShowApprovalCardParams", "result": "ApprovalDecision" },
+      "probeAppCapability": { "direction": "harnessToApp", "params": "ProbeAppCapabilityParams", "result": "AppCapability" },
+      "openNewWindow": { "direction": "harnessToApp", "params": "OpenNewWindowParams", "result": "OpenNewWindowResult" },
+      "moveToTrash": { "direction": "harnessToApp", "params": "MoveToTrashParams", "result": "MoveToTrashResult" },
+      "listWindows": { "direction": "harnessToApp", "params": "ListWindowsParams", "result": "WindowList" },
+      "getWindowFrame": { "direction": "harnessToApp", "params": "WindowRef", "result": "Rect" },
+      "setWindowFrame": { "direction": "harnessToApp", "params": "SetWindowFrameParams", "result": "Empty" },
+      "storeSecret": { "direction": "harnessToApp", "params": "StoreSecretParams", "result": "Empty" },
+      "loadSecret": { "direction": "harnessToApp", "params": "SecretRef", "result": "LoadSecretResult" }
+    },
+    "events": {
+      "taskStatusChanged": "TaskStatusChanged",
+      "goalRestated": "GoalRestated",
+      "questionAsked": "QuestionAsked",
+      "cursorCommand": "CursorCommand",
+      "approvalCancelled": "ApprovalCancelled",
+      "interruptedTaskFound": "TaskRef",
+      "userError": "UserError",
+      "waitingForWindow": "WaitingForWindow",
+      "tilingSuggested": "TilingSuggested",
+      "routeDecided": "RouteDecided",
+      "speak": "Speak",
+      "bridgeStateChanged": "BridgeStateChanged"
+    }
+  },
+  "$defs": {
+    "Empty": {
+      "description": "No params or no result.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {}
+    },
+    "HelloParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocolVersion"],
+      "properties": { "protocolVersion": { "$ref": "common.json#/$defs/ProtocolVersion" } }
+    },
+    "HelloResult": {
+      "description": "The harness's version. The app refuses to continue if it differs.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocolVersion"],
+      "properties": { "protocolVersion": { "$ref": "common.json#/$defs/ProtocolVersion" } }
+    },
+    "TaskRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["taskId"],
+      "properties": { "taskId": { "$ref": "common.json#/$defs/Uuid" } }
+    },
+    "SubmitGoalParams": {
+      "description": "A new goal from the user's speech or typing (OBJ-15). The harness creates a task in awaitingConfirmation.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["transcript", "originDeviceId"],
+      "properties": {
+        "transcript": { "type": "string", "minLength": 1 },
+        "originDeviceId": { "$ref": "common.json#/$defs/DeviceId" }
+      }
+    },
+    "SubmitGoalResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["taskId"],
+      "properties": { "taskId": { "$ref": "common.json#/$defs/Uuid" } }
+    },
+    "ReplyToConfirmationParams": {
+      "description": "The user's answer to the repeat-back (SPEC-01, OBJ-17).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["taskId", "reply"],
+      "properties": {
+        "taskId": { "$ref": "common.json#/$defs/Uuid" },
+        "reply": { "$ref": "#/$defs/ConfirmationReply" }
+      }
+    },
+    "ConfirmationReply": {
+      "type": "object",
+      "discriminator": { "propertyName": "kind" },
+      "oneOf": [{ "$ref": "#/$defs/ButtonReply" }, { "$ref": "#/$defs/SpokenReply" }]
+    },
+    "ButtonReply": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "choice"],
+      "properties": {
+        "kind": { "const": "button" },
+        "choice": { "$ref": "#/$defs/ConfirmationChoice" }
+      }
+    },
+    "SpokenReply": {
+      "description": "Speech the harness classifies as confirm, cancel, or correction.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "text"],
+      "properties": {
+        "kind": { "const": "spoken" },
+        "text": { "type": "string", "minLength": 1 }
+      }
+    },
+    "ConfirmationChoice": {
+      "description": "The \"Go ahead\", \"Change it\", and \"Cancel\" buttons.",
+      "type": "string",
+      "enum": ["goAhead", "changeIt", "cancel"]
+    },
+    "PauseParams": {
+      "description": "Pause one task, or every task when taskId is absent (SPEC-06 r1).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": { "taskId": { "$ref": "common.json#/$defs/Uuid" } }
+    },
+    "ListTasksParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "limit": { "type": "integer", "minimum": 1, "maximum": 100 },
+        "before": { "description": "Only tasks created before this time, for paging.", "$ref": "common.json#/$defs/Timestamp" }
+      }
+    },
+    "SearchTasksParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["query"],
+      "properties": {
+        "query": { "type": "string", "minLength": 1 },
+        "limit": { "type": "integer", "minimum": 1, "maximum": 100 }
+      }
+    },
+    "TaskList": {
+      "description": "Newest first.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tasks"],
+      "properties": { "tasks": { "type": "array", "items": { "$ref": "task.json#/$defs/Task" } } }
+    },
+    "TaskDetail": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["task", "subtasks", "steps"],
+      "properties": {
+        "task": { "$ref": "task.json#/$defs/Task" },
+        "subtasks": { "type": "array", "items": { "$ref": "task.json#/$defs/Subtask" } },
+        "steps": { "type": "array", "items": { "$ref": "task.json#/$defs/Step" } }
+      }
+    },
+    "StartPairingResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["qrPayload", "expiresAt"],
+      "properties": {
+        "qrPayload": { "description": "What the pairing QR code encodes, defined by OBJ-02.", "type": "string", "minLength": 1 },
+        "expiresAt": { "$ref": "common.json#/$defs/Timestamp" }
+      }
+    },
+    "PairedDeviceList": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["devices"],
+      "properties": { "devices": { "type": "array", "items": { "$ref": "#/$defs/PairedDevice" } } }
+    },
+    "PairedDevice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["deviceId", "name", "pairedAt"],
+      "properties": {
+        "deviceId": { "$ref": "common.json#/$defs/DeviceId" },
+        "name": { "type": "string", "minLength": 1 },
+        "pairedAt": { "$ref": "common.json#/$defs/Timestamp" }
+      }
+    },
+    "UnpairParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["deviceId"],
+      "properties": { "deviceId": { "$ref": "common.json#/$defs/DeviceId" } }
+    },
+    "ExecuteActionParams": {
+      "description": "Run one checked action. With a cursor id, the Mac app first animates that cursor to the element, then acts after it arrives (SPEC-04, SPEC-05 r3).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stepId", "target", "action", "cursorId"],
+      "properties": {
+        "stepId": { "$ref": "common.json#/$defs/Uuid" },
+        "target": { "$ref": "task.json#/$defs/Target" },
+        "action": { "$ref": "action.json#/$defs/RecordedAction" },
+        "cursorId": { "type": "string", "minLength": 1 }
+      }
+    },
+    "ExecuteActionResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["outcome", "observation"],
+      "properties": {
+        "outcome": { "$ref": "common.json#/$defs/StepOutcome" },
+        "observation": { "description": "One line: what changed.", "type": "string", "maxLength": 300 }
+      }
+    },
+    "ObserveWindowParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target"],
+      "properties": { "target": { "$ref": "task.json#/$defs/Target" } }
+    },
+    "ReadFieldValuesParams": {
+      "description": "Read real field values, for example To and Cc before sending (SPEC-07 r13).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target", "elementPaths"],
+      "properties": {
+        "target": { "$ref": "task.json#/$defs/Target" },
+        "elementPaths": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "ReadFieldValuesResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fields"],
+      "properties": { "fields": { "type": "array", "items": { "$ref": "#/$defs/FieldValue" } } }
+    },
+    "FieldValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["elementPath"],
+      "properties": {
+        "elementPath": { "type": "string", "minLength": 1 },
+        "value": { "description": "Absent when the element was not found.", "type": "string" }
+      }
+    },
+    "ShowApprovalCardParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["approval"],
+      "properties": { "approval": { "$ref": "approval.json#/$defs/Approval" } }
+    },
+    "ProbeAppCapabilityParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bundleId"],
+      "properties": { "bundleId": { "type": "string", "minLength": 1 } }
+    },
+    "OpenNewWindowParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bundleId"],
+      "properties": { "bundleId": { "type": "string", "minLength": 1 } }
+    },
+    "OpenNewWindowResult": {
+      "description": "Whether the app could open a second window (SPEC-03 r11), and its id.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["supported"],
+      "properties": {
+        "supported": { "type": "boolean" },
+        "windowId": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "MoveToTrashParams": {
+      "description": "Exact, already approved paths. Never a permanent delete (SPEC-07 r7).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["paths"],
+      "properties": {
+        "paths": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "common.json#/$defs/Path" } }
+      }
+    },
+    "MoveToTrashResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["trashed"],
+      "properties": { "trashed": { "type": "array", "items": { "$ref": "common.json#/$defs/Path" } } }
+    },
+    "TaskStatusChanged": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["taskId", "status"],
+      "properties": {
+        "taskId": { "$ref": "common.json#/$defs/Uuid" },
+        "status": { "$ref": "task.json#/$defs/TaskStatus" },
+        "subtaskId": { "$ref": "common.json#/$defs/Uuid" },
+        "subtaskStatus": { "$ref": "task.json#/$defs/SubtaskStatus" }
+      }
+    },
+    "GoalRestated": {
+      "description": "The repeat-back sentence to speak and show (SPEC-01 r4).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["taskId", "text"],
+      "properties": {
+        "taskId": { "$ref": "common.json#/$defs/Uuid" },
+        "text": { "type": "string", "minLength": 1 }
+      }
+    },
+    "CursorCommand": {
+      "description": "Drives the cursor overlay (SPEC-04, OBJ-18).",
+      "type": "object",
+      "discriminator": { "propertyName": "command" },
+      "oneOf": [
+        { "$ref": "#/$defs/SpawnCursor" },
+        { "$ref": "#/$defs/MoveCursor" },
+        { "$ref": "#/$defs/SetCursorState" },
+        { "$ref": "#/$defs/SetCursorLabel" },
+        { "$ref": "#/$defs/FadeCursor" }
+      ]
+    },
+    "CursorKind": {
+      "type": "string",
+      "enum": ["main", "ghost"]
+    },
+    "CursorState": {
+      "description": "SPEC-04 r3, plus the idle, done, and stuck poses from the character design.",
+      "type": "string",
+      "enum": ["idle", "listening", "thinking", "moving", "acting", "waitingForUser", "paused", "done", "stuck"]
+    },
+    "SpawnCursor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "cursorId", "cursorKind"],
+      "properties": {
+        "command": { "const": "spawn" },
+        "cursorId": { "type": "string", "minLength": 1 },
+        "cursorKind": { "$ref": "#/$defs/CursorKind" },
+        "label": { "description": "Ghosts show the subtask title (SPEC-04 r5).", "type": "string", "maxLength": 60 },
+        "at": { "description": "Absent means near the user's pointer (SPEC-04 r1).", "$ref": "#/$defs/CursorTarget" }
+      }
+    },
+    "MoveCursor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "cursorId", "to"],
+      "properties": {
+        "command": { "const": "move" },
+        "cursorId": { "type": "string", "minLength": 1 },
+        "to": { "$ref": "#/$defs/CursorTarget" }
+      }
+    },
+    "SetCursorState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "cursorId", "state"],
+      "properties": {
+        "command": { "const": "setState" },
+        "cursorId": { "type": "string", "minLength": 1 },
+        "state": { "$ref": "#/$defs/CursorState" }
+      }
+    },
+    "SetCursorLabel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "cursorId", "label"],
+      "properties": {
+        "command": { "const": "setLabel" },
+        "cursorId": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "maxLength": 60 }
+      }
+    },
+    "FadeCursor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "cursorId"],
+      "properties": {
+        "command": { "const": "fade" },
+        "cursorId": { "type": "string", "minLength": 1 }
+      }
+    },
+    "CursorTarget": {
+      "type": "object",
+      "discriminator": { "propertyName": "kind" },
+      "oneOf": [{ "$ref": "#/$defs/ScreenPoint" }, { "$ref": "#/$defs/ElementTarget" }]
+    },
+    "ScreenPoint": {
+      "description": "A point in global screen coordinates, in points, which may be negative on displays left of or above the main one.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "x", "y"],
+      "properties": {
+        "kind": { "const": "point" },
+        "x": { "type": "number" },
+        "y": { "type": "number" }
+      }
+    },
+    "ElementTarget": {
+      "description": "An element the Mac app finds on screen itself.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "target", "elementPath"],
+      "properties": {
+        "kind": { "const": "element" },
+        "target": { "$ref": "task.json#/$defs/Target" },
+        "elementPath": { "type": "string", "minLength": 1 }
+      }
+    },
+    "ApprovalCancelled": {
+      "description": "A pause cancelled a pending approval (SPEC-06 r5).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["approvalId"],
+      "properties": { "approvalId": { "$ref": "common.json#/$defs/Uuid" } }
+    },
+    "WaitingForWindow": {
+      "description": "A subtask has waited 2 minutes for a busy window (SPEC-03 r13). The spoken copy lives in the app.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["taskId", "subtaskId", "appName"],
+      "properties": {
+        "taskId": { "$ref": "common.json#/$defs/Uuid" },
+        "subtaskId": { "$ref": "common.json#/$defs/Uuid" },
+        "appName": { "type": "string", "minLength": 1 }
+      }
+    },
+    "TilingSuggested": {
+      "description": "Ask before arranging windows (SPEC-03 r14).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["taskId", "windows"],
+      "properties": {
+        "taskId": { "$ref": "common.json#/$defs/Uuid" },
+        "windows": { "type": "array", "minItems": 2, "items": { "$ref": "task.json#/$defs/Target" } }
+      }
+    },
+    "RouteDecided": {
+      "description": "A routing decision and its reason, for the dashboard (SPEC-03 r10).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["taskId", "subtaskId", "lane", "reason"],
+      "properties": {
+        "taskId": { "$ref": "common.json#/$defs/Uuid" },
+        "subtaskId": { "$ref": "common.json#/$defs/Uuid" },
+        "lane": { "$ref": "common.json#/$defs/Lane" },
+        "reason": { "$ref": "common.json#/$defs/RouteReason" }
+      }
+    },
+    "QuestionAsked": {
+      "description": "The model asked the user something (a ModelAction ask). The task waits for answerQuestion.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["taskId", "subtaskId", "question"],
+      "properties": {
+        "taskId": { "$ref": "common.json#/$defs/Uuid" },
+        "subtaskId": { "$ref": "common.json#/$defs/Uuid" },
+        "question": { "type": "string", "minLength": 1, "maxLength": 300 }
+      }
+    },
+    "AnswerQuestionParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["taskId", "subtaskId", "answer"],
+      "properties": {
+        "taskId": { "$ref": "common.json#/$defs/Uuid" },
+        "subtaskId": { "$ref": "common.json#/$defs/Uuid" },
+        "answer": { "type": "string", "minLength": 1 }
+      }
+    },
+    "ListWindowsParams": {
+      "description": "List windows, of one app or of every app.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": { "bundleId": { "type": "string", "minLength": 1 } }
+    },
+    "WindowList": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["windows"],
+      "properties": { "windows": { "type": "array", "items": { "$ref": "#/$defs/WindowInfo" } } }
+    },
+    "WindowInfo": {
+      "description": "One window, for locks and tiling (SPEC-03).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["windowId", "bundleId", "appName", "title", "frame", "minimized"],
+      "properties": {
+        "windowId": { "type": "integer", "minimum": 0 },
+        "bundleId": { "type": "string", "minLength": 1 },
+        "appName": { "type": "string" },
+        "title": { "type": "string" },
+        "frame": { "$ref": "#/$defs/Rect" },
+        "minimized": { "description": "Ghosts cannot work in minimized windows (docs/lane-router.md).", "type": "boolean" }
+      }
+    },
+    "WindowRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["windowId"],
+      "properties": { "windowId": { "type": "integer", "minimum": 0 } }
+    },
+    "Rect": {
+      "description": "A window frame in global screen coordinates, in points. x and y may be negative on displays left of or above the main one.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "width", "height"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "width": { "type": "number", "minimum": 0 },
+        "height": { "type": "number", "minimum": 0 }
+      }
+    },
+    "SetWindowFrameParams": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["windowId", "frame"],
+      "properties": {
+        "windowId": { "type": "integer", "minimum": 0 },
+        "frame": { "$ref": "#/$defs/Rect" }
+      }
+    },
+    "SecretKey": {
+      "description": "Name of a secret in Yumi's Keychain items, for example bridge.device-key. Never a secret itself.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9.-]{0,99}$"
+    },
+    "StoreSecretParams": {
+      "description": "Store a secret in the macOS Keychain (OBJ-27). Secrets never touch files or logs; the socket is only readable by the user.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "value"],
+      "properties": {
+        "key": { "$ref": "#/$defs/SecretKey" },
+        "value": { "description": "The secret, base64 encoded.", "type": "string", "pattern": "^[A-Za-z0-9+/]*={0,2}$" }
+      }
+    },
+    "SecretRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key"],
+      "properties": { "key": { "$ref": "#/$defs/SecretKey" } }
+    },
+    "LoadSecretResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "value": { "description": "Base64 encoded. Absent when no secret is stored under the key.", "type": "string", "pattern": "^[A-Za-z0-9+/]*={0,2}$" }
+      }
+    },
+    "BridgeState": {
+      "description": "The connection state both apps show (SPEC-08 r10).",
+      "type": "string",
+      "enum": ["connected", "reconnecting", "offline"]
+    },
+    "BridgeStateChanged": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state"],
+      "properties": {
+        "state": { "$ref": "#/$defs/BridgeState" },
+        "peerDeviceId": { "description": "The paired device, when there is one.", "$ref": "common.json#/$defs/DeviceId" }
+      }
+    },
+    "Speak": {
+      "description": "Something to say on this device, for example the task summary (SPEC-02 r9).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text"],
+      "properties": {
+        "text": { "type": "string", "minLength": 1 },
+        "taskId": { "$ref": "common.json#/$defs/Uuid" }
+      }
+    }
+  }
+}
