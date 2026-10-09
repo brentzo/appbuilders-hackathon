@@ -22,6 +22,25 @@ const delegateGoal = {
   spokenAt: now.toISOString(),
 };
 
+describe("SPEC-09 edge cases and waking the Mac (OBJ-76)", () => {
+  const toolList = { kind: "toolList", deviceId: "3f2a9c1e7b4d6a8f0e1c2b3a4d5e6f70", tools: [] };
+
+  it("lets a device advertise the hardware addresses the other device can wake it on (SPEC-09 r19)", () => {
+    expect(validateMessagePayload({ ...toolList, wakeAddresses: ["a4:83:e7:1c:2b:9f", "3c:22:fb:00:12:ab"] }, "event").errors).toEqual([]);
+    expect(validateMessagePayload(toolList, "event").errors).toEqual([]);
+    for (const bad of ["A4:83:E7:1C:2B:9F", "a4-83-e7-1c-2b-9f", "a4:83:e7:1c:2b", ""]) {
+      expect(validateMessagePayload({ ...toolList, wakeAddresses: [bad] }, "event").valid, bad).toBe(false);
+    }
+    expect(validateMessagePayload({ ...toolList, wakeAddresses: [] }, "event").valid).toBe(false);
+  });
+
+  it("lets a locked Mac accept a goal it starts once unlocked, with no running task title (SPEC-09 r20)", () => {
+    const accepted = { kind: "goalAccepted", goalId: delegateGoal.goalId, status: "waitingForUnlock" };
+    expect(validateMessagePayload(accepted, "result").errors).toEqual([]);
+    expect(validateMessagePayload({ ...accepted, activeTaskTitle: "Export the deck" }, "result").valid).toBe(false);
+  });
+});
+
 describe("cross-device message payloads", () => {
   it("accepts a phone alarm call only in a command envelope", () => {
     const payload = { kind: "toolCall", call: { tool: "set_alarm", time: "06:30" } };

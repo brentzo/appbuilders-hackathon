@@ -67,16 +67,16 @@ Goals that wait for an offline device stay on the origin device ([SPEC-09 r15](.
 
 | Payload kind | Envelope type | Expiry policy | Direction / purpose |
 |---|---|---|---|
-| `toolList` | event | 2 minutes | Device advertises tool names, descriptions, and argument schemas on connect |
+| `toolList` | event | 2 minutes | Device advertises tool names, descriptions, and argument schemas on connect; the Mac adds its `wakeAddresses` |
 | `toolCall` | command | 2 minutes | Brain calls one tool on its paired device |
 | `toolResult` | result | 2 minutes | Tool provider returns success data or an `ErrorKind` |
 | `delegateGoal` | command | 2 minutes | Origin sends the confirmed whole goal to the Mac while it is online |
-| `goalAccepted` | result | 2 minutes | Mac says it started the goal or queued it behind the active task |
+| `goalAccepted` | result | 2 minutes | Mac says it started the goal, queued it behind the active task, or waits for the user to unlock it |
 | `progress` | event | 2 minutes | Executing device reports changes and at least a 30-second heartbeat |
 | `goalFinished` | event | 2 minutes | Executing device returns final status and spoken summary |
 | `approvalRequest` | command | 5 minutes | Executing device asks for approval on the origin device |
 | `approvalResponse` | result | 2 minutes | Origin returns the decision; delete and unclassified-action approvals require a tap |
-| `approvalCancelled` | event | 2 minutes | Executing device reports that pause cancelled the pending approval |
+| `approvalCancelled` | event | 2 minutes | Executing device reports that a pause, or 5 minutes with no answer, cancelled the pending approval |
 | `pause`, `resume`, `cancel` | command | 2 minutes | Either device controls a delegated goal |
 | `pauseConfirmed`, `cancelConfirmed` | result | 2 minutes | Executing device confirms the control action |
 | `commandExpired` | result | 2 minutes | Receiver tells the sender that it did not run an expired command |
@@ -93,7 +93,22 @@ The action approval's `text` is the safe summary the harness built from the reso
 The `toolResult` schema rejects free-text failures; failures use `ErrorKind`.
 
 Individual payload examples live in `examples/Payload.*.json` and `examples/PhoneTool*.json`.
-The end-to-end JSON sequences in `examples/sequences/` cover the Mac-to-phone alarm, phone-to-Mac Keynote export, and phone Stop with pause confirmation.
+The end-to-end JSON sequences in `examples/sequences/` cover the Mac-to-phone alarm, phone-to-Mac Keynote export, phone Stop with pause confirmation, and the edge cases below.
+A step is either a payload in an envelope or a frame the relay sends itself (`"from": "relay"`), for example `targetOffline`.
+
+Edge cases (SPEC-09 requirements 10 and 13 to 20, [OBJ-76](../objectives/OBJ-76-cross-device-edge-case-contracts.md)), each a sequence in `examples/sequences/`:
+
+- **Presence.** There is no presence frame.
+  A device knows its peer is back when the peer's `toolList` arrives, which every device sends on connect, or when a `ping` is answered by `pingResult` instead of the relay's `targetOffline`.
+  A phone holding a queued goal pings the Mac while it waits.
+- **Mac offline** (`mac-offline.json`, SPEC-09 r15). The relay answers `delegateGoal` with `targetOffline` and never holds it, so the phone keeps the queued goal itself, one per origin device.
+  When the Mac is back, the phone sends the goal as a new command, after asking again if it waited more than 30 minutes since `spokenAt`.
+- **Mac busy** (`mac-busy.json`, r14). `goalAccepted` with `queued` and the running task's title; `progress` follows once the goal starts.
+- **No reply** (r17). No `progress` for 2 minutes while a goal runs; the phone decides this from its own clock, with no message.
+- **Stop with the Mac unreachable** (`stop-mac-unreachable.json`, r13). The relay answers `pause` with `targetOffline`, so no `pauseConfirmed` can come and the phone never shows "Paused".
+- **No answer to an approval** (`approval-timeout.json`, r10). At `expiresAt` the Mac sends `approvalCancelled` and `progress` with `paused`.
+- **Waking the Mac** (`mac-wakes-locked.json`, r19 and r20, p1). The phone sends Wake-on-LAN to the Mac's `wakeAddresses` from its last `toolList`, on the local Wi-Fi and outside the bridge.
+  A Mac that is awake but locked answers `goalAccepted` with `waitingForUnlock` and starts the goal by itself once unlocked. Nothing in the protocol carries a password.
 
 ## Commands
 
@@ -361,5 +376,5 @@ A sheet usually has no `AXTitle`.
 | [OBJ-56](../objectives/OBJ-56-unclassified-action-approval-contract.md) | Approval contract for unclassified risky actions | Jepoy | blocked |
 | [OBJ-60](../objectives/OBJ-60-goal-revision-contract.md) | Contract for changing the goal mid-task | Jepoy | in-progress |
 | [OBJ-64](../objectives/OBJ-64-cross-device-local-rpc-contract.md) | Local RPC for cross-device routing on the Mac | Jepoy | done |
-| [OBJ-76](../objectives/OBJ-76-cross-device-edge-case-contracts.md) | Contracts for SPEC-09 edge cases and waking the Mac | Jepoy | todo |
+| [OBJ-76](../objectives/OBJ-76-cross-device-edge-case-contracts.md) | Contracts for SPEC-09 edge cases and waking the Mac | Jepoy | in-progress |
 <!-- generated:product-objectives:end -->

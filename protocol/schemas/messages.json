@@ -29,7 +29,16 @@
         { "$ref": "#/$defs/PingResultPayload" }
       ]
     },
-    "GoalAcceptanceStatus": { "type": "string", "enum": ["started", "queued"] },
+    "GoalAcceptanceStatus": {
+      "description": "started: the Mac runs the goal now. queued: it runs after the current task (SPEC-09 r14). waitingForUnlock: the Mac is awake but locked, and starts the goal by itself once the user unlocks it; progress follows then (SPEC-09 r20).",
+      "type": "string",
+      "enum": ["started", "queued", "waitingForUnlock"]
+    },
+    "HardwareAddress": {
+      "description": "A network interface's hardware (MAC) address, as six lower-case hex pairs separated by colons.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{2}(:[0-9a-f]{2}){5}$"
+    },
     "GoalFinalStatus": { "type": "string", "enum": ["done", "failed", "cancelled"] },
     "AdvertisedToolName": {
       "description": "A current Mac tool or a p0 phone tool that a paired device can invoke.",
@@ -72,7 +81,14 @@
       "properties": {
         "kind": { "const": "toolList" },
         "deviceId": { "$ref": "common.json#/$defs/DeviceId" },
-        "tools": { "type": "array", "items": { "$ref": "#/$defs/ToolDescriptor" } }
+        "tools": { "type": "array", "items": { "$ref": "#/$defs/ToolDescriptor" } },
+        "wakeAddresses": {
+          "description": "The hardware addresses of the sender's Wi-Fi and Ethernet interfaces, so the other device can wake it with Wake-on-LAN on the same local network (SPEC-09 r19). The Mac sends them; never a loopback or all-zero address. Absent when the sender cannot be woken this way.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/HardwareAddress" }
+        }
       }
     },
     "ToolCallPayload": {
@@ -136,7 +152,7 @@
           "then": { "required": ["activeTaskTitle"] }
         },
         {
-          "if": { "properties": { "status": { "const": "started" } } },
+          "if": { "properties": { "status": { "enum": ["started", "waitingForUnlock"] } } },
           "then": { "properties": { "activeTaskTitle": false } }
         }
       ]

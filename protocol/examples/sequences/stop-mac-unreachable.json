@@ -1,0 +1,27 @@
+{
+  "name": "Stop when the Mac cannot be reached (SPEC-09 r13)",
+  "notes": [
+    "The relay answers targetOffline, so no pauseConfirmed can come.",
+    "The phone says it cannot reach the Mac and points to the stop shortcut on the Mac, and never shows Paused."
+  ],
+  "steps": [
+    {
+      "id": "43000000-0000-4000-8000-000000000001",
+      "from": "android",
+      "to": "mac",
+      "envelopeType": "command",
+      "payload": {
+        "kind": "pause",
+        "goalId": "5b0c6f8e-2f4d-4c1a-9a57-1f0e2d3c4b5a"
+      }
+    },
+    {
+      "from": "relay",
+      "frame": {
+        "frame": "targetOffline",
+        "messageId": "43000000-0000-4000-8000-000000000001",
+        "to": "3f2a9c1e7b4d6a8f0e1c2b3a4d5e6f70"
+      }
+    }
+  ]
+}

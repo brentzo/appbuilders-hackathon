@@ -133,7 +133,7 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-73](OBJ-73-live-cross-device-routing-acceptance.md) | Live cross-device routing acceptance | bridge | Jepoy | 09 | 30, 65, 66, 67, 68, 69, 70, 71, 72 | - | todo |
 | [OBJ-74](OBJ-74-save-list-to-note.md) | Save a list into a new note | harness | Brent | 02, 01 | - | 17, 36, 50 | done |
 | [OBJ-75](OBJ-75-vision-fallback.md) | Vision fallback for apps without accessibility content | mac | Patrick | 05 | - | 36, 39 | in-progress |
-| [OBJ-76](OBJ-76-cross-device-edge-case-contracts.md) | Contracts for SPEC-09 edge cases and waking the Mac | protocol | Jepoy | 09 | 25 | 77, 78, 79, 80 | todo |
+| [OBJ-76](OBJ-76-cross-device-edge-case-contracts.md) | Contracts for SPEC-09 edge cases and waking the Mac | protocol | Jepoy | 09 | 25 | 77, 78, 79, 80 | in-progress |
 | [OBJ-77](OBJ-77-harness-cross-device-edge-cases.md) | Harness edge cases for cross-device routing | harness | Brent | 09 | 76 | 65, 68, 70, 78 | todo |
 | [OBJ-78](OBJ-78-android-cross-device-edge-cases.md) | Android edge cases for goals sent to the Mac | android | Brent | 09 | 76 | 67, 69, 71, 77 | todo |
 | [OBJ-79](OBJ-79-android-wake-the-mac.md) | Wake the Mac from the phone | android | Brent | 09 | 76, 78 | 80 | todo |

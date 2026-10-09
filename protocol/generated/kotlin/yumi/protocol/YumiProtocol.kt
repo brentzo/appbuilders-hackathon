@@ -522,10 +522,12 @@ data class GetAppVersionParams(
     val bundleId: String,
 )
 
+/** started: the Mac runs the goal now. queued: it runs after the current task (SPEC-09 r14). waitingForUnlock: the Mac is awake but locked, and starts the goal by itself once the user unlocks it; progress follows then (SPEC-09 r20). */
 @Serializable
 enum class GoalAcceptanceStatus {
     @SerialName("started") Started,
-    @SerialName("queued") Queued;
+    @SerialName("queued") Queued,
+    @SerialName("waitingForUnlock") WaitingForUnlock;
 }
 
 /** The Mac reports that it started the goal or queued it behind its current task (SPEC-09 r14). */
@@ -1533,6 +1535,8 @@ data class ToolDescriptor(
 data class ToolListPayload(
     val deviceId: String,
     val tools: List<ToolDescriptor>,
+    /** The hardware addresses of the sender's Wi-Fi and Ethernet interfaces, so the other device can wake it with Wake-on-LAN on the same local network (SPEC-09 r19). The Mac sends them; never a loopback or all-zero address. Absent when the sender cannot be woken this way. */
+    val wakeAddresses: List<String>? = null,
 ) : Payload
 
 /** Every tool name, used to tell a worker which tools its lane allows. */

@@ -400,8 +400,9 @@ export interface GetAppVersionParams {
   bundleId: string;
 }
 
-export type GoalAcceptanceStatus = "started" | "queued";
-export const goalAcceptanceStatusValues: readonly GoalAcceptanceStatus[] = ["started", "queued"];
+/** started: the Mac runs the goal now. queued: it runs after the current task (SPEC-09 r14). waitingForUnlock: the Mac is awake but locked, and starts the goal by itself once the user unlocks it; progress follows then (SPEC-09 r20). */
+export type GoalAcceptanceStatus = "started" | "queued" | "waitingForUnlock";
+export const goalAcceptanceStatusValues: readonly GoalAcceptanceStatus[] = ["started", "queued", "waitingForUnlock"];
 
 /** The Mac reports that it started the goal or queued it behind its current task (SPEC-09 r14). */
 export interface GoalAcceptedPayload {
@@ -437,6 +438,9 @@ export interface GoalRevision {
   goal: string;
   confirmedAt: Timestamp;
 }
+
+/** A network interface's hardware (MAC) address, as six lower-case hex pairs separated by colons. */
+export type HardwareAddress = string;
 
 /** The app's version. Any version validates here, so the harness's own check runs and a different version gets a UserError, not a contract error. */
 export interface HelloParams {
@@ -1290,6 +1294,8 @@ export interface ToolListPayload {
   kind: "toolList";
   deviceId: DeviceId;
   tools: ToolDescriptor[];
+  /** The hardware addresses of the sender's Wi-Fi and Ethernet interfaces, so the other device can wake it with Wake-on-LAN on the same local network (SPEC-09 r19). The Mac sends them; never a loopback or all-zero address. Absent when the sender cannot be woken this way. */
+  wakeAddresses?: HardwareAddress[];
 }
 
 /** Every tool name, used to tell a worker which tools its lane allows. */

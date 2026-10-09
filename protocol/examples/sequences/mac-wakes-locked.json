@@ -1,0 +1,77 @@
+{
+  "name": "Wake the Mac, which wakes up locked (SPEC-09 r19, r20, p1)",
+  "notes": [
+    "The phone knows the Mac's wake addresses from an earlier toolList, and sends the Wake-on-LAN packet on the local Wi-Fi, outside the bridge.",
+    "The Mac reconnects and sends its toolList, so the phone sends the queued goal.",
+    "The screen is locked, so the Mac answers waitingForUnlock and the phone says the Other device locked copy. Yumi never types the password.",
+    "The user unlocks the Mac, and the goal starts by itself."
+  ],
+  "steps": [
+    {
+      "id": "44000000-0000-4000-8000-000000000001",
+      "from": "android",
+      "to": "mac",
+      "envelopeType": "command",
+      "payload": {
+        "kind": "ping"
+      }
+    },
+    {
+      "from": "relay",
+      "frame": {
+        "frame": "targetOffline",
+        "messageId": "44000000-0000-4000-8000-000000000001",
+        "to": "3f2a9c1e7b4d6a8f0e1c2b3a4d5e6f70"
+      }
+    },
+    {
+      "from": "mac",
+      "to": "android",
+      "envelopeType": "event",
+      "payload": {
+        "kind": "toolList",
+        "deviceId": "3f2a9c1e7b4d6a8f0e1c2b3a4d5e6f70",
+        "tools": [],
+        "wakeAddresses": [
+          "a4:83:e7:1c:2b:9f"
+        ]
+      }
+    },
+    {
+      "id": "44000000-0000-4000-8000-000000000002",
+      "from": "android",
+      "to": "mac",
+      "envelopeType": "command",
+      "payload": {
+        "kind": "delegateGoal",
+        "goalId": "5b0c6f8e-2f4d-4c1a-9a57-1f0e2d3c4b5a",
+        "confirmedGoal": "Export my Keynote deck as a PDF",
+        "originDeviceId": "a1b2c3d4e5f60718293a4b5c6d7e8f90",
+        "spokenAt": "2026-10-09T12:00:00.000Z"
+      }
+    },
+    {
+      "from": "mac",
+      "to": "android",
+      "envelopeType": "result",
+      "replyTo": "44000000-0000-4000-8000-000000000002",
+      "payload": {
+        "kind": "goalAccepted",
+        "goalId": "5b0c6f8e-2f4d-4c1a-9a57-1f0e2d3c4b5a",
+        "status": "waitingForUnlock"
+      }
+    },
+    {
+      "from": "mac",
+      "to": "android",
+      "envelopeType": "event",
+      "payload": {
+        "kind": "progress",
+        "goalId": "5b0c6f8e-2f4d-4c1a-9a57-1f0e2d3c4b5a",
+        "status": "planning",
+        "currentSubtaskTitle": "Export the Keynote deck",
+        "updatedAt": "2026-10-09T12:02:00.000Z"
+      }
+    }
+  ]
+}

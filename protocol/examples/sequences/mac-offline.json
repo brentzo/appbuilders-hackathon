@@ -1,0 +1,97 @@
+{
+  "name": "Mac is offline: the phone holds the goal, then sends it when the Mac is back (SPEC-09 r15)",
+  "notes": [
+    "The relay answers targetOffline, so the phone shows the Other device offline copy and keeps the goal itself; the relay never holds it.",
+    "While a goal is queued the phone pings the Mac; targetOffline means it is still away.",
+    "The Mac's toolList on connect tells the phone it is back. The goal was spoken 3 hours earlier, so the phone asks again first, and sends it with a new command id once the user says yes."
+  ],
+  "steps": [
+    {
+      "id": "40000000-0000-4000-8000-000000000001",
+      "from": "android",
+      "to": "mac",
+      "envelopeType": "command",
+      "payload": {
+        "kind": "delegateGoal",
+        "goalId": "5b0c6f8e-2f4d-4c1a-9a57-1f0e2d3c4b5a",
+        "confirmedGoal": "Export my Keynote deck as a PDF",
+        "originDeviceId": "a1b2c3d4e5f60718293a4b5c6d7e8f90",
+        "spokenAt": "2026-10-09T09:00:00.000Z"
+      }
+    },
+    {
+      "from": "relay",
+      "frame": {
+        "frame": "targetOffline",
+        "messageId": "40000000-0000-4000-8000-000000000001",
+        "to": "3f2a9c1e7b4d6a8f0e1c2b3a4d5e6f70"
+      }
+    },
+    {
+      "id": "40000000-0000-4000-8000-000000000002",
+      "from": "android",
+      "to": "mac",
+      "envelopeType": "command",
+      "payload": {
+        "kind": "ping"
+      }
+    },
+    {
+      "from": "relay",
+      "frame": {
+        "frame": "targetOffline",
+        "messageId": "40000000-0000-4000-8000-000000000002",
+        "to": "3f2a9c1e7b4d6a8f0e1c2b3a4d5e6f70"
+      }
+    },
+    {
+      "from": "mac",
+      "to": "android",
+      "envelopeType": "event",
+      "payload": {
+        "kind": "toolList",
+        "deviceId": "3f2a9c1e7b4d6a8f0e1c2b3a4d5e6f70",
+        "tools": [],
+        "wakeAddresses": [
+          "a4:83:e7:1c:2b:9f"
+        ]
+      }
+    },
+    {
+      "id": "40000000-0000-4000-8000-000000000003",
+      "from": "android",
+      "to": "mac",
+      "envelopeType": "command",
+      "payload": {
+        "kind": "delegateGoal",
+        "goalId": "5b0c6f8e-2f4d-4c1a-9a57-1f0e2d3c4b5a",
+        "confirmedGoal": "Export my Keynote deck as a PDF",
+        "originDeviceId": "a1b2c3d4e5f60718293a4b5c6d7e8f90",
+        "spokenAt": "2026-10-09T09:00:00.000Z"
+      }
+    },
+    {
+      "from": "mac",
+      "to": "android",
+      "envelopeType": "result",
+      "replyTo": "40000000-0000-4000-8000-000000000003",
+      "payload": {
+        "kind": "goalAccepted",
+        "goalId": "5b0c6f8e-2f4d-4c1a-9a57-1f0e2d3c4b5a",
+        "status": "started"
+      }
+    },
+    {
+      "from": "mac",
+      "to": "android",
+      "envelopeType": "event",
+      "payload": {
+        "kind": "progress",
+        "goalId": "5b0c6f8e-2f4d-4c1a-9a57-1f0e2d3c4b5a",
+        "status": "planning",
+        "currentSubtaskTitle": "Export the Keynote deck",
+        "updatedAt": "2026-10-09T12:00:05.000Z"
+      }
+    }
+  ]
+}

@@ -5,7 +5,7 @@ product: protocol
 assignee: Jepoy
 touches: []
 specs: [SPEC-09]
-status: todo
+status: in-progress
 priority: p0
 depends-on: [OBJ-25]
 integrates-with: [OBJ-77, OBJ-78, OBJ-79, OBJ-80]
