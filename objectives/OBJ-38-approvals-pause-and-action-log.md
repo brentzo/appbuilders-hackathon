@@ -44,24 +44,24 @@ Build against the mock Mac app from [OBJ-01](OBJ-01-task-record-schemas.md) unti
 
 ## Tasks
 
-- [ ] **OBJ-38.1** Approval flow: an "ask" action sets the subtask to `needsApproval` and the task to `waitingForUser`, writes an `Approval`, and calls `showApprovalCard`. An approval covers exactly one action, once. A delete counts as approved only with `method: tap` (SPEC-07 r11); a send with a tap or the reply "send it" (r15).
-- [ ] **OBJ-38.2** Sending: build the approval text from the real To and Cc fields read with `readFieldValues`, never from model text, in the form "I'm about to send this email to Ana. Should I send it?" (SPEC-07 r13), and the SPEC-07 "Draft copy" forms for Messages, several recipients, and Cc. Right before pressing Send, read them again; if they changed, drop the approval and ask again (r14).
-- [ ] **OBJ-38.3** Deleting: build the text from the [OBJ-37](OBJ-37-permission-gate-and-file-tools.md) `FileSummary`, in the form "I'm about to move 12 files from Downloads to the Trash, starting with old-invoice.pdf. Should I delete them?", and the SPEC-07 "Draft copy" forms for one file and for files in several folders. Right before acting, list the files again; if any was added, removed, or changed, ask again with the new list (r12). Then call `moveToTrash` with the exact paths.
-- [ ] **OBJ-38.4** Blocked actions never run, even after a yes: record the step as `blocked`, emit a `userError` of kind `blockedAction`, and on the user's choice either continue ("Keep going") or pause the task ("Stop") (SPEC-07 r5).
-- [ ] **OBJ-38.5** Pause: one `pause(taskId, scope)` path ([OBJ-45](OBJ-45-pause-scope-and-model-readiness-contracts.md): `scope` is `everyLane`, the default, or `uiLanes`), with scope every lane (stop shortcut, menu bar "Stop") or UI lanes only (the user took over; helpers keep running). A UI-lanes pause while the task waits for the user and no UI lane is acting is ignored, as a second guard behind the Mac app (SPEC-06 r2). It sets the pause state the [OBJ-36](OBJ-36-gui-act-sub-agent.md) step loop checks before every action, checkpoints, sets the task to `paused`, cancels every pending approval, and emits `approvalCancelled` (SPEC-06 r1, r2, r4, r5). After resume, a risky action goes through the gate and asks again.
-- [ ] **OBJ-38.6** Cancel: extend the [OBJ-06](OBJ-06-resume-and-limits.md) `cancelTask` so it stops every lane, helpers included, drops every queued subtask and every command not yet run, and sets the task to `cancelled`. Nothing runs after cancel (SPEC-06 r8).
-- [ ] **OBJ-38.7** Action log: write an `ActionLogEntry` for every action that ran, was blocked, or was declined, with time (am/pm), device, lane, a plain-language description, and every path for deletes (SPEC-07 r18). Write it to a text file as lines like "3:42 pm, Mac, main cursor: Clicked Export in Keynote", plus a count line per task such as "Read 3 files and clicked 12 times". Record the file's location in `harness/README.md`.
-- [ ] **OBJ-38.8** (p1) Add a test that text typed into a password field never reaches the action log (SPEC-07 r20).
+- [x] **OBJ-38.1** Approval flow: an "ask" action sets the subtask to `needsApproval` and the task to `waitingForUser`, writes an `Approval`, and calls `showApprovalCard`. An approval covers exactly one action, once. A delete counts as approved only with `method: tap` (SPEC-07 r11); a send with a tap or the reply "send it" (r15).
+- [x] **OBJ-38.2** Sending: build the approval text from the real To and Cc fields read with `readFieldValues`, never from model text, in the form "I'm about to send this email to Ana. Should I send it?" (SPEC-07 r13), and the SPEC-07 "Draft copy" forms for Messages, several recipients, and Cc. Right before pressing Send, read them again; if they changed, drop the approval and ask again (r14).
+- [x] **OBJ-38.3** Deleting: build the text from the [OBJ-37](OBJ-37-permission-gate-and-file-tools.md) `FileSummary`, in the form "I'm about to move 12 files from Downloads to the Trash, starting with old-invoice.pdf. Should I delete them?", and the SPEC-07 "Draft copy" forms for one file and for files in several folders. Right before acting, list the files again; if any was added, removed, or changed, ask again with the new list (r12). Then call `moveToTrash` with the exact paths.
+- [x] **OBJ-38.4** Blocked actions never run, even after a yes: record the step as `blocked`, emit a `userError` of kind `blockedAction`, and on the user's choice either continue ("Keep going") or pause the task ("Stop") (SPEC-07 r5).
+- [x] **OBJ-38.5** Pause: one `pause(taskId, scope)` path ([OBJ-45](OBJ-45-pause-scope-and-model-readiness-contracts.md): `scope` is `everyLane`, the default, or `uiLanes`), with scope every lane (stop shortcut, menu bar "Stop") or UI lanes only (the user took over; helpers keep running). A UI-lanes pause while the task waits for the user and no UI lane is acting is ignored, as a second guard behind the Mac app (SPEC-06 r2). It sets the pause state the [OBJ-36](OBJ-36-gui-act-sub-agent.md) step loop checks before every action, checkpoints, sets the task to `paused`, cancels every pending approval, and emits `approvalCancelled` (SPEC-06 r1, r2, r4, r5). After resume, a risky action goes through the gate and asks again.
+- [x] **OBJ-38.6** Cancel: extend the [OBJ-06](OBJ-06-resume-and-limits.md) `cancelTask` so it stops every lane, helpers included, drops every queued subtask and every command not yet run, and sets the task to `cancelled`. Nothing runs after cancel (SPEC-06 r8).
+- [x] **OBJ-38.7** Action log: write an `ActionLogEntry` for every action that ran, was blocked, or was declined, with time (am/pm), device, lane, a plain-language description, and every path for deletes (SPEC-07 r18). Write it to a text file as lines like "3:42 pm, Mac, main cursor: Clicked Export in Keynote", plus a count line per task such as "Read 3 files and clicked 12 times". Record the file's location in `harness/README.md`.
+- [x] **OBJ-38.8** (p1) Add a test that text typed into a password field never reaches the action log (SPEC-07 r20).
 - [ ] **OBJ-38.9** Tests with the mock Mac app: the send and delete re-checks, a voice "yes" on a delete, a blocked action after a yes, pausing with an open approval, cancel with a queued helper, and the log lines. Then run them with the real Mac app when OBJ-40 and OBJ-35 are done.
 
 ## Expectations
 
 - [ ] SPEC-07 "Strict delete" scenarios pass: "Delete needs a tap", "Saying yes is not enough to delete", "User declines a delete", "File list changed after approval".
 - [ ] SPEC-07 "Sending" scenarios pass: "Sending an email needs approval", "Approval text comes from the real recipients", "Recipients changed after approval".
-- [ ] SPEC-07 "Action log" scenarios pass: "Every action is logged", "Task summary includes activity counts".
-- [ ] SPEC-06 scenarios pass at the harness level: "Pause cancels a pending approval", "User resumes", "User cancels a paused task".
-- [ ] No approval text, file name, or recipient comes from model output.
-- [ ] No action runs after a pause is set.
+- [x] SPEC-07 "Action log" scenarios pass: "Every action is logged", "Task summary includes activity counts".
+- [x] SPEC-06 scenarios pass at the harness level: "Pause cancels a pending approval", "User resumes", "User cancels a paused task".
+- [x] No approval text, file name, or recipient comes from model output.
+- [x] No action runs after a pause is set.
 
 ## Expected outcomes
 
@@ -77,4 +77,52 @@ Build against the mock Mac app from [OBJ-01](OBJ-01-task-record-schemas.md) unti
 
 ## Outcome
 
-_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._
+- **Result:** In progress.
+  OBJ-38.1 to OBJ-38.8 are built and tested in the harness against the protocol's mock Mac app.
+  OBJ-38.9 is half done: the tests run with the mock Mac app, and the run with the real Mac app waits for [OBJ-40](OBJ-40-mac-approval-cards.md) and [OBJ-35](OBJ-35-mac-stop-and-take-over.md), which are not started.
+  The SPEC-07 "Strict delete" and "Sending" expectations stay open until then, because their scenarios include the cards' buttons and spoken lines, which are the Mac app's.
+- **Delivered:**
+  - `harness/src/approvals/`: `ApprovalFlow`, which implements the `ApprovalGate` seam (`request` for an ask, `blocked` for a blocked action, `moveToTrash`), the card text in `copy.ts`, and `findRecipientFields` and `parseRecipients` in `recipients.ts`.
+  - `harness/src/control/run-control.ts`: `RunControl`, one run's pause state; `mayAct(lane)` is the check before every action.
+  - `harness/src/scheduler/task-control.ts`: `pause(taskId, scope)` with the `everyLane` and `uiLanes` scopes, `resume` after a take-over in the same run, and `cancel` extended to every lane, queued subtasks, and open cards.
+  - `harness/src/scheduler/scheduler.ts` and `subtask-runner.ts`: per-subtask signals, UI subtasks held during a take-over and started again in the same attempt, the pause check before each action, and the ask and blocked paths. `move_to_trash` is offered on the helper lane (`withTrash` in `lanes.ts`) and only runs through an approval.
+  - `harness/src/action-log/text-log.ts`: the action log file, `Action log/<yyyy-mm-dd>.txt` in the support folder, with a count line per task. The location is in `harness/README.md`, "Action log".
+  - `harness/src/scheduler/describe.ts`: log lines for UI actions (`describeGuiAction`), Trash moves (`describeTrashed`), and actions not done (`describeNotDone`). None includes typed text.
+  - Task store: migration 6 adds the `approvals` table (kept forever), with `addApproval`, `decideApproval`, `closeApproval`, `getApproval`, `listOpenApprovals`, plus `onActionLogged` and `getStepActionLog`. Startup recovery closes open approvals as cancelled. `paused -> done` is now allowed, because helpers keep running during a take-over.
+  - RPC: the harness serves `pause` and `replyToBlockedAction` (`harness/src/rpc/tasks.ts`).
+  - Protocol, non-breaking, still version 4: `PauseParams.scope` (`PauseScope`: `everyLane` by default, or `uiLanes`), `UserError.stepId`, and the `replyToBlockedAction` method with `ReplyToBlockedActionParams` and `BlockedActionChoice`, with examples and regenerated TypeScript, Swift, and Kotlin types. The mock Mac app's `moveToTrash` answers for the paths it was given and moves nothing, and tests can script its answers (`answers`).
+  - Tests: `harness/test/approvals-send.test.ts`, `approvals-delete.test.ts`, `pause-and-cancel.test.ts`, and `action-log-file.test.ts`, with helpers in `harness/test/support/`. They run the protocol's mock Mac app in process on a real socket, so every scripted answer is checked against the contract.
+- **Commits:**
+  - `ddd951f docs(objectives): start OBJ-38`
+  - `16923cd feat(protocol): add the pause scope and the blocked-action reply`
+  - `c8a7d96 feat(harness): add approvals, pause, cancel, and the action log file`
+  - and the commit that records this outcome.
+- **Expectations:**
+  - SPEC-07 "Strict delete": "Delete needs a tap", "Saying yes is not enough to delete", "User declines a delete", and "File list changed after approval" pass at the harness level in `approvals-delete.test.ts`, end to end through the planner, the scheduler, the gate, and the mock Mac app, with files moved into a test Trash folder. Open until the real Mac app shows the buttons and says the declined line (OBJ-40).
+  - SPEC-07 "Sending": "Sending an email needs approval", "Approval text comes from the real recipients", and "Recipients changed after approval" pass at the harness level in `approvals-send.test.ts`, through the seam with a fake `gui_act` step, because OBJ-36 is built at the same time. Open until OBJ-36 calls the seam and OBJ-40 shows the card.
+  - SPEC-07 "Action log": "Every action is logged" and "Task summary includes activity counts" pass in `action-log-file.test.ts`, reading the real file.
+  - SPEC-06 at the harness level: "Pause cancels a pending approval" passes in `pause-and-cancel.test.ts` for a delete card through the `pause` method and resume, and in `approvals-send.test.ts` for the Send card at the seam. "User resumes" and "User cancels a paused task" pass in `pause-and-cancel.test.ts` (fresh observation, same attempt, the queued helper never runs). The cursors fading and the spoken lines are the Mac app's (OBJ-35).
+  - No approval text, file name, or recipient comes from model output: the flow reads only the gate's decision, `readFieldValues`, and the real file system; "Approval text comes from the real recipients" names `mallory@example.com` while the goal says Ana.
+  - No action runs after a pause is set: `pause-and-cancel.test.ts` counts every action on a UI lane and the helper after `uiLanes` and `everyLane` pauses, and checks that no model request, step, or `moveToTrash` happens after a pause or cancel, including after a late tap.
+  - The new tests passed 15 runs in a row, and the full harness suite (369 tests) 4 runs in a row, on the final code. `python3 scripts/verify.py` passes; the Swift and Kotlin compile checks were not run because Docker is not running here (CI runs them).
+- **Not verified:**
+  - The run with the real Mac app (OBJ-38.9). When OBJ-40 and OBJ-35 are done, Patrick or Brent: start the harness with work, run the delete scenarios from a goal such as "delete the old invoices in Downloads", answer the card by voice and by tap, take the mouse and press Control-Option-Escape while a card is open, then resume and cancel; check the action log file in `~/Library/Application Support/Yumi/Action log/`.
+  - Mail's real To and Cc fields. `findRecipientFields` matches text fields, text areas, and combo boxes labelled "To" or "Cc" (with or without a colon), and `parseRecipients` splits on commas, semicolons, and new lines, following `GuiExecutor.fieldText`, which joins Mail's tokens with ", ". Neither was checked against a real Mail draft. Check with OBJ-39's GUI debug window on a draft to Ana with a Cc.
+  - Messages in an existing conversation has no To field, so a send there answers `unavailable` (`noRecipients`) and does not run until the conversation's recipient can be read.
+- **Decisions and deviations:**
+  - Contract additions for open question G6 (owner Jepoy; Brent leads protocol changes for now): `pause` takes an optional `scope`, and the blocked-action card answers with the new `replyToBlockedAction` and the `stepId` from the `userError`. "Stop" there pauses the task through the same pause path. Patrick needs to call these from OBJ-35 and OBJ-40.
+  - Only sends and `move_to_trash` deletes can be approved, because `ApprovalKind` has only those. Any other `ask` (a click no rule classifies in Mail, Messages, WhatsApp, or Finder, a Delete or Move to Trash button, Command-Delete in Finder) is recorded as not done, as before. That is a gap between SPEC-07 r6 and the approval contract; see the questions in the report.
+  - A pause is ignored for `uiLanes` only while the task waits for the user and no UI lane acts, as written. During planning, a `uiLanes` pause stops the planner too, since no lane exists yet, and the resume plans again.
+  - While the user has taken over, nothing asks: a helper that needs an approval or the blocked card waits for the resume, because a pause cancels every pending approval.
+  - A voice "yes" on a delete shows the same approval again rather than closing it, so the card stays until a tap.
+  - A changed file is one whose identity, size, or modification time changed since the card was built.
+  - `moveToTrash` gets the expanded file list the user approved, not the folders the model named, so a file added to a folder after the last check is never moved. A deleted folder's empty shell stays behind.
+  - Cancel now fails subtasks that never started, with "Cancelled before it started.", where OBJ-06 left them as they were.
+  - The action log file is one file a day, `Action log/<yyyy-mm-dd>.txt`, rather than one file for everything, so each file stays readable and the date need not be on every line. The count line is written when a task ends: done, stopped (failed), or cancelled.
+  - The action log names a line's device "Mac" when it is this Mac's device id and "phone" otherwise.
+  - Approvals expire 5 minutes after they are asked, as the contract requires, but nothing acts on `expiresAt` yet (SPEC-09, out of scope).
+- **For the next objectives:**
+  - OBJ-36 (`gui_act`): call `checkAction`, then `if (!control.mayAct(lane)) stop` right before `beginStep`. For an `ask`, call `approvals.request(decision, { subtask, step, lane, control, send }, signal)` with `send` from `findRecipientFields(observation)` resolved to element paths, and press Send only on `approved`. For a `blocked` action, record the step as blocked, then `approvals.blocked(...)` and stop the attempt unless it answers `keepGoing`. Write log lines with `describeGuiAction` and `describeNotDone`. The run's `RunControl` and the subtask's signal reach `runSubtask`. If OBJ-36 landed its own approval seam, reconcile it with `ApprovalGate` here.
+  - OBJ-35 (Patrick): the stop shortcut and menu bar "Stop" call `pause` with no scope (or `everyLane`); a take-over calls `pause` with `scope: "uiLanes"`; Resume calls `resumeTask`; Cancel calls `cancelTask`. The harness ignores a `uiLanes` pause while it waits for the user and no UI lane acts.
+  - OBJ-40 (Patrick): on `approvalCancelled`, close the card; a late answer is ignored. On a `userError` of kind `blockedAction`, show the card and answer with `replyToBlockedAction` and the error's `stepId`. A delete answered by voice comes back to the card: the harness shows the same approval again. Implement `moveToTrash` for the exact paths.
+  - OBJ-17: the harness needs `work` to create the approval flow; without it there are no approvals.
