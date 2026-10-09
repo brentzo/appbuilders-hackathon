@@ -3,7 +3,7 @@ id: OBJ-36
 title: gui_act sub-agent
 product: harness
 assignee: Brent
-touches: []
+touches: [mac]
 specs: [SPEC-05, SPEC-02, SPEC-11]
 status: in-progress
 priority: p0
@@ -57,6 +57,7 @@ Build against the mock Mac app from [OBJ-01](OBJ-01-task-record-schemas.md) unti
 - [x] **OBJ-36.9** `ask` actions and password fields: when the next step needs a secure text field, never read or fill it, and ask the user to type the password (SPEC-05 r7). Set the subtask to waiting, emit the question for the Mac app to speak, and feed the answer into the next step. While it waits and no UI lane is acting, the user's typing does not pause the task (SPEC-06 r2). Use the draft password copy from the SPEC-07 "Draft copy" table. The question goes out as the `questionAsked` event and comes back through `answerQuestion` (OBJ-01).
 - [ ] **OBJ-36.10** Apply the OBJ-26 round 3 lessons (see "Round 3" in [models/gui/SMOKE-TEST.md](../models/gui/SMOKE-TEST.md)): wait until two observations in a row match before showing the model the screen after an action, so a closing sheet is not mistaken for the current one; treat an accessibility error from `executeAction` as `noEffect` with the reason, never as `ok`; when a file appears in the home folder during the attempt, tell the model ("new file: Q3 Report.pdf"), so it can finish instead of exporting again; and when it clicks a text field, say to use `setValue`. Measure each against round 3 with the smoke test.
 - [ ] **OBJ-36.11** Tests with a mocked model and the mock Mac app for each scenario below, the 10-step limit, a shell attempt, and a check that unique screen text never reaches the orchestrator. Then run the three demo tasks on the real Mac app 5 times each and record steps, time, and failures in the Outcome.
+- [ ] **OBJ-36.12** Serve `resolveApp` in the Mac app (`mac/Yumi/Native/AppResolver.swift`, wired into `AppMethodServer`), because every plan that names an app failed with "method not found" (Brent's run, 2026-10-10). It covers the `resolveApp` part of Patrick's [OBJ-39](OBJ-39-mac-gui-execution.md); decided by Brent. Only installed apps that Launch Services knows, matched by the name the user sees, with unit tests. `open_app` by name uses the same lookup.
 
 ## Expectations
 
