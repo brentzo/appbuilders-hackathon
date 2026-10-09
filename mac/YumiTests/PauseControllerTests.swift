@@ -84,7 +84,7 @@ struct PauseControllerTests {
         func input(tagged: Bool = false, keyboard: Bool = false, overYumi: Bool = false, yumiKeyboard: Bool = false) -> TakeOverRule.Input {
             .init(tagged: tagged, isKeyboard: keyboard, overYumiWindow: overYumi, yumiHasKeyboard: yumiKeyboard)
         }
-        #expect(TakeOverRule.isTakeOver(input(), uiLaneActing: true), "the user moves their mouse")
+        #expect(TakeOverRule.isTakeOver(input(), uiLaneActing: true), "the user clicks")
         #expect(TakeOverRule.isTakeOver(input(keyboard: true), uiLaneActing: true), "the user types")
         #expect(!TakeOverRule.isTakeOver(input(tagged: true), uiLaneActing: true), "Yumi's own input")
         #expect(!TakeOverRule.isTakeOver(input(tagged: true, keyboard: true), uiLaneActing: true))

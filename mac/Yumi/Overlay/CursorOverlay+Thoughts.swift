@@ -83,7 +83,14 @@ extension CursorOverlay {
     /// What can be clicked now, in global AppKit coordinates: each cat's bubble or open panel
     /// where it is drawn (it may be hopping out of the pointer's way), and each chip.
     func thoughtsTargets() -> [(target: ThoughtTarget, frame: CGRect)] {
-        guard thoughts.isEnabled else { return [] }
+        thoughts.isEnabled ? drawnTargets() : []
+    }
+
+    /// Where Yumi's own bubbles, open panels, and helper chips are drawn now, in global AppKit
+    /// coordinates, in any mode. Pointer moves and clicks there are never taking over (SPEC-06 r2).
+    var ownFrames: [CGRect] { drawnTargets().map(\.frame) }
+
+    private func drawnTargets() -> [(target: ThoughtTarget, frame: CGRect)] {
         var targets: [(target: ThoughtTarget, frame: CGRect)] = []
         for (id, cursor) in cursors {
             let drawings = drawings(of: id)
