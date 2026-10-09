@@ -17,7 +17,7 @@ The paths below say plainly what you will and will not see.
 |---|---|---|---|
 | [1. The Mac app with the scripted harness](#path-1-the-mac-app-with-the-scripted-harness) | A Mac with Xcode | About 15 minutes | The full interface: menu bar, voice, the cat cursors, the repeat-back, window tiling, and error messages, driven by a scripted stand-in for the AI |
 | [2. The real harness and model](#path-2-the-real-harness-and-model) | Path 1, plus Python and about 10 GB of free memory | About 30 minutes, mostly the model download | The local model choosing real actions, and the real harness behind the Mac app |
-| [3. The Android app](#path-3-the-android-app) | An Android 12+ phone and the Android SDK | About 20 minutes | The phone app's shell: setup, home screen, and settings |
+| [3. The Android app](#path-3-the-android-app) | An Android 12+ phone and the Android SDK | About 20 minutes | The phone app: setup, push-to-talk, and the wake word, without the link to the Mac yet |
 | [4. The tests](#path-4-the-tests) | Node.js, on any OS | About 5 minutes | Every product's checks, including the end-to-end encryption and the relay |
 
 ## What you need
@@ -165,8 +165,9 @@ Close other heavy apps, such as the Android emulator or a large build, or every 
 ## Path 3: the Android app
 
 The Android app is the phone half of Yumi.
-Today it is the app shell: setup, the home screen, settings, and the background service.
-Its connection to the Mac and its voice input are still being built, and Settings lists every stand-in in the build.
+Today it has setup, the home screen, settings, the background service, push-to-talk, and the wake word, all on the phone.
+Its connection to the Mac is still being built, so a goal stays on the phone, and Settings lists every stand-in in the build.
+As on the Mac, the wake word is the stand-in **"Hey Jarvis"**; its model ships inside the app.
 
 1. Tell Gradle where the Android SDK is, from `android/`:
 

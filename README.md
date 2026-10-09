@@ -14,7 +14,7 @@ It has four paths, from quickest to fullest:
 
 1. **The Mac app with the scripted harness:** the whole interface in about 15 minutes, with no model download.
 2. **The real harness and model:** Qwen3.5-9B running on your Mac through mlx-vlm.
-3. **The Android app:** build and install the phone app.
+3. **The Android app:** build and install the phone app, with push-to-talk and the wake word.
 4. **The tests:** every product's checks, on macOS, Linux, or Windows.
 
 The quickest start, on a Mac with Apple silicon, Xcode 26, and Node.js 24:
