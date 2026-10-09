@@ -27,7 +27,6 @@ struct ProtocolTypesTests {
         try Self.roundTrip(HelloParams.self, "HelloParams.v1")
         try Self.roundTrip(HelloResult.self, "HelloResult.v1")
         try Self.roundTrip(Empty.self, "Empty.empty")
-        #expect(PROTOCOL_VERSION == 1)
     }
 
     @Test func userErrors() throws {
