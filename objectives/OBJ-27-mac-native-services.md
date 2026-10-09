@@ -5,7 +5,7 @@ product: mac
 assignee: Patrick
 touches: []
 specs: [SPEC-03, SPEC-08]
-status: in-progress
+status: done
 priority: p0
 depends-on: [OBJ-14]
 integrates-with: [OBJ-03, OBJ-07, OBJ-08, OBJ-21]
@@ -48,17 +48,17 @@ Each service follows a contract from [OBJ-01](OBJ-01-task-record-schemas.md), so
 - [x] **OBJ-27.4** `storeSecret` and `loadSecret` backed by the macOS Keychain, scoped to Yumi. Secrets never touch files or logs.
 - [x] **OBJ-27.5** Pairing screen: call `startPairing`, show the QR code, then "Paired with <device name>" when done. Add "Unpair" in settings.
 - [x] **OBJ-27.6** Show the bridge connection state (connected, reconnecting, offline) in the menu bar from `bridgeStateChanged`, and the SPEC-11 "Bridge down" and "Unpaired device" copy from `userError` events.
-- [ ] **OBJ-27.7** Test each method with the mock harness and by hand against Chrome, Finder, Mail, Keynote, and one app without accessibility support.
+- [x] **OBJ-27.7** Test each method with the mock harness and by hand against Chrome, Finder, Mail, Keynote, and one app without accessibility support. Keynote and the Mail draft are not verified, accepted by the lead: see Not verified in the Outcome.
 - [x] **OBJ-27.8** When [OBJ-03](OBJ-03-harness-skeleton.md) is done, switch the Mac app from the mock harness to the real one (a launcher next to `MockHarnessLauncher` in `mac/Yumi/Harness/HarnessLauncher.swift`), and re-check the [OBJ-14](OBJ-14-mac-app-shell.md) expectations against it. Moved here from OBJ-14 so OBJ-14 could finish before the real harness exists.
 
 ## Expectations
 
 - [x] Every method matches its OBJ-01 contract and validates against the schema.
 - [x] `probeAppCapability` reports Chrome as DevTools-capable and an app without accessibility support as not background-capable.
-- [ ] `openNewWindow` works for Chrome, Finder, and Mail, and returns "unsupported" for other apps instead of failing.
-- [ ] Setting a window's frame and reading it back returns the same frame, on a laptop display and an external display.
+- [x] `openNewWindow` works for Chrome, Finder, and Mail, and returns "unsupported" for other apps instead of failing. Mail is not verified (no Mail account here), accepted by the lead: see Not verified in the Outcome.
+- [x] Setting a window's frame and reading it back returns the same frame, on a laptop display and an external display. The external display is not verified, accepted by the lead: see Not verified in the Outcome.
 - [x] Secrets are only in the Keychain.
-- [ ] The pairing screen and connection state look right in light and dark mode.
+- [x] The pairing screen and connection state look right in light and dark mode. The menu bar status line is not verified, accepted by the lead: see Not verified in the Outcome.
 
 ## Expected outcomes
 
@@ -72,7 +72,7 @@ Each service follows a contract from [OBJ-01](OBJ-01-task-record-schemas.md), so
 
 ## Outcome
 
-- **Result:** In progress: everything is built and works for the demo, but OBJ-27.7 and three expectations need things this Mac does not have (Keynote, a Mail account, an external display). Set it done once those are checked or the lead accepts them as not verified.
+- **Result:** Done for the demo. The lead (Brent) accepted the items under Not verified: OBJ-27.7 ran against the mock-style driver, Chrome, Finder, Mail, and WezTerm (no accessibility), but not Keynote. Three expectations are checked with a note because their remaining parts need a Mail account, an external display, or the menu checked by eye.
 - **Delivered:**
   - `mac/Yumi/Native/`: `WindowService` (list windows, get and set a frame), `AppCapabilityProbe` (with `AppLauncher`), `NewWindowOpener` (the per-app strategies in one table), `SecretStore` (Keychain), and `AppMethodServer`, which serves those seven app methods to the harness.
   - `mac/Yumi/Harness/HarnessClient.swift`: harness-to-app requests go to `AppMethodServer`. Replies are a result, -32601 for methods no objective serves yet, -32602 for params that break the contract, or -32000 with a SPEC-11 `UserError`.
@@ -82,11 +82,13 @@ Each service follows a contract from [OBJ-01](OBJ-01-task-record-schemas.md), so
   - Debug options `-YumiOpen pairing` and `-YumiOpen pairing-code` for snapshots.
   - Tests in `mac/YumiTests/AppMethodServerTests.swift`.
 - **Commits:**
-  - `836c51b docs(objectives): start OBJ-27`
-  - `ebbec28 feat(mac): serve native window, capability, and Keychain methods, and show pairing and phone state`
-  - `7e6a3c0 feat(mac): start the real harness by default`
-  - `6d8d0c2 feat(mac): sharpen the pairing QR code and add pairing snapshot options`
-  - `3ba1520 feat(mac): open pairing from the Unpaired device error's Pair now`
+  - `c0ba726 docs(objectives): start OBJ-27`
+  - `7b3a756 feat(mac): serve native window, capability, and Keychain methods, and show pairing and phone state`
+  - `3d6d82d feat(mac): start the real harness by default`
+  - `3227c4f feat(mac): sharpen the pairing QR code and add pairing snapshot options`
+  - `4f6b5f5 feat(mac): open pairing from the Unpaired device error's Pair now`
+  - `68f4ecf docs(objectives): record the OBJ-27 outcome so far`
+  - `docs(objectives): finish OBJ-27` (this commit)
 - **Expectations:**
   - Contracts: a throwaway driver ran every method through `AppMethodServer.serve` and validated params and results (and `UserError` data) against the protocol schemas with the protocol package's validator. All valid. Against the real harness, its `RpcPeer` validated both sides of `storeSecret` and `loadSecret` for `bridge.device-seeds`.
   - Probe: Chrome reports `devtools: true, accessibility: true`. WezTerm, which draws its window itself, reports `accessibility: false` with a window open. An app that is not installed fails with `unsupportedRequest`.
@@ -97,12 +99,13 @@ Each service follows a contract from [OBJ-01](OBJ-01-task-record-schemas.md), so
   - Mac tests: 54 tests in 12 suites pass.
   - Real harness (OBJ-27.8): the app starts it, `hello` and `ping` work, `bridgeStateChanged` events arrive, and after `kill -9` the supervisor restarts it and reconnects.
 - **Not verified:**
-  - Mail: "New Message" is disabled on this Mac because Mail has no account. On the demo Mac, with an account, call `openNewWindow` with `com.apple.mail` and check that it returns a window id and a draft opens.
-  - Keynote is not installed here. Install it and call `probeAppCapability` and `listWindows` with `com.apple.iWork.Keynote`.
-  - External display: with a second display attached, move a window there with `setWindowFrame` and read it back with `getWindowFrame`. The frame should be equal, and negative x or y should work on displays left of or above the main one.
-  - Pairing against the real bridge and a real phone (needs OBJ-21 and the Android app): open "Pair your phone…", scan the code, check "Paired with <name>", the menu status line, and Unpair in settings.
-  - A team-signed build: the ad hoc build has no Accessibility grant, so window methods were exercised through the driver from an AX-trusted shell, not from the app. With `Signing.local.xcconfig`, grant Yumi Accessibility and repeat one `listWindows` from the harness.
-  - The menu bar status line in light and dark mode (system-drawn).
+  - Steps for the demo Mac start from a team-signed build: create `mac/Signing.local.xcconfig` with the team id, build the Yumi scheme, open the app, and grant Yumi Accessibility in System Settings > Privacy & Security > Accessibility. Then start the real harness with Yumi (the default) and send the calls below from the harness, or from any JSON-RPC client on `~/Library/Application Support/Yumi/harness.sock`.
+  - Window methods from the signed app: the ad hoc build here has no Accessibility grant, so window methods ran through a driver from an AX-trusted shell. Open a Finder window and call `listWindows` with `{"bundleId": "com.apple.finder"}`. Expect the Finder window with its frame, not an `accessibilityPermissionMissing` error.
+  - Mail draft: "New Message" is disabled on this Mac because Mail has no account. Add a mail account in Mail, then call `openNewWindow` with `{"bundleId": "com.apple.mail"}`. Expect `supported: true` with a window id, and a new draft on screen.
+  - Keynote is not installed here. Install it from the App Store, open a presentation, and call `probeAppCapability` with `{"bundleId": "com.apple.iWork.Keynote"}`. Expect `accessibility: true`, `devtools: false`, and the Keynote version. Then call `listWindows` with the same bundle id and expect the presentation window.
+  - External display: attach a second display. Call `listWindows`, pick a window id, and call `setWindowFrame` with a frame on the second display (for a display left of or above the main one, x or y is negative). Call `getWindowFrame` and expect the same frame. Repeat on the laptop display.
+  - Pairing with a phone (needs OBJ-21 and the Android app): choose "Pair your phone…" in the menu bar menu, scan the code with Yumi on the phone, and expect "Paired with <phone name>". Then check that the menu shows "<phone name>: connected", that turning off the phone's network shows reconnecting or offline, and that Unpair in settings brings back "Not paired".
+  - The menu bar status line in light and dark mode (system-drawn): open the menu in both modes and check that it reads right.
 - **Decisions and deviations:**
   - Coordinates are Quartz global points: origin at the top left of the main display, y down. The OBJ-01 contract does not say; this matches what the Accessibility API and screenshots use.
   - Window ids are `CGWindowID`s, found through the private `_AXUIElementGetWindow`, the only way to match an AX window to the id screenshots use.
