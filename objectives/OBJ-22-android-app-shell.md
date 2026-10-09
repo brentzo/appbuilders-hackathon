@@ -53,7 +53,7 @@ Android only lets a background app stay alive this way, with a visible notificat
 
 ## Expectations
 
-- [ ] The service survives leaving the app and locking the screen for at least 30 minutes on the demo phone.
+- [x] The service survives leaving the app on the development phone; the results are in [wiki/android-background-survival.md](../wiki/android-background-survival.md). Changed by Brent on 2026-10-09: a clean 30-minute locked run is not required, since in the demo the phone is in someone's hand.
 - [x] SPEC-10 scenario "Permission asked from the background" passes, using a test tool.
 - [x] "Stop" in the notification stops the service.
 - [x] The cat plays and switches between idle and listening.
@@ -91,7 +91,7 @@ Notes from the work so far:
   - `baa0662 fix(android): remove the service notification when the service stops`
   - `e279afe docs(android): add build, install, and sideload steps`
 - **Expectations:**
-  - Survives 30 minutes in the background with the screen locked, on the demo phone: not verified on the demo phone. On the development phone (Samsung Galaxy A56, SM-A566B, Android 16, 8 GB), the service kept the same process and stayed in the foreground for 30 minutes in the background with deep Doze forced (`dumpsys deviceidle force-idle`) and the charger simulated as unplugged. The screen was off and locked for the first 15 to 20 minutes, then someone unlocked the phone, so a clean 30 minutes locked is still open there too.
+  - Survives in the background: replaced by the report [wiki/android-background-survival.md](../wiki/android-background-survival.md), which also records about 1.5 hours of real use on battery with the service alive (checked at 8:17 pm). The original note: On the development phone (Samsung Galaxy A56, SM-A566B, Android 16, 8 GB), the service kept the same process and stayed in the foreground for 30 minutes in the background with deep Doze forced (`dumpsys deviceidle force-idle`) and the charger simulated as unplugged. The screen was off and locked for the first 15 to 20 minutes, then someone unlocked the phone, so a clean 30 minutes locked is still open there too.
   - SPEC-10 "Permission asked from the background": passed on the development phone with the debug test tool. Leaving the app posted "I need permission to use your location for this.", and tapping it opened the app straight into the Android location dialog. The tool received the answer. Also covered by `PermissionCoordinatorTest.permissionAskedFromTheBackground`.
   - "Stop" in the notification: on the development phone the service stopped, its notification was removed, and the home screen offered "Start again".
   - The cat switches between idle and listening: verified on the development phone with the placeholder cat (ears perk up, eyes widen, a soft pulse). The Rive cat is not in yet.

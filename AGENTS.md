@@ -15,6 +15,7 @@ Start with [README.md](README.md) for the repo map, architecture, and key decisi
 | `specs/` | Requirement specs with Gherkin scenarios. The source of truth for behavior |
 | `objectives/` | Implementation objectives: tasks, expectations, status, assignee, Outcome |
 | `docs/` | Design background. Older than the specs; the spec wins when they disagree |
+| `wiki/` | Reports and findings: what was measured or observed, when, and what it means |
 | `protocol/`, `harness/`, `mac/`, `android/`, `iphone/`, `bridge/`, `character/`, `models/` | Products. Each has a README with its owner, boundaries, and plan |
 | `scripts/objectives.py` | Regenerates objective tables and validates the docs |
 | `scripts/verify.py` | Runs every check a change needs: docs, plus the build and tests of each product it touches |
