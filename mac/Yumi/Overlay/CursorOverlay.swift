@@ -36,6 +36,9 @@ final class CursorOverlay {
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.rebuildPanels() }
         }
+        #if DEBUG
+        if LaunchArguments.bool("YumiCursorDemo") { CursorDebugActions(overlay: self).playDemo() }
+        #endif
     }
 
     var isClickThrough: Bool { panels.allSatisfy(\.ignoresMouseEvents) }

@@ -68,6 +68,47 @@ struct CursorDebugActions {
         overlay.removeHelperChip(id: "debug-helper")
     }
 
+    /// `-YumiCursorDemo YES` (Debug builds): the main cat appears, goes through its states, three
+    /// ghosts split out of it and leap around, then everyone fades. For screen recordings.
+    func playDemo() {
+        guard let screen = NSScreen.main else { return }
+        let frame = screen.visibleFrame
+        func point(_ fx: CGFloat, _ fy: CGFloat) -> CursorTarget {
+            let global = ScreenGeometry.globalTopLeftPoint(fromAppKit: CGPoint(x: frame.minX + frame.width * fx, y: frame.minY + frame.height * fy))
+            return .point(ScreenPoint(x: global.x, y: global.y))
+        }
+        let ghosts = ["ghost-1": "Fill expense form", "ghost-2": "Rename invoices", "ghost-3": "Export the deck"]
+        let steps: [(Double, () -> Void)] = [
+            (0.5, { overlay.apply(.spawn(SpawnCursor(cursorId: "main", cursorKind: .main, at: point(0.5, 0.5)))) }),
+            (1.5, { setState(.listening) }),
+            (2.5, { setState(.thinking) }),
+            (3.5, {
+                for (index, id) in ghosts.keys.sorted().enumerated() {
+                    let spot = [point(0.3, 0.7), point(0.72, 0.68), point(0.62, 0.3)][index]
+                    overlay.apply(.spawn(SpawnCursor(cursorId: id, cursorKind: .ghost, label: ghosts[id], at: spot)))
+                }
+            }),
+            (4.5, { setState(.moving); moveTo([point(0.2, 0.35), point(0.8, 0.45), point(0.45, 0.2), point(0.6, 0.8)]) }),
+            (5.3, { setState(.acting) }),
+            (6.3, { setState(.moving); moveTo([point(0.65, 0.55), point(0.35, 0.45), point(0.8, 0.25), point(0.25, 0.75)]) }),
+            (7.1, { setState(.waitingForUser) }),
+            (8.1, { setState(.stuck) }),
+            (9.1, { setState(.done) }),
+            (10.1, { for id in ghosts.keys { overlay.apply(.fade(FadeCursor(cursorId: id))) } }),
+            (10.8, { setState(.paused) }),
+            (11.8, { fadeAll() }),
+        ]
+        for (delay, step) in steps {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { MainActor.assumeIsolated { step() } }
+        }
+    }
+
+    private func moveTo(_ targets: [CursorTarget]) {
+        for (id, target) in zip(["main", "ghost-1", "ghost-2", "ghost-3"], targets) where overlay.cursors[id] != nil {
+            overlay.apply(.move(MoveCursor(cursorId: id, to: target)))
+        }
+    }
+
     /// A random point well inside a display, in protocol (top-left) coordinates.
     private func randomPoint(on screen: NSScreen?) -> ScreenPoint {
         let frame = (screen ?? NSScreen.screens[0]).visibleFrame.insetBy(dx: 120, dy: 120)
