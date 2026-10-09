@@ -415,11 +415,15 @@ export interface GoalAcceptedPayload {
 export type GoalFinalStatus = "done" | "failed" | "cancelled";
 export const goalFinalStatusValues: readonly GoalFinalStatus[] = ["done", "failed", "cancelled"];
 
+/** The goal ended on the executing device (SPEC-09 r7). The origin device says the summary. A failed goal also carries its error, so the origin device can show the SPEC-11 copy and its buttons. */
 export interface GoalFinishedPayload {
   kind: "goalFinished";
   goalId: Uuid;
   status: GoalFinalStatus;
+  /** The one or two sentence summary to speak, or for a failed or cancelled goal, a plain line that says so. */
   summary: string;
+  /** Why the goal failed, for the SPEC-11 copy. Only for failed; the executing device always sends it then. */
+  error?: UserError;
 }
 
 /** The goal the Mac displays for confirmation. For a revision, the existing taskId lets the Mac distinguish it from a new task. In Auto mode, autoMode=true means show the goal without asking for confirmation; the harness separately sends a short speak acknowledgement. */
@@ -746,6 +750,7 @@ export type Payload =
   | CancelPayload
   | PauseConfirmedPayload
   | CancelConfirmedPayload
+  | ResumeConfirmedPayload
   | CommandExpiredPayload
   | PingPayload
   | PingResultPayload;
@@ -916,6 +921,12 @@ export type ResultExpirySeconds = typeof RESULT_EXPIRY_SECONDS;
 /** Outcome of a subtask attempt (SPEC-05 r4). */
 export type ResultStatus = "done" | "partial" | "stuck" | "blocked";
 export const resultStatusValues: readonly ResultStatus[] = ["done", "partial", "stuck", "blocked"];
+
+/** The executing device resumed the goal after a resume command; progress follows. */
+export interface ResumeConfirmedPayload {
+  kind: "resumeConfirmed";
+  goalId: Uuid;
+}
 
 export interface ResumePayload {
   kind: "resume";

@@ -546,12 +546,16 @@ enum class GoalFinalStatus {
     @SerialName("cancelled") Cancelled;
 }
 
+/** The goal ended on the executing device (SPEC-09 r7). The origin device says the summary. A failed goal also carries its error, so the origin device can show the SPEC-11 copy and its buttons. */
 @Serializable
 @SerialName("goalFinished")
 data class GoalFinishedPayload(
     val goalId: String,
     val status: GoalFinalStatus,
+    /** The one or two sentence summary to speak, or for a failed or cancelled goal, a plain line that says so. */
     val summary: String,
+    /** Why the goal failed, for the SPEC-11 copy. Only for failed; the executing device always sends it then. */
+    val error: UserError? = null,
 ) : Payload
 
 /** The goal the Mac displays for confirmation. For a revision, the existing taskId lets the Mac distinguish it from a new task. In Auto mode, autoMode=true means show the goal without asking for confirmation; the harness separately sends a short speak acknowledgement. */
@@ -1089,6 +1093,13 @@ enum class ResultStatus {
     @SerialName("stuck") Stuck,
     @SerialName("blocked") Blocked;
 }
+
+/** The executing device resumed the goal after a resume command; progress follows. */
+@Serializable
+@SerialName("resumeConfirmed")
+data class ResumeConfirmedPayload(
+    val goalId: String,
+) : Payload
 
 @Serializable
 @SerialName("resume")

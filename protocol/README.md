@@ -73,12 +73,12 @@ Goals that wait for an offline device stay on the origin device ([SPEC-09 r15](.
 | `delegateGoal` | command | 2 minutes | Origin sends the confirmed whole goal to the Mac while it is online |
 | `goalAccepted` | result | 2 minutes | Mac says it started the goal, queued it behind the active task, or waits for the user to unlock it |
 | `progress` | event | 2 minutes | Executing device reports changes and at least a 30-second heartbeat |
-| `goalFinished` | event | 2 minutes | Executing device returns final status and spoken summary |
+| `goalFinished` | event | 2 minutes | Executing device returns the final status and spoken summary, and for a failed goal its `UserError` |
 | `approvalRequest` | command | 5 minutes | Executing device asks for approval on the origin device |
 | `approvalResponse` | result | 2 minutes | Origin returns the decision; delete and unclassified-action approvals require a tap |
 | `approvalCancelled` | event | 2 minutes | Executing device reports that a pause, or 5 minutes with no answer, cancelled the pending approval |
 | `pause`, `resume`, `cancel` | command | 2 minutes | Either device controls a delegated goal |
-| `pauseConfirmed`, `cancelConfirmed` | result | 2 minutes | Executing device confirms the control action |
+| `pauseConfirmed`, `resumeConfirmed`, `cancelConfirmed` | result | 2 minutes | Executing device confirms the control action |
 | `commandExpired` | result | 2 minutes | Receiver tells the sender that it did not run an expired command |
 | `ping` | command | 2 minutes | Either device tests its peer connection |
 | `pingResult` | result | 2 minutes | Peer answers the ping |
@@ -100,6 +100,7 @@ Edge cases (SPEC-09 requirements 10 and 13 to 20, [OBJ-76](../objectives/OBJ-76-
 
 - **Presence.** There is no presence frame.
   A device knows its peer is back when the peer's `toolList` arrives, which every device sends on connect, or when a `ping` is answered by `pingResult` instead of the relay's `targetOffline`.
+  The Mac answers each phone `toolList` with its own, so a phone that connects after the Mac still learns it is there and gets its `wakeAddresses`; the phone never answers the Mac's, so the two never loop.
   A phone holding a queued goal pings the Mac while it waits.
 - **Mac offline** (`mac-offline.json`, SPEC-09 r15). The relay answers `delegateGoal` with `targetOffline` and never holds it, so the phone keeps the queued goal itself, one per origin device.
   When the Mac is back, the phone sends the goal as a new command, after asking again if it waited more than 30 minutes since `spokenAt`.

@@ -891,15 +891,20 @@ public enum GoalFinalStatus: String, Codable, Equatable, Sendable, CaseIterable 
     case cancelled
 }
 
+/// The goal ended on the executing device (SPEC-09 r7). The origin device says the summary. A failed goal also carries its error, so the origin device can show the SPEC-11 copy and its buttons.
 public struct GoalFinishedPayload: Codable, Equatable, Sendable {
     public var goalId: String
     public var status: GoalFinalStatus
+    /// The one or two sentence summary to speak, or for a failed or cancelled goal, a plain line that says so.
     public var summary: String
+    /// Why the goal failed, for the SPEC-11 copy. Only for failed; the executing device always sends it then.
+    public var error: UserError?
 
-    public init(goalId: String, status: GoalFinalStatus, summary: String) {
+    public init(goalId: String, status: GoalFinalStatus, summary: String, error: UserError? = nil) {
         self.goalId = goalId
         self.status = status
         self.summary = summary
+        self.error = error
     }
 }
 
@@ -1457,6 +1462,7 @@ public enum Payload: Codable, Equatable, Sendable {
     case cancel(CancelPayload)
     case pauseConfirmed(PauseConfirmedPayload)
     case cancelConfirmed(CancelConfirmedPayload)
+    case resumeConfirmed(ResumeConfirmedPayload)
     case commandExpired(CommandExpiredPayload)
     case ping(PingPayload)
     case pingResult(PingResultPayload)
@@ -1484,6 +1490,7 @@ public enum Payload: Codable, Equatable, Sendable {
         case "cancel": self = .cancel(try CancelPayload(from: decoder))
         case "pauseConfirmed": self = .pauseConfirmed(try PauseConfirmedPayload(from: decoder))
         case "cancelConfirmed": self = .cancelConfirmed(try CancelConfirmedPayload(from: decoder))
+        case "resumeConfirmed": self = .resumeConfirmed(try ResumeConfirmedPayload(from: decoder))
         case "commandExpired": self = .commandExpired(try CommandExpiredPayload(from: decoder))
         case "ping": self = .ping(try PingPayload(from: decoder))
         case "pingResult": self = .pingResult(try PingResultPayload(from: decoder))
@@ -1539,6 +1546,9 @@ public enum Payload: Codable, Equatable, Sendable {
             try value.encode(to: encoder)
         case .cancelConfirmed(let value):
             try container.encode("cancelConfirmed", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .resumeConfirmed(let value):
+            try container.encode("resumeConfirmed", forKey: .discriminator)
             try value.encode(to: encoder)
         case .commandExpired(let value):
             try container.encode("commandExpired", forKey: .discriminator)
@@ -1843,6 +1853,15 @@ public enum ResultStatus: String, Codable, Equatable, Sendable, CaseIterable {
     case partial
     case stuck
     case blocked
+}
+
+/// The executing device resumed the goal after a resume command; progress follows.
+public struct ResumeConfirmedPayload: Codable, Equatable, Sendable {
+    public var goalId: String
+
+    public init(goalId: String) {
+        self.goalId = goalId
+    }
 }
 
 public struct ResumePayload: Codable, Equatable, Sendable {

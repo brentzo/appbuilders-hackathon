@@ -24,6 +24,7 @@
         { "$ref": "#/$defs/CancelPayload" },
         { "$ref": "#/$defs/PauseConfirmedPayload" },
         { "$ref": "#/$defs/CancelConfirmedPayload" },
+        { "$ref": "#/$defs/ResumeConfirmedPayload" },
         { "$ref": "#/$defs/CommandExpiredPayload" },
         { "$ref": "#/$defs/PingPayload" },
         { "$ref": "#/$defs/PingResultPayload" }
@@ -171,6 +172,7 @@
       }
     },
     "GoalFinishedPayload": {
+      "description": "The goal ended on the executing device (SPEC-09 r7). The origin device says the summary. A failed goal also carries its error, so the origin device can show the SPEC-11 copy and its buttons.",
       "type": "object",
       "additionalProperties": false,
       "required": ["kind", "goalId", "status", "summary"],
@@ -178,8 +180,19 @@
         "kind": { "const": "goalFinished" },
         "goalId": { "$ref": "common.json#/$defs/Uuid" },
         "status": { "$ref": "#/$defs/GoalFinalStatus" },
-        "summary": { "type": "string", "minLength": 1 }
-      }
+        "summary": { "description": "The one or two sentence summary to speak, or for a failed or cancelled goal, a plain line that says so.", "type": "string", "minLength": 1 },
+        "error": { "description": "Why the goal failed, for the SPEC-11 copy. Only for failed; the executing device always sends it then.", "$ref": "errors.json#/$defs/UserError" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "done" } } },
+          "then": { "properties": { "error": false } }
+        },
+        {
+          "if": { "properties": { "status": { "const": "cancelled" } } },
+          "then": { "properties": { "error": false } }
+        }
+      ]
     },
     "ApprovalRequestPayload": {
       "description": "Approval data copied from the harness without a decision (SPEC-07, SPEC-09 r10).",
@@ -260,6 +273,13 @@
       "additionalProperties": false,
       "required": ["kind", "goalId"],
       "properties": { "kind": { "const": "cancelConfirmed" }, "goalId": { "$ref": "common.json#/$defs/Uuid" } }
+    },
+    "ResumeConfirmedPayload": {
+      "description": "The executing device resumed the goal after a resume command; progress follows.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "goalId"],
+      "properties": { "kind": { "const": "resumeConfirmed" }, "goalId": { "$ref": "common.json#/$defs/Uuid" } }
     },
     "CommandExpiredErrorKind": { "type": "string", "enum": ["commandExpired"] },
     "CommandExpiredPayload": {
