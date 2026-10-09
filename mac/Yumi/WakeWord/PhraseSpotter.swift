@@ -39,11 +39,22 @@ nonisolated enum WakePhrase {
         return nil
     }
 
-    /// The goal in a recording that starts with "Hey Yumi": the words after it, or all of them if
-    /// the recognizer wrote the phrase some other way this time.
+    /// The goal in a recording that starts with "Hey Yumi": the words after it. If the recognizer
+    /// wrote the phrase some other way this time, a "Hey" or "Yumi" left at the start goes, and the
+    /// rest is the goal (live, "Hey Yumi, open Notes" once came out as "Hey, open Notes.").
     static func goal(in transcript: String) -> String {
-        remainder(after: transcript) ?? transcript
+        if let rest = remainder(after: transcript) { return rest }
+        var start = transcript.startIndex
+        for word in words(in: transcript).prefix(2) {
+            guard leftovers.contains(word.text), transcript[start..<word.range.lowerBound].allSatisfy({ $0.isWhitespace || $0.isPunctuation }) else { break }
+            start = word.range.upperBound
+        }
+        let rest = transcript[start...].drop { $0.isWhitespace || $0.isPunctuation }
+        return rest.prefix(1).uppercased() + rest.dropFirst()
     }
+
+    /// Words that can be left of the phrase at the start of the goal recording.
+    private static let leftovers: Set<String> = ["hey", "hi", "hay", "yumi", "yummy", "umi"]
 
     private static func words(in text: String) -> [(text: String, range: Range<String.Index>)] {
         text.ranges(of: #/[\p{L}\p{N}']+/#).map { range in

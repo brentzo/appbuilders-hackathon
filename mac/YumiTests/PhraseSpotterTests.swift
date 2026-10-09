@@ -32,8 +32,13 @@ struct PhraseSpotterTests {
         #expect(WakePhrase.remainder(after: "Hey Yumi") == "")
         #expect(WakePhrase.remainder(after: "Hey Yumi?") == "")
         #expect(WakePhrase.goal(in: "Hey Yumi, open Notes.") == "Open Notes.")
-        // Written another way the second time: the whole recording is the goal.
+        // Written another way the second time: what is left of the phrase goes.
         #expect(WakePhrase.goal(in: "Open Notes.") == "Open Notes.")
+        #expect(WakePhrase.goal(in: "Hey, open Notes.") == "Open Notes.")
+        #expect(WakePhrase.goal(in: "Yumi, open Notes.") == "Open Notes.")
+        #expect(WakePhrase.goal(in: "Hey. Yumi. open Notes") == "Open Notes")
+        #expect(WakePhrase.goal(in: "Open the hey file") == "Open the hey file")
+        #expect(WakePhrase.goal(in: "A new note in Notes") == "A new note in Notes")
     }
 
     // MARK: The spotter
