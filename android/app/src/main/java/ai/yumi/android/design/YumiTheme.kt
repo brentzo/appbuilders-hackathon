@@ -207,8 +207,7 @@ object YumiMotion {
     const val POUNCE_MS = 300
     const val FADE_OUT_MS = 1000
     const val PANEL_MS = 350
-    const val AVOID_RADIUS_PT = 8
-    const val AVOID_HOP_PT = 64
+    const val AVOID_RADIUS_PT = 24
     const val AVOID_FADE_OPACITY = 0.25f
     const val AVOID_FADE_MS = 150
     const val AVOID_RETURN_MS = 1000
