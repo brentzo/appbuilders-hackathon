@@ -2,7 +2,7 @@
 id: OBJ-17
 title: Goal confirmation loop
 product: mac
-assignee: Patrick
+assignee: Brent
 touches: [harness]
 specs: [SPEC-01]
 status: todo
@@ -14,7 +14,7 @@ tags: [objective, p0, mac, harness, voice, ux]
 
 # OBJ-17 Goal confirmation loop
 
-**Product:** [Yumi for Mac](../mac/README.md) · **Also touches:** [harness](../harness/README.md) · **Specs:** [SPEC-01](../specs/01-voice-intake.md) · **Assignee:** Patrick
+**Product:** [Yumi for Mac](../mac/README.md) · **Also touches:** [harness](../harness/README.md) · **Specs:** [SPEC-01](../specs/01-voice-intake.md) · **Assignee:** Brent
 
 ## Project context
 
@@ -27,6 +27,8 @@ tags: [objective, p0, mac, harness, voice, ux]
 > Repo map: [README.md](../README.md). Full overview: [docs/yumi.md](../docs/yumi.md).
 
 ## Why this objective
+
+Reassigned from Patrick to Brent on 2026-10-09, because Patrick is busy elsewhere; the Mac code still follows Patrick's conventions in `mac/README.md`.
 
 Yumi never acts on a goal it might have misheard.
 It repeats the goal back in its own words, by voice and on screen, and waits for yes, a correction, or cancel.

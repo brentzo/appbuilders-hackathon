@@ -74,7 +74,7 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-14](OBJ-14-mac-app-shell.md) | Mac app shell, permissions, and harness link | mac | Patrick | 01, 04 | 01 | 03 | done |
 | [OBJ-15](OBJ-15-mac-voice-intake.md) | Mac voice intake | mac | Patrick | 01 | 14 | 11 | done |
 | [OBJ-16](OBJ-16-mac-wake-word.md) | Mac wake word | mac | Patrick | 01 | 15 | 12 | in-progress |
-| [OBJ-17](OBJ-17-goal-confirmation.md) | Goal confirmation loop | mac | Patrick | 01 | 04, 15, 18 | - | todo |
+| [OBJ-17](OBJ-17-goal-confirmation.md) | Goal confirmation loop | mac | Brent | 01 | 04, 15, 18 | - | todo |
 | [OBJ-18](OBJ-18-cursor-overlay-and-motion.md) | Cursor overlay and motion | mac | Patrick | 04 | 14 | - | done |
 | [OBJ-19](OBJ-19-rive-cat-cursor.md) | Rive cat cursor | mac | Patrick | 04 | 10, 18 | - | todo |
 | [OBJ-20](OBJ-20-window-tiling.md) | Window tiling with consent | mac | Patrick | 03 | 18, 27 | 08 | in-progress |
@@ -120,11 +120,11 @@ Ranked by how many objectives each one holds up through hard dependencies:
 | 1 | OBJ-01 Task record schemas and cross-team contracts | Jepoy | 24 | Brent, Patrick |
 | 2 | OBJ-02 Bridge envelope and end-to-end crypto | Jepoy | 12 | Brent, Patrick |
 | 3 | OBJ-03 Harness skeleton and local model client | Brent | 12 | Patrick |
-| 4 | OBJ-14 Mac app shell, permissions, and harness link | Patrick | 11 | Jepoy |
+| 4 | OBJ-14 Mac app shell, permissions, and harness link | Patrick | 11 | Brent, Jepoy |
 | 5 | OBJ-04 Task store and history | Brent | 10 | Patrick |
-| 6 | OBJ-18 Cursor overlay and motion | Patrick | 6 | No |
+| 6 | OBJ-18 Cursor overlay and motion | Patrick | 6 | Brent |
 | 7 | OBJ-05 Planner, scheduler, and task summary | Brent | 4 | No |
-| 8 | OBJ-15 Mac voice intake | Patrick | 4 | No |
+| 8 | OBJ-15 Mac voice intake | Patrick | 4 | Brent |
 | 9 | OBJ-31 Define unpair delivery acknowledgement | Jepoy | 4 | Brent, Patrick |
 | 10 | OBJ-06 Resume and limits | Brent | 3 | No |
 | 11 | OBJ-07 Lane router core | Brent | 3 | No |
@@ -132,7 +132,7 @@ Ranked by how many objectives each one holds up through hard dependencies:
 | 13 | OBJ-22 Android app shell and foreground service | Brent | 3 | Jepoy |
 | 14 | OBJ-34 Define protocol version upgrade recovery | Jepoy | 3 | Brent, Patrick |
 | 15 | OBJ-13 Bridge relay server | Jepoy | 2 | Brent |
-| 16 | OBJ-17 Goal confirmation loop | Patrick | 2 | No |
+| 16 | OBJ-17 Goal confirmation loop | Brent | 2 | Patrick |
 | 17 | OBJ-27 Mac native services for the harness | Patrick | 2 | Jepoy |
 | 18 | OBJ-37 Permission gate and typed file tools | Brent | 2 | No |
 | 19 | OBJ-08 Window locks, busy windows, and cursor cap | Brent | 1 | No |
@@ -148,12 +148,15 @@ Hard dependencies that cross between people (everything else is within one perso
 - OBJ-01 (Jepoy) before OBJ-04 (Brent)
 - OBJ-01 (Jepoy) before OBJ-07 (Brent)
 - OBJ-01 (Jepoy) before OBJ-14 (Patrick)
-- OBJ-04 (Brent) before OBJ-17 (Patrick)
+- OBJ-15 (Patrick) before OBJ-17 (Brent)
+- OBJ-18 (Patrick) before OBJ-17 (Brent)
 - OBJ-02 (Jepoy) before OBJ-23 (Brent)
 - OBJ-13 (Jepoy) before OBJ-23 (Brent)
 - OBJ-01 (Jepoy) before OBJ-29 (Brent)
 - OBJ-23 (Brent) before OBJ-30 (Jepoy)
 - OBJ-27 (Patrick) before OBJ-30 (Jepoy)
+- OBJ-17 (Brent) before OBJ-35 (Patrick)
+- OBJ-17 (Brent) before OBJ-40 (Patrick)
 - OBJ-21 (Jepoy) before OBJ-41 (Brent)
 - OBJ-33 (Jepoy) before OBJ-41 (Brent)
 - OBJ-34 (Jepoy) before OBJ-42 (Brent)
@@ -166,9 +169,9 @@ Workload:
 <!-- generated:objectives-workload:start -->
 | Person | Objectives | Count |
 |---|---|---|
-| Brent | 03, 04, 05, 06, 07, 08, 09, 22, 23, 24, 26, 29, 32, 36, 37, 38, 41, 42, 43 | 19 |
+| Brent | 03, 04, 05, 06, 07, 08, 09, 17, 22, 23, 24, 26, 29, 32, 36, 37, 38, 41, 42, 43 | 20 |
 | Jepoy | 01, 02, 11, 12, 13, 21, 25, 28, 30, 31, 33, 34 | 12 |
-| Patrick | 10, 14, 15, 16, 17, 18, 19, 20, 27, 35, 39, 40, 44 | 13 |
+| Patrick | 10, 14, 15, 16, 18, 19, 20, 27, 35, 39, 40, 44 | 12 |
 <!-- generated:objectives-workload:end -->
 ## Suggested order
 
@@ -180,7 +183,7 @@ Waves come from hard dependencies only. Each person works their column top to bo
 | 1 | OBJ-22, OBJ-26, OBJ-32 | OBJ-01, OBJ-02, OBJ-11, OBJ-12, OBJ-28 | OBJ-10 |
 | 2 | OBJ-03, OBJ-24, OBJ-29 | OBJ-13, OBJ-21, OBJ-25, OBJ-31, OBJ-33 | OBJ-14 |
 | 3 | OBJ-04, OBJ-23, OBJ-37, OBJ-41 | OBJ-34 | OBJ-15, OBJ-18, OBJ-27 |
-| 4 | OBJ-05, OBJ-07, OBJ-42, OBJ-43 | OBJ-30 | OBJ-16, OBJ-17, OBJ-19, OBJ-20, OBJ-39, OBJ-44 |
+| 4 | OBJ-05, OBJ-07, OBJ-17, OBJ-42, OBJ-43 | OBJ-30 | OBJ-16, OBJ-19, OBJ-20, OBJ-39, OBJ-44 |
 | 5 | OBJ-06, OBJ-08 | - | OBJ-35, OBJ-40 |
 | 6 | OBJ-09, OBJ-36, OBJ-38 | - | - |
 <!-- generated:objectives-waves:end -->
