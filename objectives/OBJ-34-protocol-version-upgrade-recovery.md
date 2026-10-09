@@ -56,4 +56,32 @@ Protocol v4 makes that behavior user-visible for devices upgraded at different t
 
 ## Outcome
 
-Not started.
+- **Result:** In progress.
+  The contract, the relay, and the docs are done.
+  Both expectations wait for the clients and the copy: [OBJ-42](OBJ-42-version-mismatch-copy.md) (SPEC-11 copy), [OBJ-43](OBJ-43-mac-bridge-client-version-refusal.md) (Mac bridge client), [OBJ-44](OBJ-44-mac-version-mismatch-copy.md) (Mac app copy), and [OBJ-23](OBJ-23-android-bridge-client.md) (phone).
+- **Delivered:**
+  - `protocol/schemas/bridge.json`: `refused` takes an optional `protocolVersion` (the relay's), allowed only with `unsupportedVersion`; a new `targetNeedsUpdate` notice; `UnsupportedVersionRetrySeconds` (300). Regenerated types and new examples `BridgeFrame.refused-unsupported-version.json` and `BridgeFrame.targetNeedsUpdate.json`.
+  - `protocol/docs/pairing.md`: "Another protocol version", with the relay's and the refused device's rules, and the new check order in "Connecting".
+  - `protocol/README.md` "Versioning": the handshake frames only gain optional properties from version 4 on, and a new version keeps every pairing.
+  - `bridge/src/relay.ts` and `bridge/src/store.ts`: the version is checked after the signature; a registered device that is behind is remembered in `devices_needing_update` until it connects on the relay's version or comes back ahead; a command for it gets `targetNeedsUpdate`.
+  - `harness/src/bridge-client/client.ts`: `targetNeedsUpdate` drops the command from the outbox and reports `otherDeviceOffline`, so the deployed relay does not make the Mac resend it.
+  - SPEC-08: the "Protocol versions" scenarios and the "Another protocol version" decision.
+- **Commits:**
+  - `02f219a docs(objectives): start OBJ-34 and add OBJ-42 to OBJ-44 for the version mismatch copy and clients`
+  - `027c9ed feat(protocol): name the relay's version when it refuses another one, and add targetNeedsUpdate`
+  - `1b1f659 feat(bridge): refuse another protocol version with the relay's version and tell senders a target needs an update`
+  - `82086a1 fix(harness): report targetNeedsUpdate as otherDeviceOffline until it has its own copy`
+  - `747dd86 docs(spec-08): decide protocol version mismatch recovery and align its objectives`
+- **Expectations:**
+  - Distinguishable from a network outage: the relay side is verified in `bridge/test/e2e.test.ts` "another protocol version (OBJ-34)" and `protocol/test/bridge.test.ts`; what the user sees waits for OBJ-42, OBJ-43, and OBJ-23.
+  - Pairing preserved: verified at the relay ("delivers what it held once the device updates, with the same pairing and no new QR code"); what the user understands waits for the OBJ-42 copy.
+- **Not verified:** the clients, which are not built yet for this (OBJ-43, OBJ-23), and the live relay, in [OBJ-30](OBJ-30-live-cross-device-bridge-acceptance.md).
+- **Decisions and deviations:**
+  - No protocol version bump: the new frame, constant, and optional property are additions, which protocol/README "Versioning" calls not breaking.
+  - The relay checks the version after the signature, so only the device itself can be marked as behind, and a forged connection on an old version gets `badSignature`.
+  - A device newer than the relay is not reported to its peers: only the team can update the relay, so senders keep seeing `targetOffline`.
+  - The SPEC-11 copy moved to OBJ-42, because a new row fails the Android and Mac copy tests until both apps have it.
+  - Found along the way: SPEC-08 had its unpair decision inside a Gherkin block; it moved to "Decisions".
+- **For the next objectives:**
+  - Clients follow `protocol/docs/pairing.md` "Another protocol version". A `refused` without `protocolVersion` comes from an older relay: treat the relay as behind.
+  - The relay learns that a device is behind only when that device tries to connect.
