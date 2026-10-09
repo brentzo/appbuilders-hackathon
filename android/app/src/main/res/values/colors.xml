@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- The design tokens are in yumi_colors.xml, copied from character/design/generated/android. -->
 <resources>
-    <color name="yumi_background">#FFFFF8F6</color>
-    <color name="yumi_icon_background">#FFFFDBCC</color>
-    <color name="yumi_icon_foreground">#FF96491F</color>
-    <color name="yumi_notification_accent">#FF96491F</color>
+    <color name="yumi_notification_accent">@color/yumi_accent</color>
 </resources>
