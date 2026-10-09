@@ -97,7 +97,7 @@ The approval flow that runs when the gate says "ask" is [OBJ-38](OBJ-38-approval
 - **Not verified:**
   - The gate is not yet called by the step loop, because the loop that runs actions does not exist yet ([OBJ-36](OBJ-36-gui-act-sub-agent.md) and [OBJ-38](OBJ-38-approvals-pause-and-action-log.md)). The file tools call it themselves.
   - Label and key matching was tested with labels written by hand, not read from real Mail, Finder, or Messages windows. When OBJ-39 reads real trees, check that Mail's Send button and "New Message" and "Attach" really carry those labels.
-  - Swapping OBJ-05's test-only file tools for these is left to the orchestrator after both branches merge, as briefed.
+  - Swapping OBJ-05's test-only file tools for these was done on the OBJ-05 branch ("feat(harness): run every task action through the permission gate with the typed file tools"): the helper lane uses `registerFileTools`, and every task action goes through `checkAction` before it runs.
 - **Decisions and deviations:**
   - Unlisted clicks in risky apps: Brent chose option (a) on 2026-10-09 (SPEC-07 Decisions). Mail's safe labels are exactly "New Message" and "Attach"; a safe label matches only as the whole label and only in its own app.
   - OBJ-37.4's last sentence now says the orchestrator does the OBJ-05 swap, as the orchestrator briefed, so the objective can be done without it.
