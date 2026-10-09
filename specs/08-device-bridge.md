@@ -19,8 +19,8 @@ Design: [device-bridge](../docs/device-bridge.md).
 
 1. Devices pair once, in person, by scanning a QR code shown on the Mac with the phone.
 2. Pairing creates a key pair per device. Messages are encrypted end to end and signed by the sender.
-3. The VPS sees only routing fields (`id`, `from`, `to`, `expiresAt`) and ciphertext.
-4. Every message uses the envelope in the design doc: `id`, `from`, `to`, `type`, `replyTo`, `expiresAt`, `signature`, `payload`.
+3. The VPS sees only routing fields (`id`, `from`, `to`, `type`, `expiresAt`, `protocolVersion`) and ciphertext. It needs `type` to tell commands, which it never holds, from results and events, which it holds through a short reconnect (requirement 7).
+4. Every message uses the envelope in the design doc: `id`, `from`, `to`, `type`, `replyTo`, `expiresAt`, `protocolVersion`, `signature`, `payload`.
 5. Messages with a bad signature or from an unpaired device are dropped and logged on the receiving device.
 6. Expired commands are never executed. Every single command (one tool call) expires after 2 minutes, as in [SPEC-09](09-cross-device-routing.md) requirement 16.
 7. The VPS never queues commands. If the target device is offline, the VPS at once tells the sender, and the sender's brain tells the user. Whole goals waiting for an offline device are held on the origin device, not on the VPS ([SPEC-09](09-cross-device-routing.md) requirement 15). Results and events for a device that drops off briefly are held on the VPS until they expire (2 minutes), so a short reconnect does not lose a result.

@@ -50,9 +50,9 @@ Status: empty scaffold, nothing built yet.
 - Model runtime (Part B): MNN or llama.cpp, chosen after benchmarking.
 - Sideloaded for the hackathon. See the setup checklist in SPEC-10.
 
-## Open decisions
+## Decisions
 
-- **Part B model size.** SPEC-10 requirement 9 says Qwen3.5-9B, fixed. That was written for 18 GB. With 12 GB of real RAM, 9B (~6 GB plus context) is too tight. Proposal: Qwen3.5-4B, fixed, which scores the same as 9B on phone tasks (AndroidWorld 58.6 vs 57.8). Waiting on the SPEC-10 owner.
+- **Part B model:** Qwen3.5-4B, fixed (SPEC-10 requirement 9). 9B (~6 GB plus context) was too tight on 12 GB of real RAM, and 4B scores about the same on phone tasks (AndroidWorld 58.6 vs 57.8). Decided 2026-10-09.
 
 ## Specs
 

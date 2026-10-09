@@ -25,7 +25,7 @@ The brain sees one combined tool list and picks the device the same way the lane
 
 | Device | Brain | Example tools |
 |---|---|---|
-| Mac (16 GB) | Qwen3.5-9B, main brain | `gui_act`, `bash`, `read`, `write`, `open_app`, `look` |
+| Mac (16 GB) | Qwen3.5-9B, main brain | `gui_act` and typed tools only: `open_app`, `open_file`, `open_url`, `reveal_in_finder`, `read_file`, `list_dir`, `write_new_file`, `copy`, `move`, `move_to_trash`. No shell or AppleScript ([SPEC-07](../specs/07-safety.md)) |
 | Android (12 GB demo phone, 8 GB dev phone) | p0: none, a fixed rule. p1: one fixed model on the demo phone | p0: `set_alarm`, `set_timer`, `open_app`. p1 adds `phone_gui_act`, `get_location`, `read_recent_photos` |
 | iPhone (later) | none at first | Tools exposed by our own app, plus Shortcuts |
 
@@ -66,19 +66,41 @@ Same model family on both devices means one prompt format, one tool-call format,
 
 ```ts
 type Envelope = {
-  id: string            // unique message id
+  id: string              // unique message id
   from: DeviceId
   to: DeviceId
   type: "command" | "result" | "event"
-  replyTo?: string      // matches a result to its command
-  expiresAt: string     // stale commands are dropped, never executed late
-  signature: string     // signed with the sender's paired device key
-  payload: string       // encrypted body
+  replyTo?: string        // matches a result to its command
+  expiresAt: string       // stale commands are dropped, never executed late
+  protocolVersion: number
+  signature: string       // signed with the sender's paired device key
+  payload: string         // encrypted body
 }
 ```
 
+The VPS can read `id`, `from`, `to`, `type`, `expiresAt`, and `protocolVersion`.
+It needs `type` to reject commands for an offline device at once while holding results and events through a short reconnect ([SPEC-08](../specs/08-device-bridge.md) r7).
+Everything that says what the message means stays inside the encrypted `payload`.
+
+Message kinds inside the payload:
+
+| Kind | Envelope type | Direction | Expires after |
+|---|---|---|---|
+| Tool call (`set_alarm`, `set_timer`, `open_app`) | command | brain to tool provider | 2 minutes |
+| Tool result | result | back to the caller | 2 minutes |
+| Delegated goal | command | origin device to Mac | 2 minutes, sent only while the Mac is online |
+| Progress | event | executing device to origin device | 2 minutes |
+| Approval request | command | executing device to origin device | 5 minutes |
+| Approval response | result | origin device back | 2 minutes |
+| Pause, cancel | command | either way | 2 minutes |
+| Pause confirmed | result | back to the sender | 2 minutes |
+| Tool list | event | on connect | 2 minutes |
+| Busy, target offline, expired | event | to the sender | 2 minutes |
+
+Schemas: [OBJ-02](../objectives/OBJ-02-bridge-envelope-and-crypto.md) (envelope and crypto) and [OBJ-25](../objectives/OBJ-25-cross-device-messages.md) (message kinds).
+
 3. **No command queue.** Commands to an offline device fail at once, and goals waiting for an offline device are held on the origin device ([SPEC-09](../specs/09-cross-device-routing.md)). The VPS only holds results and events through short reconnects, until they expire. For iPhone (later) it also sends a push to wake the app.
-4. **Confirm on the device that acts.** Risky actions (bash, sending messages, deleting, buying) ask for confirmation on the device where they run.
+4. **Approve where the user is.** Risky actions (sending and deleting, [SPEC-07](../specs/07-safety.md)) ask for approval on the origin device. The executing device shows only a "Waiting for your OK" banner ([SPEC-09](../specs/09-cross-device-routing.md) r10).
 5. **Reply where the user spoke.** The result is spoken on the device the user talked to, even if the work happened on the other.
 6. **Show the work.** A phone request that runs on the Mac spawns the visible cursor on the Mac.
 

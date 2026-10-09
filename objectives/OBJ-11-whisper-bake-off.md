@@ -39,17 +39,18 @@ This objective runs that test and records the choice that the Mac and Android vo
 
 - [ ] **OBJ-11.1** Record about 20 real Taglish goals from the team, with consent, including names, numbers, and app names. Store them in the team's shared storage, not in git.
 - [ ] **OBJ-11.2** Write the correct transcript for each and commit the transcripts to `models/whisper/transcripts/`.
-- [ ] **OBJ-11.3** Write a script that runs each option (small, medium, large-v3-turbo, large-v3, and any Tagalog fine-tune worth testing) through each runtime: WhisperKit and whisper.cpp on the Mac, whisper.cpp on the Android demo phone.
-- [ ] **OBJ-11.4** Measure word error rate and time from end of speech to transcript for every combination.
-- [ ] **OBJ-11.5** Measure memory while Qwen3.5 is also loaded (9B on the Mac, 4B on the phone).
+- [ ] **OBJ-11.3** Write a script that runs each option (small, medium, large-v3-turbo, large-v3, and any Tagalog fine-tune worth testing) through each Mac runtime: WhisperKit and whisper.cpp. The Android demo phone run (whisper.cpp) waits for SPEC-10 Part B (p1); keep the script ready for it.
+- [ ] **OBJ-11.4** Measure word error rate and time from end of speech to transcript for every combination. Also run about 10 plain English commands, to see whether Whisper alone is fast enough for every goal on the Mac. If it is, the Mac can skip the native recognizer and the rule for choosing between the two (SPEC-01 r2 and r3).
+- [ ] **OBJ-11.5** Measure memory on the Mac while Qwen3.5-9B and the wake word model are also loaded. Use the peak memory recorded in [OBJ-26](OBJ-26-gui-smoke-test.md) if it is done.
 - [ ] **OBJ-11.6** Check confirmed model sizes against the estimates in SPEC-01 and correct the table if they differ.
 - [ ] **OBJ-11.7** Pick the smallest option per device whose errors would not change what Yumi repeats back. Write results and the choice to `models/whisper/RESULTS.md`.
 - [ ] **OBJ-11.8** Record the decision in SPEC-01's open question and in the models manifest (download source and checksum).
 
 ## Expectations
 
-- [ ] Results cover every option and runtime on both devices, or explain why one was skipped.
-- [ ] The chosen option fits in memory alongside Qwen3.5 on each device.
+- [ ] Results cover every option and runtime on the Mac, or explain why one was skipped. The phone results follow with SPEC-10 Part B (p1).
+- [ ] The chosen option fits in memory alongside Qwen3.5-9B and the wake word on the Mac.
+- [ ] The results say whether Whisper alone is fast enough for English commands on the Mac.
 - [ ] SPEC-01 no longer lists the Whisper choice as open.
 - [ ] No voice recordings are in git.
 

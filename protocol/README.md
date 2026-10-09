@@ -7,9 +7,11 @@ Status: empty scaffold, nothing built yet.
 
 ## Responsibilities
 
-- **Task record schemas:** Task, Subtask, Step, Action, WindowLock, AppCapability ([task-record-schema](../docs/task-record-schema.md)).
-- **Local RPC schemas:** messages between the harness and the native apps (execute an action, capture the screen, task and cursor events).
-- **Bridge schemas:** the message envelope, message types, and payloads sent between devices ([device-bridge](../docs/device-bridge.md)).
+- **Task record schemas:** Task, Subtask, Step, WindowLock, AppCapability, Approval, and ActionLogEntry ([task-record-schema](../docs/task-record-schema.md)).
+- **Action and tool schemas:** the action the model outputs (elements by number), the resolved action the harness records, the trimmed accessibility tree the model sees, and one argument schema per typed tool. No shell or AppleScript.
+- **Error kinds:** one value per row of the [SPEC-11](../specs/11-user-facing-errors.md) error table, shared by every product.
+- **Local RPC schemas:** every method and event between the harness and the native apps.
+- **Bridge schemas:** the message envelope, and every message kind sent between devices: tool calls, delegated goals, progress, approvals, pause and cancel ([device-bridge](../docs/device-bridge.md)).
 - **Crypto rules:** pairing, key types, encryption, and signatures for bridge messages, plus a reference TypeScript implementation.
 - **Generated types:** TypeScript, Swift, and Kotlin types generated from the schemas, so no product hand-writes them.
 
@@ -32,7 +34,11 @@ Status: empty scaffold, nothing built yet.
 ## Specs
 
 - [SPEC-02 Task lifecycle and resume](../specs/02-task-lifecycle.md)
+- [SPEC-05 Mac GUI control](../specs/05-mac-gui-control.md) (actions, trimmed tree, typed tools, structured result)
+- [SPEC-07 Safety and action log](../specs/07-safety.md) (permission levels, approvals, action log)
 - [SPEC-08 Device bridge](../specs/08-device-bridge.md)
+- [SPEC-09 Cross-device routing](../specs/09-cross-device-routing.md) (message kinds)
+- [SPEC-11 User-facing errors](../specs/11-user-facing-errors.md) (error kinds)
 
 ## Objectives
 
@@ -40,3 +46,4 @@ Status: empty scaffold, nothing built yet.
 |---|---|---|
 | [OBJ-01](../objectives/OBJ-01-task-record-schemas.md) | Task record and action schemas | todo |
 | [OBJ-02](../objectives/OBJ-02-bridge-envelope-and-crypto.md) | Bridge envelope and end-to-end crypto | todo |
+| [OBJ-25](../objectives/OBJ-25-cross-device-messages.md) | Cross-device message kinds | todo |

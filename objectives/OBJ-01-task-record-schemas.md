@@ -3,7 +3,7 @@ id: OBJ-01
 title: Task record and action schemas
 product: protocol
 touches: []
-specs: [SPEC-02, SPEC-03]
+specs: [SPEC-02, SPEC-03, SPEC-05, SPEC-07, SPEC-11]
 status: todo
 priority: p0
 depends-on: []
@@ -12,7 +12,7 @@ tags: [objective, p0, protocol]
 
 # OBJ-01 Task record and action schemas
 
-**Product:** [Yumi Protocol](../protocol/README.md) · **Specs:** [SPEC-02](../specs/02-task-lifecycle.md), [SPEC-03](../specs/03-lane-routing.md)
+**Product:** [Yumi Protocol](../protocol/README.md) · **Specs:** [SPEC-02](../specs/02-task-lifecycle.md), [SPEC-03](../specs/03-lane-routing.md), [SPEC-05](../specs/05-mac-gui-control.md), [SPEC-07](../specs/07-safety.md), [SPEC-11](../specs/11-user-facing-errors.md)
 
 ## Project context
 
@@ -26,48 +26,68 @@ tags: [objective, p0, protocol]
 
 ## Why this objective
 
-Every long-running behavior in Yumi depends on the task record: resuming after a crash, handing work between workers, routing to lanes, and the action log.
+Every long-running behavior in Yumi depends on the task record: resuming after a crash, handing work between workers, routing to lanes, approvals, and the action log.
 The harness (TypeScript), the Mac app (Swift), and the Android app (Kotlin) all read and write these shapes, so they must be defined once, as JSON Schema, with generated types for each language.
 This is the first thing other objectives build on.
 
 ## Read first
 
-- [docs/task-record-schema.md](../docs/task-record-schema.md): the draft shapes (written as Swift structs), the worker input, and the limits.
+- [docs/task-record-schema.md](../docs/task-record-schema.md): the shapes (written as Swift sketches), what the model sees, typed tools, approvals, and limits.
 - [docs/lane-router.md](../docs/lane-router.md): lanes, route reasons, window locks.
-- [SPEC-02](../specs/02-task-lifecycle.md) and [SPEC-03](../specs/03-lane-routing.md).
+- [SPEC-02](../specs/02-task-lifecycle.md), [SPEC-03](../specs/03-lane-routing.md).
+- [SPEC-05](../specs/05-mac-gui-control.md) requirements 1-6 (typed tools, trimmed tree, structured result, no-effect rule).
+- [SPEC-07](../specs/07-safety.md) requirements 1-15 (permission levels, typed file tools, strict delete, sending).
+- [SPEC-11](../specs/11-user-facing-errors.md), the error copy table.
 - [protocol/README.md](../protocol/README.md).
 
 ## Tasks
 
-- [ ] **OBJ-01.1** Set up `protocol/` as a package: a `schemas/` folder for JSON Schema files and a `generated/` folder (or build step) for TypeScript, Swift, and Kotlin types.
-- [ ] **OBJ-01.2** Write JSON Schemas for `Task`, `TaskStatus`, `Subtask`, `SubtaskStatus`, `Target`, `Step`, `StepOutcome`, `Lane`, `RouteReason`, `WindowLock`, and `AppCapability`, following the design doc. Include `confirmedGoal` separate from the raw `goal`.
-- [ ] **OBJ-01.3** Write the `Action` schema as a tagged union: `click`, `axPress`, `setValue`, `type`, `key`, `scroll`, `toolCall`, `ask`. Each variant has only its own fields.
-- [ ] **OBJ-01.4** Write the `WorkerInput` schema (confirmed goal, subtask instruction, last 3-5 steps, screen observation, allowed tools) and `WorkerOutput` (exactly one `Action`).
-- [ ] **OBJ-01.5** Write the local RPC schemas between the harness and native apps: requests (`executeAction`, `captureWindow`, `readAccessibilityTree`), results (`ActionResult` with a one-line observation), and events (`taskStatusChanged`, `cursorCommand`).
-- [ ] **OBJ-01.6** Add a `protocolVersion` field, and a versioning section in `protocol/README.md`: how to bump the version and what counts as a breaking change.
-- [ ] **OBJ-01.7** Generate TypeScript, Swift, and Kotlin types with one command, and add a check that fails if generated files are out of date.
-- [ ] **OBJ-01.8** Add example JSON files for each schema and a test that validates every example.
-- [ ] **OBJ-01.9** Update `protocol/README.md` with the layout, the generate command, and how other products import the types.
+- [ ] **OBJ-01.1** Try the type generator first. Write only the `ModelAction` tagged union and generate TypeScript, Swift, and Kotlin from it. Check that each language gets a real sum type (TypeScript discriminated union, Swift enum with associated values, Kotlin sealed class) and not a bag of optional fields. If quicktype cannot do this, pick another generator now, before writing the other schemas. Record the choice.
+- [ ] **OBJ-01.2** Set up `protocol/` as a package: a `schemas/` folder for JSON Schema files and a `generated/` folder (or build step) for TypeScript, Swift, and Kotlin types.
+- [ ] **OBJ-01.3** Write JSON Schemas for `Task` (with `originDeviceId`), `TaskStatus` (with `queued`), `Subtask`, `SubtaskStatus` (with `needsApproval`), `SubtaskResult`, `ResultStatus`, `Target`, `Step`, `StepOutcome` (with `blocked` and `declined`), `Lane`, `RouteReason`, `WindowLock`, and `AppCapability`, following the design doc. Keep `confirmedGoal` separate from the raw `goal`.
+- [ ] **OBJ-01.4** Write the action schemas:
+  - `ModelAction`, a tagged union of `axPress`, `setValue`, `type`, `key`, `scroll`, `tool`, `ask`, `finish`, and `click` (p1). Element actions refer to the element's short number, not a path. Each variant has only its own fields.
+  - `RecordedAction`: the model action plus the resolved element (path, role, label) and the `PermissionLevel` the harness decided.
+- [ ] **OBJ-01.5** Write the typed tool schemas, one argument schema per tool: `open_app`, `open_file`, `open_url`, `reveal_in_finder`, `read_file`, `list_dir`, `write_new_file`, `copy`, `move`, `move_to_trash`, and `phone`. `move_to_trash` takes an array of exact paths and rejects wildcard characters. There is no shell or AppleScript tool.
+- [ ] **OBJ-01.6** Write the observation schemas: `Observation` (window title, trimmed elements, optional p1 screenshot path) and `TreeElement` (`n`, `role`, `label`, optional `value`, `enabled`), with at most 200 elements and only the actionable roles from SPEC-05 requirement 2.
+- [ ] **OBJ-01.7** Write `WorkerInput` (confirmed goal, subtask instruction, last 3-5 steps, observation, allowed tool names) and `WorkerOutput` (exactly one `ModelAction`).
+- [ ] **OBJ-01.8** Write the approval schemas: `Approval`, `ApprovalKind`, `FileSummary`, `ApprovalDecision`, and `ApprovalMethod` (`tap` or `voice`). A delete approval's text is built from `FileSummary`, never from model text.
+- [ ] **OBJ-01.9** Write `ActionLogEntry` (time, device id, lane, plain-language description, paths for deletes, outcome).
+- [ ] **OBJ-01.10** Write `ErrorKind`: one value per row of the SPEC-11 error table, plus `blockedAction` for SPEC-07 requirement 5. Every product maps these values to copy; nothing maps raw error text.
+- [ ] **OBJ-01.11** Write the local RPC schemas between the harness and the native apps. List every method now, so later objectives implement them instead of inventing them:
+  - Harness to Mac app: `executeAction`, `observeWindow` (returns `Observation`), `animateCursorTo`, `readFieldValues` (for To and Cc, SPEC-07 r13), `showApprovalCard` (returns `ApprovalDecision`), `probeAppCapability`, `openNewWindow`, `moveToTrash`.
+  - Mac app to harness: `submitGoal`, `pause`, `resumeTask`, `cancelTask`, `listTasks`, `searchTasks`, `getTask`, `startPairing`, `listPairedDevices`, `unpair`.
+  - Events from the harness: `taskStatusChanged`, `cursorCommand`, `progress`, `approvalCancelled`.
+- [ ] **OBJ-01.12** Add a `protocolVersion` field, and a versioning section in `protocol/README.md`: how to bump the version, and what counts as a breaking change. Add the rule: an objective that adds or changes an RPC method updates the schema in `protocol/` in the same commit.
+- [ ] **OBJ-01.13** Generate TypeScript, Swift, and Kotlin types with one command, and add a check that fails if generated files are out of date.
+- [ ] **OBJ-01.14** Add example JSON files for each schema and a test that validates every example.
+- [ ] **OBJ-01.15** Update `protocol/README.md` with the layout, the generate command, and how other products import the types.
 
 ## Expectations
 
 - [ ] Every shape in [docs/task-record-schema.md](../docs/task-record-schema.md) has a JSON Schema, or a written reason why it changed.
-- [ ] An `Action` with fields from another variant fails validation.
+- [ ] A `ModelAction` with fields from another variant fails validation.
+- [ ] An element action that names a path instead of a number fails validation.
 - [ ] A `WorkerOutput` with zero or two actions fails validation (supports SPEC-02 scenario "Worker returns an invalid action").
-- [ ] Generated types compile in TypeScript, Swift, and Kotlin.
+- [ ] A shell command or AppleScript action fails validation (supports SPEC-05 scenario "Raw shell is not available").
+- [ ] A `move_to_trash` call with `~/Downloads/*.pdf` fails validation (supports SPEC-07 scenario "Wildcards are rejected").
+- [ ] An `Observation` with 201 elements fails validation.
+- [ ] Every row of the SPEC-11 table has an `ErrorKind` value.
+- [ ] Generated types compile in TypeScript, Swift, and Kotlin, and unions come out as real sum types.
 - [ ] One command regenerates all types, and the out-of-date check runs in CI or a pre-commit step.
 
 ## Outcomes
 
 - `protocol/schemas/*.json`: the source of truth.
-- Generated types for TypeScript, Swift, and Kotlin.
+- Generated types for TypeScript, Swift, and Kotlin, and the recorded generator choice.
 - Example files and a validation test.
 - An updated `protocol/README.md`.
 
 ## Out of scope
 
-- Bridge messages and crypto: [OBJ-02](OBJ-02-bridge-envelope-and-crypto.md).
+- Bridge envelope and crypto: [OBJ-02](OBJ-02-bridge-envelope-and-crypto.md). Cross-device message kinds: [OBJ-25](OBJ-25-cross-device-messages.md).
 - Storing records in SQLite: [OBJ-04](OBJ-04-task-store.md).
+- Deciding permission levels at runtime and building approval text: harness objectives (not written yet for SPEC-07).
 
 ## Completion notes
 

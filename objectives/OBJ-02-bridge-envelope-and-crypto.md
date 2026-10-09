@@ -37,13 +37,13 @@ This objective defines the message envelope, the pairing flow, and the crypto ru
 
 ## Tasks
 
-- [ ] **OBJ-02.1** Write the `Envelope` JSON Schema: `id`, `from`, `to`, `type` (`command`, `result`, `event`), `replyTo`, `expiresAt`, `protocolVersion`, `signature`, `payload` (ciphertext). Only `id`, `from`, `to`, `expiresAt`, and `protocolVersion` are readable by the bridge.
-- [ ] **OBJ-02.2** Write the decrypted payload schemas: `Command` (tool name and arguments), `Result` (success or a structured failure kind, never raw error text), and `Event` (connection, expiry notice, tool list announcement).
-- [ ] **OBJ-02.3** Define the expiry default as a constant: 2 minutes for every command. Add a `targetOffline` event type for the bridge to send back when a command's target is offline.
+- [ ] **OBJ-02.1** Write the `Envelope` JSON Schema: `id`, `from`, `to`, `type` (`command`, `result`, `event`), `replyTo`, `expiresAt`, `protocolVersion`, `signature`, `payload` (ciphertext). Only `id`, `from`, `to`, `type`, `expiresAt`, and `protocolVersion` are readable by the bridge. The bridge needs `type` to reject commands for an offline device while holding results and events ([SPEC-08](../specs/08-device-bridge.md) r3 and r7).
+- [ ] **OBJ-02.2** Write the bridge-level event schemas the relay itself sends: `targetOffline` (a command's target is offline) and `expired` (a message expired before delivery). Every other payload kind is in [OBJ-25](OBJ-25-cross-device-messages.md).
+- [ ] **OBJ-02.3** Define expiry as constants per message kind, from the table in [docs/device-bridge.md](../docs/device-bridge.md): 2 minutes for every command, except approval requests, which wait 5 minutes ([SPEC-09](../specs/09-cross-device-routing.md) r10).
 - [ ] **OBJ-02.4** Write the pairing design in `protocol/docs/pairing.md`: the Mac shows a QR code with its device id, public keys, a one-time pairing code, and the bridge URL; the phone scans it and completes the exchange through the bridge; both register with the bridge. Cover unpairing and key revocation.
-- [ ] **OBJ-02.5** Choose and document the crypto: libsodium, X25519 for key exchange, XChaCha20-Poly1305 for payload encryption, Ed25519 for signatures over the envelope's routing fields plus ciphertext.
+- [ ] **OBJ-02.5** Choose and document the crypto: libsodium, X25519 for key exchange, XChaCha20-Poly1305 for payload encryption, Ed25519 for signatures over the envelope's routing fields plus ciphertext. Plain `crypto_box` uses XSalsa20, not XChaCha20, so use the `crypto_box_curve25519xchacha20poly1305` functions or a key exchange plus the XChaCha20-Poly1305 AEAD. Before deciding, check that libsodium-wrappers, swift-sodium, and lazysodium all expose the exact functions chosen.
 - [ ] **OBJ-02.6** Write the reference TypeScript implementation with libsodium-wrappers: generate device keys, seal and open a payload, sign and verify an envelope.
-- [ ] **OBJ-02.7** Write cross-language test vectors (fixed keys, plaintext, expected ciphertext and signature) so the Swift and Kotlin clients can prove they match.
+- [ ] **OBJ-02.7** Write cross-language test vectors (fixed keys, fixed nonce, plaintext, expected ciphertext and signature) so the Swift and Kotlin clients can prove they match. The nonce must be fixed in the vectors, or the expected ciphertext can never match.
 - [ ] **OBJ-02.8** Write tests: wrong key cannot open, tampered routing field fails verification, expired envelope is detectable.
 
 ## Expectations
@@ -64,7 +64,7 @@ This objective defines the message envelope, the pairing flow, and the crypto ru
 
 - The relay server: [OBJ-13](OBJ-13-bridge-relay-server.md).
 - Client connections: [OBJ-21](OBJ-21-mac-bridge-client-and-pairing.md) (Mac), [OBJ-23](OBJ-23-android-bridge-client.md) (Android).
-- Which tools each device offers: SPEC-09 and SPEC-10, not finalized.
+- Payload kinds for SPEC-09 (tool calls, delegated goals, progress, approvals, pause, tool lists): [OBJ-25](OBJ-25-cross-device-messages.md).
 
 ## Completion notes
 

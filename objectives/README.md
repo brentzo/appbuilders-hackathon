@@ -48,7 +48,7 @@ Update the tables in this file and in the product README in the same commit.
 
 | ID | Objective | Product | Specs | Depends on | Status |
 |---|---|---|---|---|---|
-| [OBJ-01](OBJ-01-task-record-schemas.md) | Task record and action schemas | protocol | 02 | - | todo |
+| [OBJ-01](OBJ-01-task-record-schemas.md) | Task record and action schemas | protocol | 02, 03, 05, 07, 11 | - | todo |
 | [OBJ-02](OBJ-02-bridge-envelope-and-crypto.md) | Bridge envelope and end-to-end crypto | protocol | 08 | - | todo |
 | [OBJ-03](OBJ-03-harness-skeleton.md) | Harness skeleton and local model client | harness | 02 | 01 | todo |
 | [OBJ-04](OBJ-04-task-store.md) | Task store and history | harness | 02 | 01, 03 | todo |
@@ -72,6 +72,8 @@ Update the tables in this file and in the product README in the same commit.
 | [OBJ-22](OBJ-22-android-app-shell.md) | Android app shell and foreground service | android | 10, 08, 01 | 10 | todo |
 | [OBJ-23](OBJ-23-android-bridge-client.md) | Android bridge client and pairing | android | 08 | 02, 13, 22 | todo |
 | [OBJ-24](OBJ-24-android-voice-intake.md) | Android voice intake and wake word | android | 01, 10 | 12, 22 | todo |
+| [OBJ-25](OBJ-25-cross-device-messages.md) | Cross-device message kinds | protocol | 09, 06, 07, 08, 10 | 01, 02 | todo |
+| [OBJ-26](OBJ-26-gui-smoke-test.md) | Qwen3.5-9B smoke test on the demo tasks | models | 05 | - | todo |
 
 ## Suggested order
 
@@ -79,8 +81,8 @@ Objectives in the same wave can run in parallel.
 
 | Wave | Objectives |
 |---|---|
-| 1 | OBJ-01, OBJ-02, OBJ-10, OBJ-11, OBJ-12 |
-| 2 | OBJ-03, OBJ-13, OBJ-22 |
+| 1 | OBJ-01, OBJ-02, OBJ-10, OBJ-11, OBJ-12, OBJ-26 |
+| 2 | OBJ-03, OBJ-13, OBJ-22, OBJ-25 |
 | 3 | OBJ-04, OBJ-14, OBJ-23, OBJ-24 |
 | 4 | OBJ-05, OBJ-07, OBJ-15, OBJ-18, OBJ-21 |
 | 5 | OBJ-06, OBJ-08, OBJ-16, OBJ-17, OBJ-19 |
@@ -92,11 +94,11 @@ Objectives exist for specs whose decisions are final: SPEC-01, SPEC-02, SPEC-03,
 
 | Spec | Why not yet |
 |---|---|
-| [SPEC-05 Mac GUI control](../specs/05-mac-gui-control.md) | Open question: the 3 demo tasks. Also holds the GUI model bake-off |
+| [SPEC-05 Mac GUI control](../specs/05-mac-gui-control.md) | The 3 demo tasks are decided. Its schemas are in OBJ-01 and the p0 model check is OBJ-26. The harness `gui_act` objective is not written yet, and the full model bake-off is p1 |
 | [SPEC-06 User control](../specs/06-user-control.md) | No open questions, but not reviewed yet |
 | [SPEC-07 Safety](../specs/07-safety.md) | Open question: "always allow" for risky actions |
-| [SPEC-09 Cross-device routing](../specs/09-cross-device-routing.md) | Defined by Jepoy (b824989). Not reviewed together yet. Its conflicts with SPEC-01, SPEC-08, and SPEC-10 are resolved (see below). Objectives for the p0 rule, phone tools, and delegation come after review |
-| [SPEC-10 Yumi on Android](../specs/10-android-companion.md) | Part A (p0): app shell and voice are covered by OBJ-22 and OBJ-24; phone-only goals and phone tools wait on SPEC-09. Part B (p1): the model size is under review (9B is too tight on 12 GB) |
+| [SPEC-09 Cross-device routing](../specs/09-cross-device-routing.md) | Defined by Jepoy (b824989). Not reviewed together yet. Its conflicts with SPEC-01, SPEC-08, and SPEC-10 are resolved (see below). Its message kinds are OBJ-25. Objectives for the p0 rule, phone tools, and delegation in the apps come after review |
+| [SPEC-10 Yumi on Android](../specs/10-android-companion.md) | Part A (p0): app shell and voice are covered by OBJ-22 and OBJ-24; phone-only goals and phone tools wait on SPEC-09. Part B (p1): the model is decided, Qwen3.5-4B fixed |
 | [SPEC-11 User-facing errors](../specs/11-user-facing-errors.md) | Expanded by Jepoy. Every objective follows it |
 | [SPEC-12 Yumi on iPhone](../specs/12-iphone-companion.md) | p2, after Android |
 

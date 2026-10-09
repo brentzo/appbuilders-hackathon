@@ -41,7 +41,7 @@ Demo phone: 12 GB RAM (advertised as "12 GB + 6 GB", but the extra 6 GB is exten
 
 ### Part B (p1)
 
-9. The phone runs one fixed model, around 8 GB class (Qwen3.5-9B at 4-bit, about 6 GB plus context), through MNN or llama.cpp, chosen after benchmarking. It runs on the 18 GB demo phone only. There is no automatic switch to a smaller model.
+9. The phone runs one fixed model, Qwen3.5-4B at 4-bit (about 2.7 GB plus context), through MNN or llama.cpp, chosen after benchmarking. It runs on the 12 GB demo phone only. There is no automatic switch to a smaller model. Qwen3.5-9B (about 6 GB plus context) was dropped because it is too tight next to Android and Whisper on 12 GB of real memory, and 4B scores about the same on phone tasks (AndroidWorld 58.6 vs 57.8).
 10. The model replaces the p0 rule for deciding phone versus Mac, and is the brain when the Mac is unreachable.
 11. Speech uses Whisper on the phone (whisper.cpp), so Taglish works on the phone too.
 12. The app controls other apps through an Accessibility Service: read the element tree, tap, swipe, and enter text.
@@ -146,6 +146,10 @@ Feature: Android phone brain
     Then it does not load the model
     And shows the "Model failed to load" error from SPEC-11
 ```
+
+## Decisions
+
+- **Part B model:** Qwen3.5-4B, fixed, on the 12 GB demo phone. Decided 2026-10-09, replacing the earlier Qwen3.5-9B on an 18 GB phone.
 
 ## Open questions
 
