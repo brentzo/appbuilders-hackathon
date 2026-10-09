@@ -5,7 +5,7 @@ product: mac
 assignee: Patrick
 touches: []
 specs: [SPEC-03]
-status: todo
+status: in-progress
 priority: p0
 depends-on: [OBJ-18, OBJ-27]
 integrates-with: [OBJ-08]
