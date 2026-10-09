@@ -697,6 +697,28 @@ describe("gui_act limits and endings (OBJ-36.5 to OBJ-36.8)", () => {
       expect(run.reason).toBe("finished");
     });
 
+    it("clicks Close in a sheet over the user's window, and logs it as a click", async () => {
+      await connect(
+        staticApp(KEYNOTE, {
+          app: "Keynote",
+          title: "Q3 Report",
+          layer: { kind: "sheet" },
+          elements: [{ role: "button", label: "Close" }],
+        }),
+      );
+      scriptModel((text, call) =>
+        call === 1 ? reply({ kind: "click", element: 1 }) : reply({ kind: "finish", status: "done", note: "Dismissed it." }),
+      );
+      const { subtask } = guiSubtask({ windowId: 7 });
+      const run = ended(await act(subtask));
+      expect(mac!.executed.map((c) => c.params.action)).toMatchObject([{ permission: "allowed", element: { label: "Close" } }]);
+      expect(run.reason).toBe("finished");
+      // The static screen does not change, so the step reads as having no effect; what matters is what it is called.
+      expect(harness.store.listActionLog(subtask.taskId).map((entry) => entry.description)).toEqual([
+        "Tried to click Close in Keynote",
+      ]);
+    });
+
     it("closes the user's window without asking in Auto mode", async () => {
       await connect(deckWindow());
       scriptModel((text, call) =>

@@ -1,7 +1,15 @@
 import { statSync } from "node:fs";
 import { basename, extname, join } from "node:path";
 import { validate } from "@yumi/protocol";
-import type { FileSummary, ModelAction, PermissionLevel, RecordedAction, ResolvedElement, ToolCall } from "@yumi/protocol/types";
+import type {
+  FileSummary,
+  LayerKind,
+  ModelAction,
+  PermissionLevel,
+  RecordedAction,
+  ResolvedElement,
+  ToolCall,
+} from "@yumi/protocol/types";
 import { ACTION } from "../worker/actions.ts";
 import { entryKind, isFolder, isProtectedFolder, nameKey, pathProblem, realHome, resolvePath } from "./paths.ts";
 import {
@@ -44,6 +52,8 @@ export interface GateContext {
    * Missing means no: closing a window the user had open is never allowed by default.
    */
   mayCloseWindow?: boolean;
+  /** What was in front when the model chose the action (`Observation.layer`), from the Mac app. Missing means the window. */
+  layer?: LayerKind | undefined;
 }
 
 /** An action after the harness resolved its element, before the gate decided its level. */
@@ -114,7 +124,8 @@ function decide(unchecked: UncheckedAction, context: GateContext): Verdict {
     if (blockedApp) return { rule: blockedApp.rule };
     if (SYSTEM_SETTINGS_APPS.some((name) => sameName(name, app))) return { rule: "changeSystemSettings" };
   }
-  if (closesWindow(action, element)) return { rule: context.mayCloseWindow === true ? "closeYumiWindow" : "closeUserWindow" };
+  if (closesWindow(action, element, context.layer))
+    return { rule: context.mayCloseWindow === true ? "closeYumiWindow" : "closeUserWindow" };
 
   switch (action.kind) {
     case ACTION.click:
@@ -136,9 +147,14 @@ function decide(unchecked: UncheckedAction, context: GateContext): Verdict {
   }
 }
 
-/** A click on a close button or a Close menu item, or a close shortcut (`CLOSE_LABELS`, `CLOSE_COMBOS`). */
-export function closesWindow(action: ModelAction, element: ResolvedElement | undefined): boolean {
+/**
+ * A click on a close button or a Close menu item, or a close shortcut (`CLOSE_LABELS`, `CLOSE_COMBOS`). A Close button
+ * in a sheet or dialog in front dismisses that layer, not the window under it, so it is an ordinary click: the Mac app
+ * reads only the sheet's elements while one is open, and a dialog is its own window with subrole AXDialog.
+ */
+export function closesWindow(action: ModelAction, element: ResolvedElement | undefined, layer?: LayerKind | undefined): boolean {
   if (action.kind === ACTION.click && element !== undefined) {
+    if (layer === "sheet" || layer === "dialog") return false;
     return CLOSE_LABELS.some((label) => normalizeLabel(label) === normalizeLabel(element.label));
   }
   if (action.kind === ACTION.key) {

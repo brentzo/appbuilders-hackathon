@@ -1,5 +1,5 @@
 import { basename, dirname } from "node:path";
-import type { RecordedAction, ToolCall } from "@yumi/protocol/types";
+import type { LayerKind, RecordedAction, ToolCall } from "@yumi/protocol/types";
 import { PASSWORD_QUESTION } from "../gui/copy.ts";
 import { closesWindow } from "../safety/gate.ts";
 
@@ -69,11 +69,17 @@ export function describeTrashed(paths: readonly string[]): string {
 
 /**
  * A UI action, for the `gui_act` step loop (OBJ-36): "Clicked Export in Keynote". `app` is the app the Mac app
- * reported (`Observation.app`). Text that was typed or set is never part of the line.
+ * reported (`Observation.app`), and `layer` what was in front (`Observation.layer`). Text that was typed or set is never
+ * part of the line.
  */
-export function describeGuiAction(recorded: RecordedAction, app: string | undefined, ok: boolean): string {
+export function describeGuiAction(
+  recorded: RecordedAction,
+  app: string | undefined,
+  ok: boolean,
+  layer?: LayerKind | undefined,
+): string {
   if (recorded.action.kind === "tool") return describeToolRun(recorded.action.call, ok);
-  const phrase = guiPhrase(recorded, app);
+  const phrase = guiPhrase(recorded, app, layer);
   return phrase
     ? ok
       ? phrase.done
@@ -111,12 +117,17 @@ const BECAUSE: Record<NotDone, string> = {
 };
 
 /** An action the gate or the user did not let run: "Did not move 12 items to the Trash, because you said no". */
-export function describeNotDone(recorded: RecordedAction, app: string | undefined, why: NotDone): string {
+export function describeNotDone(
+  recorded: RecordedAction,
+  app: string | undefined,
+  why: NotDone,
+  layer?: LayerKind | undefined,
+): string {
   const { action } = recorded;
   const what =
     action.kind === "tool"
       ? describeToolRun(action.call, false).replace(/^Tried to /, "")
-      : (guiPhrase(recorded, app)?.todo ?? "do that on the screen");
+      : (guiPhrase(recorded, app, layer)?.todo ?? "do that on the screen");
   return `Did not ${what}, ${BECAUSE[why]}`;
 }
 
@@ -125,10 +136,16 @@ export function describeNotDone(recorded: RecordedAction, app: string | undefine
  * "press Command-Q in Keynote", "open Terminal". Undefined when there is no plain name for it, so the message says
  * "I can't do that" instead. Built like the action log line: never model text, never typed text.
  */
-export function describeSkipped(recorded: RecordedAction, app: string | undefined): string | undefined {
+export function describeSkipped(
+  recorded: RecordedAction,
+  app: string | undefined,
+  layer?: LayerKind | undefined,
+): string | undefined {
   const { action } = recorded;
   const what =
-    action.kind === "tool" ? describeToolRun(action.call, false).replace(/^Tried to /, "") : guiPhrase(recorded, app)?.todo;
+    action.kind === "tool"
+      ? describeToolRun(action.call, false).replace(/^Tried to /, "")
+      : guiPhrase(recorded, app, layer)?.todo;
   if (!what) return undefined;
   return what.length <= 200 ? what : `${what.slice(0, 199).trimEnd()}…`;
 }
@@ -145,11 +162,15 @@ export function describeInterrupted(recorded: RecordedAction): string {
 }
 
 /** The past and the "to ..." form of a UI action, or undefined for actions that are not UI actions. */
-function guiPhrase(recorded: RecordedAction, app: string | undefined): { done: string; todo: string } | undefined {
+function guiPhrase(
+  recorded: RecordedAction,
+  app: string | undefined,
+  layer?: LayerKind | undefined,
+): { done: string; todo: string } | undefined {
   const { action, element } = recorded;
   const where = app ? ` in ${app}` : "";
   // Said as what it does, so the blocked-action message reads "I can't close a window in Keynote" (SPEC-07).
-  if (closesWindow(action, element)) return { done: `Closed a window${where}`, todo: `close a window${where}` };
+  if (closesWindow(action, element, layer)) return { done: `Closed a window${where}`, todo: `close a window${where}` };
   const label = element?.label.trim() ? element.label.trim() : undefined;
   const on = label ? ` ${label}` : "";
   switch (action.kind) {

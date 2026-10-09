@@ -694,6 +694,28 @@ describe("closing a window (SPEC-07, decided 2026-10-10 by Brent)", () => {
     ).toMatchObject({ level: "allowed", rule: "closeYumiWindow" });
   });
 
+  it("treats a Close button in a sheet or dialog in front as an ordinary click, but not a close shortcut", () => {
+    for (const layer of ["sheet", "dialog"] as const) {
+      expect(
+        checkAction(
+          { action: { kind: "click", element: 3 }, element: element("Close", "button") },
+          { home: "/nonexistent", app: "Keynote", layer },
+        ),
+      ).toMatchObject({ level: "allowed", rule: "clickOrType" });
+      expect(
+        checkAction({ action: { kind: "key", combo: "cmd+w" } }, { home: "/nonexistent", app: "Keynote", layer }),
+      ).toMatchObject({ level: "blocked", rule: "closeUserWindow" });
+    }
+    for (const layer of ["window", "menu"] as const) {
+      expect(
+        checkAction(
+          { action: { kind: "click", element: 3 }, element: element("Close", "menuItem") },
+          { home: "/nonexistent", app: "Keynote", layer },
+        ),
+      ).toMatchObject({ level: "blocked", rule: "closeUserWindow" });
+    }
+  });
+
   it("leaves other clicks alone, and still blocks Quit even when closing is allowed", () => {
     expect(closeClick("Closed captions", "button")).toMatchObject({ level: "allowed", rule: "clickOrType" });
     expect(

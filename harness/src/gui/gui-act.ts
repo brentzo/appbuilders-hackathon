@@ -432,9 +432,10 @@ class Attempt {
   private async act(action: ModelAction, before: Observation | undefined): Promise<ActResult> {
     const { store } = this.deps;
     const app = before?.app;
+    const layer = before?.layer?.kind;
     const decision = checkAction(
       { action, element: resolveElement(action, before) },
-      { home: this.deps.home, app, mayCloseWindow: this.mayCloseWindow() },
+      { home: this.deps.home, app, layer, mayCloseWindow: this.mayCloseWindow() },
     );
     // SPEC-06 r4: nothing is written or sent once a pause covers this lane. Checked right before the step is written.
     const stop = this.stopped();
@@ -442,13 +443,13 @@ class Attempt {
     const step = store.beginStep({ subtaskId: this.subtask.id, lane: this.lane, action: decision.recorded });
     this.steps++;
     const notDone = (outcome: "blocked" | "declined" | "noEffect", why: NotDone) =>
-      this.finishStep(step, outcome, NOT_DONE[why], describeNotDone(decision.recorded, app, why));
+      this.finishStep(step, outcome, NOT_DONE[why], describeNotDone(decision.recorded, app, why, layer));
     const key = JSON.stringify(action);
 
     if (this.blockedActions.has(key)) {
       // The same action again after "Keep going": the user already heard about it, so it is not asked about again,
       // and a model that keeps repeating it is stuck (live Keynote runs, 2026-10-10).
-      this.finishStep(step, "blocked", BLOCKED_AGAIN, describeNotDone(decision.recorded, app, "blocked"));
+      this.finishStep(step, "blocked", BLOCKED_AGAIN, describeNotDone(decision.recorded, app, "blocked", layer));
       this.blockedRepeats++;
       if (this.blockedRepeats >= INVALID_OUTPUT_LIMIT) return { end: this.end("invalidOutput", "stuck") };
       return { next: before ?? (await this.look()) };
@@ -512,7 +513,12 @@ class Attempt {
         this.blockedActions.add(key);
         return this.afterBlocked(step, before);
       }
-      this.finishStep(step, "error", "The Mac app could not run this action.", describeGuiAction(decision.recorded, app, false));
+      this.finishStep(
+        step,
+        "error",
+        "The Mac app could not run this action.",
+        describeGuiAction(decision.recorded, app, false, layer),
+      );
       return { end: this.macFailure(error.userError) };
     }
 
@@ -525,7 +531,7 @@ class Attempt {
         step,
         ran.outcome === "ok" ? "ok" : "error",
         fit(`${ran.observation} Then the window could not be read.`),
-        describeGuiAction(decision.recorded, app, ran.outcome === "ok"),
+        describeGuiAction(decision.recorded, app, ran.outcome === "ok", layer),
       );
       return { end: this.macFailure(error.userError) };
     }
@@ -534,7 +540,7 @@ class Attempt {
     const outcome = stepOutcome(action, ran, before, after, files);
     const line = fit(observationLine(action, ran, outcome, before, after, files));
     if (outcome === "blocked") {
-      this.finishStep(step, "blocked", line, describeNotDone(decision.recorded, app, "blocked"));
+      this.finishStep(step, "blocked", line, describeNotDone(decision.recorded, app, "blocked", layer));
       // Only typing can stop partway, at a password field (SPEC-05 r7). Any other action the Mac app answers as
       // blocked never ran: the app is stopped on its side, for example after it saw the user take over. That is a
       // pause, not a blocked action, so the task pauses and the user's Resume carries on (live Keynote runs,
@@ -543,7 +549,7 @@ class Attempt {
       this.blockedActions.add(key);
       return this.afterBlocked(step, after);
     }
-    this.finishStep(step, outcome, line, describeGuiAction(decision.recorded, app, outcome === "ok"));
+    this.finishStep(step, outcome, line, describeGuiAction(decision.recorded, app, outcome === "ok", layer));
     if (outcome === "ok") this.worked++;
     // The file the instruction asked for exists now: the job is done. The model, asked again, kept checking where
     // the file went instead of finishing (live Keynote runs, 2026-10-10), so the harness ends it here.
@@ -583,7 +589,7 @@ class Attempt {
   private async afterBlocked(step: Step, screen: Observation | undefined): Promise<ActResult> {
     const { approvals } = this.deps;
     if (!approvals) {
-      const skippedAction = describeSkipped(step.action, screen?.app);
+      const skippedAction = describeSkipped(step.action, screen?.app, screen?.layer?.kind);
       return {
         end: this.end("blocked", "blocked", {
           kind: "blockedAction",
