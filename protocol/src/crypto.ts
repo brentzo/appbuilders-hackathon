@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import sodium from "libsodium-wrappers";
+import { MAX_EXPIRY_CLOCK_SKEW_SECONDS } from "./expiry.ts";
 import {
   APPROVAL_REQUEST_EXPIRY_SECONDS,
   COMMAND_EXPIRY_SECONDS,
@@ -90,7 +91,7 @@ const EXPIRY_SECONDS: Record<ExpiryKind, number> = {
   event: EVENT_EXPIRY_SECONDS,
 };
 /** How far ahead an expiry may be: the longest expiry plus a minute for clocks that disagree. */
-const MAX_EXPIRY_AHEAD_MS = (Math.max(...Object.values(EXPIRY_SECONDS)) + 60) * 1000;
+const MAX_EXPIRY_AHEAD_MS = (Math.max(...Object.values(EXPIRY_SECONDS)) + MAX_EXPIRY_CLOCK_SKEW_SECONDS) * 1000;
 
 /** The expiry for a message of this kind sent now, as an ISO 8601 UTC timestamp. */
 export function expiresAt(kind: ExpiryKind, now: Date = new Date()): string {

@@ -1,6 +1,6 @@
 // Compile-time checks, run by `npm run typecheck`. Each @ts-expect-error must stay an error,
 // or the generated TypeScript has become looser than the schema.
-import type { ModelAction, RpcMethods, ToolCall } from "../generated/ts/index.ts";
+import type { ModelAction, Payload, RpcMethods, ToolCall, ToolResultPayload } from "../generated/ts/index.ts";
 
 export const press: ModelAction = { kind: "click", element: 3 };
 
@@ -15,6 +15,11 @@ export const clickAtElement: ModelAction = { kind: "clickAt", element: 3 };
 
 // @ts-expect-error there is no shell tool
 export const shell: ToolCall = { tool: "shell", command: "ls" };
+
+export const phonePause: Payload = { kind: "pause", goalId: "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8" };
+
+// @ts-expect-error tool failures carry ErrorKind values, never prose
+export const rawPhoneToolError: ToolResultPayload = { kind: "toolResult", success: false, error: "The phone is offline" };
 
 export function narrow(action: ModelAction): number | undefined {
   // The discriminator narrows the union, so element is only reachable on element actions.
