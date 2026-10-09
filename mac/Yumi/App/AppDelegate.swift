@@ -96,6 +96,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// The menu bar panel's content, also used by the `-YumiOpen menu` snapshot.
+    func menuPanel(close: @escaping () -> Void) -> MenuPanel {
+        MenuPanel(
+            model: model, windows: windows, harness: harness,
+            talk: { [weak self] in Task { await self?.voice.talk() } },
+            typeGoal: { [weak self] in self?.showTypeGoal() },
+            close: close
+        )
+    }
+
     @discardableResult
     func showTypeGoal() -> NSWindow {
         TypeGoalWindow.show { [weak self] goal in

@@ -8,13 +8,16 @@ struct YumiApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            MenuContent(model: appDelegate.model, windows: appDelegate.windows, harness: appDelegate.harness)
+            appDelegate.menuPanel {
+                // The menu bar panel is the key window while it is open.
+                NSApp.keyWindow?.close()
+            }
         } label: {
             // A template image, so macOS tints it for the menu bar's light, dark, and selected states.
             Image("MenuBarIcon")
                 .renderingMode(.template)
                 .accessibilityLabel("Yumi")
         }
-        .menuBarExtraStyle(.menu)
+        .menuBarExtraStyle(.window)
     }
 }

@@ -149,10 +149,39 @@ final class VoiceIntake: ReplyListening {
     /// Hands-free answer right after Yumi asks something (OBJ-17.5): the same microphone,
     /// recognizers, and indicator as push-to-talk, ended by a short silence instead of a key.
     func listenForReply() async -> String? {
-        guard phase == .idle else { return nil }
+        guard case .heard(let text) = await listenHandsFree(promptIfNeeded: false) else { return nil }
+        return text
+    }
+
+    /// "Talk" in the menu bar panel: push-to-talk without a key to hold, ended by a short
+    /// silence. Unlike the wake word, the user asked on purpose, so silence says "Didn't catch speech".
+    func talk() async {
+        guard phase == .idle else { return }
+        switch await listenHandsFree(promptIfNeeded: true) {
+        case .heard(let transcript):
+            log.notice("Heard a goal of \(transcript.count) characters from Talk")
+            spawnedCursor = false
+            submit(transcript)
+        case .nothing:
+            dropCursor()
+            showError(UserError(kind: .didNotCatchSpeech))
+        case .notStarted:
+            break
+        }
+    }
+
+    private enum HandsFree {
+        /// The microphone did not open; the reason was shown or logged.
+        case notStarted
+        case nothing
+        case heard(String)
+    }
+
+    private func listenHandsFree(promptIfNeeded: Bool) async -> HandsFree {
+        guard phase == .idle else { return .notStarted }
         let ended = Outcome<SpeechEndpoint.Outcome>()
         let endpoint = SpeechEndpoint { ended.resolve(.success($0)) }
-        guard let session = openMicrophone(promptIfNeeded: false, endpoint: endpoint) else { return nil }
+        guard let session = openMicrophone(promptIfNeeded: promptIfNeeded, endpoint: endpoint) else { return .notStarted }
         self.session = session
         phase = .listening
         defer {
@@ -168,16 +197,16 @@ final class VoiceIntake: ReplyListening {
         closeMicrophone()
         guard outcome != .silent else {
             session.cancel()
-            log.notice("No spoken answer")
-            return nil
+            log.notice("Nothing said")
+            return .nothing
         }
         do {
             let text = try await session.finish().trimmingCharacters(in: .whitespacesAndNewlines)
-            log.notice("Heard an answer of \(text.count) characters")
-            return text.isEmpty ? nil : text
+            log.notice("Heard \(text.count) characters hands-free")
+            return text.isEmpty ? .nothing : .heard(text)
         } catch {
-            log.error("Answer not transcribed: \(String(describing: error), privacy: .public)")
-            return nil
+            log.error("Not transcribed: \(String(describing: error), privacy: .public)")
+            return .nothing
         }
     }
 
