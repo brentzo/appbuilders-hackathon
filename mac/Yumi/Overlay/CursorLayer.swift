@@ -28,6 +28,8 @@ final class CursorLayer {
     /// A pose held for a while instead of the cursor's state, such as moving while it leaps out of
     /// or back into the island.
     private var heldPose: CursorState?
+    /// Ears back over whatever pose it has, while it dodges the user's pointer (SPEC-04 r21).
+    private var earsBack = false
     private var last: (cursor: OverlayCursor, scale: CGFloat)?
 
     init() {
@@ -84,7 +86,8 @@ final class CursorLayer {
         }
         bubble.setScale(scale)
         if let shownPalette, let shownState {
-            cat.contents = shownPalette.image(for: shownState)?.layerContents(forContentsScale: scale)
+            let image = earsBack ? shownPalette.earsBackImage : shownPalette.image(for: shownState)
+            cat.contents = image?.layerContents(forContentsScale: scale)
         }
         badgeIcon.contents = badgeImage.flatMap { image(for: $0, scale: scale) }
     }
@@ -96,6 +99,13 @@ final class CursorLayer {
     func showPose(_ pose: CursorState) {
         heldPose = pose
         // Plays the pose's motion again even when it is already showing, such as a second pounce.
+        shownState = nil
+        if let last { apply(last.cursor, scale: last.scale) }
+    }
+
+    func setEarsBack(_ on: Bool) {
+        guard on != earsBack else { return }
+        earsBack = on
         shownState = nil
         if let last { apply(last.cursor, scale: last.scale) }
     }
@@ -113,7 +123,8 @@ final class CursorLayer {
         CATransaction.setDisableActions(true)
 
         if stateChanged || cursor.palette != shownPalette {
-            cat.contents = cursor.palette.image(for: state)?.layerContents(forContentsScale: scale)
+            let image = earsBack ? cursor.palette.earsBackImage : cursor.palette.image(for: state)
+            cat.contents = image?.layerContents(forContentsScale: scale)
             shownState = state
             shownPalette = cursor.palette
         }

@@ -104,6 +104,15 @@ nonisolated public enum YumiMotion {
     public static let panel: Double = 0.35
     /// The ease-in-out curve of a move, as cubic-bezier control points.
     public static let easing: (Double, Double, Double, Double) = (0.65, 0, 0.35, 1)
+    /// A cat reacts when the pointer comes within avoidRadius points of its body (SPEC-04 r21).
+    public static let avoidRadius: CGFloat = 8
+    /// How far an idle, thinking, or paused cat hops out of the pointer's way.
+    public static let avoidHop: CGFloat = 64
+    /// How see-through a cat that cannot move gets, and how fast.
+    public static let avoidFadeOpacity: Double = 0.25
+    public static let avoidFade: Double = 0.15
+    /// How long after the pointer leaves a cat drifts or fades back.
+    public static let avoidReturn: Double = 1.0
     /// How long a move of `distance` points takes.
     public static func moveDuration(distance: CGFloat) -> Double {
         moveMin + (moveMax - moveMin) * Double(min(max(distance / moveFar, 0), 1))

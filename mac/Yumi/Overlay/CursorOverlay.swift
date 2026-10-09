@@ -31,6 +31,8 @@ final class CursorOverlay {
     private var nextGhostColor = 0
     private var screenObserver: NSObjectProtocol?
     private let locator: ElementLocating
+    /// Keeps cats from covering what the user points at (SPEC-04 r21).
+    private(set) lazy var avoider = PointerAvoider(overlay: self)
     private let log = Logger(subsystem: "ph.appbuilders.yumi", category: "overlay")
 
     init(locator: ElementLocating = AccessibilityElementLocator()) {
@@ -96,6 +98,7 @@ final class CursorOverlay {
         cursors[id] = cursor
         guard let island = island(near: point) else { return }
         let duration = CursorMotion.duration(for: hypot(point.x - island.mouth.x, point.y - island.mouth.y))
+        avoider.hold(id, for: CursorIsland.openDuration + duration, overlayMoves: true)
         island.open(for: CursorIsland.openDuration + duration * 0.5)
         for panel in panels {
             addLayer(for: cursor, to: panel, arrival: (from: island.mouth, delay: CursorIsland.openDuration, duration: duration))
@@ -112,6 +115,7 @@ final class CursorOverlay {
         cursor.position = point
         cursors[id] = cursor
         var duration = CursorMotion.shortestMove
+        defer { avoider.hold(id, for: duration, overlayMoves: true) }
         for panel in panels {
             guard let layer = layers[id]?[ObjectIdentifier(panel)] else { continue }
             // Starts from where the cursor is on screen now, so a new move mid-flight (or
@@ -137,6 +141,7 @@ final class CursorOverlay {
         let from = cursor.position
         cursor.position = point
         cursors[id] = cursor
+        avoider.hold(id, for: duration, overlayMoves: true)
         for panel in panels {
             guard let layer = layers[id]?[ObjectIdentifier(panel)] else { continue }
             let start = layer.root.presentation()?.position ?? panel.local(from)
@@ -155,6 +160,7 @@ final class CursorOverlay {
     /// cursor's own state comes back afterwards.
     func pounce(id: String) {
         guard cursors[id] != nil else { return }
+        avoider.hold(id, for: YumiMotion.pounce, overlayMoves: false)
         for panel in panels {
             guard let layer = layers[id]?[ObjectIdentifier(panel)] else { continue }
             layer.showPose(.acting)
@@ -170,7 +176,7 @@ final class CursorOverlay {
 
     /// A move from A to B (SPEC-04 r2): a short arc like a cat's leap, eased in and out. Never a
     /// jump. With Reduce Motion on, a straight glide on the same easing (r17).
-    private static let spawnPath = "spawn-path"
+    static let spawnPath = "spawn-path"
 
     static func leap(from start: CGPoint, to end: CGPoint, duration: CFTimeInterval) -> CAAnimation {
         CursorMotion.animation(from: start, to: end, arcs: !CursorMotion.reduceMotion, duration: duration)
@@ -184,6 +190,12 @@ final class CursorOverlay {
             guard let layer = layers[id]?[ObjectIdentifier(panel)] else { continue }
             draw(cursor, with: layer, on: panel)
         }
+        avoider.cursorChanged(id)
+    }
+
+    /// Every drawing of one cursor, one per display, for the pointer avoider.
+    func drawings(of id: String) -> [(layer: CursorLayer, panel: OverlayPanel)] {
+        panels.compactMap { panel in layers[id]?[ObjectIdentifier(panel)].map { ($0, panel) } }
     }
 
     /// Redraws a cursor, with its bubble below the paws when there is no room for it above on the
@@ -198,6 +210,7 @@ final class CursorOverlay {
     /// it fades where it is. Either way the cursor is gone within 1 second (SPEC-04 r9). A cat
     /// that finished its task meows as it goes.
     func fade(id: String, immediately: Bool = false) {
+        avoider.forget(id)
         guard let cursor = cursors.removeValue(forKey: id), let byPanel = layers.removeValue(forKey: id) else { return }
         // A cat that finished its task meows as it heads home.
         if !immediately, cursor.state == .done { sounds.meow() }
@@ -321,6 +334,7 @@ final class CursorOverlay {
         let screens = NSScreen.screens
         panels = screens.map(OverlayPanel.init(screen:))
         layers = [:]
+        avoider.forgetAll()
         islands = [:]
         for (screen, panel) in zip(screens, panels) {
             panel.orderFrontRegardless()
