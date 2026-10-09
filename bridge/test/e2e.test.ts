@@ -141,15 +141,18 @@ describe("bridge relay end to end", () => {
     try {
       await pair(mac, phone);
       const at = new Date(Date.now() + 1000).toISOString();
+      const id = randomUUID();
       const unpair = {
         frame: "unpair",
+        id,
         from: phone.keys.deviceId,
         to: mac.keys.deviceId,
         at,
-        signature: toBase64(sign(unpairSigningBytes({ from: phone.keys.deviceId, to: mac.keys.deviceId, at }), phone.keys.signing.secretKey)),
+        signature: toBase64(sign(unpairSigningBytes({ id, from: phone.keys.deviceId, to: mac.keys.deviceId, at }), phone.keys.signing.secretKey)),
       };
       await mac.close();
       phone.send(unpair);
+      expect(await phone.next("ack")).toMatchObject({ frame: "ack", messageId: id });
       await until(() => !fixture.relay.store.isPaired(phone.keys.deviceId, mac.keys.deviceId));
       expect(fixture.relay.store.isPaired(phone.keys.deviceId, mac.keys.deviceId)).toBe(false);
       expect(fixture.relay.store.pendingUnpairs(mac.keys.deviceId)).toHaveLength(1);
@@ -160,6 +163,19 @@ describe("bridge relay end to end", () => {
       const reconnected = await RelayDevice.connect(fixture.relay.url(), mac.keys);
       try {
         expect(await reconnected.next("unpair")).toEqual(unpair);
+        phone.send({ frame: "ack", messageId: id });
+        expect(fixture.relay.store.pendingUnpairs(mac.keys.deviceId)).toHaveLength(1);
+        reconnected.send({ frame: "ack", messageId: id });
+        await until(() => fixture.relay.store.pendingUnpairs(mac.keys.deviceId).length === 0);
+        phone.send(unpair);
+        expect(await phone.next("ack")).toMatchObject({ frame: "ack", messageId: id });
+        expect(fixture.relay.store.pendingUnpairs(mac.keys.deviceId)).toHaveLength(0);
+        while (Date.now() <= Date.parse(at) + 10) await new Promise((resolve) => setTimeout(resolve, 5));
+        await pair(reconnected, phone);
+        phone.send(unpair);
+        await new Promise((resolve) => setTimeout(resolve, 25));
+        expect(fixture.relay.store.isPaired(phone.keys.deviceId, mac.keys.deviceId)).toBe(true);
+        expect(reconnected.frames.some((frame) => frame.frame === "ack" && frame.messageId === id)).toBe(false);
       } finally {
         await reconnected.close();
       }

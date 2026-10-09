@@ -69,9 +69,13 @@ export class RelayStore {
         frame TEXT NOT NULL,
         at TEXT NOT NULL,
         created_at TEXT NOT NULL,
+        acknowledged INTEGER NOT NULL DEFAULT 0 CHECK (acknowledged IN (0, 1)),
         PRIMARY KEY (from_device, to_device)
       );
     `);
+    const unpairColumns = this.db.prepare("PRAGMA table_info(pending_unpairs)").all() as Array<{ name: string }>;
+    if (!unpairColumns.some(({ name }) => name === "acknowledged"))
+      this.db.exec("ALTER TABLE pending_unpairs ADD COLUMN acknowledged INTEGER NOT NULL DEFAULT 0 CHECK (acknowledged IN (0, 1))");
     if (process.platform !== "win32") chmodSync(path, 0o600);
   }
 
@@ -115,6 +119,17 @@ export class RelayStore {
       this.db.prepare("DELETE FROM pairings WHERE device_a = ? AND device_b = ?").run(deviceA, deviceB);
       this.deletePairDeliveries(a, b);
       this.db.prepare("DELETE FROM pending_pairs WHERE (from_device = ? AND to_device = ?) OR (from_device = ? AND to_device = ?)").run(a, b, b, a);
+    })();
+  }
+
+  revokeAndRememberUnpair(from: string, to: string, frame: Extract<BridgeFrame, { frame: "unpair" }>, createdAt: string): void {
+    const [deviceA, deviceB] = sortPair(from, to);
+    this.db.transaction(() => {
+      this.db.prepare("DELETE FROM pairings WHERE device_a = ? AND device_b = ?").run(deviceA, deviceB);
+      this.deletePairDeliveries(from, to);
+      this.db.prepare("DELETE FROM pending_pairs WHERE (from_device = ? AND to_device = ?) OR (from_device = ? AND to_device = ?)").run(from, to, to, from);
+      this.db.prepare("INSERT INTO pending_unpairs (from_device, to_device, frame, at, created_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(from_device, to_device) DO UPDATE SET frame = excluded.frame, at = excluded.at, created_at = excluded.created_at, acknowledged = 0")
+        .run(from, to, JSON.stringify(frame), frame.at, createdAt);
     })();
   }
 
@@ -177,12 +192,20 @@ export class RelayStore {
   }
 
   pendingUnpairs(to: string): string[] {
-    return (this.db.prepare("SELECT frame FROM pending_unpairs WHERE to_device = ? ORDER BY created_at, from_device").all(to) as { frame: string }[]).map(({ frame }) => frame);
+    return (this.db.prepare("SELECT frame FROM pending_unpairs WHERE to_device = ? AND acknowledged = 0 ORDER BY created_at, from_device").all(to) as { frame: string }[]).map(({ frame }) => frame);
   }
 
-  rememberUnpair(from: string, to: string, frame: BridgeFrame, at: string, createdAt: string): void {
-    this.db.prepare("INSERT INTO pending_unpairs VALUES (?, ?, ?, ?, ?) ON CONFLICT(from_device, to_device) DO UPDATE SET frame = excluded.frame, at = excluded.at, created_at = excluded.created_at")
-      .run(from, to, JSON.stringify(frame), at, createdAt);
+  pendingUnpair(from: string, to: string): { frame: string; acknowledged: boolean } | undefined {
+    const row = this.db.prepare("SELECT frame, acknowledged FROM pending_unpairs WHERE from_device = ? AND to_device = ?")
+      .get(from, to) as { frame: string; acknowledged: number } | undefined;
+    return row ? { frame: row.frame, acknowledged: row.acknowledged === 1 } : undefined;
+  }
+
+  acknowledgeUnpair(from: string, to: string, messageId: string): boolean {
+    const row = this.pendingUnpair(from, to);
+    if (!row || (JSON.parse(row.frame) as Extract<BridgeFrame, { frame: "unpair" }>).id !== messageId) return false;
+    this.db.prepare("UPDATE pending_unpairs SET acknowledged = 1 WHERE from_device = ? AND to_device = ?").run(from, to);
+    return true;
   }
 
   queuedCount(): number {

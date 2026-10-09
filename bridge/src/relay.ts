@@ -296,6 +296,36 @@ export class Relay {
   }
 
   private unpair(frame: Extract<BridgeFrame, { frame: "unpair" }>): void {
+    const previous = this.store.pendingUnpair(frame.from, frame.to);
+    if (previous) {
+      const priorFrame = parseFrame(previous.frame);
+      if (priorFrame.frame === "unpair" && priorFrame.id === frame.id && previous.frame === JSON.stringify(frame)) {
+        const sender = this.online.get(frame.from);
+        if (sender) this.send(sender, { frame: "ack", messageId: frame.id });
+        if (!previous.acknowledged) {
+          const recipient = this.online.get(frame.to);
+          if (recipient) this.send(recipient, frame);
+        }
+        return;
+      }
+      const legacy = JSON.parse(previous.frame) as { id?: string; at?: string };
+      const publicKey = this.store.signingKey(frame.from);
+      if (
+        legacy.id === undefined &&
+        legacy.at !== undefined &&
+        Date.parse(frame.at) >= Date.parse(legacy.at) &&
+        publicKey &&
+        verify(fromBase64(frame.signature), unpairSigningBytes(frame), fromBase64(publicKey))
+      ) {
+        this.store.revokeAndRememberUnpair(frame.from, frame.to, frame, this.now().toISOString());
+        const sender = this.online.get(frame.from);
+        if (sender) this.send(sender, { frame: "ack", messageId: frame.id });
+        const recipient = this.online.get(frame.to);
+        if (recipient) this.send(recipient, frame);
+        this.logger("pairing.revoked", { from: frame.from, to: frame.to });
+        return;
+      }
+    }
     const pairedAt = this.store.pairedAt(frame.from, frame.to);
     const publicKey = this.store.signingKey(frame.from);
     if (!pairedAt || !publicKey || Date.parse(frame.at) <= Date.parse(pairedAt) ||
@@ -304,14 +334,23 @@ export class Relay {
       return;
     }
     const now = this.now().toISOString();
-    this.store.unpair(frame.from, frame.to);
-    this.store.rememberUnpair(frame.from, frame.to, frame, frame.at, now);
+    this.store.revokeAndRememberUnpair(frame.from, frame.to, frame, now);
+    const sender = this.online.get(frame.from);
+    if (sender) this.send(sender, { frame: "ack", messageId: frame.id });
     const recipient = this.online.get(frame.to);
     if (recipient) this.send(recipient, frame);
     this.logger("pairing.revoked", { from: frame.from, to: frame.to });
   }
 
   private acknowledge(deviceId: string, messageId: string): void {
+    for (const frameText of this.store.pendingUnpairs(deviceId)) {
+      const frame = parseFrame(frameText);
+      if (frame.frame === "unpair" && frame.id === messageId && frame.to === deviceId) {
+        if (this.store.acknowledgeUnpair(frame.from, frame.to, messageId))
+          this.logger("pairing.unpairAcknowledged", { deviceId, messageId });
+        return;
+      }
+    }
     const delivery = this.store.findEnvelopeDelivery(deviceId, messageId);
     if (!delivery) return;
     this.store.deleteDelivery(delivery.rowid);
