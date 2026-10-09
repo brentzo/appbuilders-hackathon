@@ -59,7 +59,7 @@ For a goal from the phone, risky actions ask on the phone while the Mac shows on
 ## Out of scope
 
 - The phone's approval cards and Stop button: [OBJ-71](OBJ-71-android-approvals.md) and [OBJ-69](OBJ-69-android-delegated-goal-screen.md).
-- Edge cases not planned yet: the 5-minute approval timeout (SPEC-09 r10, "No answer to an approval").
+- The 5-minute approval timeout (SPEC-09 r10, "No answer to an approval"): [OBJ-77](OBJ-77-harness-cross-device-edge-cases.md).
 
 ## Outcome
 

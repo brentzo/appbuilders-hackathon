@@ -183,6 +183,8 @@ The UI reads the phrase from there.
 | [OBJ-67](../objectives/OBJ-67-android-goal-routing.md) | Phone repeats back a goal and runs it or sends it to the Mac | Brent | blocked |
 | [OBJ-69](../objectives/OBJ-69-android-delegated-goal-screen.md) | Phone shows a goal working on the Mac, with Stop | Brent | blocked |
 | [OBJ-71](../objectives/OBJ-71-android-approvals.md) | Approvals on the phone for goals running on the Mac | Brent | todo |
+| [OBJ-78](../objectives/OBJ-78-android-cross-device-edge-cases.md) | Android edge cases for goals sent to the Mac | Brent | todo |
+| [OBJ-79](../objectives/OBJ-79-android-wake-the-mac.md) | Wake the Mac from the phone | Brent | todo |
 <!-- generated:product-objectives:end -->
 
 Not written yet: the p0 phone-only rule (OBJ-67.1, cut for the demo, so every goal is delegated) and phone-run tools ([OBJ-66](../objectives/OBJ-66-android-phone-tool-host.md)), approvals on the phone ([OBJ-71](../objectives/OBJ-71-android-approvals.md)), and everything in Part B.

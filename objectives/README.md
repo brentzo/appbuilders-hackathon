@@ -133,6 +133,11 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-73](OBJ-73-live-cross-device-routing-acceptance.md) | Live cross-device routing acceptance | bridge | Jepoy | 09 | 30, 65, 66, 67, 68, 69, 70, 71, 72 | - | todo |
 | [OBJ-74](OBJ-74-save-list-to-note.md) | Save a list into a new note | harness | Brent | 02, 01 | - | 17, 36, 50 | done |
 | [OBJ-75](OBJ-75-vision-fallback.md) | Vision fallback for apps without accessibility content | mac | Patrick | 05 | - | 36, 39 | in-progress |
+| [OBJ-76](OBJ-76-cross-device-edge-case-contracts.md) | Contracts for SPEC-09 edge cases and waking the Mac | protocol | Jepoy | 09 | 25 | 77, 78, 79, 80 | todo |
+| [OBJ-77](OBJ-77-harness-cross-device-edge-cases.md) | Harness edge cases for cross-device routing | harness | Brent | 09 | 76 | 65, 68, 70, 78 | todo |
+| [OBJ-78](OBJ-78-android-cross-device-edge-cases.md) | Android edge cases for goals sent to the Mac | android | Brent | 09 | 76 | 67, 69, 71, 77 | todo |
+| [OBJ-79](OBJ-79-android-wake-the-mac.md) | Wake the Mac from the phone | android | Brent | 09 | 76, 78 | 80 | todo |
+| [OBJ-80](OBJ-80-harness-wake-and-lock.md) | Harness wake addresses and a locked Mac | harness | Brent | 09 | 76 | 68, 79 | todo |
 <!-- generated:objectives-index:end -->
 
 ## Priority and blocking
@@ -148,12 +153,12 @@ Ranked by how many objectives each one holds up through hard dependencies:
 <!-- generated:objectives-priority:start -->
 | Rank | Objective | Assignee | Holds up (hard) | Holds up another person |
 |---|---|---|---|---|
-| 1 | OBJ-01 Task record schemas and cross-team contracts | Jepoy | 42 | Brent, Patrick |
-| 2 | OBJ-02 Bridge envelope and end-to-end crypto | Jepoy | 23 | Brent, Patrick |
+| 1 | OBJ-01 Task record schemas and cross-team contracts | Jepoy | 47 | Brent, Patrick |
+| 2 | OBJ-02 Bridge envelope and end-to-end crypto | Jepoy | 28 | Brent, Patrick |
 | 3 | OBJ-03 Harness skeleton and local model client | Brent | 19 | Jepoy, Patrick |
-| 4 | OBJ-04 Task store and history | Brent | 15 | Jepoy, Patrick |
-| 5 | OBJ-14 Mac app shell, permissions, and harness link | Patrick | 15 | Brent, Jepoy |
-| 6 | OBJ-25 Cross-device message kinds | Jepoy | 11 | Brent |
+| 4 | OBJ-25 Cross-device message kinds | Jepoy | 16 | Brent |
+| 5 | OBJ-04 Task store and history | Brent | 15 | Jepoy, Patrick |
+| 6 | OBJ-14 Mac app shell, permissions, and harness link | Patrick | 15 | Brent, Jepoy |
 | 7 | OBJ-05 Planner, scheduler, and task summary | Brent | 8 | Jepoy |
 | 8 | OBJ-21 Mac bridge client and pairing | Jepoy | 8 | Brent |
 | 9 | OBJ-22 Android app shell and foreground service | Brent | 8 | Jepoy |
@@ -168,31 +173,33 @@ Ranked by how many objectives each one holds up through hard dependencies:
 | 18 | OBJ-49 Mac answers ping and has bridge test hooks | Brent | 5 | Jepoy |
 | 19 | OBJ-24 Android voice intake and wake word | Brent | 4 | Jepoy |
 | 20 | OBJ-66 Phone runs the Mac's tool calls | Brent | 4 | Jepoy |
-| 21 | OBJ-07 Lane router core | Brent | 3 | No |
-| 22 | OBJ-17 Goal confirmation loop | Brent | 3 | Patrick |
-| 23 | OBJ-27 Mac native services for the harness | Patrick | 3 | Jepoy |
-| 24 | OBJ-33 Align the pairing response timeout contract | Jepoy | 3 | Brent |
-| 25 | OBJ-38 Approvals, pause, and action log in the harness | Brent | 3 | Jepoy |
-| 26 | OBJ-67 Phone repeats back a goal and runs it or sends it to the Mac | Brent | 3 | Jepoy |
-| 27 | OBJ-39 Mac GUI execution | Patrick | 2 | No |
-| 28 | OBJ-41 Mac pairing waits for the relay's verdict | Brent | 2 | Jepoy |
-| 29 | OBJ-42 Add the protocol version mismatch copy | Brent | 2 | Jepoy |
-| 30 | OBJ-43 Mac bridge client recovers from a version refusal | Brent | 2 | Jepoy |
-| 31 | OBJ-68 Harness runs goals sent from the phone | Brent | 2 | Jepoy |
-| 32 | OBJ-69 Phone shows a goal working on the Mac, with Stop | Brent | 2 | Jepoy |
-| 33 | OBJ-08 Window locks, busy windows, and cursor cap | Brent | 1 | No |
-| 34 | OBJ-10 Yumi cat v0 without Rive | Patrick | 1 | No |
-| 35 | OBJ-16 Mac wake word | Patrick | 1 | No |
-| 36 | OBJ-30 Live cross-device bridge acceptance | Jepoy | 1 | No |
-| 37 | OBJ-35 Stop and take over on the Mac | Patrick | 1 | No |
-| 38 | OBJ-45 Pause scope and model readiness contracts | Jepoy | 1 | Brent |
-| 39 | OBJ-52 Debug mode keeps full local logs | Brent | 1 | No |
-| 40 | OBJ-60 Contract for changing the goal mid-task | Jepoy | 1 | Patrick |
-| 41 | OBJ-61 Harness turns an interruption into a revised goal | Brent | 1 | No |
-| 42 | OBJ-65 Phone tool lane in the harness | Brent | 1 | Jepoy |
-| 43 | OBJ-70 Harness takes approvals and Stop from the phone | Brent | 1 | Jepoy |
-| 44 | OBJ-71 Approvals on the phone for goals running on the Mac | Brent | 1 | Jepoy |
-| 45 | OBJ-72 Mac app side of cross-device routing | Patrick | 1 | Jepoy |
+| 21 | OBJ-76 Contracts for SPEC-09 edge cases and waking the Mac | Jepoy | 4 | Brent |
+| 22 | OBJ-07 Lane router core | Brent | 3 | No |
+| 23 | OBJ-17 Goal confirmation loop | Brent | 3 | Patrick |
+| 24 | OBJ-27 Mac native services for the harness | Patrick | 3 | Jepoy |
+| 25 | OBJ-33 Align the pairing response timeout contract | Jepoy | 3 | Brent |
+| 26 | OBJ-38 Approvals, pause, and action log in the harness | Brent | 3 | Jepoy |
+| 27 | OBJ-67 Phone repeats back a goal and runs it or sends it to the Mac | Brent | 3 | Jepoy |
+| 28 | OBJ-39 Mac GUI execution | Patrick | 2 | No |
+| 29 | OBJ-41 Mac pairing waits for the relay's verdict | Brent | 2 | Jepoy |
+| 30 | OBJ-42 Add the protocol version mismatch copy | Brent | 2 | Jepoy |
+| 31 | OBJ-43 Mac bridge client recovers from a version refusal | Brent | 2 | Jepoy |
+| 32 | OBJ-68 Harness runs goals sent from the phone | Brent | 2 | Jepoy |
+| 33 | OBJ-69 Phone shows a goal working on the Mac, with Stop | Brent | 2 | Jepoy |
+| 34 | OBJ-08 Window locks, busy windows, and cursor cap | Brent | 1 | No |
+| 35 | OBJ-10 Yumi cat v0 without Rive | Patrick | 1 | No |
+| 36 | OBJ-16 Mac wake word | Patrick | 1 | No |
+| 37 | OBJ-30 Live cross-device bridge acceptance | Jepoy | 1 | No |
+| 38 | OBJ-35 Stop and take over on the Mac | Patrick | 1 | No |
+| 39 | OBJ-45 Pause scope and model readiness contracts | Jepoy | 1 | Brent |
+| 40 | OBJ-52 Debug mode keeps full local logs | Brent | 1 | No |
+| 41 | OBJ-60 Contract for changing the goal mid-task | Jepoy | 1 | Patrick |
+| 42 | OBJ-61 Harness turns an interruption into a revised goal | Brent | 1 | No |
+| 43 | OBJ-65 Phone tool lane in the harness | Brent | 1 | Jepoy |
+| 44 | OBJ-70 Harness takes approvals and Stop from the phone | Brent | 1 | Jepoy |
+| 45 | OBJ-71 Approvals on the phone for goals running on the Mac | Brent | 1 | Jepoy |
+| 46 | OBJ-72 Mac app side of cross-device routing | Patrick | 1 | Jepoy |
+| 47 | OBJ-78 Android edge cases for goals sent to the Mac | Brent | 1 | No |
 <!-- generated:objectives-priority:end -->
 Hard dependencies that cross between people (everything else is within one person's queue):
 
@@ -235,14 +242,18 @@ Hard dependencies that cross between people (everything else is within one perso
 - OBJ-70 (Brent) before OBJ-73 (Jepoy)
 - OBJ-71 (Brent) before OBJ-73 (Jepoy)
 - OBJ-72 (Patrick) before OBJ-73 (Jepoy)
+- OBJ-76 (Jepoy) before OBJ-77 (Brent)
+- OBJ-76 (Jepoy) before OBJ-78 (Brent)
+- OBJ-76 (Jepoy) before OBJ-79 (Brent)
+- OBJ-76 (Jepoy) before OBJ-80 (Brent)
 <!-- generated:objectives-cross:end -->
 Workload:
 
 <!-- generated:objectives-workload:start -->
 | Person | Objectives | Count |
 |---|---|---|
-| Brent | 03, 04, 05, 06, 07, 08, 09, 17, 22, 23, 24, 26, 29, 32, 36, 37, 38, 41, 42, 43, 47, 49, 50, 51, 52, 53, 54, 57, 58, 59, 61, 63, 65, 66, 67, 68, 69, 70, 71, 74 | 40 |
-| Jepoy | 01, 02, 11, 12, 13, 21, 25, 28, 30, 31, 33, 34, 45, 48, 55, 56, 60, 64, 73 | 19 |
+| Brent | 03, 04, 05, 06, 07, 08, 09, 17, 22, 23, 24, 26, 29, 32, 36, 37, 38, 41, 42, 43, 47, 49, 50, 51, 52, 53, 54, 57, 58, 59, 61, 63, 65, 66, 67, 68, 69, 70, 71, 74, 77, 78, 79, 80 | 44 |
+| Jepoy | 01, 02, 11, 12, 13, 21, 25, 28, 30, 31, 33, 34, 45, 48, 55, 56, 60, 64, 73, 76 | 20 |
 | Patrick | 10, 14, 15, 16, 18, 19, 20, 27, 35, 39, 40, 44, 46, 62, 72, 75 | 16 |
 <!-- generated:objectives-workload:end -->
 ## Suggested order
@@ -254,9 +265,9 @@ Waves come from hard dependencies only. Each person works their column top to bo
 |---|---|---|---|
 | 1 | OBJ-22, OBJ-26, OBJ-32, OBJ-50, OBJ-51, OBJ-52, OBJ-54, OBJ-58, OBJ-59, OBJ-61, OBJ-74 | OBJ-01, OBJ-02, OBJ-11, OBJ-12, OBJ-28, OBJ-55 | OBJ-10, OBJ-75 |
 | 2 | OBJ-03, OBJ-24, OBJ-29, OBJ-53, OBJ-63 | OBJ-13, OBJ-21, OBJ-25, OBJ-31, OBJ-33, OBJ-45, OBJ-56, OBJ-60 | OBJ-14 |
-| 3 | OBJ-04, OBJ-23, OBJ-37, OBJ-41, OBJ-47, OBJ-49 | OBJ-34, OBJ-48, OBJ-64 | OBJ-15, OBJ-18, OBJ-27, OBJ-46, OBJ-72 |
-| 4 | OBJ-05, OBJ-07, OBJ-17, OBJ-42, OBJ-43, OBJ-65, OBJ-66 | - | OBJ-16, OBJ-19, OBJ-20, OBJ-39, OBJ-44 |
-| 5 | OBJ-06, OBJ-08, OBJ-67, OBJ-68 | OBJ-30 | OBJ-35, OBJ-40 |
+| 3 | OBJ-04, OBJ-23, OBJ-37, OBJ-41, OBJ-47, OBJ-49 | OBJ-34, OBJ-48, OBJ-64, OBJ-76 | OBJ-15, OBJ-18, OBJ-27, OBJ-46, OBJ-72 |
+| 4 | OBJ-05, OBJ-07, OBJ-17, OBJ-42, OBJ-43, OBJ-65, OBJ-66, OBJ-77, OBJ-78, OBJ-80 | - | OBJ-16, OBJ-19, OBJ-20, OBJ-39, OBJ-44 |
+| 5 | OBJ-06, OBJ-08, OBJ-67, OBJ-68, OBJ-79 | OBJ-30 | OBJ-35, OBJ-40 |
 | 6 | OBJ-09, OBJ-36, OBJ-38, OBJ-69 | - | OBJ-62 |
 | 7 | OBJ-57, OBJ-70, OBJ-71 | - | - |
 | 8 | - | OBJ-73 | - |

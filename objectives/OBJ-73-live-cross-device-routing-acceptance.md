@@ -53,7 +53,7 @@ Each SPEC-09 objective is tested against scripted peers; this one proves the dem
 ## Out of scope
 
 - Fixing failures: the owning objective.
-- SPEC-09 edge cases and p1 scenarios: no objectives yet.
+- SPEC-09 edge cases and the wake and lock scenarios, built in [OBJ-77](OBJ-77-harness-cross-device-edge-cases.md) to [OBJ-80](OBJ-80-harness-wake-and-lock.md): a later run, once they are done. p1 photo and share goals: no objectives yet.
 
 ## Outcome
 

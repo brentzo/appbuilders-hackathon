@@ -60,7 +60,7 @@ Until the harness side ([OBJ-68](OBJ-68-harness-delegated-goals.md)) lands, test
 ## Out of scope
 
 - Which other phone-only goals belong in the rule: SPEC-09 open question, for Brent.
-- Edge cases not planned yet: the Mac offline when delegating (SPEC-09 r15, "Mac is offline", "Queued goal waited too long").
+- The Mac offline when delegating (SPEC-09 r15, "Mac is offline", "Queued goal waited too long"): [OBJ-78](OBJ-78-android-cross-device-edge-cases.md).
 
 ## Outcome
 

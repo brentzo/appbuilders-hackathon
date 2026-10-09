@@ -59,7 +59,7 @@ Until the harness side ([OBJ-70](OBJ-70-harness-phone-approvals-and-stop.md)) la
 ## Out of scope
 
 - The Mac's "Waiting for your OK on your phone" banner: [OBJ-72](OBJ-72-mac-cross-device-routing.md).
-- Edge cases not planned yet: the 5-minute approval timeout ("No answer to an approval").
+- The 5-minute approval timeout ("No answer to an approval"): [OBJ-78](OBJ-78-android-cross-device-edge-cases.md).
 
 ## Outcome
 

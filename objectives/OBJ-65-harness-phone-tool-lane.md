@@ -59,7 +59,7 @@ Until the phone side ([OBJ-66](OBJ-66-android-phone-tool-host.md)) works, test w
 ## Out of scope
 
 - The phone running the tools: [OBJ-66](OBJ-66-android-phone-tool-host.md).
-- Edge cases not planned yet: a phone that is offline when called (SPEC-09 r16, "Phone is offline when the Mac calls a tool").
+- A phone that is offline when called (SPEC-09 r16, "Phone is offline when the Mac calls a tool"): [OBJ-77](OBJ-77-harness-cross-device-edge-cases.md).
 
 ## Outcome
 

@@ -60,7 +60,7 @@ This objective makes the harness the executing device and moves it to its bridge
 ## Out of scope
 
 - Approvals and Stop from the phone: [OBJ-70](OBJ-70-harness-phone-approvals-and-stop.md).
-- Edge cases not planned yet: the Mac busy with another task (SPEC-09 r14, "Mac is busy").
+- The Mac busy with another task (SPEC-09 r14, "Mac is busy"): [OBJ-77](OBJ-77-harness-cross-device-edge-cases.md).
 
 ## Outcome
 

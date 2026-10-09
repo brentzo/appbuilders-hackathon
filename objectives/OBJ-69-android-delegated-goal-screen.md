@@ -58,7 +58,7 @@ Until the harness sides ([OBJ-68](OBJ-68-harness-delegated-goals.md), [OBJ-70](O
 ## Out of scope
 
 - Approvals on the phone: [OBJ-71](OBJ-71-android-approvals.md).
-- Edge cases not planned yet: Mac busy, no reply for 2 minutes, and Stop when the Mac cannot be reached (SPEC-09 r13, r14, r17).
+- Mac busy, no reply for 2 minutes, and Stop when the Mac cannot be reached (SPEC-09 r13, r14, r17): [OBJ-78](OBJ-78-android-cross-device-edge-cases.md).
 
 ## Outcome
 
