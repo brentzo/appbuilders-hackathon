@@ -17,15 +17,15 @@ All of it is drawn by the harness on a transparent overlay; the model only choos
 
 ## Requirements
 
-1. The main cursor spawns near the user's pointer when the user starts speaking a goal.
-2. Movement to a target uses an eased curve over about 300 ms. It never teleports.
+1. The main cursor appears when the user starts speaking a goal: it comes out of the island (requirement 19) and leaps to a spot near the user's pointer.
+2. Movement to a target eases in and out on a symmetric curve, cubic-bezier(0.65, 0, 0.35, 1), along a short arc. It takes 350 ms for a short hop and grows with distance up to 700 ms. It never teleports.
 3. Each cursor has a visible state: listening, thinking, moving, acting, waiting for the user, paused.
 4. The thinking state is shown while the model works, so a 1-4 second step never looks frozen.
 5. Ghost cursors have their own color and a short label with the subtask title.
 6. Helpers show as small status chips, not cursors.
 7. The overlay never blocks clicks meant for the user's own pointer.
 8. The overlay looks correct on every connected display, at every scale factor, in light and dark mode.
-9. Cursors fade in and out. No cursor stays on screen after its task ends.
+9. Cursors never pop in or out: they come out of the island, and leave by leaping back into it or fading out. No cursor stays on screen after its task ends.
 10. Every Yumi cursor is a custom pointer with Yumi's character attached: a cat.
 11. Yumi's personality is playful and creative. The cat moves around the screen like a cat would: trotting, leaping, pouncing.
 12. The cat's pose and expression show the cursor's state (see "Cat behaviors").
@@ -33,8 +33,9 @@ All of it is drawn by the harness on a transparent overlay; the model only choos
 14. Playfulness never slows a task. Leaps fit inside the normal movement time, and idle play happens only while Yumi is thinking.
 15. Ghost cursors are the same cat in their own color, like littermates.
 16. The cat is drawn with vector animation, so it stays sharp at every display scale.
-17. If the user has "Reduce motion" turned on, leaps and pounces become simple glides.
+17. If the user has "Reduce motion" turned on, leaps, pounces, and arcs become straight glides, including the way into and out of the island.
 18. The same cat appears in the Android app.
+19. Cursors spawn from the camera notch "island": a pill grows out of the notch, the cat drops out of it and leaps to its spot. When a task finishes, its ghosts leap back into the island within 1 second. A display without a notch uses a pill at the top center, just under the menu bar.
 
 ## Scenarios
 
@@ -45,7 +46,7 @@ Feature: Cursor presence
   Scenario: Cursor moves smoothly to a target
     Given the main cursor is idle at one point
     When the next action is a click on a button across the screen
-    Then the cursor moves there along an eased path in about 300 ms
+    Then the cursor moves there along an eased arc in 350 to 700 ms, depending on the distance
     And the click happens after the cursor arrives
 
   Scenario: Thinking state during a slow step
@@ -69,6 +70,19 @@ Feature: Cursor presence
   Scenario: Cursors leave when the task ends
     Given a task has finished
     Then every cursor for that task fades out within 1 second
+
+  Scenario: Cursors come out of the island
+    Given the Mac has a camera notch
+    When a ghost cursor spawns
+    Then a pill grows out of the notch
+    And the cat drops out of it and leaps to its spot
+    When the ghost's task finishes
+    Then the ghost leaps back into the island within 1 second
+
+  Scenario: Island on a display without a notch
+    Given the display has no camera notch
+    When a cursor spawns
+    Then the island is a pill at the top center, just under the menu bar
 ```
 
 ```gherkin
@@ -90,7 +104,7 @@ Feature: Cursor character
 
   Scenario: Playfulness does not slow the task
     Given the cat leaps to a target across the screen
-    Then the leap takes no longer than a normal move of about 300 ms
+    Then the leap takes no longer than a normal move of that distance, at most 700 ms
 
   Scenario: Ghost cursors are littermates
     Given a ghost cursor spawns
@@ -99,7 +113,7 @@ Feature: Cursor character
   Scenario: Reduce motion
     Given the user has "Reduce motion" turned on
     When the cursor moves to a target
-    Then it glides without leaping or pouncing
+    Then it glides in a straight line without leaping or pouncing
 
   Scenario: Cat stays sharp
     Given the cursor is on a display with a scale factor of 2
@@ -146,7 +160,9 @@ First draft, to be replaced by the real design.
   - Rive's MCP integration is in Early Access, so expect rough edges. Check current setup docs before connecting.
 - The cat is a round ginger cat: ginger fur, three even cream stripes on the forehead, a cream patch over the right eye, cream bib and paw tips, cocoa outlines, and coral cheeks. This replaces the earlier black-and-white decision. The master art is `character/art/yumi-cat.svg`. Decided 2026-10-09 by Patrick.
 - Ghost littermates are the same cat with its fur, markings, and lines recolored in the ghost's own color, such as mint or sky. The coral cheeks stay. This answers the open question about how ghost colors combine with the cat. Decided 2026-10-09 by Patrick.
+- Moves ease in and out on a symmetric curve, cubic-bezier(0.65, 0, 0.35, 1), with an arc, and take 350 to 700 ms by distance (requirement 2, design tokens `moveMinMs`, `moveMaxMs`, `moveFarPt`). With Reduce Motion on they are straight glides. This replaces the earlier "about 300 ms" and answers the open question on animation timing. Decided 2026-10-09 by Patrick.
+- Cursors spawn from the camera notch "island" (requirement 19): a pill grows from the notch, the cat drops out and leaps to its spot, and on finish ghosts leap back in within 1 second. Displays without a notch use a pill at the top center under the menu bar. Decided 2026-10-09 by Patrick.
 
 ## Open questions
 
-- Final animation timing. To be designed later.
+None.
