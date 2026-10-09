@@ -35,10 +35,10 @@ const MAX_REPLIES = 2;
 export async function makePlan(
   confirmedGoal: string,
   tools: readonly PlannerTool[],
-  deps: { client: ModelClient; logger: Logger; debug?: DebugLog | undefined },
+  deps: { client: ModelClient; logger: Logger; home: string; debug?: DebugLog | undefined },
   options: PlanOptions = {},
 ): Promise<PlanResult> {
-  const first = buildPlannerMessages(confirmedGoal, tools);
+  const first = buildPlannerMessages(confirmedGoal, tools, deps.home);
   let messages = first;
   for (let reply = 1; ; reply++) {
     const answer = await deps.client.chat({
@@ -53,7 +53,7 @@ export async function makePlan(
       return userError ? { outcome: "error", userError } : { outcome: "aborted" };
     }
 
-    const check = checkPlan(answer.content);
+    const check = checkPlan(answer.content, deps.home);
     if (check.ok) {
       deps.logger.info("plan.ok", { taskId: options.taskId, reply, subtasks: check.plan.subtasks.length });
       deps.debug?.write("plan.made", { taskId: options.taskId, reply, plan: check.plan });

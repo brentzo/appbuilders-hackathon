@@ -93,6 +93,47 @@ function subtask(title: string, proposedLane: Lane, target?: Target, needsKeyboa
   });
 }
 
+describe("file work the planner places in Finder (Brent's run, 2026-10-10)", () => {
+  const FINDER = "com.apple.finder";
+
+  function planned(instruction: string, proposedLane: Lane, targetApp: { name?: string; bundleId?: string }): Subtask {
+    const task = store.createTask({ originDeviceId: "mac-brent", goal: instruction });
+    store.setTaskStatus(task.id, "planning", { confirmedGoal: instruction });
+    return store.addSubtask({ taskId: task.id, title: "Note", instruction, proposedLane, status: "ready", targetApp });
+  }
+
+  it("goes to the helper when the planner proposed the helper, without resolving or probing Finder", async () => {
+    const resolved: string[] = [];
+    const capabilities = new AppCapabilities({ store, probe: fake.probe, logger });
+    router = new LaneRouter({
+      store,
+      capabilities,
+      logger,
+      resolveApp: (name) => (resolved.push(name), Promise.resolve(FINDER)),
+      emit: (event, payload) => events.push({ event, payload }),
+    });
+    const note = planned('write_new_file(path="/Users/brent/Documents/Yumi test", content="hello")', "helper", {
+      name: "Finder",
+    });
+    expect(await router.route(note, note.proposedLane)).toEqual({ lane: "helper", reason: "noUI" });
+    expect(resolved).toEqual([]);
+    expect(fake.calls).toEqual([]);
+    expect(store.getSubtask(note.id)).toMatchObject({ lane: "helper", routeReason: "noUI" });
+  });
+
+  it("goes to the helper when a ghost instruction in Finder names a file tool", async () => {
+    const note = planned('Use write_new_file to write "hello" to ~/Documents/Yumi test.txt.', "ghost", { bundleId: FINDER });
+    expect(await router.route(note, note.proposedLane)).toEqual({ lane: "helper", reason: "noUI" });
+    expect(fake.calls).toEqual([]);
+  });
+
+  it("still checks Finder for work the user wants to see in a Finder window", async () => {
+    const show = planned("Open the Downloads folder in a Finder window.", "ghost", { bundleId: FINDER });
+    await expect(router.route(show, show.proposedLane)).rejects.toBeInstanceOf(ProbeFailure);
+    expect(fake.calls).toEqual([FINDER]);
+  });
+});
+
 describe("Feature: Lane routing (SPEC-03)", () => {
   it("Scenario: Subtask with no UI runs as a helper", async () => {
     const extract = subtask("extract totals from 20 spreadsheets", "helper");

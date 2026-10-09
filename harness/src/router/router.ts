@@ -11,6 +11,7 @@ import type { WindowCoordinator } from "./windows.ts";
  *
  * Checks, in order:
  * 0. The app is the subtask's `target`, or the planner's `targetApp`, with a name resolved through the Mac app.
+ *    File work the planner placed in Finder has no target app: the helper's file tools do it without a window.
  * 1. No target app: `helper`, reason `noUI` (SPEC-03 r2).
  * 2. The planner marked the subtask as needing the keyboard: `main`, reason `needsKeyboard`, because only `main`
  *    sends keystrokes (SPEC-03 r7 and r17). The app is not probed.
@@ -94,6 +95,10 @@ export class LaneRouter {
    * matches no installed app (`unsupportedRequest`, as the probe answers for an app that is not installed).
    */
   private async bundleIdOf(subtask: Subtask): Promise<string | undefined> {
+    if (isFileWorkInFinder(subtask)) {
+      this.options.logger.info("router.fileWorkInFinder", { taskId: subtask.taskId, subtaskId: subtask.id });
+      return undefined;
+    }
     if (subtask.target) return subtask.target.bundleId;
     const app = subtask.targetApp;
     if (!app) return undefined;
@@ -131,4 +136,21 @@ export class LaneRouter {
       ? { lane: "ghost", reason: "backgroundCapable" }
       : { lane: "main", reason: "appNotBackgroundCapable" };
   }
+}
+
+const FINDER = "com.apple.finder";
+
+/** The helper's file tools by name, which the planner sometimes writes into an instruction as a call. */
+const FILE_TOOL = /\b(?:read_file|list_dir|write_new_file|move_to_trash)\b/;
+
+/**
+ * A subtask that works with files, which the planner placed in Finder: the planner proposed the helper lane, or the
+ * instruction names one of the helper's file tools. Brent's run, 2026-10-10: a note written to Documents went to a
+ * ghost in Finder. Showing something in Finder, which the user wants to see, stays a Finder subtask.
+ */
+export function isFileWorkInFinder(subtask: Subtask): boolean {
+  const app = subtask.targetApp;
+  const inFinder =
+    subtask.target?.bundleId === FINDER || app?.bundleId === FINDER || app?.name?.trim().toLowerCase() === "finder";
+  return inFinder && (subtask.proposedLane === "helper" || FILE_TOOL.test(subtask.instruction));
 }

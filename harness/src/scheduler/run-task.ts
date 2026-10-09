@@ -43,7 +43,7 @@ export async function runTask(taskId: Uuid, deps: RunTaskDeps, control = new Run
     Object.values(deps.lanes).flatMap((lane) => lane?.tools.tools ?? []),
     deps.gui !== undefined,
   );
-  const planned = await makePlan(confirmedGoal, tools, model, { taskId, signal });
+  const planned = await makePlan(confirmedGoal, tools, { ...model, home: deps.home }, { taskId, signal });
   switch (planned.outcome) {
     case "aborted":
       return { outcome: "aborted" };
@@ -117,6 +117,12 @@ async function runPlan(
 
 /** Fails the task and tells the user. `why` is for the debug log only: what went wrong, in the team's words. */
 function fail(task: Task, userError: UserError, deps: RunTaskDeps, why?: string): RunTaskOutcome {
+  const status = deps.store.getTask(task.id)?.status;
+  if (status === "paused" || status === "cancelled") {
+    // The user paused or cancelled while the failure happened: their status stands, and no error is shown.
+    deps.logger.info("task.failureAfterStop", { taskId: task.id, status, kind: userError.kind });
+    return { outcome: "aborted" };
+  }
   const error: UserError = { ...userError, taskId: task.id };
   deps.store.setTaskStatus(task.id, "failed");
   deps.voice.userError(task.originDeviceId, error);

@@ -27,41 +27,68 @@ const sub = (id: string, dependsOn: string[] = []) => ({
   proposedLane: "helper" as const,
 });
 const planJson = (...subtasks: ReturnType<typeof sub>[]) => JSON.stringify({ subtasks });
+/** The user's home folder the planner is given. */
+const HOME = "/Users/brent";
 
 describe("plan checks (OBJ-05.2)", () => {
   it("accepts a plan with dependencies", () => {
-    const check = checkPlan(planJson(sub("a"), sub("b"), sub("note", ["a", "b"])));
+    const check = checkPlan(planJson(sub("a"), sub("b"), sub("note", ["a", "b"])), HOME);
     expect(check.ok).toBe(true);
   });
 
   it("rejects a dependency cycle and names it", () => {
-    const check = checkPlan(planJson(sub("a", ["c"]), sub("b", ["a"]), sub("c", ["b"])));
+    const check = checkPlan(planJson(sub("a", ["c"]), sub("b", ["a"]), sub("c", ["b"])), HOME);
     expect(check).toEqual({ ok: false, error: expect.stringContaining("a -> c -> b -> a") });
   });
 
   it("rejects a subtask that depends on itself", () => {
-    expect(checkPlan(planJson(sub("a", ["a"])))).toEqual({ ok: false, error: expect.stringContaining("depends on itself") });
+    expect(checkPlan(planJson(sub("a", ["a"])), HOME)).toEqual({
+      ok: false,
+      error: expect.stringContaining("depends on itself"),
+    });
   });
 
   it("rejects an unknown dependency id", () => {
-    expect(checkPlan(planJson(sub("a"), sub("b", ["z"])))).toEqual({ ok: false, error: expect.stringContaining('"z"') });
+    expect(checkPlan(planJson(sub("a"), sub("b", ["z"])), HOME)).toEqual({ ok: false, error: expect.stringContaining('"z"') });
   });
 
   it("rejects a repeated id", () => {
-    expect(checkPlan(planJson(sub("a"), sub("a")))).toEqual({ ok: false, error: expect.stringContaining("more than one") });
+    expect(checkPlan(planJson(sub("a"), sub("a")), HOME)).toEqual({ ok: false, error: expect.stringContaining("more than one") });
   });
 
   it(`rejects more than ${MAX_PLAN_SUBTASKS} subtasks`, () => {
     const many = Array.from({ length: MAX_PLAN_SUBTASKS + 1 }, (_, i) => sub(`s${i}`));
-    expect(checkPlan(planJson(...many))).toEqual({ ok: false, error: expect.stringContaining(`most is ${MAX_PLAN_SUBTASKS}`) });
-    expect(checkPlan(planJson(...many.slice(0, MAX_PLAN_SUBTASKS))).ok).toBe(true);
+    expect(checkPlan(planJson(...many), HOME)).toEqual({
+      ok: false,
+      error: expect.stringContaining(`most is ${MAX_PLAN_SUBTASKS}`),
+    });
+    expect(checkPlan(planJson(...many.slice(0, MAX_PLAN_SUBTASKS)), HOME).ok).toBe(true);
   });
 
   it("rejects replies that are not a Plan", () => {
-    expect(checkPlan(null).ok).toBe(false);
-    expect(checkPlan("here is my plan: ...").ok).toBe(false);
-    expect(checkPlan(JSON.stringify({ subtasks: [] })).ok).toBe(false);
-    expect(checkPlan(JSON.stringify({ subtasks: [{ ...sub("a"), proposedLane: "cloud" }] })).ok).toBe(false);
+    expect(checkPlan(null, HOME).ok).toBe(false);
+    expect(checkPlan("here is my plan: ...", HOME).ok).toBe(false);
+    expect(checkPlan(JSON.stringify({ subtasks: [] }), HOME).ok).toBe(false);
+    expect(checkPlan(JSON.stringify({ subtasks: [{ ...sub("a"), proposedLane: "cloud" }] }), HOME).ok).toBe(false);
+  });
+
+  it("rejects a path outside the user's home folder, without quoting it (Brent's run, 2026-10-10)", () => {
+    const at = (instruction: string) => planJson({ ...sub("note"), instruction });
+    const made = checkPlan(at('write_new_file(path="/Users/Yumi/Documents/Yumi test", content="hello")'), HOME);
+    expect(made).toEqual({ ok: false, error: expect.stringContaining('Subtask "note" names a path outside') });
+    expect(JSON.stringify(made)).not.toContain("/Users/Yumi");
+    expect(checkPlan(at("Read /etc/hosts."), HOME).ok).toBe(false);
+    expect(checkPlan(at("Read /Users/brent/../other/notes.txt."), HOME).ok).toBe(false);
+    expect(checkPlan(at("Read /Users/brenda/notes.txt."), HOME).ok).toBe(false);
+  });
+
+  it("accepts paths inside the home folder, ~ paths, and links", () => {
+    const at = (instruction: string) => planJson({ ...sub("note"), instruction });
+    expect(checkPlan(at('Write "Yumi test.txt" in /Users/brent/Documents/ saying hello.'), HOME).ok).toBe(true);
+    expect(checkPlan(at("List /Users/brent."), HOME).ok).toBe(true);
+    expect(checkPlan(at("Write ~/Documents/Yumi test.txt saying hello."), HOME).ok).toBe(true);
+    expect(checkPlan(at("Open https://example.com/a/b in Safari."), HOME).ok).toBe(true);
+    expect(checkPlan(at("Copy the notes and/or the slides."), HOME).ok).toBe(true);
   });
 
   it("finds no cycle in a diamond", () => {
@@ -85,7 +112,7 @@ describe("the planner (OBJ-05.1)", () => {
 
   it("sends the goal and the tools, with the Plan schema limited to the most subtasks", async () => {
     server.reply({ kind: "content", content: planJson(sub("a")) });
-    const result = await makePlan("tidy my notes", tools, { client, logger });
+    const result = await makePlan("tidy my notes", tools, { client, logger, home: HOME });
     expect(result.outcome).toBe("ok");
 
     const request = server.requests[0] as unknown as ChatRequest;
@@ -105,12 +132,35 @@ describe("the planner (OBJ-05.1)", () => {
     expect(JSON.stringify(planSchemaForModel())).not.toContain("uniqueItems");
   });
 
+  it("gives the planner the user's real home, Documents, Desktop, and Downloads folders", async () => {
+    server.reply({ kind: "content", content: planJson(sub("a")) });
+    await makePlan("write a note in Documents", tools, { client, logger, home: HOME });
+    const request = server.requests[0] as unknown as ChatRequest;
+    const user = request.messages[1]!.content as string;
+    expect(user).toContain("- Home folder: /Users/brent\n- Documents: /Users/brent/Documents\n");
+    expect(user).toContain("- Desktop: /Users/brent/Desktop");
+    expect(user).toContain("- Downloads: /Users/brent/Downloads");
+    expect(request.messages[0]!.content as string).toContain("Never make up a user name or a home folder.");
+  });
+
+  it("sends a plan with a made-up home folder back once, and accepts the fixed one", async () => {
+    const note = (path: string) => planJson({ ...sub("note"), instruction: `Write ${path} saying hello.` });
+    server.reply(
+      { kind: "content", content: note("/Users/Yumi/Documents/Yumi test.txt") },
+      { kind: "content", content: note("/Users/brent/Documents/Yumi test.txt") },
+    );
+    const result = await makePlan("goal", tools, { client, logger, home: HOME });
+    expect(result.outcome).toBe("ok");
+    const retry = (server.requests[1] as unknown as ChatRequest).messages;
+    expect(retry[3]!.content).toContain("outside the user's home folder");
+  });
+
   it("asks once to fix a broken plan, with the reason, and accepts the fixed one", async () => {
     server.reply(
       { kind: "content", content: planJson(sub("a", ["b"]), sub("b", ["a"])) },
       { kind: "content", content: planJson(sub("a"), sub("b", ["a"])) },
     );
-    const result = await makePlan("goal", tools, { client, logger });
+    const result = await makePlan("goal", tools, { client, logger, home: HOME });
     expect(result.outcome).toBe("ok");
     expect(server.requests).toHaveLength(2);
     const retry = (server.requests[1] as unknown as ChatRequest).messages;
@@ -120,14 +170,19 @@ describe("the planner (OBJ-05.1)", () => {
 
   it("gives up after the second broken plan, without a third request", async () => {
     server.reply({ kind: "content", content: planJson(sub("a", ["zz"])) }, { kind: "content", content: "not json" });
-    const result = await makePlan("goal", tools, { client, logger });
+    const result = await makePlan("goal", tools, { client, logger, home: HOME });
     expect(result).toEqual({ outcome: "invalidPlan", error: expect.stringContaining("not valid JSON") });
     expect(server.requests).toHaveLength(2);
   });
 
   it("maps an unreachable model server to modelFailedToLoad", async () => {
     await server.close();
-    const result = await makePlan("goal", tools, { client, logger }, { taskId: "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8" });
+    const result = await makePlan(
+      "goal",
+      tools,
+      { client, logger, home: HOME },
+      { taskId: "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8" },
+    );
     expect(result).toEqual({
       outcome: "error",
       userError: { kind: "modelFailedToLoad", taskId: "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8" },

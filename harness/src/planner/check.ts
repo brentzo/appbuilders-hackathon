@@ -1,10 +1,11 @@
+import { posix } from "node:path";
 import { validate } from "@yumi/protocol";
 import type { Plan, PlannedSubtask } from "@yumi/protocol/types";
 
 /**
  * Checks the planner's reply (OBJ-05.1, OBJ-05.2): one JSON object that matches the protocol's `Plan` schema, with
- * no duplicate ids, no dependency on an id that is not in the plan, no dependency cycle, and no more than
- * `MAX_PLAN_SUBTASKS` subtasks. A plan that fails never reaches the scheduler. The error text goes back to the
+ * no duplicate ids, no dependency on an id that is not in the plan, no dependency cycle, no more than
+ * `MAX_PLAN_SUBTASKS` subtasks, and no absolute path outside the user's home folder. A plan that fails never reaches the scheduler. The error text goes back to the
  * planner on its one retry and into the log; it never reaches the user and never quotes the reply.
  */
 
@@ -16,7 +17,8 @@ export const MAX_PLAN_SUBTASKS = 12;
 
 export type PlanCheck = { ok: true; plan: Plan } | { ok: false; error: string };
 
-export function checkPlan(raw: string | null): PlanCheck {
+/** `home` is the user's real home folder: every absolute path in a title or instruction must be inside it. */
+export function checkPlan(raw: string | null, home: string): PlanCheck {
   if (raw === null || raw.trim() === "") return { ok: false, error: "The reply was empty." };
 
   let value: unknown;
@@ -29,8 +31,32 @@ export function checkPlan(raw: string | null): PlanCheck {
   const result = validate("Plan", value);
   if (!result.valid) return { ok: false, error: `The plan does not match the plan schema: ${result.errors.join("; ")}.` };
   const plan = value as Plan;
-  const problem = graphProblem(plan.subtasks);
+  const problem = graphProblem(plan.subtasks) ?? pathProblem(plan.subtasks, home);
   return problem ? { ok: false, error: problem } : { ok: true, plan };
+}
+
+/**
+ * Absolute paths in free text: a `/` at the start or after a space, quote, bracket, `=`, or `,`, and not `//` (a
+ * link). The path ends at the next space or quote, so a name with spaces is cut short, which is enough to see where
+ * it is. `~/...` paths are inside the home folder by definition and are not matched.
+ */
+const ABSOLUTE_PATH = /(?:^|[\s"'`([=,])(\/(?!\/)[^\s"'`)\],;]+)/g;
+
+/** The first subtask that names an absolute path outside the home folder (Brent's run, 2026-10-10). */
+function pathProblem(subtasks: readonly PlannedSubtask[], home: string): string | undefined {
+  const root = posix.normalize(home).replace(/\/+$/, "");
+  for (const subtask of subtasks) {
+    for (const text of [subtask.title, subtask.instruction]) {
+      for (const match of text.matchAll(ABSOLUTE_PATH)) {
+        const path = posix.normalize(match[1]!.replace(/[.:]+$/, ""));
+        if (path !== root && !path.startsWith(`${root}/`)) {
+          // The path itself is not quoted: it may be the user's own words.
+          return `Subtask "${subtask.id}" names a path outside the user's home folder. Use only paths inside ${root}, built from the folders listed.`;
+        }
+      }
+    }
+  }
+  return undefined;
 }
 
 function graphProblem(subtasks: readonly PlannedSubtask[]): string | undefined {

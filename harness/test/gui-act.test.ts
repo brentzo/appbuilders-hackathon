@@ -944,6 +944,41 @@ describe("the orchestrator never sees the screen (SPEC-05 r4, r8)", () => {
   });
 });
 
+describe("file work the planner places in Finder (Brent's run, 2026-10-10)", () => {
+  it("writes the note with the helper's file tools, never a ghost in Finder", async () => {
+    // Brent's plan, with the real home folder the planner is now given.
+    const fake = await connect(staticApp("com.apple.finder", { app: "Finder", title: "Documents", elements: [] }));
+    const plan = {
+      subtasks: [
+        {
+          id: "note",
+          title: "Create Yumi test note",
+          instruction: `write_new_file(path="${home}/Documents/Yumi test.txt", content="hello")`,
+          dependsOn: [],
+          proposedLane: "helper",
+          targetApp: { name: "Finder" },
+        },
+      ],
+    };
+    scriptModel(
+      (text) =>
+        text.includes("Created")
+          ? reply({ kind: "finish", status: "done", note: "Wrote the note." })
+          : reply({ kind: "tool", call: { tool: "write_new_file", path: "~/Documents/Yumi test.txt", content: "hello" } }),
+      plan,
+    );
+    const goal = "write a note in Documents called Yumi test that says hello";
+    const task = harness.store.createTask({ originDeviceId: "mac-brent", goal });
+    harness.store.setTaskStatus(task.id, "planning", { confirmedGoal: goal });
+
+    expect(await harness.tasks.start(task.id)).toMatchObject({ outcome: "done" });
+    expect(harness.store.listSubtasks(task.id)).toMatchObject([{ lane: "helper", routeReason: "noUI", status: "done" }]);
+    expect(readFileSync(join(home, "Documents", "Yumi test.txt"), "utf8")).toBe("hello");
+    expect(fake.observes).toEqual([]);
+    expect(fake.events.filter((e) => e.event === "cursorCommand")).toEqual([]);
+  });
+});
+
 describe("gui_act in the scheduler", () => {
   const plan = {
     subtasks: [

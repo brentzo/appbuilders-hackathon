@@ -3,6 +3,7 @@ import { join } from "node:path";
 import type { Approval, ApprovalCancelled, ApprovalDecision, Lane, Observation, Step } from "@yumi/protocol/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryLogger } from "../src/log.ts";
+import { ProbeFailure } from "../src/router/index.ts";
 import { fileHelperLane, type LaneRunner, type RouteSubtask } from "../src/scheduler/lanes.ts";
 import type { ChatRequest } from "../src/model/openai.ts";
 import { PLANNER_SYSTEM_PROMPT } from "../src/planner/prompt.ts";
@@ -394,5 +395,93 @@ describe("SPEC-06 r2 take-over: UI lanes pause, helpers keep running", () => {
     expect(keynote.runs.length).toBe(ran.keynote);
     expect(readdirSync(join(home, "Documents")).length).toBe(ran.notes);
     expect(subtasks(task.id).map((s) => s.status)).toEqual(["ready", "ready"]);
+  });
+});
+
+describe("a pause or cancel always wins over work that was still being routed (Brent's run, 2026-10-10)", () => {
+  const userErrors = () => run!.mac.events.filter((e) => e.event === "userError");
+
+  /** A route that waits for `gate` on its first call, then answers with `first`, and later calls go to the helper. */
+  function gatedRoute(first: () => Promise<Awaited<ReturnType<RouteSubtask>>>) {
+    const gate = later<void>();
+    let calls = 0;
+    const route: RouteSubtask = async () => {
+      if (calls++ === 0) {
+        await gate.promise;
+        return first();
+      }
+      return { lane: "helper", reason: "noUI" };
+    };
+    return { route, gate, calls: () => calls };
+  }
+
+  it("a pause of every lane while a subtask is routed starts nothing, and the resume runs it", async () => {
+    const helper = countingHelper();
+    const worker = scriptModel(model, { plan: plan(NOTE_ONLY), worker: trashUntilMoved });
+    const { route, gate, calls } = gatedRoute(() => Promise.resolve({ lane: "helper", reason: "noUI" }));
+    run = await startWithMac({ dir: dir.path, home, logger, model, lanes: { helper }, route });
+    const task = run.startTask("write a note");
+    await until(() => calls() === 1);
+
+    const paused = run.mac.call("pause", { taskId: task.id, scope: "everyLane" });
+    await until(() => status(task.id) === "paused");
+    gate.resolve();
+    expect(await paused).toEqual({});
+
+    expect(status(task.id)).toBe("paused");
+    expect(subtasks(task.id).map((s) => s.status)).toEqual(["ready"]);
+    expect(helper.observed()).toBe(0);
+    expect(worker).toEqual([]);
+    expect(logger.entries.some((e) => e.event === "schedule.notStarted")).toBe(true);
+
+    expect(await run.mac.call("resumeTask", { taskId: task.id })).toEqual({});
+    await until(() => status(task.id) === "done");
+    expect(readdirSync(join(home, "Documents"))).toEqual(["Cleanup.md"]);
+  });
+
+  it("a failure after the pause leaves the task paused, shows no error, and the resume runs the subtask", async () => {
+    const helper = countingHelper();
+    scriptModel(model, { plan: plan(NOTE_ONLY), worker: trashUntilMoved });
+    const { route, gate, calls } = gatedRoute(() =>
+      Promise.reject(new ProbeFailure("com.apple.finder", { kind: "stuckOnScreen" })),
+    );
+    run = await startWithMac({ dir: dir.path, home, logger, model, lanes: { helper }, route });
+    const task = run.startTask("write a note");
+    await until(() => calls() === 1);
+
+    const paused = run.mac.call("pause", { taskId: task.id, scope: "everyLane" });
+    await until(() => status(task.id) === "paused");
+    gate.resolve();
+    expect(await paused).toEqual({});
+    await settle();
+
+    expect(status(task.id)).toBe("paused");
+    expect(subtasks(task.id).map((s) => s.status)).toEqual(["ready"]);
+    expect(userErrors()).toEqual([]);
+
+    expect(await run.mac.call("resumeTask", { taskId: task.id })).toEqual({});
+    await until(() => status(task.id) === "done");
+  });
+
+  it("cancelling while a subtask is routed starts nothing and leaves the task cancelled", async () => {
+    const helper = countingHelper();
+    scriptModel(model, { plan: plan(NOTE_ONLY), worker: trashUntilMoved });
+    const { route, gate, calls } = gatedRoute(() =>
+      Promise.reject(new ProbeFailure("com.apple.finder", { kind: "stuckOnScreen" })),
+    );
+    run = await startWithMac({ dir: dir.path, home, logger, model, lanes: { helper }, route });
+    const task = run.startTask("write a note");
+    await until(() => calls() === 1);
+
+    const cancel = run.mac.call("cancelTask", { taskId: task.id });
+    await settle(50);
+    gate.resolve();
+    expect(await cancel).toEqual({});
+    await settle();
+
+    expect(status(task.id)).toBe("cancelled");
+    expect(helper.observed()).toBe(0);
+    expect(userErrors()).toEqual([]);
+    expect(subtasks(task.id).map((s) => s.result?.note)).toEqual(["Cancelled before it started."]);
   });
 });

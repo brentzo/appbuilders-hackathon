@@ -117,6 +117,8 @@ export async function runSchedule(
   };
 
   const runOne = async (subtask: Subtask, slot: { held: boolean }) => {
+    // Paused, cancelled, or stopped by another subtask's failure: nothing is routed or started after that.
+    if (stopSignal.aborted) return;
     const continues = continuing.has(subtask.id) && subtask.attempts > 0;
     if (!continues && subtask.attempts >= limits.attemptsPerSubtask) {
       // Its attempts are used up (SPEC-02 r8): fail it before routing, so nothing runs and no app is probed.
@@ -131,6 +133,11 @@ export async function runSchedule(
       decision = await routeWhenThereIsRoom(subtask, slot);
     } catch (error) {
       if (!(error instanceof ProbeFailure)) throw error;
+      if (stopSignal.aborted) {
+        // The check failed after the stop: the subtask never started, and the stop decides what happens to it.
+        notStarted(subtask.id);
+        return;
+      }
       // The router could not learn what the target app supports, so no lane can work in it (OBJ-07 Outcome).
       logger.warn("schedule.routeFailed", { taskId, subtaskId: subtask.id, kind: error.userError.kind });
       store.setSubtaskStatus(subtask.id, "failed", {
@@ -140,9 +147,32 @@ export async function runSchedule(
     }
     if (!decision) return;
     try {
+      if (stopSignal.aborted) {
+        // Stopped while it was routed (Brent's run, 2026-10-10: a pause during routing still started a ghost). The
+        // lock and cursor are given back below, and the subtask waits where routing left it.
+        notStarted(subtask.id);
+        return;
+      }
       await runRouted(subtask, decision, continues);
     } finally {
       decision.release?.();
+    }
+  };
+
+  /**
+   * A subtask the stop kept from starting. Paused or cancelled: a queued one goes back to ready, so a resume routes it
+   * again, unless the pause flow already moved it. Stopped by another subtask's failure: failed, like the other
+   * subtasks that were stopped.
+   */
+  const notStarted = (subtaskId: Uuid) => {
+    const current = store.getSubtask(subtaskId)!;
+    logger.info("schedule.notStarted", { taskId, subtaskId, status: current.status });
+    if (current.status !== "queued") return;
+    if (signal.aborted) store.setSubtaskStatus(subtaskId, "ready");
+    else {
+      store.setSubtaskStatus(subtaskId, "failed", {
+        result: { status: "partial", files: [], note: "Stopped before it started." },
+      });
     }
   };
 
@@ -169,16 +199,7 @@ export async function runSchedule(
       await decision.queued.wait(stopSignal);
       current = store.getSubtask(current.id)!;
       if (stopSignal.aborted) {
-        // Paused or cancelled: back to ready, so a resume routes it again, unless the pause flow already moved it.
-        // Stopped by another subtask's failure: failed, like the other subtasks that were stopped.
-        if (current.status === "queued") {
-          if (signal.aborted) store.setSubtaskStatus(current.id, "ready");
-          else {
-            store.setSubtaskStatus(current.id, "failed", {
-              result: { status: "partial", files: [], note: "Stopped before it started." },
-            });
-          }
-        }
+        notStarted(current.id);
         return undefined;
       }
     }
@@ -232,8 +253,12 @@ export async function runSchedule(
       promoteReady(taskId);
       return;
     }
-    // Stopped from outside (a pause of every lane, or a cancel): the pause and cancel flow sets the statuses (OBJ-38).
-    if (run.outcome === "aborted" && signal.aborted) return;
+    // Stopped from outside (a pause of every lane, or a cancel): the pause and cancel flow sets the statuses (OBJ-38),
+    // even when the run ended with a failure after the stop.
+    if (signal.aborted) {
+      logger.info("schedule.endedAfterStop", { taskId, subtaskId: subtask.id, outcome: run.outcome });
+      return;
+    }
     if (run.outcome === "aborted" && !stop.signal.aborted && !control.mayAct(decision.lane)) {
       // The user took over: the subtask goes back to ready and carries on with this attempt after the resume.
       store.setSubtaskStatus(subtask.id, "ready");
@@ -273,8 +298,9 @@ export async function runSchedule(
     await Promise.race([...active.values(), nudged(), control.changed()]);
   }
 
-  if (failure) return failure;
+  // A pause or cancel from outside wins over a failure: the pause and cancel flow owns the statuses.
   if (signal.aborted) return { outcome: "aborted" };
+  if (failure) return failure;
   const left = store.listSubtasks(taskId).filter((s) => s.status !== "done");
   if (left.length > 0) {
     // Cannot happen with a checked plan: every dependency is in the plan and there are no cycles.
