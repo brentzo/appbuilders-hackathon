@@ -196,7 +196,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 | [OBJ-15](../objectives/OBJ-15-mac-voice-intake.md) | Mac voice intake | Patrick | todo |
 | [OBJ-16](../objectives/OBJ-16-mac-wake-word.md) | Mac wake word | Patrick | todo |
 | [OBJ-17](../objectives/OBJ-17-goal-confirmation.md) | Goal confirmation loop | Patrick | todo |
-| [OBJ-18](../objectives/OBJ-18-cursor-overlay-and-motion.md) | Cursor overlay and motion | Patrick | in-progress |
+| [OBJ-18](../objectives/OBJ-18-cursor-overlay-and-motion.md) | Cursor overlay and motion | Patrick | done |
 | [OBJ-19](../objectives/OBJ-19-rive-cat-cursor.md) | Rive cat cursor | Patrick | todo |
 | [OBJ-20](../objectives/OBJ-20-window-tiling.md) | Window tiling with consent | Patrick | todo |
 | [OBJ-27](../objectives/OBJ-27-mac-native-services.md) | Mac native services for the harness | Patrick | todo |
