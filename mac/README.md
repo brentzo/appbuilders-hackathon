@@ -150,6 +150,19 @@ Push-to-talk turns speech into a goal on the Mac ([OBJ-15](../objectives/OBJ-15-
   - The rule is in `RecognizerRule`: "I speak Taglish" uses Whisper first, otherwise Apple's recognizer first; the other one is the fallback when the first fails, never when it heard silence.
 - Audio stays in memory and is dropped once transcribed.
 
+### Wake word
+
+With the wake word on in Settings (on by default), Yumi listens for it hands-free ([OBJ-16](../objectives/OBJ-16-mac-wake-word.md)).
+
+- Detection is openWakeWord through ONNX Runtime: `WakeWordFeatures` is a Swift port of openWakeWord 0.6.0's feature step and matches the Python output on a fixed clip.
+- The models are not in git. Fetch them once with `scripts/fetch-wake-word-models.sh`, which checks their checksums and puts them in `~/Library/Application Support/Yumi/Models/WakeWord`.
+  Without them the wake word is off, and push-to-talk still works.
+- The wake word model is a stand-in: openWakeWord's pre-trained "hey jarvis", so say "Hey Jarvis" for now.
+  Dropping OBJ-12's `hey_yumi.onnx` into the same folder switches to "Hey Yumi" with no code change.
+- On a detection Yumi plays a short sound and listens for the goal on the push-to-talk path, until the user stops speaking.
+- Audio lives only in the detector's rolling buffers in memory; nothing is transcribed or stored before the wake word.
+- With the setting off, the microphone is not opened for the wake word at all.
+
 ### Approval cards and the Trash
 
 Sending and deleting ask every time ([OBJ-40](../objectives/OBJ-40-mac-approval-cards.md)).
@@ -224,7 +237,8 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 - `-YumiAppearance light|dark` forces the app's appearance.
 - `-YumiOpen settings|onboarding|pairing|pairing-code|type-goal|error:<ErrorKind>` opens that window at launch (`pairing-code` shows a sample pairing code).
 - `-YumiVoiceFile <path>` makes push-to-talk transcribe that recording instead of the microphone (Debug builds).
-- `-YumiReplyFile <path>` makes the spoken answer after a repeat-back transcribe that recording (Debug builds).
+- `-YumiReplyFile <path>` makes the spoken answer after a repeat-back, or the goal after the wake word, transcribe that recording (Debug builds).
+- `-YumiWakeWordFile <path>` feeds that recording to the wake word detector at real-time pace instead of the microphone, and `-YumiWakeWordLoop YES` repeats it (Debug builds).
   An error window uses the sample last action "Clicked Export in Keynote".
 - `-YumiPermissions mixed|granted` pretends permissions are in that state, without asking macOS.
 - `-YumiStatus startingUp|ready|listening|working|paused` sets the menu's status line.
@@ -246,6 +260,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 | `Yumi/GUI/` | Controlling other apps: the trimmed tree reader, element actions, tagged keystrokes, the direct tools, and the GUI debug window |
 | `Yumi/Approvals/` | Send and delete approval cards, their copy, and `moveToTrash` |
 | `Yumi/Control/` | The stop shortcut, the take-over watcher, the local stop, and the paused panel |
+| `Yumi/WakeWord/` | The wake word: ONNX Runtime models, the openWakeWord feature port, and the listener |
 | `Yumi/Voice/` | Voice intake: the push-to-talk hot key, the microphone, the recognizers and their rule, the silence endpoint, and the typed-goal box |
 | `Yumi/Confirmation/` | Goal confirmation: the repeat-back panel, the `speak` interface, and listening for the answer |
 | `Yumi/Tiling/` | Window tiling: the consent panel, the grid, and saving and restoring window frames |
@@ -261,8 +276,8 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
   The protocol has no method for settings yet.
 - Model readiness is a placeholder that is always unknown (`ModelReadiness`).
   The protocol cannot report it yet; this is open with the protocol and harness owners.
-- Error buttons whose feature comes in a later objective are shown disabled: for example "Stop", and "Try again" outside "Didn't catch speech".
-- `showApprovalCard` and `moveToTrash` answer "method not found" until [OBJ-40](../objectives/OBJ-40-mac-approval-cards.md).
+- Error buttons whose feature comes in a later objective are shown disabled: for example "Try again" outside "Didn't catch speech", and "Stop" or "Keep going" when the error names no task.
+- The wake word model is openWakeWord's "hey jarvis" until "Hey Yumi" from [OBJ-12](../objectives/OBJ-12-hey-yumi-wake-word.md), with openWakeWord's default threshold, 0.5.
 - Cursors are a placeholder drawing (a black and white pointer, ghosts outlined in their color) until the Rive cat ([OBJ-19](../objectives/OBJ-19-rive-cat-cursor.md)).
 - A cursor moving to an element whose path does not resolve goes to the center of the target window, or the app's frontmost window.
 - Vision clicks (`clickAt`) are refused until the p1 vision fallback.
