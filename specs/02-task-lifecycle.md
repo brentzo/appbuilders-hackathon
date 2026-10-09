@@ -28,6 +28,7 @@ Schema: [task-record-schema](../docs/task-record-schema.md).
 9. When a task finishes, Yumi speaks a one or two sentence summary on the device the user spoke to. When the goal asked for information (what is in a folder, how many, a list, what a file says), the summary is the answer, built from what the task's steps really found, not from the model's memory: the number and a few names, or what the file says in a few words. If the summary cannot be written, Yumi says "Done. I finished everything you asked for.", or, for a folder it listed, the number of items and up to three names.
 10. Task records (tasks, subtasks, steps, the action log, and step screenshots) are kept forever. Nothing is deleted automatically.
 11. The user can browse and search past tasks from the Mac menu bar and the phone app.
+12. `p1` A task keeps every confirmed revised goal ([SPEC-06](06-user-control.md) requirement 16) in order, each with what the user said and when; `confirmedGoal` is always the latest, and the action log records each change. A revision that is cancelled or never confirmed is not kept.
 
 ## Scenarios
 

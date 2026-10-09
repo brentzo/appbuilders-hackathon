@@ -321,4 +321,5 @@ A sheet usually has no `AXTitle`.
 | [OBJ-45](../objectives/OBJ-45-pause-scope-and-model-readiness-contracts.md) | Pause scope and model readiness contracts | Jepoy | in-progress |
 | [OBJ-48](../objectives/OBJ-48-unpair-without-device-clocks.md) | Bind unpair to the pairing instead of device clocks | Jepoy | todo |
 | [OBJ-56](../objectives/OBJ-56-unclassified-action-approval-contract.md) | Approval contract for unclassified risky actions | Jepoy | todo |
+| [OBJ-59](../objectives/OBJ-59-goal-revision-contract.md) | Contract for changing the goal mid-task | Jepoy | todo |
 <!-- generated:product-objectives:end -->

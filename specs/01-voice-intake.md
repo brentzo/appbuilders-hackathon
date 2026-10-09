@@ -198,6 +198,7 @@ Work this needs:
 - Use synthetic speech in several voices and accents, including Filipino-accented English. Retrain with more accent variety if misses are high.
 - The full training notebook makes better models but takes hours and more ML setup. Skip it for the hackathon.
 - **False triggers:** play an hour of everyday Taglish talk, TV, and music, and count wake-ups.
+  Also play Yumi's own spoken copy through the Mac's speakers, since the wake word stays live while Yumi talks ([SPEC-06](06-user-control.md) requirement 14); it must never wake Yumi.
 - **Misses:** each teammate says "Hey Yumi" 20 times at different distances.
 - **Fallback:** push-to-talk works without the wake word. If the wake word is not reliable by demo day, demo with push-to-talk.
 
