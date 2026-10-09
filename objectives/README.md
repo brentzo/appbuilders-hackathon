@@ -116,7 +116,7 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-56](OBJ-56-unclassified-action-approval-contract.md) | Approval contract for unclassified risky actions | protocol | Jepoy | 07 | 01 | 36, 38, 40 | todo |
 | [OBJ-57](OBJ-57-route-classified-gui-deletes-through-strict-delete.md) | Route classified GUI delete asks through strict delete | harness | Brent | 07 | 37, 38 | 36, 40 | todo |
 | [OBJ-58](OBJ-58-mac-hey-yumi-recognizer.md) | "Hey Yumi" on the Mac with the on-device recognizer | mac | Brent | 01 | - | 16 | done |
-| [OBJ-59](OBJ-59-android-hey-yumi-vosk.md) | "Hey Yumi" on Android with Vosk | android | Brent | 01, 10 | - | 12, 24 | in-progress |
+| [OBJ-59](OBJ-59-android-hey-yumi-vosk.md) | "Hey Yumi" on Android with Vosk | android | Brent | 01, 10 | - | 12, 24 | done |
 | [OBJ-60](OBJ-60-goal-revision-contract.md) | Contract for changing the goal mid-task | protocol | Jepoy | 06, 02 | 01 | 61, 62 | in-progress |
 | [OBJ-61](OBJ-61-harness-goal-revision.md) | Harness turns an interruption into a revised goal | harness | Brent | 06, 02, 01 | - | 17, 38, 60, 62 | in-progress |
 | [OBJ-62](OBJ-62-mac-voice-interruption.md) | Mac listens for interruptions during a task | mac | Patrick | 06, 01 | 16, 35, 60 | 40, 61 | todo |

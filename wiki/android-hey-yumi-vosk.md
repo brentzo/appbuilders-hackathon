@@ -9,7 +9,7 @@ Specs: [SPEC-01](../specs/01-voice-intake.md) requirement 10 and its Decisions, 
 The phone now spots "Hey Yumi" with Vosk, an offline speech recognizer, limited by a grammar to "hey yumi" plus an unknown-word catch-all.
 It replaces the "Hey Jarvis" stand-in until Jepoy's trained openWakeWord model ([OBJ-12](../objectives/OBJ-12-hey-yumi-wake-word.md)) is ready.
 On the Mac, with synthesized voices, it heard "Hey Yumi" 12 times out of 12 and "Hey Jarvis" 0 times out of 6.
-On the demo phone, with Brent's voice at arm's length, it woke on "Hey Yumi" and the goal after it was captured each time, and Brent reported it worked normally.
+On the demo phone, with Brent's voice at arm's length, it woke on all 4 of his "Hey Yumi" tries, one with the phone locked, never on his "Hey Jarvis", and Brent reported it worked normally.
 Idle listening costs about 6% of one CPU core, less than the openWakeWord stand-in's 9%, and Yumi sent and received nothing.
 
 ## Library and model
@@ -52,7 +52,8 @@ Build: Yumi 0.1.0 debug from `main` at `5e403f3`, installed at 3:09 am.
 | Brent's "Hey Yumi" at arm's length, 3:11 am to 3:12 am | 3 wake-ups, each followed by the chime and a transcript handed to the goal (6, 6, and 12 words). Brent: "It worked just fine, and normally." |
 | Wake to the recognizer's microphone opening | About 0.8 seconds (the chime, then the recognizer starting), the same as the stand-in |
 | Normal talk, 3:12 am to 3:13 am | No wake-ups |
-| One more wake-up at 3:13:08 am, as the phone was locked | Then no goal was heard ("Didn't catch speech"). Not known whether it was Brent's locked-phone try or a false trigger |
+| Brent's "Hey Yumi" with the phone locked, 3:13:08 am | Woke. The recognizer then caught no goal that time ("Didn't catch speech"), which Brent said was as intended |
+| Brent's "Hey Jarvis" | No wake-up |
 | Idle CPU, screen off, 60 seconds | 3.4 s of process CPU time, about 6% of one core |
 | Memory | About 267 MB PSS for the whole app, with the model loaded |
 | Battery | 76% before and after, on USB, so no drain could be measured |
@@ -60,6 +61,5 @@ Build: Yumi 0.1.0 debug from `main` at `5e403f3`, installed at 3:09 am.
 
 ## Not verified
 
-- "Hey Jarvis" on the phone with a real voice: Brent's report does not say whether he tried it. It did not wake Vosk with synthesized voices on the Mac.
 - An hour-long idle run, and a battery drain measured off USB.
 - False triggers from real everyday Taglish, TV, and music.
