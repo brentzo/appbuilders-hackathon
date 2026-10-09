@@ -129,6 +129,10 @@ def android():
     return run("android build, tests, lint", [gradlew, "--no-daemon", "assembleDebug", "testDebugUnitTest", "lintDebug"], cwd, env), None
 
 
+def sweep():
+    return run("scenario sweep tests", [sys.executable, "-m", "unittest", "discover", "-s", "scripts/sweep", "-p", "test_*.py"]), None
+
+
 def whisper():
     return run("models/whisper tests", [sys.executable, "-m", "unittest", "discover", "-s", "models/whisper", "-p", "test_*.py"]), None
 
@@ -144,6 +148,8 @@ CHECKS = [
     ("mac", ("mac/", "protocol/", "specs/"), mac, False),
     ("android", ("android/", "specs/"), android, True),
     ("models/whisper", ("models/whisper/",), whisper, True),
+    # A test tool, not a product, but its runner must keep working for the next sweep.
+    ("scripts/sweep", ("scripts/sweep/",), sweep, True),
 ]
 
 

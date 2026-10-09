@@ -45,7 +45,7 @@ Use the skill that matches what you are doing:
 
 ## Rules
 
-- **Run `python3 scripts/verify.py` before every commit and again before every push.** It works out the checks from the files you changed: the docs check always, `npm run verify` for `protocol/`, `harness/`, and `bridge/` (a protocol change also runs the products that depend on it), the Xcode build and tests for `mac/` (on a Mac; elsewhere it says it could not run), the Gradle build, tests, and lint for `android/`, and the whisper tests for `models/whisper/`. A change to `specs/` also runs the protocol and Android tests, because they read SPEC-11. Never commit or push past a failure or a required check it could not run.
+- **Run `python3 scripts/verify.py` before every commit and again before every push.** It works out the checks from the files you changed: the docs check always, `npm run verify` for `protocol/`, `harness/`, and `bridge/` (a protocol change also runs the products that depend on it), the Xcode build and tests for `mac/` (on a Mac; elsewhere it says it could not run), the Gradle build, tests, and lint for `android/`, the whisper tests for `models/whisper/`, and the scenario sweep tests for `scripts/sweep/`. A change to `specs/` also runs the protocol and Android tests, because they read SPEC-11. Never commit or push past a failure or a required check it could not run.
 - **Push only your own work, after checks pass.** First run `git pull --rebase`, then `python3 scripts/verify.py` again on the rebased result, since someone else's push can break your change.
 - **Never force-push.** An agent pushes only when its person asks in that session.
 - **Never add `Co-Authored-By` or any agent attribution** to commits.
