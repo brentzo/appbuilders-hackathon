@@ -7,4 +7,5 @@ Specs still decide behavior: if a report shows a spec is wrong, raise it and cha
 | Report | What it covers |
 |---|---|
 | [Android background survival](android-background-survival.md) | Whether Yumi's foreground service stays alive with the app in the background, on the development phone |
+| [Demo readiness](demo-readiness.md) | What works end to end for the hackathon demo, what is missing, the risks, and the actions before demo day |
 | [Bridge deployment](bridge-deployment.md) | The relay on Brent's VPS: where it runs, the Snap Docker changes, and the live checks |
