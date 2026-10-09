@@ -879,6 +879,8 @@ export interface TaskDetail {
   task: Task;
   subtasks: Subtask[];
   steps: Step[];
+  /** The task's action log, oldest first (SPEC-02 'Finished tasks are kept'). Optional so older harnesses stay valid; the harness always sends it. */
+  actionLog?: ActionLogEntry[];
 }
 
 /** Newest first. */

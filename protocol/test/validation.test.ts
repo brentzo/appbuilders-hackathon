@@ -205,6 +205,44 @@ describe("Task", () => {
   });
 });
 
+describe("TaskDetail", () => {
+  const detail = {
+    task: {
+      id: "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+      originDeviceId: "mac-brent",
+      goal: "file the March invoices",
+      confirmedGoal: "file the March invoices",
+      status: "done",
+      plan: [],
+      createdAt: "2026-04-09T10:00:00+08:00",
+      updatedAt: "2026-04-09T10:05:00+08:00",
+    },
+    subtasks: [],
+    steps: [],
+  };
+  const line = {
+    time: "2026-04-09T10:02:00+08:00",
+    deviceId: "mac-brent",
+    taskId: "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+    lane: "main",
+    description: "Moved 4 invoices to Accounting",
+    outcome: "ok",
+  };
+
+  it("carries the task's action log (SPEC-02 'Finished tasks are kept')", () => {
+    expect(validate("TaskDetail", { ...detail, actionLog: [line] }).errors).toEqual([]);
+  });
+
+  it("still accepts a detail without the action log, so the change is not breaking", () => {
+    expect(validate("TaskDetail", detail).errors).toEqual([]);
+  });
+
+  it("rejects an action log line that breaks ActionLogEntry", () => {
+    const { description: _description, ...noDescription } = line;
+    expect(validate("TaskDetail", { ...detail, actionLog: [noDescription] }).valid).toBe(false);
+  });
+});
+
 describe("Approval", () => {
   const deleteApproval = (decision?: unknown) => ({
     id: "3f1c2a9e-8b7d-4c6e-9a1f-2d3e4f5a6b7c",

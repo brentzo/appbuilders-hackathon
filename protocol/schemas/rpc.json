@@ -172,7 +172,12 @@
       "properties": {
         "task": { "$ref": "task.json#/$defs/Task" },
         "subtasks": { "type": "array", "items": { "$ref": "task.json#/$defs/Subtask" } },
-        "steps": { "type": "array", "items": { "$ref": "task.json#/$defs/Step" } }
+        "steps": { "type": "array", "items": { "$ref": "task.json#/$defs/Step" } },
+        "actionLog": {
+          "description": "The task's action log, oldest first (SPEC-02 'Finished tasks are kept'). Optional so older harnesses stay valid; the harness always sends it.",
+          "type": "array",
+          "items": { "$ref": "action-log.json#/$defs/ActionLogEntry" }
+        }
       }
     },
     "StartPairingResult": {

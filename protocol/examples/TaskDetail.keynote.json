@@ -62,5 +62,15 @@
       "startedAt": "2026-10-09T15:41:02+08:00",
       "durationMs": 1830
     }
+  ],
+  "actionLog": [
+    {
+      "time": "2026-10-09T15:41:04+08:00",
+      "deviceId": "mac-brent",
+      "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+      "lane": "main",
+      "description": "Clicked Export To in Keynote",
+      "outcome": "ok"
+    }
   ]
 }

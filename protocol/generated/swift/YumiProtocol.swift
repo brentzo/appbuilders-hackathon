@@ -1706,11 +1706,14 @@ public struct TaskDetail: Codable, Equatable, Sendable {
     public var task: TaskRecord
     public var subtasks: [Subtask]
     public var steps: [Step]
+    /// The task's action log, oldest first (SPEC-02 'Finished tasks are kept'). Optional so older harnesses stay valid; the harness always sends it.
+    public var actionLog: [ActionLogEntry]?
 
-    public init(task: TaskRecord, subtasks: [Subtask], steps: [Step]) {
+    public init(task: TaskRecord, subtasks: [Subtask], steps: [Step], actionLog: [ActionLogEntry]? = nil) {
         self.task = task
         self.subtasks = subtasks
         self.steps = steps
+        self.actionLog = actionLog
     }
 }
 

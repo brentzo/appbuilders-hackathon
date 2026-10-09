@@ -1066,6 +1066,8 @@ data class TaskDetail(
     val task: Task,
     val subtasks: List<Subtask>,
     val steps: List<Step>,
+    /** The task's action log, oldest first (SPEC-02 'Finished tasks are kept'). Optional so older harnesses stay valid; the harness always sends it. */
+    val actionLog: List<ActionLogEntry>? = null,
 )
 
 /** Newest first. */
