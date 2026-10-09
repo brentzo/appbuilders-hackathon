@@ -1,20 +1,20 @@
 ---
 id: OBJ-10
-title: Yumi cat v0 in Rive
+title: Yumi cat v0 without Rive
 product: character
 assignee: Patrick
-touches: [mac, android]
+touches: [mac]
 specs: [SPEC-04]
-status: todo
+status: done
 priority: p0
 depends-on: []
 integrates-with: []
 tags: [objective, p0, character, ux]
 ---
 
-# OBJ-10 Yumi cat v0 in Rive
+# OBJ-10 Yumi cat v0 without Rive
 
-**Product:** [Yumi Character](../character/README.md) · **Also touches:** [mac](../mac/README.md), [android](../android/README.md) · **Specs:** [SPEC-04](../specs/04-cursor-presence.md) · **Assignee:** Patrick
+**Product:** [Yumi Character](../character/README.md) · **Also touches:** [mac](../mac/README.md) · **Specs:** [SPEC-04](../specs/04-cursor-presence.md) · **Assignee:** Patrick
 
 ## Project context
 
@@ -29,46 +29,52 @@ tags: [objective, p0, character, ux]
 ## Why this objective
 
 Yumi's personality is a playful cat, and the cat is how users understand what Yumi is doing.
-The apps need a working `.riv` file and a stable state machine contract early, even with rough art, so the Mac cursor and Android app can be built in parallel with the real design.
-The cat is a round ginger cat (SPEC-04 Decisions), and its layered master art is `character/art/yumi-cat.svg`; final timing comes later and must not change the contract.
+The apps needed a cat with a pose for every cursor state, a fixed click point, and ghost littermate colors, so the cursor could be built early.
+This was first planned as a Rive file; Rive is now out of scope, and the cat is drawn as vector poses rendered from the layered art (SPEC-04 Decisions, 2026-10-10).
 
 ## Read first
 
 - [SPEC-04](../specs/04-cursor-presence.md): requirements 10-18, "Cat behaviors", "Animation tools", and Decisions.
-- [character/README.md](../character/README.md): workflow with Rive's MCP server.
-- Rive's current docs for the MCP integration and for state machine inputs or data binding.
+- `mac/scripts/render-cursor-cat.py` and `mac/Yumi/Overlay/CursorLayer.swift`.
 
 ## Tasks
 
-- [ ] **OBJ-10.1** Set up the Rive desktop editor (Early Access) with MCP enabled, and connect Claude Code or Cursor following Rive's current docs. Note the working setup in `character/README.md`.
-- [ ] **OBJ-10.2** Create the `yumi-cat` artboard from the master art `character/art/yumi-cat.svg`, keeping its named parts (ears, tail, eyes, stripes, patch) as separate shapes so they can move.
-- [ ] **OBJ-10.3** Build one state machine with a state for each behavior in "Cat behaviors": idle, listening, thinking, moving, waiting, paused, done, stuck, plus a pounce for clicks.
-- [ ] **OBJ-10.4** Define the inputs: a number or enum input for the current state, a trigger for pounce, a color input for ghost littermates (data-bound color or a numeric hue, whichever both the Apple and Android Rive runtimes support). The color recolors the fur, markings, and lines (SPEC-04 Decisions), and a boolean `reduceMotion` that swaps leaps and pounces for simple glides.
-- [ ] **OBJ-10.5** Fix the click point: the paw tip's exact coordinate in the artboard, so the apps align it with the click.
-- [ ] **OBJ-10.6** Keep the pounce within about 300 ms so it never slows a task.
-- [ ] **OBJ-10.7** Export `character/yumi-cat.riv`.
-- [ ] **OBJ-10.8** Write the "State machine contract" section in `character/README.md`: state machine name, every input with type and allowed values, the click point, artboard size, and the rule that changing it is a breaking change.
-- [ ] **OBJ-10.9** Verify the file plays and responds to every input in Rive's own preview, and record a short screen capture of all states for reference.
+- [x] **OBJ-10.1** Render one pose per cursor state (idle, listening, thinking, moving, acting, waitingForUser, paused, done, stuck), plus ears back for pointer avoidance, from the layered cat art.
+- [x] **OBJ-10.2** Render each pose in every cat palette: ginger for the main cursor, and mint, sky, and slate for ghost littermates.
+- [x] **OBJ-10.3** Fix the click point where the paws land in the pose image, so a click lands on it.
+- [x] **OBJ-10.4** Record that Rive is out of scope in SPEC-04 Decisions.
 
 ## Expectations
 
-- [ ] Every state in "Cat behaviors" is reachable through the documented inputs.
-- [ ] Transitions between any two states blend without visual jumps.
-- [ ] The click point is documented and visibly matches the paw tip.
-- [ ] With `reduceMotion` on, no leap or pounce plays.
-- [ ] No state uses red or warning colors, including stuck.
+- [x] Every cursor state has its own pose.
+- [x] Ghost littermates are the same cat in their own color.
+- [x] The click point is defined in one place and used by the cursor.
 
 ## Expected outcomes
 
-- `character/yumi-cat.riv`.
-- The state machine contract in `character/README.md`.
-- A short reference capture of all states.
+- The cat poses for every state and palette, the render script, and the click point.
 
 ## Out of scope
 
-- Final art and animation timing: later design work, which keeps this contract.
-- Playing the cat in the apps: [OBJ-19](OBJ-19-rive-cat-cursor.md) (Mac), [OBJ-22](OBJ-22-android-app-shell.md) (Android).
+- Checking the cat cursor against every SPEC-04 "Cursor character" scenario on the Mac: [OBJ-19](OBJ-19-rive-cat-cursor.md).
+- The cat in the Android app: [OBJ-22](OBJ-22-android-app-shell.md) and later Android work.
 
 ## Outcome
 
-_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._
+- **Result:** Done without Rive. Rive is out of scope and will not be implemented (Patrick, 2026-10-10); the cat cursor already works with native vector poses.
+- **Delivered:**
+  - `mac/scripts/render-cursor-cat.py` (with `mac/scripts/cursor-cat-states.tsx` and `mac/scripts/render-ears-back-cat.py`): renders every state in every palette from the layered cat in `character/remotion/src/cat` and the palettes in `character/design/tokens.json`.
+  - `mac/Yumi/Overlay/CursorCat.xcassets`: 40 pose image sets, 10 poses (9 states plus ears back) in 4 coats (ginger, mint, sky, slate), at 1x and 2x.
+  - The click point in `CursorLayer.hotspot`: (229.6, 434.3) in the 512-unit pose image.
+  - The SPEC-04 decision dropping Rive, and requirement 16 reworded to "drawn from vector art".
+- **Commits:**
+  - `6ca8a07 feat(mac): render the cat cursor's poses for every state in its four coats`
+  - `5f7ff47 feat(mac): draw cursors as the Yumi cat and move them on a curved leap, with ghosts splitting out of the main cat`
+  - `docs(objectives): finish OBJ-10 without Rive` (this commit)
+- **Expectations:**
+  - Every cursor state has its own pose: the image sets in `CursorCat.xcassets` cover every `CursorState` in `protocol/schemas/rpc.json`.
+  - Ghost littermates: each pose exists in the mint, sky, and slate coats.
+  - Click point: `CursorLayer.hotspot`, where the layer's position is the click point.
+- **Not verified:** Nothing new here; the cursor's behavior on screen is checked in OBJ-19.
+- **Decisions and deviations:** The original tasks (Rive editor, `.riv` export, state machine contract) were dropped with Rive. The original pounce, `reduceMotion`, and blending expectations belong to the cursor's motion, now in OBJ-19 and the overlay.
+- **For the next objectives:** OBJ-19 no longer adds a Rive runtime; it checks the native cat against SPEC-04. Re-render the poses with `python3 mac/scripts/render-cursor-cat.py` after any art change.

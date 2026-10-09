@@ -66,5 +66,5 @@ To be defined in [OBJ-10](../objectives/OBJ-10-yumi-cat-v0.md).
 <!-- generated:product-objectives:start -->
 | ID | Objective | Assignee | Status |
 |---|---|---|---|
-| [OBJ-10](../objectives/OBJ-10-yumi-cat-v0.md) | Yumi cat v0 in Rive | Patrick | todo |
+| [OBJ-10](../objectives/OBJ-10-yumi-cat-v0.md) | Yumi cat v0 without Rive | Patrick | done |
 <!-- generated:product-objectives:end -->

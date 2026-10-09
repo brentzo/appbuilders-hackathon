@@ -32,7 +32,7 @@ All of it is drawn by the harness on a transparent overlay; the model only choos
 13. A click is a pounce. The paw tip is the click point, and it is always clear exactly where Yumi will click.
 14. Playfulness never slows a task. Leaps fit inside the normal movement time, and idle play happens only while Yumi is thinking.
 15. Ghost cursors are the same cat in their own color, like littermates.
-16. The cat is drawn with vector animation, so it stays sharp at every display scale.
+16. The cat is drawn from vector art and rendered for every display scale, so it stays sharp.
 17. If the user has "Reduce motion" turned on, leaps, pounces, and arcs become straight glides, including the way into and out of the island.
 18. The same cat appears in the Android app.
 19. Cursors spawn from the camera notch "island": a pill grows out of the notch, the cat drops out of it and leaps to its spot. When a task finishes, its ghosts leap back into the island within 1 second. A display without a notch uses a pill at the top center, just under the menu bar.
@@ -147,7 +147,8 @@ First draft, to be replaced by the real design.
 
 | Tool | Use | Notes |
 |---|---|---|
-| **Rive** (chosen) | Live cursor and phone app | Built-in state machine matches the cursor states, smooth blending between states, small files, native macOS and Android runtimes. Check current plans, since some export features may need a paid tier |
+| **Vector poses** (chosen) | Live cursor and phone app | One pose per cursor state, drawn from the layered cat art and rendered for each display scale, moved with the platform's own animation (Core Animation on the Mac, Compose on Android). No animation runtime to ship |
+| Rive (dropped) | Live cursor and phone app | Out of scope: see Decisions |
 | Lottie (alternative) | Live cursor and phone app | Designed in After Effects or LottieFiles, plays natively on macOS and Android. Plays clips, so our code switches clips and smooths transitions |
 | Remotion | Demo and pitch video only | Renders React to video. Not a live animation runtime, so not for the cursor |
 
@@ -170,6 +171,8 @@ First draft, to be replaced by the real design.
 - Cats avoid the user's pointer instead of covering content: idle, thinking, and paused cats scoot away, acting cats fade (requirement 21). Decided 2026-10-10 by Brent.
 - How the dodge feels (requirement 21, OBJ-54): the hop is a quick, startled hop of about 200 ms (design token `avoidHopMs`), while the drift back keeps the normal move curve and duration; listening, moving, waiting-for-the-user, done, and stuck cats fade in place like acting ones; and a cat reacts only when the pointer moves toward it, measured from the cat's body, not its center, at about 24 points (`avoidRadiusPt`). So a cat that appears next to a still pointer, as the main cat does near the pointer (requirement 1), stays put. Decided 2026-10-10 by Brent.
 - No cat hops out of the pointer's way any more: every cat, in every state and with or without Debug mode, fades in place when the user's pointer comes near and never moves away (requirement 21), replacing the earlier scoot and the startled hop above. A hopping cat took its bubble with it, so in Debug mode the user could not click it to see what the cat was thinking (SPEC-07 r23); fading keeps every bubble clickable and every click point still. The `avoidHopPt` and `avoidHopMs` design tokens are gone. Decided 2026-10-10 by Brent.
+
+- Rive is out of scope and will not be implemented, replacing the earlier Rive decision above. The cat is drawn as vector poses, one per cursor state, rendered from the layered cat art for each display scale (`mac/scripts/render-cursor-cat.py` on the Mac), and moved with the platform's own animation: Core Animation on the Mac, Compose on Android. The Mac cursor already works this way, so a Rive file, its runtimes, and its state machine contract would add work without changing what the user sees. Requirement 16 now says the cat is drawn from vector art rather than with vector animation. Decided 2026-10-10 by Patrick.
 
 ## Open questions
 

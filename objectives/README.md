@@ -67,7 +67,7 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-07](OBJ-07-lane-router-core.md) | Lane router core | harness | Brent | 03 | 01, 04 | 27 | done |
 | [OBJ-08](OBJ-08-locks-busy-windows-cap.md) | Window locks, busy windows, and cursor cap | harness | Brent | 03 | 07 | 27 | done |
 | [OBJ-09](OBJ-09-ghost-handoff.md) | Ghost handoff | harness | Brent | 03 | 06, 08 | - | todo |
-| [OBJ-10](OBJ-10-yumi-cat-v0.md) | Yumi cat v0 in Rive | character | Patrick | 04 | - | - | todo |
+| [OBJ-10](OBJ-10-yumi-cat-v0.md) | Yumi cat v0 without Rive | character | Patrick | 04 | - | - | done |
 | [OBJ-11](OBJ-11-whisper-bake-off.md) | Whisper bake-off | models | Jepoy | 01 | - | - | in-progress |
 | [OBJ-12](OBJ-12-hey-yumi-wake-word.md) | "Hey Yumi" wake word model | models | Jepoy | 01 | - | - | in-progress |
 | [OBJ-13](OBJ-13-bridge-relay-server.md) | Bridge relay server | bridge | Jepoy | 08 | 02 | 31, 33 | done |
@@ -179,7 +179,7 @@ Ranked by how many objectives each one holds up through hard dependencies:
 | 31 | OBJ-68 Harness runs goals sent from the phone | Brent | 2 | Jepoy |
 | 32 | OBJ-69 Phone shows a goal working on the Mac, with Stop | Brent | 2 | Jepoy |
 | 33 | OBJ-08 Window locks, busy windows, and cursor cap | Brent | 1 | No |
-| 34 | OBJ-10 Yumi cat v0 in Rive | Patrick | 1 | No |
+| 34 | OBJ-10 Yumi cat v0 without Rive | Patrick | 1 | No |
 | 35 | OBJ-16 Mac wake word | Patrick | 1 | No |
 | 36 | OBJ-30 Live cross-device bridge acceptance | Jepoy | 1 | No |
 | 37 | OBJ-35 Stop and take over on the Mac | Patrick | 1 | No |
