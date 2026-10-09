@@ -1,8 +1,18 @@
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { validate } from "@yumi/protocol";
-import type { CursorCommand, ModelAction, QuestionAsked, Subtask, Task, TaskStatusChanged } from "@yumi/protocol/types";
+import type {
+  CursorCommand,
+  ModelAction,
+  QuestionAsked,
+  Subtask,
+  Task,
+  TaskStatusChanged,
+  WorkerThought,
+} from "@yumi/protocol/types";
+import { DebugLog } from "../src/debug/debug-log.ts";
+import { PASSWORD_REMOVED } from "../src/debug/scrub.ts";
 import { GUI_TOOLS, guiAct, STEPS_PER_ATTEMPT, type GuiActDeps, type GuiActRun } from "../src/gui/gui-act.ts";
 import { PASSWORD_QUESTION } from "../src/gui/copy.ts";
 import { MacGuiFailure, macAppGui } from "../src/gui/mac.ts";
@@ -1048,5 +1058,153 @@ describe("gui_act in the scheduler", () => {
       result: { status: "done", files: ["~/Downloads/Q3 Report.pdf"] },
     });
     expect(keynote.exported).toHaveLength(1);
+  });
+});
+
+describe("gui_act in Debug mode (OBJ-52)", () => {
+  /** A debug log that is on, shared by the model client and gui_act, and the thoughts gui_act sends. */
+  function debugDeps(enabled = true) {
+    const dir_ = join(dir.path, "s", "Debug log");
+    const debug = new DebugLog({ dir: dir_, enabled, logger });
+    const thoughts: WorkerThought[] = [];
+    const overrides: Partial<GuiActDeps> = {
+      client: new ModelClient(modelConfig(model.baseUrl), logger, fetch, debug),
+      debug,
+      thoughts: (thought) => thoughts.push(thought),
+    };
+    const entries = () =>
+      existsSync(dir_)
+        ? readdirSync(dir_).flatMap((name) =>
+            readFileSync(join(dir_, name), "utf8")
+              .trim()
+              .split("\n")
+              .map((line) => JSON.parse(line) as Record<string, unknown>),
+          )
+        : [];
+    const text = () =>
+      existsSync(dir_)
+        ? readdirSync(dir_)
+            .map((name) => readFileSync(join(dir_, name), "utf8"))
+            .join("")
+        : "";
+    return { overrides, thoughts, entries, text };
+  }
+
+  /** The Keynote worker, giving a reason with each action, as the model does in Debug mode. */
+  const withReason = (decide: (text: string) => MockReply) => (text: string) => {
+    const answer = decide(text) as { kind: "content"; content: string };
+    const { action } = JSON.parse(answer.content) as { action: ModelAction };
+    return { kind: "content" as const, content: JSON.stringify({ reason: `Next: ${action.kind}.`, action }) };
+  };
+
+  it("writes each step and sends a ghost's thoughts under its own cursor id", async () => {
+    await connect(new FakeKeynote({ home }));
+    const calls = scriptModel(withReason(keynoteWorker()));
+    const { subtask } = guiSubtask();
+    const { overrides, thoughts, entries } = debugDeps();
+
+    const run = ended(await act(subtask, overrides));
+    expect(run.result.status).toBe("done");
+
+    // The model was asked for its reason first.
+    const schema = (
+      calls[0]!.body["response_format"] as { json_schema: { schema: { $defs: Record<string, { required: string[] }> } } }
+    ).json_schema.schema;
+    expect(schema.$defs["WorkerOutput"]!.required).toEqual(["reason", "action"]);
+
+    // Every thought fits the contract, and names the ghost's cursor, the one gui_act spawned and moved.
+    expect(thoughts.length).toBeGreaterThan(2);
+    for (const thought of thoughts) {
+      expect(validate("WorkerThought", thought).errors).toEqual([]);
+      expect(thought).toMatchObject({
+        subtaskId: subtask.id,
+        cursorId: "ghost-1",
+        lane: "ghost",
+        title: "Export the deck as a PDF",
+      });
+    }
+    expect(thoughts[0]).toMatchObject({
+      decision: expect.stringMatching(/^Click "File" \(element \d+\)$/),
+      reason: "Next: click.",
+    });
+    expect(thoughts[0]!.sees).toMatch(/^Keynote, /);
+    expect(thoughts[0]).not.toHaveProperty("lastAction");
+    expect(thoughts[1]).toMatchObject({ decision: thoughts[0]!.decision, lastAction: "Clicked File in Keynote" });
+    expect(thoughts.at(-1)).toMatchObject({ decision: "Finish as done: Exported the deck.", reason: "Next: finish." });
+
+    // The debug log has each decision with the full observation, each outcome, and how the attempt ended.
+    const log = entries();
+    const decided = log.filter((e) => e.event === "step.decided");
+    expect(decided).toHaveLength(calls.length);
+    expect(decided[0]).toMatchObject({ subtaskId: subtask.id, step: 1, lane: "ghost", observation: { app: "Keynote" } });
+    expect(log.filter((e) => e.event === "step.finished").length).toBe(calls.length - 1);
+    expect(log.find((e) => e.event === "subtask.started")).toMatchObject({ cursorId: "ghost-1", target: { bundleId: KEYNOTE } });
+    expect(log.find((e) => e.event === "subtask.ended")).toMatchObject({
+      outcome: "ended",
+      reason: "finished",
+      result: { status: "done" },
+    });
+    expect(log.filter((e) => e.event === "model.request" && e.purpose === "workerStep")).toHaveLength(calls.length);
+  });
+
+  it("keeps the password the model tried to fill out of the debug log, and names the main cursor", async () => {
+    let signedIn = false;
+    const pages: FakeAppModel = {
+      bundleId: "com.apple.Pages",
+      name: "Pages",
+      screen: () =>
+        signedIn
+          ? { app: "Pages", title: "Q3 Plan", elements: [{ role: "textArea", label: "Body", value: "Plan" }] }
+          : {
+              app: "Pages",
+              title: "Q3 Plan",
+              focused: "Password",
+              elements: [
+                { role: "secureTextField", label: "Password" },
+                { role: "button", label: "OK" },
+              ],
+            },
+      onElement: (action, element) => {
+        if (action.kind === "click" && element.label === "OK") signedIn = true;
+        return undefined;
+      },
+    };
+    const fake = await connect(pages);
+    scriptModel((text, call) => {
+      if (call === 1)
+        return reply({ kind: "setValue", element: numberOf(text, "secureTextField", "Password")!, text: "guess-Pa55word" });
+      if (text.includes('textArea "Body"')) return reply({ kind: "finish", status: "done", note: "Opened it." });
+      return reply({ kind: "click", element: numberOf(text, "button", "OK")! });
+    });
+    const { task, subtask } = guiSubtask({
+      bundleId: "com.apple.Pages",
+      instruction: "Open the Q3 Plan document.",
+      lane: "main",
+    });
+    const { overrides, thoughts, entries, text } = debugDeps();
+
+    const running = act(subtask, overrides);
+    await until(() => fake.events.some((e) => e.event === "questionAsked"));
+    await fake.peer.request("answerQuestion", { taskId: task.id, subtaskId: subtask.id, answer: "Done" });
+    expect(ended(await running).result.status).toBe("done");
+
+    expect(text()).not.toContain("guess-Pa55word");
+    const reply1 = entries().find((e) => e.event === "model.reply" && e.purpose === "workerStep")!;
+    expect(reply1.content).toContain(PASSWORD_REMOVED);
+    expect(thoughts[0]).toMatchObject({ cursorId: "main", lane: "main", decision: 'Set the text of "Password" (element 1)' });
+    for (const thought of thoughts) expect(JSON.stringify(thought)).not.toContain("guess-Pa55word");
+  });
+
+  it("writes nothing and sends no thoughts with Debug mode off", async () => {
+    await connect(new FakeKeynote({ home }));
+    const calls = scriptModel(keynoteWorker());
+    const { subtask } = guiSubtask();
+    const { overrides, thoughts, entries } = debugDeps(false);
+
+    expect(ended(await act(subtask, overrides)).result.status).toBe("done");
+    expect(thoughts).toEqual([]);
+    expect(entries()).toEqual([]);
+    expect(existsSync(join(dir.path, "s", "Debug log"))).toBe(false);
+    expect(JSON.stringify(calls[0]!.body["response_format"])).not.toContain('"reason"');
   });
 });

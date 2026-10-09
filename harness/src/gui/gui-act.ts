@@ -21,6 +21,9 @@ import type { ApprovalAnswer, ApprovalGate, SendFields } from "../approvals/appr
 import { findRecipientFields, sendApp } from "../approvals/recipients.ts";
 import { DEFAULT_LIMITS, type Limits } from "../config.ts";
 import type { RunControl } from "../control/run-control.ts";
+import type { DebugLog } from "../debug/debug-log.ts";
+import { describeSees } from "../debug/thoughts.ts";
+import { SubtaskTrail, type TrailDeps } from "../debug/trail.ts";
 import type { Logger } from "../log.ts";
 import type { ModelClient } from "../model/client.ts";
 import { checkAction } from "../safety/gate.ts";
@@ -120,6 +123,10 @@ export interface GuiActDeps extends GuiServices {
    * ends the attempt.
    */
   approvals?: ApprovalGate;
+  /** The detailed debug log (OBJ-52): each step's observation, decision, reason, and outcome, in Debug mode. */
+  debug?: DebugLog | undefined;
+  /** Sends each step's thoughts to the app for the thoughts panel; the harness sends them only in Debug mode. */
+  thoughts?: TrailDeps["thoughts"];
 }
 
 export interface GuiActOptions {
@@ -202,7 +209,14 @@ export async function guiAct(subtaskId: Uuid, deps: GuiActDeps, options: GuiActO
   try {
     const run = await attempt.run();
     // The files this attempt created or changed, as the file system reports them (SPEC-05 r4).
-    return { ...run, result: buildSubtaskResult(run.result.status, run.result.note, await attempt.files()) };
+    const ended = { ...run, result: buildSubtaskResult(run.result.status, run.result.note, await attempt.files()) };
+    attempt.trail.ended({
+      outcome: ended.outcome,
+      ...(ended.outcome === "ended" ? { reason: ended.reason, steps: ended.steps } : {}),
+      result: ended.result,
+      ...("userError" in ended && ended.userError ? { userError: ended.userError } : {}),
+    });
+    return ended;
   } finally {
     attempt.close();
   }
@@ -214,6 +228,8 @@ type ActResult = { next: Observation } | { end: GuiActRun };
 class Attempt {
   private readonly taskId: Uuid;
   private readonly cursorId: string;
+  /** This attempt's lines in the debug log and its thoughts for the thoughts panel (OBJ-52). */
+  readonly trail: SubtaskTrail;
   private readonly settle: SettleTiming;
   private readonly startedMs = Date.now();
   private steps = 0;
@@ -235,6 +251,7 @@ class Attempt {
     // The main cursor is the main lane; a ghost is its worker's own cursor (OBJ-39: the Mac app reads the lane from it).
     this.cursorId = lane === "main" ? "main" : (subtask.workerId ?? `ghost-${subtask.id.slice(0, 8)}`);
     this.settle = deps.settle ?? DEFAULT_SETTLE;
+    this.trail = new SubtaskTrail(deps, subtask, lane, this.cursorId);
   }
 
   close(): void {
@@ -249,6 +266,11 @@ class Attempt {
       lane: this.lane,
       attempt: store.getSubtask(this.subtask.id)?.attempts,
       continuing: this.options.continuing === true,
+    });
+    this.trail.started({
+      attempt: store.getSubtask(this.subtask.id)?.attempts,
+      continuing: this.options.continuing === true,
+      target: this.target,
     });
     this.deps.mac.cursor({
       command: "spawn",
@@ -287,13 +309,15 @@ class Attempt {
       const lastAction = store.listActionLog(this.taskId).at(-1)?.description;
       const step = await runWorkerStep(
         input,
-        { client: this.deps.client, logger },
+        { client: this.deps.client, logger, debug: this.deps.debug },
         {
           lane: this.lane,
           signal: this.options.signal,
           taskId: this.taskId,
+          subtaskId: this.subtask.id,
           ...(lastAction ? { lastAction } : {}),
           secureFields: "handOff",
+          scrubber: this.trail.scrubber,
         },
       );
       switch (step.outcome) {
@@ -311,6 +335,7 @@ class Attempt {
       }
 
       const action = step.output.action;
+      this.trail.decided(steps.length + 1, observation, step.output, step.attempts.length);
       if (action.kind === ACTION.finish) return this.finish(action.status);
       let outcome: ActResult;
       if (needsPassword(action, observation)) outcome = await this.ask(PASSWORD_QUESTION, observation);
@@ -639,11 +664,12 @@ class Attempt {
     observation: string,
     description: string,
   ) {
-    if (outcome === "invalidOutput") {
-      this.deps.store.finishStep(step.id, { outcome, observation });
-    } else {
-      this.deps.store.finishStep(step.id, { outcome, observation, log: { deviceId: this.deps.deviceId, description } });
-    }
+    const finished =
+      outcome === "invalidOutput"
+        ? this.deps.store.finishStep(step.id, { outcome, observation })
+        : this.deps.store.finishStep(step.id, { outcome, observation, log: { deviceId: this.deps.deviceId, description } });
+    // What the worker sees now: the window after the action when it was looked at, else the one it acted in.
+    this.trail.finished(finished, this.last ? describeSees(this.last) : "Opening the app");
   }
 
   private cursorState(state: CursorState): void {

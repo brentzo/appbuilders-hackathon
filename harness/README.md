@@ -73,7 +73,7 @@ Debug mode is built ([OBJ-52](../objectives/OBJ-52-harness-debug-logs.md)): the 
 | `src/confirm/` | The goal confirmation loop (`confirmation.ts`), the repeat-back prompt and checks (`restate.ts`), and reading the user's answer (`classify.ts`). A goal sent with `autoMode` skips the loop and starts in `planning` with the trimmed transcript as `confirmedGoal` (SPEC-01 r14). |
 | `src/errors.ts` | Maps failures to the protocol's `UserError` kinds. Never builds user-facing text. |
 | `src/log.ts` | The local log file. |
-| `src/debug/` | Debug mode (OBJ-52): the detailed debug log and its retention (`debug-log.ts`), keeping password text out of it (`scrub.ts`), and the words of each `workerThought` (`thoughts.ts`). |
+| `src/debug/` | Debug mode (OBJ-52): the detailed debug log and its retention (`debug-log.ts`), keeping password text out of it (`scrub.ts`), the words of each `workerThought` (`thoughts.ts`), and what each subtask's step loop writes and sends, shared by the helper runner and `gui_act` (`trail.ts`). |
 | `src/rpc/debug.ts` | The `setDebugMode` method. |
 | `scripts/model-check.ts` | Checks the harness against the real model server. |
 | `scripts/gui-run.ts` | Runs one `gui_act` subtask on the real Mac app and model, several times, and prints each run's steps and time. |
@@ -476,6 +476,7 @@ Debug mode ([SPEC-07](../specs/07-safety.md) r22 and r23) keeps what `harness.lo
 - **Passwords:** the Mac app never reads a secure field's value, and for each subtask the log learns the text of every `type` or `setValue` that could reach a password field and removes it from every line, as `[password field text removed]`.
   A reply that is not JSON while a password field is on screen is logged by length only (SPEC-07 r20).
 - **Thoughts:** each step sends a `workerThought` for the thoughts panel: the subtask title, lane, cursor, a short summary of what it sees, its last action, and the model's decision and reason.
+  `gui_act` steps carry the cursor they move: `main`, or the ghost's own id (its `workerId`, such as `ghost-2`), the same id as its `spawn`; a helper's carry none.
   In Debug mode the model writes a one-sentence `reason` before its action; the reason never changes what runs.
 
 ### Reading it
