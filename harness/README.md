@@ -224,6 +224,7 @@ A harness refuses a database written by a newer harness.
 ### History
 
 `listTasks` and `searchTasks` answer newest first, 50 tasks by default.
+Both leave out tasks the user cancelled before confirming them; their records are kept.
 Search matches tasks whose goal, confirmed goal, summary, or subtask titles contain every word of the query, ignoring case and accents.
 `getTask` returns the task with its subtasks, steps, and action log.
 

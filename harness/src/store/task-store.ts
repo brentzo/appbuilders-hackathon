@@ -57,6 +57,12 @@ export const SCREENSHOTS_DIR = "screenshots";
 
 const DEFAULT_PAGE_SIZE = 50;
 
+/**
+ * History leaves out tasks the user cancelled before confirming them (Brent's decision for SPEC-01 "User cancels
+ * before work starts", 2026-10-10): the record is kept, as every record is, but it was never work.
+ */
+const LISTED = "NOT (status = 'cancelled' AND confirmed_goal IS NULL)";
+
 export interface TaskStoreOptions {
   /** The folder for the database and the screenshots. Created if missing. */
   dir: string;
@@ -660,24 +666,24 @@ export class TaskStore {
 
   // History
 
-  /** Past tasks, newest first. `before` pages back: only tasks created before that time. */
+  /** Past tasks, newest first, without tasks cancelled before they were confirmed. `before` pages back: only tasks created before that time. */
   listTasks(options: { limit?: number; before?: string } = {}): Task[] {
     const before = options.before === undefined ? Number.MAX_SAFE_INTEGER : Date.parse(options.before);
-    const rows = this.stmt("SELECT * FROM tasks WHERE created_ms < ? ORDER BY created_ms DESC, rowid DESC LIMIT ?").all(
-      before,
-      options.limit ?? DEFAULT_PAGE_SIZE,
-    ) as unknown as TaskRow[];
+    const rows = this.stmt(
+      `SELECT * FROM tasks WHERE created_ms < ? AND ${LISTED} ORDER BY created_ms DESC, rowid DESC LIMIT ?`,
+    ).all(before, options.limit ?? DEFAULT_PAGE_SIZE) as unknown as TaskRow[];
     return rows.map(taskFromRow);
   }
 
   /**
-   * Past tasks whose goal, confirmed goal, summary, or subtask titles contain every word of the query, newest first.
+   * Past tasks whose goal, confirmed goal, summary, or subtask titles contain every word of the query, newest first,
+   * without tasks cancelled before they were confirmed.
    * Matching ignores case and accents.
    */
   searchTasks(options: { query: string; limit?: number }): Task[] {
     const rows = this.stmt(
       `SELECT * FROM tasks AS t
-       WHERE yumi_matches(
+       WHERE ${LISTED} AND yumi_matches(
          t.goal || char(10) || coalesce(t.confirmed_goal, '') || char(10) || coalesce(t.summary, '') || char(10) ||
            coalesce((SELECT group_concat(s.title, char(10)) FROM subtasks AS s WHERE s.task_id = t.id), ''),
          $query)

@@ -285,9 +285,11 @@ export class GoalConfirmation {
   private end(question: OpenQuestion, userError: UserError): void {
     this.open.delete(question.taskId);
     try {
+      // The error goes first, so the app knows this cancel came with one and says only the error copy, not
+      // "Okay, I won't do anything." (Brent's decision, 2026-10-10).
+      this.deps.voice.userError(question.originDeviceId, userError);
       const task = this.deps.store.getTask(question.taskId);
       if (task?.status === "awaitingConfirmation") this.deps.store.setTaskStatus(question.taskId, "cancelled");
-      this.deps.voice.userError(question.originDeviceId, userError);
     } catch (error) {
       this.deps.logger.error("confirm.endFailed", { taskId: question.taskId, ...describeError(error) });
     }

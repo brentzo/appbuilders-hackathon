@@ -261,6 +261,10 @@ describe("SPEC-01 Voice intake and confirmation", () => {
     expect(task.confirmedGoal).toBeUndefined();
     expect(task.plan).toEqual([]);
     expect(h.store.listActionLog(taskId)).toEqual([]);
+    // History leaves it out, though the record is kept.
+    expect((await client.call("listTasks", {})).result).toEqual({ tasks: [] });
+    expect((await client.call("searchTasks", { query: "invoices" })).result).toEqual({ tasks: [] });
+    expect((await client.call("getTask", { taskId })).result).toMatchObject({ task: { status: "cancelled" } });
     client.close();
   });
 
@@ -427,6 +431,11 @@ describe("OBJ-17 failures", () => {
     const taskId = (submitted.result as { taskId: string }).taskId;
     await until(() => client.named("userError").length === 1);
     expect(client.named("userError")).toEqual([{ kind: "modelFailedToLoad", taskId }]);
+    // The error comes before the cancelled status, so the app says only the error copy.
+    const order = client.events.map((e) =>
+      e.method === "taskStatusChanged" ? `status:${(e.params as { status: string }).status}` : e.method,
+    );
+    expect(order.indexOf("userError")).toBeLessThan(order.indexOf("status:cancelled"));
     expect(client.named("goalRestated")).toEqual([]);
     expect(h.store.getTask(taskId)!.status).toBe("cancelled");
     const shown = JSON.stringify(client.events);
