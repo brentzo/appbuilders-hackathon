@@ -150,6 +150,12 @@ The harness and the Mac app talk JSON-RPC 2.0 over a Unix socket, one JSON messa
   The message is for logs only and never reaches the user.
 - Unknown methods answer `-32601`, and params that break the contract answer `-32602`.
 
+Pausing, approvals, and blocked actions (SPEC-06, SPEC-07, [OBJ-38](../objectives/OBJ-38-approvals-pause-and-action-log.md)):
+
+- `pause` takes an optional `scope`: `everyLane` (the default) for the stop shortcut and the menu bar "Stop", or `uiLanes` when the user takes over the mouse or keyboard, so helpers keep running.
+- `showApprovalCard` resolves when the user answers, and the harness sends `approvalCancelled` when a pause or cancel drops the approval first; the app then closes the card and ignores a late tap.
+- A blocked action is a `userError` of kind `blockedAction`. The app shows "Keep going", which calls `resumeTask`, and "Stop", which calls `cancelTask` (gap G6, resolved in OBJ-45).
+
 `src/rpc.ts` implements this for TypeScript (`RpcPeer`) and validates every message in both directions.
 The Swift and Kotlin sides follow the same rules.
 
@@ -173,6 +179,8 @@ npm run mock:mac
 ```
 
 It connects to the harness, says `hello`, logs every event, and answers every method the harness can call.
+`moveToTrash` answers for the exact paths it was given and moves nothing.
+Tests can pass `answers` to `connectMockMacApp` to script a method, for example a "Don't delete" tap or To and Cc fields that change; scripted answers are still checked against the contract.
 
 Options for both:
 

@@ -8,6 +8,8 @@ import {
   type AppCapability,
   type AppVersionResult,
   type GetAppVersionParams,
+  type MoveToTrashParams,
+  type MoveToTrashResult,
   type ProbeAppCapabilityParams,
   type ResolveAppParams,
   type ResolveAppResult,
@@ -20,6 +22,11 @@ export interface MockMacAppOptions {
   socketPath?: string;
   /** Methods that fail with the given ErrorKind, to test error handling. */
   fail?: Record<string, string>;
+  /**
+   * Answers that replace the mock's own for some methods, for tests that script the user or the screen (for
+   * example a "Don't delete" tap, or To and Cc fields that change). They must return what the real Mac app would.
+   */
+  answers?: Record<string, Handler>;
   /** Called for every event the harness sends. */
   onEvent?: (event: string, payload: unknown) => void;
   quiet?: boolean;
@@ -64,6 +71,8 @@ const ANSWERS: Record<string, Handler> = {
     const app = INSTALLED_APPS.get((params as GetAppVersionParams).bundleId);
     return app ? { appVersion: app.appVersion } : {};
   },
+  // Answers for the paths it was asked about, as the real app does, but moves nothing: the mock never touches files.
+  moveToTrash: (params): MoveToTrashResult => ({ trashed: [...(params as MoveToTrashParams).paths] }),
 };
 
 export async function connectMockMacApp(options: MockMacAppOptions = {}): Promise<MockMacApp> {
@@ -78,7 +87,8 @@ export async function connectMockMacApp(options: MockMacAppOptions = {}): Promis
       log(`${name} ${JSON.stringify(params)}`);
       const failure = options.fail?.[name];
       if (failure) throw new RpcFailure({ kind: failure }, `Mock failure for ${name}`);
-      return ANSWERS[name] ? ANSWERS[name](params) : exampleOf(method.result);
+      const answer = options.answers?.[name] ?? ANSWERS[name];
+      return answer ? answer(params) : exampleOf(method.result);
     };
   }
 

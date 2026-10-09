@@ -7,7 +7,7 @@ import { PROTOCOL_VERSION } from "../generated/ts/index.ts";
 import { exampleOf, examplesOf } from "../mocks/examples.ts";
 import { connectMockMacApp } from "../mocks/mock-mac-app.ts";
 import { loadScript, SCRIPT_DIR, startMockHarness } from "../mocks/mock-harness.ts";
-import { loadRpcContract, RpcPeer, RpcRemoteError, validate } from "../src/index.ts";
+import { loadRpcContract, RpcPeer, RpcRemoteError, validate, type Handler } from "../src/index.ts";
 
 const contract = loadRpcContract();
 const methods = (direction: "appToHarness" | "harnessToApp") =>
@@ -120,23 +120,23 @@ describe("mock Mac app", () => {
   });
 });
 
-describe("mock Mac app capability answers", () => {
-  async function harnessWithMockMac(): Promise<RpcPeer> {
-    const path = socketPath();
-    const harnessSide = new Promise<RpcPeer>((resolve) => {
-      const server: Server = createServer((socket) => {
-        resolve(new RpcPeer({ role: "harness", socket, handlers: { hello: () => ({ protocolVersion: PROTOCOL_VERSION }) } }));
-      });
-      server.listen(path);
-      cleanups.push(() => new Promise<void>((r) => server.close(() => r())));
+async function harnessWithMockMacApp(answers?: Record<string, Handler>): Promise<RpcPeer> {
+  const path = socketPath();
+  const harnessSide = new Promise<RpcPeer>((resolve) => {
+    const server: Server = createServer((socket) => {
+      resolve(new RpcPeer({ role: "harness", socket, handlers: { hello: () => ({ protocolVersion: PROTOCOL_VERSION }) } }));
     });
-    const app = await connectMockMacApp({ socketPath: path, quiet: true });
-    cleanups.push(() => app.close());
-    return harnessSide;
-  }
+    server.listen(path);
+    cleanups.push(() => new Promise<void>((r) => server.close(() => r())));
+  });
+  const app = await connectMockMacApp({ socketPath: path, quiet: true, ...(answers ? { answers } : {}) });
+  cleanups.push(() => app.close());
+  return harnessSide;
+}
 
+describe("mock Mac app capability answers", () => {
   it("probes the app that was asked, for every AppCapability example", async () => {
-    const harness = await harnessWithMockMac();
+    const harness = await harnessWithMockMacApp();
     const apps = examplesOf("AppCapability") as { bundleId: string; appVersion: string }[];
     expect(apps.map((a) => a.bundleId)).toEqual(["com.google.Chrome", "com.apple.Keynote", "com.github.wez.wezterm"]);
     for (const app of apps) {
@@ -147,18 +147,35 @@ describe("mock Mac app capability answers", () => {
   });
 
   it("resolves an installed app's name to its bundle id, ignoring case, and finds nothing for another name", async () => {
-    const harness = await harnessWithMockMac();
+    const harness = await harnessWithMockMacApp();
     expect(await harness.request("resolveApp", { name: "Keynote" })).toEqual({ bundleId: "com.apple.Keynote" });
     expect(await harness.request("resolveApp", { name: "google chrome" })).toEqual({ bundleId: "com.google.Chrome" });
     expect(await harness.request("resolveApp", { name: "Final Cut Pro" })).toEqual({});
   });
 
   it("answers an app that is not installed like the real Mac app: unsupportedRequest to a probe, no version", async () => {
-    const harness = await harnessWithMockMac();
+    const harness = await harnessWithMockMacApp();
     const error = await harness.request("probeAppCapability", { bundleId: "com.example.NotInstalled" }).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(RpcRemoteError);
     expect((error as RpcRemoteError).error).toMatchObject({ code: -32000, data: { kind: "unsupportedRequest" } });
     expect(await harness.request("getAppVersion", { bundleId: "com.example.NotInstalled" })).toEqual({});
+  });
+});
+
+describe("mock Mac app approvals and the Trash", () => {
+  it("answers moveToTrash for the exact paths it was given, and moves nothing", async () => {
+    const harness = await harnessWithMockMacApp();
+    const paths = ["/Users/ana/Downloads/a.pdf", "/Users/ana/Downloads/b.pdf"];
+    expect(await harness.request("moveToTrash", { paths })).toEqual({ trashed: paths });
+  });
+
+  it("lets a test script an answer, which is still checked against the contract", async () => {
+    const declined = { approved: false, method: "tap", decidedAt: "2026-10-09T15:42:20+08:00" };
+    const harness = await harnessWithMockMacApp({ showApprovalCard: () => declined });
+    expect(await harness.request("showApprovalCard", exampleOf("ShowApprovalCardParams"))).toEqual(declined);
+    const broken = await harnessWithMockMacApp({ showApprovalCard: () => ({ approved: "yes" }) });
+    const error = await broken.request("showApprovalCard", exampleOf("ShowApprovalCardParams")).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(RpcRemoteError);
   });
 });
 
