@@ -41,18 +41,18 @@ Sound-alikes waking it are fine for the demo.
 
 ## Tasks
 
-- [ ] **OBJ-59.1** Check Vosk's licence, the small English model's size and licence, and that it runs offline on the demo phone; record them.
-- [ ] **OBJ-59.2** Add a Vosk spotter limited to "hey yumi" plus an unknown-word catch-all, running in the foreground service in place of the openWakeWord stand-in, and accept common sound-alikes.
-- [ ] **OBJ-59.3** Ship the model with the app or install it ahead of time, never downloaded at first run, and keep the app's no-internet promise.
-- [ ] **OBJ-59.4** Hand over to the existing goal capture after the phrase, as the stand-in did, and never keep or log what was heard before it.
-- [ ] **OBJ-59.5** Keep the openWakeWord path so OBJ-12's `hey_yumi.onnx` can replace Vosk with a small switch when it is ready.
-- [ ] **OBJ-59.6** Tests, then a live check on the demo phone: "Hey Yumi" at arm's length, a minute of normal talk, battery and CPU for a short run.
+- [x] **OBJ-59.1** Check Vosk's licence, the small English model's size and licence, and that it runs offline on the demo phone; record them.
+- [x] **OBJ-59.2** Add a Vosk spotter limited to "hey yumi" plus an unknown-word catch-all, running in the foreground service in place of the openWakeWord stand-in, and accept common sound-alikes.
+- [x] **OBJ-59.3** Ship the model with the app or install it ahead of time, never downloaded at first run, and keep the app's no-internet promise.
+- [x] **OBJ-59.4** Hand over to the existing goal capture after the phrase, as the stand-in did, and never keep or log what was heard before it.
+- [x] **OBJ-59.5** Keep the openWakeWord path so OBJ-12's `hey_yumi.onnx` can replace Vosk with a small switch when it is ready.
+- [x] **OBJ-59.6** Tests, then a live check on the demo phone: "Hey Yumi" at arm's length, a minute of normal talk, battery and CPU for a short run.
 
 ## Expectations
 
-- [ ] Saying "Hey Yumi" at arm's length wakes the demo phone and captures the goal said after it.
+- [x] Saying "Hey Yumi" at arm's length wakes the demo phone and captures the goal said after it.
 - [ ] "Hey Jarvis" no longer wakes the phone.
-- [ ] No network traffic from Yumi during spotting.
+- [x] No network traffic from Yumi during spotting.
 
 ## Expected outcomes
 
@@ -65,4 +65,13 @@ Sound-alikes waking it are fine for the demo.
 
 ## Outcome
 
-_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._
+- **Result:** Done except one check on the phone: whether "Hey Jarvis" still wakes it with a real voice. Left in progress until Brent confirms or accepts it as is.
+- **Delivered:** `android/app/src/main/java/ai/yumi/android/voice/wakeword/VoskSpotter.kt` (the grammar-limited spotter and the model unpacking), `WakeWordSpotter.kt` (the spotter interface and the `WakeWordChoice` switch), `MicrophoneWakeWordDetector.kt` (the microphone loop both spotters share, formerly `OpenWakeWordDetector`), `VoskSpotterTest`, the `fetchVoskModel` task in `android/app/build.gradle.kts`, the licences and decision in [android/README.md](../android/README.md), and the measurements in [wiki/android-hey-yumi-vosk.md](../wiki/android-hey-yumi-vosk.md). Also synced the Android design tokens from `character/design/generated/YumiTheme.kt`.
+- **Commits:** `e916dc6 docs(objectives): start OBJ-59`, `7a94ac6 feat(android): spot "Hey Yumi" with Vosk until OBJ-12's model is ready`, `f3ca922 chore(android): sync the design tokens from character/design`, and this one.
+- **Expectations:**
+  - "Hey Yumi" at arm's length: on the demo phone at 3:11 am, Brent's voice woke it 3 times and each goal was handed over (logcat `YumiWakeWord` and `YumiVoice`); Brent: "It worked just fine, and normally."
+  - "Hey Jarvis": 0 of 6 wake-ups with synthesized voices on the Mac, and only finished utterances count (`VoskSpotterTest`). Not confirmed on the phone, see below.
+  - No network traffic: the merged manifest and `dumpsys package` show no internet permission, and `dumpsys netstats detail` holds no traffic entries for Yumi's uid after the test.
+- **Not verified:** "Hey Jarvis" on the phone with a real voice. Brent: say "Hey Jarvis" 3 times at arm's length with Yumi open; nothing should happen. One wake-up at 3:13:08 am, as the phone was locked, was followed by no goal; it is not known whether it was Brent's locked-phone try or a false trigger. Also not measured: an hour-long idle run, battery drain off USB, and false triggers from everyday Taglish, TV, and music.
+- **Decisions and deviations:** the model is fetched at build time with a pinned SHA-256 into Gradle's cache, not committed, to keep 70 MB of binaries out of git; the first build on a machine needs internet, the app never does. Only finished Vosk utterances count, because its in-progress guesses read "hey yumi" for "Hey Jarvis" for a moment. The settings "stand-ins" copy now describes the simpler "Hey Yumi" listener instead of "Hey Jarvis".
+- **For the next objectives:** OBJ-12: put `hey_yumi.onnx` in `android/app/src/main/assets/wakeword/`, point `WakeWordConfig.Current` at it, and set `WakeWordChoice.Current` to `OpenWakeWord`; then the Vosk dependency, the `fetchVoskModel` task, and `VoskSpotter` can be removed. Installing over a build from another machine fails on the debug signature: uninstall first (the app keeps only its settings file). Idle listening is about 6% of one core and the app uses about 267 MB with the model loaded.
