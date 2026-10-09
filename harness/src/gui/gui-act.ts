@@ -210,6 +210,19 @@ export async function guiAct(subtaskId: Uuid, deps: GuiActDeps, options: GuiActO
     const run = await attempt.run();
     // The files this attempt created or changed, as the file system reports them (SPEC-05 r4).
     const ended = { ...run, result: buildSubtaskResult(run.result.status, run.result.note, await attempt.files()) };
+    if (ended.outcome === "ended") {
+      deps.logger.info("gui.attemptEnded", {
+        taskId: subtask.taskId,
+        subtaskId,
+        lane,
+        reason: ended.reason,
+        status: ended.result.status,
+        steps: ended.steps,
+        files: ended.result.files.length,
+        ms: attempt.elapsedMs(),
+        ...(ended.userError ? { kind: ended.userError.kind } : {}),
+      });
+    }
     attempt.trail.ended({
       outcome: ended.outcome,
       ...(ended.outcome === "ended" ? { reason: ended.reason, steps: ended.steps } : {}),
@@ -665,17 +678,7 @@ class Attempt {
     const result = this.result(status, noteFor(reason, status, this.steps, this.streaks, this.last, this.limits));
     this.cursorState(status === "done" ? "done" : "stuck");
     if (this.lane === "ghost") this.deps.mac.cursor({ command: "fade", cursorId: this.cursorId });
-    this.deps.logger.info("gui.attemptEnded", {
-      taskId: this.taskId,
-      subtaskId: this.subtask.id,
-      lane: this.lane,
-      reason,
-      status,
-      steps: this.steps,
-      files: result.files.length,
-      ms: Date.now() - this.startedMs,
-      ...(userError ? { kind: userError.kind } : {}),
-    });
+    // Logged by `guiAct` once the files the attempt made are known.
     return {
       outcome: "ended",
       reason,
@@ -694,6 +697,11 @@ class Attempt {
   /** Cancelled or paused: the attempt must not write or send anything more (SPEC-06 r4, r8). */
   private stopped(): GuiActRun | undefined {
     return this.options.signal.aborted || !this.options.control.mayAct(this.lane) ? this.aborted() : undefined;
+  }
+
+  /** How long the attempt has run. */
+  elapsedMs(): number {
+    return Date.now() - this.startedMs;
   }
 
   /** The files this attempt created or changed that still exist. */
@@ -822,7 +830,7 @@ function observationLine(
 ): string {
   const shown = files
     .slice(0, FILE_LINES)
-    .map((file) => `${file.created ? "New file" : "Changed file"}: ${file.path.split("/").at(-1)}.`);
+    .map((file) => `${file.created ? "New file" : "Changed file"}: ${fileAndFolder(file.path)}.`);
   const more = files.length - FILE_LINES;
   const fileLine = [...shown, ...(more > 0 ? [`And ${more} more ${more === 1 ? "file" : "files"}.`] : [])].join(" ");
   if (outcome === "noEffect") {
@@ -893,4 +901,15 @@ function fit(line: string): string {
 /** The Mac app could not find the target window or app: "Stuck on screen". */
 function isMissingWindow(error: unknown): boolean {
   return error instanceof MacGuiFailure && error.userError?.kind === "stuckOnScreen";
+}
+
+/**
+ * A file the step made, with the folder it is in, so the model knows where it went: "Q3 Report.pdf, in Documents".
+ * Without the folder, a model told to save next to the deck went looking for the file (live Keynote runs, 2026-10-10).
+ */
+function fileAndFolder(path: Path): string {
+  const parts = path.split("/");
+  const name = parts.at(-1)!;
+  const folder = parts.length > 2 ? parts.at(-2)! : "your home folder";
+  return `${name}, in ${folder}`;
 }

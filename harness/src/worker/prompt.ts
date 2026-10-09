@@ -51,7 +51,7 @@ const UI_RULES: readonly string[] = [
   "- When one of the available tools does the job, use it instead of clicking through the app.",
   "- Menus: click a menu bar item to open its menu, then click an item in it.",
   "- If your last action had no effect, try something different.",
-  '- When a step says "new file", that file was just saved. If saving it was the job, finish.',
+  '- When a step says "new file", that file was just saved, in the folder it names. If saving it was the job, finish now with status "done" and say in the note which folder it is in, even if it is not the folder you meant. Never go looking for it.',
 ];
 
 /**

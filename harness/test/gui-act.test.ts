@@ -904,19 +904,22 @@ describe("OBJ-26 round 3 lessons (OBJ-36.10)", () => {
     expect(calls.some((c) => c.text.includes("-> noEffect: Nothing happened: The button"))).toBe(true);
   });
 
-  it('tells the model when a file appears in the home folder ("New file: Q3 Report.pdf"), so it can finish', async () => {
+  it('tells the model when a file appears, and in which folder ("New file: Q3 Report.pdf, in Downloads"), so it can finish', async () => {
     await connect(new FakeKeynote({ home }));
     const calls = scriptModel(keynoteWorker());
     const { subtask } = guiSubtask();
     await act(subtask);
     const exportStep = harness.store.listSteps(subtask.id).at(-1)!;
     expect(exportStep.observation).toBe(
-      'Clicked the button "Export". Changes: the sheet closed; new: button "Play", button "Add Slide", checkbox "Include presenter notes"; 4 elements gone. New file: Q3 Report.pdf.',
+      'Clicked the button "Export". Changes: the sheet closed; new: button "Play", button "Add Slide", checkbox "Include presenter notes"; 4 elements gone. New file: Q3 Report.pdf, in Downloads.',
     );
-    expect(calls.at(-1)!.text).toContain("New file: Q3 Report.pdf.");
+    expect(calls.at(-1)!.text).toContain("New file: Q3 Report.pdf, in Downloads.");
+    // Live Keynote runs, 2026-10-10: told only the name, the model went looking for the file in other folders.
     expect(calls.at(-1)!.system).toContain(
-      'When a step says "new file", that file was just saved. If saving it was the job, finish.',
+      'When a step says "new file", that file was just saved, in the folder it names. If saving it was the job, finish now with status "done" and say in the note which folder it is in, even if it is not the folder you meant. Never go looking for it.',
     );
+    // The attempt's log line counts the files it found, which are only known once the attempt is over.
+    expect(logger.entries.find((e) => e.event === "gui.attemptEnded")).toMatchObject({ reason: "finished", files: 1 });
   });
 
   it("says to use setValue when a click on a text field changed nothing", async () => {
