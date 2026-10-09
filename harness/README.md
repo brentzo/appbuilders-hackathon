@@ -494,5 +494,5 @@ The app's own harness then exits because the socket is taken, and the app keeps 
 | [OBJ-43](../objectives/OBJ-43-mac-bridge-client-version-refusal.md) | Mac bridge client recovers from a version refusal | Brent | todo |
 | [OBJ-47](../objectives/OBJ-47-harness-model-readiness.md) | Harness reports whether the model is ready | Brent | todo |
 | [OBJ-49](../objectives/OBJ-49-mac-bridge-test-support.md) | Mac answers ping and has bridge test hooks | Brent | todo |
-| [OBJ-52](../objectives/OBJ-52-harness-debug-logs.md) | Debug mode keeps full local logs | Brent | todo |
+| [OBJ-52](../objectives/OBJ-52-harness-debug-logs.md) | Debug mode keeps full local logs | Brent | in-progress |
 <!-- generated:product-objectives:end -->
