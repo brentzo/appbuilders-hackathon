@@ -8,6 +8,7 @@ description: Yumi's git rules for every agent and person - branches, worktrees, 
 ## Who does what
 
 - **Each person pushes their own work to `origin/main`.** Before pushing, run `git pull --rebase`, then `python3 scripts/verify.py` again on the rebased result.
+- **A protocol version bump needs a relay redeploy.** The relay refuses every other version, so after pushing a change to `ProtocolVersion` in `protocol/schemas/common.json`, redeploy the bridge ("Deployment" in `bridge/README.md`) or tell Brent, who holds the VPS. Until then, every device on the new version is locked out of the bridge.
 - Nobody force-pushes or changes remotes.
 - An agent pushes only when its person asks in that session. Worker agents never push; their branch is merged first.
 - **The orchestrator** (the lead's main agent session) owns local `main`: it rebases finished branches onto it and resolves conflicts there.

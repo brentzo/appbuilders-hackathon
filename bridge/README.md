@@ -61,6 +61,7 @@ Status: relay implementation in progress (OBJ-13). Live VPS rollout is tracked b
 - **Check:** `docker compose -f bridge/docker-compose.yml ps` and `docker compose -f bridge/docker-compose.yml logs --tail=100 bridge` in that folder. The local health endpoint is `http://127.0.0.1:8787/health`; the public one is `https://yumibridge.studiokova.co/health`, and devices connect to `wss://yumibridge.studiokova.co`.
 - **Data and logs:** SQLite is in `/root/dev/brent/yumi-bridge/bridge/data/bridge.sqlite`; logs are structured JSON and contain routing identifiers, connection events, and error codes only. Never copy the database or logs into a ticket without checking for private metadata.
 - **Access:** Brent runs deployments unless he explicitly hands Jepoy VPS access.
+- **Protocol version bumps:** the relay accepts only its own protocol version, so redeploy it whenever `ProtocolVersion` changes. On 2026-10-09 the Mac was refused with `unsupportedVersion` for about 2 hours after the bump to version 4, until the relay was redeployed.
 - **Status:** deployed and verified on 2026-10-09; see [wiki/bridge-deployment.md](../wiki/bridge-deployment.md).
 
 ## Implementation
