@@ -92,6 +92,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// A Yumi that only hosts unit tests never quits on request: the test runner ends it itself.
+    /// The hosts share Yumi's bundle identifier, so quitting "Yumi" by bundle id, as a relaunch of
+    /// the live app does, also reached the test host and ended a verify run with "The test runner
+    /// exited with code 0 before finishing running tests" (2026-10-10, 6:33 am).
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        Self.terminateReply(isHostingTests: isHostingTests)
+    }
+
+    static func terminateReply(isHostingTests: Bool) -> NSApplication.TerminateReply {
+        guard isHostingTests else { return .terminateNow }
+        Logger(subsystem: "ph.appbuilders.yumi", category: "app").notice("Not quitting: this process hosts unit tests")
+        return .terminateCancel
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         guard started else { return }
         harness.stop()

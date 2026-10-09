@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Testing
 @testable import Yumi
@@ -25,6 +26,14 @@ struct TestHostIsolationTests {
         #expect(TestHost.isActive)
         #expect(TestHost.isActive(in: ["XCTestSessionIdentifier": "x"]))
         #expect(!TestHost.isActive(in: ["HOME": "/Users/someone"]))
+    }
+
+    /// A quit sent to Yumi by its bundle id, such as relaunching the live app, also reaches the test
+    /// host. It ended a verify run at 6:33 am on 2026-10-10 in the middle of
+    /// `PhraseSpotterTests.heyYumiThenAGoalReachesTheHarness`, so the test host refuses it.
+    @Test func theTestHostRefusesToQuitOnRequestAndTheAppDoesNot() {
+        #expect(AppDelegate.terminateReply(isHostingTests: true) == .terminateCancel)
+        #expect(AppDelegate.terminateReply(isHostingTests: false) == .terminateNow)
     }
 
     @Test func theHarnessFolderAndSocketAreTemporaryHere() {
