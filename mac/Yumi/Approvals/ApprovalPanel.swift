@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 import YumiProtocol
 
-/// The approval card (OBJ-40.1, 45.2): a floating panel at the top of the display with the user's
+/// The approval card (OBJ-40.1, 40.2): a floating panel at the top of the display with the user's
 /// pointer, which never activates Yumi. Everything it shows comes from the harness's `Approval`.
 @MainActor
 final class ApprovalPanel: ApprovalPresenting {

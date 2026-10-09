@@ -10,7 +10,7 @@ protocol ApprovalPresenting: AnyObject {
     func close(approvalId: String)
 }
 
-/// The send and delete cards (OBJ-40.1 to 45.4, 45.6): what the harness's `showApprovalCard`
+/// The send and delete cards (OBJ-40.1 to 40.4, 40.6): what the harness's `showApprovalCard`
 /// waits on. The card shows the harness's text as is, says its first sentence, and listens once.
 /// Only "send it" approves by voice, and only a send; a delete needs a tap (SPEC-07 r11, r15).
 @MainActor
