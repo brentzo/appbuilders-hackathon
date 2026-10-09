@@ -1,5 +1,5 @@
 ---
-id: OBJ-35
+id: OBJ-45
 title: Approval and blocked-action cards on the Mac
 product: mac
 assignee: Patrick
@@ -8,11 +8,11 @@ specs: [SPEC-07, SPEC-11]
 status: todo
 priority: p0
 depends-on: [OBJ-17]
-integrates-with: [OBJ-33]
+integrates-with: [OBJ-43]
 tags: [objective, p0, mac, safety, ux]
 ---
 
-# OBJ-35 Approval and blocked-action cards on the Mac
+# OBJ-45 Approval and blocked-action cards on the Mac
 
 **Product:** [Yumi for Mac](../mac/README.md) · **Specs:** [SPEC-07](../specs/07-safety.md), [SPEC-11](../specs/11-user-facing-errors.md) · **Assignee:** Patrick
 
@@ -29,10 +29,10 @@ tags: [objective, p0, mac, safety, ux]
 ## Why this objective
 
 Sending and deleting ask every time, and blocked actions never run.
-The harness decides which is which and builds the text ([OBJ-32](OBJ-32-permission-gate-and-file-tools.md), [OBJ-33](OBJ-33-approvals-pause-and-action-log.md)); this objective is what the user sees and taps: the send card, the delete card, and the card for a blocked action.
+The harness decides which is which and builds the text ([OBJ-42](OBJ-42-permission-gate-and-file-tools.md), [OBJ-43](OBJ-43-approvals-pause-and-action-log.md)); this objective is what the user sees and taps: the send card, the delete card, and the card for a blocked action.
 It also moves files to the Trash, the only way Yumi deletes anything.
 The Mail demo task stops at the send card, so it is on the demo path.
-Until OBJ-33 exists, drive the cards from the mock harness in [OBJ-01](OBJ-01-task-record-schemas.md).
+Until OBJ-43 exists, drive the cards from the mock harness in [OBJ-01](OBJ-01-task-record-schemas.md).
 
 ## Read first
 
@@ -42,18 +42,18 @@ Until OBJ-33 exists, drive the cards from the mock harness in [OBJ-01](OBJ-01-ta
 - [docs/task-record-schema.md](../docs/task-record-schema.md), "Approvals".
 - [OBJ-01](OBJ-01-task-record-schemas.md): `Approval`, `FileSummary`, `ApprovalDecision`, `ApprovalMethod`, `ErrorKind.blockedAction`, the RPC methods `showApprovalCard` and `moveToTrash`, and the `approvalCancelled` and `userError` events.
 - The Outcome of [OBJ-17](OBJ-17-goal-confirmation.md) (`speak` and listening for a reply) and [OBJ-18](OBJ-18-cursor-overlay-and-motion.md) (cursor states).
-- The open questions for OBJ-30 to OBJ-35 in the [objectives README](README.md).
+- The open questions for OBJ-40 to OBJ-45 in the [objectives README](README.md).
 
 ## Tasks
 
-- [ ] **OBJ-35.1** `showApprovalCard` for a send: show the `Approval` text built by the harness, for example "I'm about to send this email to Ana. Should I send it?", with "Send" and "Don't send" buttons. Never build or change the text on the Mac. Return an `ApprovalDecision` with `method: tap` for a button.
-- [ ] **OBJ-35.2** `showApprovalCard` for a delete: show the text, for example "I'm about to move 12 files from Downloads to the Trash, starting with old-invoice.pdf. Should I delete them?", the folder, the first 5 names from the `FileSummary`, "and 7 more" for the rest (N is the count minus 5), and "Delete" and "Don't delete" buttons.
-- [ ] **OBJ-35.3** Voice on the cards: speak the first sentence and show the full text (SPEC-11 r11), then listen for a reply. Saying "send it" approves a send with `method: voice`. A voice "yes" on a delete does nothing, and the card stays open until the user taps a button (SPEC-07 r11). SPEC-11 r9 says every button also works by voice, which clashes with this; follow SPEC-07 until the team settles it.
-- [ ] **OBJ-35.4** After "Don't delete", say "Okay, I left the files alone. Want me to do anything else with them?" Build the other cases from the SPEC-07 "Draft copy" table (one file, files in several folders, a declined send, Messages, several recipients, Cc), and keep all of this copy in the app's one copy file so the draft can change in one place.
-- [ ] **OBJ-35.5** Blocked-action card: on a `userError` with kind `blockedAction`, show "I can't do that. It's blocked to keep your Mac safe, so I skipped it. Want me to keep going with the rest?" with "Keep going" and "Stop" buttons, and send the choice back to the harness.
-- [ ] **OBJ-35.6** While a card is open, the cursor shows the "waiting for the user" state. On `approvalCancelled`, close the card at once and ignore any late tap.
-- [ ] **OBJ-35.7** `moveToTrash`: move each exact path with `FileManager.trashItem` and return a result per path. Refuse wildcard characters and relative paths as a second guard. Nothing is ever deleted permanently.
-- [ ] **OBJ-35.8** Check the cards in light and dark mode, on every display and scale, with long file names and long recipient lists. Test every card against the mock harness, then against the real harness when [OBJ-33](OBJ-33-approvals-pause-and-action-log.md) is done.
+- [ ] **OBJ-45.1** `showApprovalCard` for a send: show the `Approval` text built by the harness, for example "I'm about to send this email to Ana. Should I send it?", with "Send" and "Don't send" buttons. Never build or change the text on the Mac. Return an `ApprovalDecision` with `method: tap` for a button.
+- [ ] **OBJ-45.2** `showApprovalCard` for a delete: show the text, for example "I'm about to move 12 files from Downloads to the Trash, starting with old-invoice.pdf. Should I delete them?", the folder, the first 5 names from the `FileSummary`, "and 7 more" for the rest (N is the count minus 5), and "Delete" and "Don't delete" buttons.
+- [ ] **OBJ-45.3** Voice on the cards: speak the first sentence and show the full text (SPEC-11 r11), then listen for a reply. Saying "send it" approves a send with `method: voice`. A voice "yes" on a delete does nothing, and the card stays open until the user taps a button (SPEC-07 r11). SPEC-11 r9 says every button also works by voice, which clashes with this; follow SPEC-07 until the team settles it.
+- [ ] **OBJ-45.4** After "Don't delete", say "Okay, I left the files alone. Want me to do anything else with them?" Build the other cases from the SPEC-07 "Draft copy" table (one file, files in several folders, a declined send, Messages, several recipients, Cc), and keep all of this copy in the app's one copy file so the draft can change in one place.
+- [ ] **OBJ-45.5** Blocked-action card: on a `userError` with kind `blockedAction`, show "I can't do that. It's blocked to keep your Mac safe, so I skipped it. Want me to keep going with the rest?" with "Keep going" and "Stop" buttons, and send the choice back to the harness.
+- [ ] **OBJ-45.6** While a card is open, the cursor shows the "waiting for the user" state. On `approvalCancelled`, close the card at once and ignore any late tap.
+- [ ] **OBJ-45.7** `moveToTrash`: move each exact path with `FileManager.trashItem` and return a result per path. Refuse wildcard characters and relative paths as a second guard. Nothing is ever deleted permanently.
+- [ ] **OBJ-45.8** Check the cards in light and dark mode, on every display and scale, with long file names and long recipient lists. Test every card against the mock harness, then against the real harness when [OBJ-43](OBJ-43-approvals-pause-and-action-log.md) is done.
 
 ## Expectations
 
@@ -70,7 +70,7 @@ Until OBJ-33 exists, drive the cards from the mock harness in [OBJ-01](OBJ-01-ta
 
 ## Out of scope
 
-- Deciding the permission level and building the approval text: [OBJ-32](OBJ-32-permission-gate-and-file-tools.md) and [OBJ-33](OBJ-33-approvals-pause-and-action-log.md) (Brent).
+- Deciding the permission level and building the approval text: [OBJ-42](OBJ-42-permission-gate-and-file-tools.md) and [OBJ-43](OBJ-43-approvals-pause-and-action-log.md) (Brent).
 - Approvals asked on the phone and the "Waiting for your OK on your phone" banner: SPEC-09, not reviewed yet.
 - Opening the action log from the menu bar (SPEC-07 r19, p1).
 - The injection warning (SPEC-07 r17, p1).

@@ -194,10 +194,10 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 | [OBJ-19](../objectives/OBJ-19-rive-cat-cursor.md) | Rive cat cursor | Patrick | todo |
 | [OBJ-20](../objectives/OBJ-20-window-tiling.md) | Window tiling with consent | Patrick | todo |
 | [OBJ-27](../objectives/OBJ-27-mac-native-services.md) | Mac native services for the harness | Patrick | todo |
-| [OBJ-30](../objectives/OBJ-30-mac-stop-and-take-over.md) | Stop and take over on the Mac | Patrick | todo |
-| [OBJ-34](../objectives/OBJ-34-mac-gui-execution.md) | Mac GUI execution | Patrick | todo |
-| [OBJ-35](../objectives/OBJ-35-mac-approval-cards.md) | Approval and blocked-action cards on the Mac | Patrick | todo |
+| [OBJ-40](../objectives/OBJ-40-mac-stop-and-take-over.md) | Stop and take over on the Mac | Patrick | todo |
+| [OBJ-44](../objectives/OBJ-44-mac-gui-execution.md) | Mac GUI execution | Patrick | todo |
+| [OBJ-45](../objectives/OBJ-45-mac-approval-cards.md) | Approval and blocked-action cards on the Mac | Patrick | todo |
 <!-- generated:product-objectives:end -->
 
 Related: [OBJ-21](../objectives/OBJ-21-mac-bridge-client-and-pairing.md) (Jepoy's bridge client; its pairing screen and connection state are built here in OBJ-27).
-Related: the harness side of GUI control, pausing, and safety is Brent's [OBJ-31](../objectives/OBJ-31-gui-act-sub-agent.md), [OBJ-32](../objectives/OBJ-32-permission-gate-and-file-tools.md), and [OBJ-33](../objectives/OBJ-33-approvals-pause-and-action-log.md).
+Related: the harness side of GUI control, pausing, and safety is Brent's [OBJ-41](../objectives/OBJ-41-gui-act-sub-agent.md), [OBJ-42](../objectives/OBJ-42-permission-gate-and-file-tools.md), and [OBJ-43](../objectives/OBJ-43-approvals-pause-and-action-log.md).
