@@ -458,21 +458,21 @@ class Attempt {
   }
 
   /**
-   * A blocked action never runs (SPEC-07 r5). The step is already recorded as blocked; the user is told and chooses
-   * "Keep going", and the attempt goes on, or "Stop", and it ends. Without the approval flow it ends with
+   * A blocked action never runs (SPEC-07 r5). The step is already recorded as blocked; the user is told, and on
+   * "Keep going" (the app's `resumeTask`) the attempt goes on. "Stop" is the app's `cancelTask` (OBJ-45), which stops
+   * the run, so the attempt ends without sending anything more. Without the approval flow it ends with
    * `blockedAction`.
    */
   private async afterBlocked(step: Step, screen: Observation | undefined): Promise<ActResult> {
     const { approvals } = this.deps;
-    if (!approvals)
-      return { end: this.end("blocked", "blocked", { kind: "blockedAction", taskId: this.taskId, stepId: step.id }) };
+    if (!approvals) return { end: this.end("blocked", "blocked", { kind: "blockedAction", taskId: this.taskId }) };
     this.cursorState("waitingForUser");
     const choice = await approvals.blocked(
       { subtask: this.subtask, step, lane: this.lane, control: this.options.control },
       this.options.signal,
     );
     if (choice === "keepGoing" && !this.stopped()) return { next: screen ?? (await this.look()) };
-    // "Stop" pauses the task through the pause path (OBJ-38), so the scheduler sets the statuses.
+    // "Stop" cancelled the task, which sets the statuses; a pause or cancel that came first did too.
     return { end: this.stopped() ?? this.end("blocked", "blocked") };
   }
 

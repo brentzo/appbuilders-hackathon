@@ -186,7 +186,7 @@ function act(subtask: Subtask, overrides: Partial<GuiActDeps> = {}, control = ne
 }
 
 /** An approval flow that answers every request the same way, and records what it was asked. */
-function approvalsAnswering(answer: ApprovalAnswer, blocked: "keepGoing" | "stop" = "stop") {
+function approvalsAnswering(answer: ApprovalAnswer, blocked: "keepGoing" | "cancelled" = "cancelled") {
   const requests: Parameters<ApprovalGate["request"]>[] = [];
   const blockedCalls: Parameters<ApprovalGate["blocked"]>[] = [];
   const gate: ApprovalGate = {
@@ -547,11 +547,12 @@ describe("gui_act limits and endings (OBJ-36.5 to OBJ-36.8)", () => {
       ],
     });
 
-  it("never runs a blocked action, and stops when the user picks Stop on the blocked-action card (SPEC-07 r5)", async () => {
+  it("never runs a blocked action, and ends the attempt when the blocked-action card is not answered Keep going (SPEC-07 r5)", async () => {
     // Clicking "Quit Keynote" is blocked by the permission table.
     await connect(quitMenu());
     scriptModel(() => reply({ kind: "click", element: 2 }));
-    const { gate, blockedCalls } = approvalsAnswering({ outcome: "cancelled" }, "stop");
+    // "Stop" is the app's cancelTask (OBJ-45): the card answers "cancelled".
+    const { gate, blockedCalls } = approvalsAnswering({ outcome: "cancelled" }, "cancelled");
     const { subtask } = guiSubtask();
     const run = ended(await act(subtask, { approvals: gate }));
 
@@ -582,16 +583,13 @@ describe("gui_act limits and endings (OBJ-36.5 to OBJ-36.8)", () => {
     );
   });
 
-  it("ends with blockedAction, naming the step, when there is no approval flow", async () => {
+  it("ends with blockedAction when there is no approval flow", async () => {
     await connect(quitMenu());
     scriptModel(() => reply({ kind: "click", element: 2 }));
     const { subtask } = guiSubtask();
     const run = ended(await act(subtask));
-    const [step] = harness.store.listSteps(subtask.id);
-    expect(run).toMatchObject({
-      reason: "blocked",
-      userError: { kind: "blockedAction", taskId: subtask.taskId, stepId: step!.id },
-    });
+    expect(run).toMatchObject({ reason: "blocked", userError: { kind: "blockedAction", taskId: subtask.taskId } });
+    expect(harness.store.listSteps(subtask.id)[0]).toMatchObject({ outcome: "blocked" });
   });
 
   const mailDraft = () =>
