@@ -18,6 +18,15 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WINDOWS = os.name == "nt"
 
 
+def needs_install(cwd):
+    """True when node_modules is missing or older than package-lock.json, for example after a pull added a dependency."""
+    lock = os.path.join(cwd, "package-lock.json")
+    installed = os.path.join(cwd, "node_modules", ".package-lock.json")
+    if not os.path.exists(installed):
+        return True
+    return os.path.exists(lock) and os.path.getmtime(lock) > os.path.getmtime(installed)
+
+
 def changed_files():
     def lines(*args):
         out = subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True)
@@ -45,7 +54,7 @@ def protocol():
     cwd = os.path.join(ROOT, "protocol")
     if not shutil.which("npm"):
         return None, "npm is not installed"
-    if not os.path.isdir(os.path.join(cwd, "node_modules")) and not run("protocol install", ["npm", "ci"], cwd):
+    if needs_install(cwd) and not run("protocol install", ["npm", "ci"], cwd):
         return False, None
     ok = run("protocol generated types", ["npm", "run", "check:generated"], cwd)
     ok = run("protocol typecheck and tests", ["npm", "run", "verify"], cwd) and ok
@@ -58,7 +67,7 @@ def harness():
         return True, None  # nothing built yet, only the README
     if not shutil.which("npm"):
         return None, "npm is not installed"
-    if not os.path.isdir(os.path.join(cwd, "node_modules")) and not run("harness install", ["npm", "ci"], cwd):
+    if needs_install(cwd) and not run("harness install", ["npm", "ci"], cwd):
         return False, None
     return run("harness typecheck, lint, format, tests", ["npm", "run", "verify"], cwd), None
 
@@ -71,7 +80,7 @@ def node_product(folder):
             return True, None  # nothing built yet, only the README
         if not shutil.which("npm"):
             return None, "npm is not installed"
-        if not os.path.isdir(os.path.join(cwd, "node_modules")) and not run(f"{folder} install", ["npm", "ci"], cwd):
+        if needs_install(cwd) and not run(f"{folder} install", ["npm", "ci"], cwd):
             return False, None
         return run(f"{folder} checks", ["npm", "run", "verify"], cwd), None
     return check
@@ -82,7 +91,7 @@ def mac():
     if not shutil.which("xcodebuild"):
         return None, "needs a Mac with Xcode"
     cwd = os.path.join(ROOT, "mac")
-    if not os.path.isdir(os.path.join(ROOT, "protocol", "node_modules")) and not run("protocol install", ["npm", "ci"], os.path.join(ROOT, "protocol")):
+    if needs_install(os.path.join(ROOT, "protocol")) and not run("protocol install", ["npm", "ci"], os.path.join(ROOT, "protocol")):
         return False, None
     # Ad hoc signing (empty DEVELOPMENT_TEAM): the tests need no personal team, and it works for everyone.
     cmd = ["xcodebuild", "-project", "Yumi.xcodeproj", "-scheme", "Yumi", "-derivedDataPath", "build", "-quiet", "DEVELOPMENT_TEAM=", "test"]
