@@ -235,7 +235,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 ```
 
 - `-YumiAppearance light|dark` forces the app's appearance.
-- `-YumiOpen settings|onboarding|pairing|pairing-code|type-goal|menu|menu-busy|approval-send|approval-delete|paused|tiling|chips|error:<ErrorKind>` opens that window at launch (`pairing-code` shows a sample pairing code).
+- `-YumiOpen settings|onboarding|pairing|pairing-code|type-goal|menu|menu-busy|approval-send|approval-delete|paused|tiling|chips|panels|error:<ErrorKind>` opens that window at launch (`pairing-code` shows a sample pairing code).
 - `-YumiVoiceFile <path>` makes push-to-talk transcribe that recording instead of the microphone (Debug builds).
 - `-YumiReplyFile <path>` makes the spoken answer after a repeat-back, or the goal after the wake word, transcribe that recording (Debug builds).
 - `-YumiWakeWordFile <path>` feeds that recording to the wake word detector at real-time pace instead of the microphone, and `-YumiWakeWordLoop YES` repeats it (Debug builds).

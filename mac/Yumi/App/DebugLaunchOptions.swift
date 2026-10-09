@@ -11,7 +11,7 @@ import YumiProtocol
 /// - `-YumiStatus startingUp|ready|listening|working|paused` sets the menu's status line.
 /// - `-YumiVoiceFile <path>` makes push-to-talk transcribe that recording instead of the microphone.
 /// - `-YumiReplyFile <path>` makes the spoken answer after a repeat-back transcribe that recording.
-/// - `-YumiOpen settings|onboarding|pairing|pairing-code|type-goal|menu|menu-busy|approval-send|approval-delete|paused|tiling|chips|error:<ErrorKind>` opens a window at launch instead of the
+/// - `-YumiOpen settings|onboarding|pairing|pairing-code|type-goal|menu|menu-busy|approval-send|approval-delete|paused|tiling|chips|panels|error:<ErrorKind>` opens a window at launch instead of the
 ///   usual onboarding check. An error uses the sample last action "Clicked Export in Keynote".
 /// - `-YumiPermissions mixed|granted` pretends permissions are in that state, without asking macOS.
 ///   `mixed` has the microphone allowed and the other two missing.
@@ -47,6 +47,10 @@ enum DebugLaunchOptions {
 
         if let directory = LaunchArguments.string("YumiOverlayDemo") {
             runOverlayDemo(app.harness.overlay, writingTo: URL(fileURLWithPath: directory))
+            return true
+        }
+        if LaunchArguments.string("YumiOpen") == "panels" {
+            showLivePanels()
             return true
         }
         if LaunchArguments.string("YumiOpen") == "chips", let directory = LaunchArguments.string("YumiSnapshotDir") {
@@ -106,6 +110,21 @@ enum DebugLaunchOptions {
         }
         func request(_ permission: Permission) async {}
         func open(_ url: URL) { NSWorkspace.shared.open(url) }
+    }
+
+    private static var livePanels: [AnyObject] = []
+    private static let panelLog = Logger(subsystem: "ph.appbuilders.yumi", category: "debug-panels")
+
+    /// `-YumiOpen panels`: the real floating panels (approval, paused, tiling) at once, for checking
+    /// by hand that they drag and click without taking focus. Taps are only logged.
+    private static func showLivePanels() {
+        let approval = ApprovalPanel()
+        approval.show(sampleDelete) { approved in panelLog.notice("Debug panel tap: approval \(approved)") }
+        let paused = PausedPanel()
+        paused.show(text: PauseCopy.paused, resume: { panelLog.notice("Debug panel tap: resume") }, cancel: { panelLog.notice("Debug panel tap: cancel") })
+        let tiling = TilingPanel()
+        tiling.show(taskId: "debug", on: NSScreen.main) { arrange in panelLog.notice("Debug panel tap: tiling \(arrange)") }
+        livePanels = [approval, paused, tiling]
     }
 
     /// A snapshot window for a view that normally lives in a menu bar panel or a floating panel.
