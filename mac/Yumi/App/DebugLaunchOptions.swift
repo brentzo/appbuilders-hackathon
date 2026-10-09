@@ -19,7 +19,7 @@ import YumiProtocol
 enum DebugLaunchOptions {
     static func permissionCenter() -> PermissionCenter {
         #if DEBUG
-        if let fake = UserDefaults.standard.string(forKey: "YumiPermissions") {
+        if let fake = LaunchArguments.string("YumiPermissions") {
             return PermissionCenter(system: FakePermissionSystem(allGranted: fake == "granted"))
         }
         #endif
@@ -30,20 +30,19 @@ enum DebugLaunchOptions {
     @discardableResult
     static func apply(to app: AppDelegate) -> Bool {
         #if DEBUG
-        let arguments = UserDefaults.standard
-        let appearance = arguments.string(forKey: "YumiAppearance")
+        let appearance = LaunchArguments.string("YumiAppearance")
         switch appearance {
         case "light": NSApp.appearance = NSAppearance(named: .aqua)
         case "dark": NSApp.appearance = NSAppearance(named: .darkAqua)
         default: break
         }
 
-        if let status = arguments.string(forKey: "YumiStatus").flatMap(AppStatus.init(rawValue:)) {
+        if let status = LaunchArguments.string("YumiStatus").flatMap(AppStatus.init(rawValue:)) {
             app.model.statusOverride = status
         }
 
         let opened: (name: String, window: NSWindow)?
-        switch arguments.string(forKey: "YumiOpen") {
+        switch LaunchArguments.string("YumiOpen") {
         case "settings": opened = ("settings", app.windows.showSettings())
         case "onboarding": opened = ("onboarding", app.windows.showOnboarding())
         case let value? where value.hasPrefix("error:"):
@@ -54,7 +53,7 @@ enum DebugLaunchOptions {
         default: opened = nil
         }
 
-        if let directory = arguments.string(forKey: "YumiSnapshotDir"), let opened {
+        if let directory = LaunchArguments.string("YumiSnapshotDir"), let opened {
             let prefix = "\(opened.name)-\(appearance ?? "system")"
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                 snapshotWhenKey(opened.window, to: URL(fileURLWithPath: directory), prefix: prefix, attemptsLeft: 10)

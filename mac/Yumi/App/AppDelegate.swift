@@ -8,12 +8,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Until OBJ-14.8 the harness is always the mock. `-YumiMockScript <name>` picks its event
     /// script (default `keynote-export`), `-YumiMockFail method=kind,...` makes methods fail, and
     /// `-YumiSendSampleGoal YES` submits the sample goal once connected. All work in Release too,
-    /// which is what smoke tests run.
+    /// which is what smoke tests run. They are read from the launch arguments only, and only the
+    /// mock harness uses them.
     private(set) lazy var harness = HarnessLink(
         model: model,
         launcher: MockHarnessLauncher(
-            script: UserDefaults.standard.string(forKey: "YumiMockScript") ?? "keynote-export",
-            failures: UserDefaults.standard.string(forKey: "YumiMockFail"),
+            script: LaunchArguments.string("YumiMockScript") ?? "keynote-export",
+            failures: LaunchArguments.string("YumiMockFail"),
             socketPath: HarnessSocket.defaultPath
         ),
         socketPath: HarnessSocket.defaultPath
@@ -34,7 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         quitCleanlyOnSIGTERM()
         harness.onUserError = { [weak self] error in self?.showError(error) }
         harness.start()
-        if UserDefaults.standard.bool(forKey: "YumiSendSampleGoal") {
+        if LaunchArguments.bool("YumiSendSampleGoal") {
             harness.submitSampleGoalWhenConnected()
         }
         if DebugLaunchOptions.apply(to: self) { return }

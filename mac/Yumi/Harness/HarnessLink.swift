@@ -9,6 +9,8 @@ final class HarnessLink {
     private let model: AppModel
     private let supervisor: HarnessSupervisor
     let client: HarnessClient
+    /// True while the harness is the mock. Mock-only aids such as the sample goal check it.
+    let usesMock: Bool
     /// The last status the harness reported for each task.
     private var taskStatuses: [String: TaskStatus] = [:]
     private var eventsTask: Task<Void, Never>?
@@ -20,6 +22,7 @@ final class HarnessLink {
         self.model = model
         supervisor = HarnessSupervisor(launcher: launcher)
         client = HarnessClient(socketPath: socketPath)
+        usesMock = launcher.isMock
         model.mockHarnessName = launcher.isMock ? launcher.displayName : nil
     }
 
@@ -69,6 +72,10 @@ final class HarnessLink {
     /// Debug aid for the mock: submits a fixed goal so scripts that play on `submitGoal`
     /// (like keynote-export) run without voice intake (OBJ-15).
     func submitSampleGoal() {
+        guard usesMock else {
+            log.error("Ignored the sample goal: it is only for the mock harness")
+            return
+        }
         Task {
             do {
                 let result = try await client.submitGoal(
