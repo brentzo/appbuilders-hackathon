@@ -9,6 +9,7 @@ import YumiProtocol
 /// - `-YumiAppearance light|dark` forces the app's appearance without changing the system's.
 /// - `-YumiStatus startingUp|ready|listening|working|paused` sets the menu's status line.
 /// - `-YumiVoiceFile <path>` makes push-to-talk transcribe that recording instead of the microphone.
+/// - `-YumiReplyFile <path>` makes the spoken answer after a repeat-back transcribe that recording.
 /// - `-YumiOpen settings|onboarding|pairing|pairing-code|type-goal|error:<ErrorKind>` opens a window at launch instead of the
 ///   usual onboarding check. An error uses the sample last action "Clicked Export in Keynote".
 /// - `-YumiPermissions mixed|granted` pretends permissions are in that state, without asking macOS.

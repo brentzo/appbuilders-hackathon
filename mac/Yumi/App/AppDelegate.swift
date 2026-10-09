@@ -49,6 +49,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         harness.onUserError = { [weak self] error in self?.showError(error) }
         harness.start()
         voice.start()
+        harness.confirmation.listener = voice
         if LaunchArguments.bool("YumiSendSampleGoal") {
             harness.submitSampleGoalWhenConnected()
         }

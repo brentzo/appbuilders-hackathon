@@ -1,5 +1,24 @@
 @preconcurrency import AVFoundation
 
+/// A recording whose audio also goes to a `SpeechEndpoint`, so it knows when the user stopped.
+nonisolated final class EndpointedSession: RecognitionSession, @unchecked Sendable {
+    private let inner: RecognitionSession
+    private let endpoint: SpeechEndpoint
+
+    init(_ inner: RecognitionSession, endpoint: SpeechEndpoint) {
+        self.inner = inner
+        self.endpoint = endpoint
+    }
+
+    func append(_ buffer: AVAudioPCMBuffer) {
+        inner.append(buffer)
+        endpoint.append(buffer)
+    }
+
+    func finish() async throws -> String { try await inner.finish() }
+    func cancel() { inner.cancel() }
+}
+
 /// Finds where the user stopped talking, for hands-free replies (OBJ-17.5): there is no shortcut
 /// to release, so listening ends after a short silence that follows speech, or when nothing is
 /// said at all.

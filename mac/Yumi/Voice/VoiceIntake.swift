@@ -5,7 +5,7 @@ import YumiProtocol
 /// Push-to-talk from shortcut to goal (OBJ-15): hold the shortcut to record, release to stop, and
 /// the transcript goes to the harness as a new goal. Audio stays in memory on this Mac and is
 /// dropped once transcribed.
-final class VoiceIntake {
+final class VoiceIntake: ReplyListening {
     enum Phase: Equatable {
         case idle, listening, transcribing
     }
@@ -20,12 +20,18 @@ final class VoiceIntake {
     private let microphone = MicrophoneCapture()
     private var session: RecognitionSession?
     private var releasedAt: ContinuousClock.Instant?
+    /// Test aid: recordings played in place of the microphone for a goal and for a spoken answer.
+    /// Debug builds read them from `-YumiVoiceFile` and `-YumiReplyFile`.
+    var testRecordings: (goal: String?, reply: String?) = {
+        #if DEBUG
+        (LaunchArguments.string("YumiVoiceFile"), LaunchArguments.string("YumiReplyFile"))
+        #else
+        (nil, nil)
+        #endif
+    }()
     /// Whether the shortcut is down right now, so listening can start once a permission prompt is answered.
     private var isHeld = false
     private let log = Logger(subsystem: "ph.appbuilders.yumi", category: "voice")
-
-    /// The cursor that shows Yumi is listening (OBJ-15.2), next to the user's pointer.
-    static let cursorId = "voice"
 
     init(model: AppModel, overlay: CursorOverlay, submit: @escaping (String) -> Void, showError: @escaping (UserError) -> Void) {
         self.model = model
@@ -80,68 +86,17 @@ final class VoiceIntake {
 
     func startListening() {
         guard phase == .idle else { return }
-        switch model.permissions.check(.microphone) {
-        case .granted:
-            break
-        case .notAsked:
-            // macOS's own prompt, or an instant answer if macOS already knows. Listens if still held.
-            Task {
-                await model.permissions.openSettings(for: .microphone)
-                if isHeld, model.permissions.check(.microphone) == .granted { startListening() }
-            }
-            return
-        case .missing:
-            showError(UserError(kind: .microphonePermissionMissing))
-            return
-        }
-        switch NativeRecognizer.authorized {
-        case true?:
-            break
-        case nil:
-            Task { await NativeRecognitionSession.requestAuthorization() }
-            return
-        case false?:
-            log.error("Speech recognition is turned off for Yumi")
-            showError(UserError(kind: .didNotCatchSpeech))
-            return
-        }
-        do {
-            let session = try FallbackRecognitionSession(order: RecognizerRule.order(
-                speaksTaglish: model.settings.speaksTaglish,
-                whisperReady: whisperReady
-            ))
-            #if DEBUG
-            if let path = LaunchArguments.string("YumiVoiceFile") {
-                // Test aid: plays a recording into the recognizer in place of the microphone.
-                try MicrophoneCapture.feed(URL(fileURLWithPath: path), to: session)
-            } else {
-                try microphone.start(feeding: session)
-            }
-            #else
-            try microphone.start(feeding: session)
-            #endif
-            self.session = session
-        } catch {
-            log.error("Could not start listening: \(String(describing: error), privacy: .public)")
-            microphone.stop()
-            showError(UserError(kind: .didNotCatchSpeech))
-            return
-        }
+        guard let session = openMicrophone(promptIfNeeded: true, endpoint: nil) else { return }
+        self.session = session
         phase = .listening
-        model.isListening = true
-        overlay.spawn(id: Self.cursorId, kind: .main, label: nil, at: Self.nearPointer())
-        overlay.update(Self.cursorId) { $0.state = .listening }
         log.notice("Listening")
     }
 
     func stopListening() {
         guard phase == .listening, let session else { return }
-        microphone.stop()
+        closeMicrophone()
         releasedAt = .now
         phase = .transcribing
-        // The microphone is off now, so the indicator goes too (SPEC-01 requirement 8).
-        model.isListening = false
-        overlay.update(Self.cursorId) { $0.state = .thinking }
         Task { await finish(session) }
     }
 
@@ -149,13 +104,13 @@ final class VoiceIntake {
         defer {
             self.session = nil
             phase = .idle
-            overlay.fade(id: Self.cursorId)
         }
         let transcript: String
         do {
             transcript = try await session.finish().trimmingCharacters(in: .whitespacesAndNewlines)
         } catch {
             log.error("Transcription failed: \(String(describing: error), privacy: .public)")
+            dropCursor()
             showError(UserError(kind: .didNotCatchSpeech))
             return
         }
@@ -163,11 +118,128 @@ final class VoiceIntake {
             log.notice("Transcript ready \((ContinuousClock.now - releasedAt).formatted(.units(allowed: [.milliseconds])), privacy: .public) after release")
         }
         guard !transcript.isEmpty else {
+            dropCursor()
             showError(UserError(kind: .didNotCatchSpeech))
             return
         }
         log.notice("Heard a goal of \(transcript.count) characters")
+        // Goal confirmation takes the main cursor from here (OBJ-17).
+        spawnedCursor = false
         submit(transcript)
+    }
+
+    // MARK: Spoken answers
+
+    /// Hands-free answer right after Yumi asks something (OBJ-17.5): the same microphone,
+    /// recognizers, and indicator as push-to-talk, ended by a short silence instead of a key.
+    func listenForReply() async -> String? {
+        guard phase == .idle else { return nil }
+        let ended = Outcome<SpeechEndpoint.Outcome>()
+        let endpoint = SpeechEndpoint { ended.resolve(.success($0)) }
+        guard let session = openMicrophone(promptIfNeeded: false, endpoint: endpoint) else { return nil }
+        self.session = session
+        phase = .listening
+        defer {
+            self.session = nil
+            phase = .idle
+        }
+        // Wall-clock cap too, in case the microphone delivers nothing at all.
+        Task {
+            try? await Task.sleep(for: .seconds(SpeechEndpoint.Timing().longest + 1))
+            ended.resolve(.success(.tooLong))
+        }
+        let outcome = (try? await ended.value()) ?? .silent
+        closeMicrophone()
+        guard outcome != .silent else {
+            session.cancel()
+            log.notice("No spoken answer")
+            return nil
+        }
+        do {
+            let text = try await session.finish().trimmingCharacters(in: .whitespacesAndNewlines)
+            log.notice("Heard an answer of \(text.count) characters")
+            return text.isEmpty ? nil : text
+        } catch {
+            log.error("Answer not transcribed: \(String(describing: error), privacy: .public)")
+            return nil
+        }
+    }
+
+    // MARK: Microphone
+
+    /// Whether the main cursor was spawned for this recording, so a failed one can take it away.
+    private var spawnedCursor = false
+
+    /// Checks the permissions, starts the recognizers and the microphone, and shows the listening
+    /// indicator (SPEC-01 requirement 8). Nil when listening cannot start; the reason is shown or logged.
+    private func openMicrophone(promptIfNeeded: Bool, endpoint: SpeechEndpoint?) -> RecognitionSession? {
+        // Test aid: a recording played in place of the microphone, so no microphone permission.
+        let testRecording = endpoint == nil ? testRecordings.goal : testRecordings.reply
+        switch testRecording != nil ? .granted : model.permissions.check(.microphone) {
+        case .granted:
+            break
+        case .notAsked:
+            guard promptIfNeeded else { return nil }
+            // macOS's own prompt. Listens if the shortcut is still held once it is answered.
+            Task {
+                await model.permissions.openSettings(for: .microphone)
+                if isHeld, model.permissions.check(.microphone) == .granted { startListening() }
+            }
+            return nil
+        case .missing:
+            if promptIfNeeded { showError(UserError(kind: .microphonePermissionMissing)) }
+            return nil
+        }
+        switch NativeRecognizer.authorized {
+        case true?:
+            break
+        case nil:
+            if promptIfNeeded { Task { await NativeRecognitionSession.requestAuthorization() } }
+            return nil
+        case false?:
+            log.error("Speech recognition is turned off for Yumi")
+            if promptIfNeeded { showError(UserError(kind: .didNotCatchSpeech)) }
+            return nil
+        }
+        let session: RecognitionSession
+        do {
+            let recognizers = try FallbackRecognitionSession(order: RecognizerRule.order(
+                speaksTaglish: model.settings.speaksTaglish,
+                whisperReady: whisperReady
+            ))
+            session = endpoint.map { EndpointedSession(recognizers, endpoint: $0) } ?? recognizers
+            if let testRecording {
+                try MicrophoneCapture.feed(URL(fileURLWithPath: testRecording), to: session)
+            } else {
+                try microphone.start(feeding: session)
+            }
+        } catch {
+            log.error("Could not start listening: \(String(describing: error), privacy: .public)")
+            microphone.stop()
+            if promptIfNeeded { showError(UserError(kind: .didNotCatchSpeech)) }
+            return nil
+        }
+        model.isListening = true
+        let mainCursor = GoalConfirmation.mainCursorId
+        if overlay.clickPoint(of: mainCursor) == nil {
+            overlay.spawn(id: mainCursor, kind: .main, label: nil, at: Self.nearPointer())
+            spawnedCursor = true
+        }
+        overlay.update(mainCursor) { $0.state = .listening }
+        return session
+    }
+
+    /// The microphone is off, so the indicator goes too (SPEC-01 requirement 8).
+    private func closeMicrophone() {
+        microphone.stop()
+        model.isListening = false
+        overlay.update(GoalConfirmation.mainCursorId) { $0.state = .thinking }
+    }
+
+    /// Nothing usable was heard for a new goal: the cursor this recording brought goes away.
+    private func dropCursor() {
+        if spawnedCursor { overlay.fade(id: GoalConfirmation.mainCursorId) }
+        spawnedCursor = false
     }
 
     #if DEBUG

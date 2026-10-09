@@ -35,8 +35,8 @@ nonisolated final class MicrophoneCapture: @unchecked Sendable {
         self.engine = engine
     }
 
-    #if DEBUG
-    /// Test aid for `-YumiVoiceFile`: sends a whole recording, in microphone-sized buffers.
+    /// Test aid for `-YumiVoiceFile` and `-YumiReplyFile` (Debug builds): sends a whole recording,
+    /// in microphone-sized buffers.
     static func feed(_ url: URL, to session: RecognitionSession) throws {
         let file = try AVAudioFile(forReading: url)
         while file.framePosition < file.length {
@@ -44,8 +44,16 @@ nonisolated final class MicrophoneCapture: @unchecked Sendable {
             try file.read(into: buffer)
             session.append(buffer)
         }
+        // A second of silence after the words, as a microphone would hear before the user stops.
+        for _ in 0..<Int(file.processingFormat.sampleRate / 1024) {
+            guard let silence = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: 1024) else { return }
+            silence.frameLength = 1024
+            for channel in 0..<Int(silence.format.channelCount) {
+                silence.floatChannelData?[channel].update(repeating: 0, count: 1024)
+            }
+            session.append(silence)
+        }
     }
-    #endif
 
     func stop() {
         engine?.inputNode.removeTap(onBus: 0)
