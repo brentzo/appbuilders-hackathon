@@ -33,6 +33,7 @@ The Mac app shows "Yumi is getting ready" only until the harness answers `hello`
 
 ## Read first
 
+- The contract is ready on the branch `obj-45-model-readiness` (`feat(protocol): tell the Mac app whether the local model is loading, ready, or failed`); merge it into `main` together with the Mac's handling.
 - [OBJ-45](OBJ-45-pause-scope-and-model-readiness-contracts.md), and `ModelState` and `ModelStateChanged` in [protocol/schemas/rpc.json](../protocol/schemas/rpc.json) once OBJ-45.3 is written.
 - "The local model server" in [harness/README.md](../harness/README.md), including its `/health` endpoint.
 - `harness/src/model/client.ts` and how it maps an unreachable server to `modelFailedToLoad`.

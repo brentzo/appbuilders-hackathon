@@ -45,6 +45,7 @@ And the harness cannot tell the Mac app whether the local model is still loading
 - [x] **OBJ-45.2** Record the blocked-action card's reply in the contract docs: "Keep going" calls `resumeTask` and "Stop" calls `cancelTask`, as the Mac already does, so no new method is needed. Close gap G6.
 - [ ] **OBJ-45.3** Add `ModelState` (`loading`, `ready`, `failed`), a `modelStateChanged` event, and an optional `modelState` in `HelloResult`, so an app that connects late knows the state at once.
   The Mac's event decoder is exhaustive over `RpcEvent` on purpose, so this lands in one push with [OBJ-46](OBJ-46-mac-model-readiness.md).
+  Done on the branch `obj-45-model-readiness`, rebased onto `main` on 2026-10-10 and pushed for Patrick; not on `main` yet.
 - [ ] **OBJ-45.4** Teach the mock harness to report the model state, so the Mac can be built against it before [OBJ-47](OBJ-47-harness-model-readiness.md).
 
 ## Expectations
