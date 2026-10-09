@@ -8,7 +8,7 @@ struct YumiApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            MenuContent()
+            MenuContent(model: appDelegate.model, windows: appDelegate.windows)
         } label: {
             // Stand-in until the Rive cat from OBJ-10/OBJ-19 provides a menu bar icon.
             Image(systemName: "cat")
