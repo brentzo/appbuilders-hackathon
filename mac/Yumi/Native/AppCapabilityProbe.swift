@@ -40,6 +40,12 @@ enum AppCapabilityProbe {
         )
     }
 
+    /// `getAppVersion`: the installed version, read from the bundle without launching the app or
+    /// needing Accessibility. Nil when the app is not installed. The same string as the probe's.
+    static func installedVersion(bundleId: String) -> String? {
+        NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId).map(version(of:))
+    }
+
     /// The marketing version plus the build, so the harness re-probes after any update.
     static func version(of url: URL) -> String {
         let info = Bundle(url: url)?.infoDictionary ?? [:]

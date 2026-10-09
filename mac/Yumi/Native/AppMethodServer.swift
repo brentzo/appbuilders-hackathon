@@ -65,6 +65,9 @@ final class AppMethodServer {
             case .probeAppCapability:
                 let p = try decode(ProbeAppCapabilityParams.self, params)
                 return try encode(await AppCapabilityProbe.probe(bundleId: p.bundleId))
+            case .getAppVersion:
+                let p = try decode(GetAppVersionParams.self, params)
+                return try encode(AppVersionResult(appVersion: AppCapabilityProbe.installedVersion(bundleId: p.bundleId)))
             case .openNewWindow:
                 let p = try decode(OpenNewWindowParams.self, params)
                 return try encode(await NewWindowOpener.open(bundleId: p.bundleId))

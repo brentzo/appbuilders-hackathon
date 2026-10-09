@@ -1,3 +1,4 @@
+import AppKit
 import CoreImage
 import Foundation
 import Testing
@@ -64,6 +65,20 @@ struct AppMethodServerTests {
             Issue.record("openNewWindow failed"); return
         }
         #expect(try JSONDecoder().decode(OpenNewWindowResult.self, from: data) == OpenNewWindowResult(supported: false))
+    }
+
+    @Test func getAppVersionReadsTheBundleWithoutLaunching() async throws {
+        let server = AppMethodServer(secrets: secrets)
+        guard case .result(let data) = await server.serve("getAppVersion", params: json(["bundleId": "com.apple.finder"])) else {
+            Issue.record("getAppVersion failed"); return
+        }
+        let finder = try #require(NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.finder"))
+        #expect(try JSONDecoder().decode(AppVersionResult.self, from: data).appVersion == AppCapabilityProbe.version(of: finder))
+
+        guard case .result(let missing) = await server.serve("getAppVersion", params: json(["bundleId": "com.example.notinstalled"])) else {
+            Issue.record("getAppVersion failed for a missing app"); return
+        }
+        #expect(String(decoding: missing, as: UTF8.self) == "{}")
     }
 
     @Test func phoneStatusLine() {
