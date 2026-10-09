@@ -23,7 +23,7 @@ The sub-agent uses the cheapest way into the app first: a typed direct tool, the
    3. Vision (`p1`): screenshot, model picks coordinates, harness clicks.
 2. The model sees a trimmed accessibility tree, not the full tree:
    - visible elements only
-   - only actionable roles: button, menu item, text field, link, checkbox, pop-up button
+   - only actionable roles: button, menu item, menu bar item, text field, text area, link, checkbox, radio button, pop-up button
    - empty layout groups are skipped
    - each element gets a short number, and the model answers with that number
    - at most 200 elements per step
@@ -144,3 +144,4 @@ Feature: Vision fallback
 
 - Demo tasks: Keynote export to PDF, Mail the PDF to Ana, Notes summary.
 - Direct tools are typed tools only. No raw shell or AppleScript in `gui_act`.
+- The trimmed tree includes text areas, menu bar items, and radio buttons. The Mail and Notes demo tasks type into text areas (the message and note bodies), menus open from menu bar items, and dialogs use radio buttons. Found by the OBJ-26 smoke test. Decided 2026-10-09.

@@ -128,7 +128,7 @@ struct Observation: Codable {
 
 struct TreeElement: Codable {
     let n: Int                       // short number the model answers with
-    let role: AXRole                 // button, menuItem, textField, secureTextField, link, checkbox, popUpButton
+    let role: AXRole                 // button, menuItem, menuBarItem, textField, secureTextField, textArea, link, checkbox, radioButton, popUpButton
     let label: String
     var value: String?               // never set for secure text fields
     var enabled: Bool
