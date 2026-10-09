@@ -31,7 +31,7 @@ Download source and checksums are in [models/manifest.json](../manifest.json).
 - Even normalized WER does not say whether a mistake matters, so every error in the leading options was read by hand. See "What the errors mean".
 - Runtimes: whisper.cpp 1.9.5 from Homebrew (ggml 0.26.0, Metal) and WhisperKit's `argmax-cli serve` built from [argmax-oss-swift](https://github.com/argmaxinc/argmax-oss-swift) at `93a97e3` (v0.17.0 plus 37 commits), default compute units (CPU and Neural Engine).
 - Model files: whisper.cpp from [ggerganov/whisper.cpp](https://huggingface.co/ggerganov/whisper.cpp) at revision `5359861c`, WhisperKit from [argmaxinc/whisperkit-coreml](https://huggingface.co/argmaxinc/whisperkit-coreml) at revision `0f63a780`. Every file's SHA-256 was checked against Hugging Face.
-- Per-clip transcripts, latencies, and memory figures for every run are JSON reports in `models/whisper/results/`, which is git-ignored until consent to commit them is confirmed. A copy is in `~/Yumi recordings/whisper-results/` on Brent's Mac. The tables here are complete without them.
+- Per-clip transcripts, latencies, and memory figures for every run are JSON reports in [results/](results/), committed with Brent's consent on 2026-10-09.
 
 ## Results
 

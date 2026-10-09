@@ -1,0 +1,83 @@
+{
+  "measured": "2026-10-09 on a MacBook Air (Apple M5, 16 GB, macOS 26.6) that Brent was using at the same time",
+  "method": {
+    "server_footprint": "proc_pid_rusage v4 ri_phys_footprint of the server process, the same method as OBJ-26. Includes Metal buffers. Excludes Neural Engine memory.",
+    "wired_delta": "median 'Pages wired down' from vm_stat over 15 s with the server loaded and warm (3 requests), minus the mean of the 15 s medians before start and after stop. Neural Engine model memory shows up here.",
+    "used_delta": "the same for app + wired + compressed memory. Too noisy on a Mac in use to rely on: other apps were compressed and swapped while the server loaded."
+  },
+  "whisper_alone": {
+    "whisperkit-large-v3-v20240930_turbo_632MB": [
+      {
+        "wired_delta_mib": 668,
+        "used_delta_mib": 176,
+        "server_footprint_mib": 117,
+        "server_footprint_peak_mib": 154,
+        "system_used_before_mib": 14553
+      },
+      {
+        "wired_delta_mib": 680,
+        "used_delta_mib": 478,
+        "server_footprint_mib": 117,
+        "server_footprint_peak_mib": 139,
+        "system_used_before_mib": 13972
+      },
+      {
+        "wired_delta_mib": 627,
+        "used_delta_mib": 494,
+        "server_footprint_mib": 117,
+        "server_footprint_peak_mib": 147,
+        "system_used_before_mib": 13780
+      }
+    ],
+    "whisper.cpp-large-v3-turbo-q5_0": [
+      {
+        "wired_delta_mib": 850,
+        "used_delta_mib": 146,
+        "server_footprint_mib": 653,
+        "server_footprint_peak_mib": 755,
+        "system_used_before_mib": 13790
+      },
+      {
+        "wired_delta_mib": 1056,
+        "used_delta_mib": -305,
+        "server_footprint_mib": 724,
+        "server_footprint_peak_mib": 754,
+        "system_used_before_mib": 13840
+      },
+      {
+        "wired_delta_mib": 867,
+        "used_delta_mib": -138,
+        "server_footprint_mib": 667,
+        "server_footprint_peak_mib": 752,
+        "system_used_before_mib": 14121
+      }
+    ]
+  },
+  "with_qwen3.5-9b_loaded": {
+    "qwen_server_footprint_mib": {
+      "after_warm_up": 6187,
+      "peak": 6333,
+      "at_end": 5985
+    },
+    "qwen_model": "mlx-community/Qwen3.5-9B-4bit at 8b2b98c00a6b4d291155e4890773ca8f769aee53, mlx-vlm 0.7.6, short prompts",
+    "whisperkit-large-v3-v20240930_turbo_632MB": [
+      {
+        "wired_delta_mib": 710,
+        "used_delta_mib": 135,
+        "server_footprint_mib": 71,
+        "server_footprint_peak_mib": 139,
+        "system_used_before_mib": 14372
+      }
+    ],
+    "whisper.cpp-large-v3-turbo-q5_0": [
+      {
+        "wired_delta_mib": 832,
+        "used_delta_mib": -60,
+        "server_footprint_mib": 660,
+        "server_footprint_peak_mib": 733,
+        "system_used_before_mib": 14626
+      }
+    ]
+  },
+  "wake_word": "Not measured: the Hey Yumi model does not exist yet (OBJ-12)."
+}

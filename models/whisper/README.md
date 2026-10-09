@@ -56,7 +56,7 @@ It gives two WERs: raw, and normalized, which first rewrites written forms into 
 To score a saved report again after the scoring rules change, run `python3 models/whisper/benchmark.py --rescore <report.json> --output <report.json>`.
 An unused group appears with a sample count of zero and no WER or latency value.
 The report does not measure peak memory; record that separately while the Mac brain and wake-word model are loaded.
-Treat results as local until the transcripts are reviewed and consent to commit them is confirmed.
+Reports contain transcripts of the recorded speech, so commit them only with the speaker's consent. Brent consented for his corpus on 2026-10-09.
 
 Pass `--language tl` for Taglish.
 With auto-detect, small and medium translate Taglish into English instead of transcribing it, and whisper.cpp runs the encoder twice.
@@ -65,7 +65,7 @@ WhisperKit's server ignores the request's `language` unless the server itself is
 ## Results
 
 The Mac results, the recommended model, and how it was chosen are in [RESULTS.md](RESULTS.md).
-Each run's report and the memory measurements (`memory.json`) are in `results/`, which stays out of git; a copy is in `~/Yumi recordings/whisper-results/` on Brent's Mac.
+Each run's report and the memory measurements (`memory.json`) are committed in `results/`, with Brent's consent.
 
 ## Runtime references
 
