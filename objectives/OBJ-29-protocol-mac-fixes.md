@@ -5,7 +5,7 @@ product: protocol
 assignee: Brent
 touches: [models]
 specs: [SPEC-05, SPEC-07]
-status: todo
+status: in-progress
 priority: p0
 depends-on: [OBJ-01]
 integrates-with: [OBJ-03, OBJ-26]
