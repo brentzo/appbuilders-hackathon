@@ -57,4 +57,12 @@ describe("ErrorKind", () => {
     expect(validate("UserError", { kind: "stepFailed", step: "" }).valid).toBe(false);
     expect(validate("UserError", { kind: "stepFailed", step: "x".repeat(201) }).valid).toBe(false);
   });
+
+  it("names the skipped action of a blocked action, optionally (SPEC-07 r5)", () => {
+    expect(validate("UserError", { kind: "blockedAction", skippedAction: "click File in Keynote" }).valid).toBe(true);
+    // An older harness sends none, and the copy then says "I can't do that".
+    expect(validate("UserError", { kind: "blockedAction" }).valid).toBe(true);
+    expect(validate("UserError", { kind: "blockedAction", skippedAction: "" }).valid).toBe(false);
+    expect(validate("UserError", { kind: "blockedAction", skippedAction: "x".repeat(201) }).valid).toBe(false);
+  });
 });

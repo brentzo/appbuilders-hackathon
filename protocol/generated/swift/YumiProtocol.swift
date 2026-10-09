@@ -2522,8 +2522,10 @@ public struct UserError: Codable, Equatable, Sendable {
     public var step: String?
     /// For taskTookTooLong: what was finished.
     public var finishedSoFar: String?
+    /// Fills {action} in the blockedAction copy (SPEC-07 r5): the action that was blocked and skipped, in plain language as a verb phrase after I can't, for example click File in Keynote or press Command-Q in Keynote. Built from the action and the real element, never from model text, and never holding text Yumi would type. Absent when there is no plain name for it; the copy then says that.
+    public var skippedAction: String?
 
-    public init(kind: ErrorKind, taskId: String? = nil, device: String? = nil, lastAction: String? = nil, permission: String? = nil, step: String? = nil, finishedSoFar: String? = nil) {
+    public init(kind: ErrorKind, taskId: String? = nil, device: String? = nil, lastAction: String? = nil, permission: String? = nil, step: String? = nil, finishedSoFar: String? = nil, skippedAction: String? = nil) {
         self.kind = kind
         self.taskId = taskId
         self.device = device
@@ -2531,6 +2533,7 @@ public struct UserError: Codable, Equatable, Sendable {
         self.permission = permission
         self.step = step
         self.finishedSoFar = finishedSoFar
+        self.skippedAction = skippedAction
     }
 }
 

@@ -1282,6 +1282,8 @@ export interface UserError {
   step?: string;
   /** For taskTookTooLong: what was finished. */
   finishedSoFar?: string;
+  /** Fills {action} in the blockedAction copy (SPEC-07 r5): the action that was blocked and skipped, in plain language as a verb phrase after I can't, for example click File in Keynote or press Command-Q in Keynote. Built from the action and the real element, never from model text, and never holding text Yumi would type. Absent when there is no plain name for it; the copy then says that. */
+  skippedAction?: string;
 }
 
 /** A UUID in its canonical text form. */

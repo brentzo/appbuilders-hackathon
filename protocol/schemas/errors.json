@@ -81,7 +81,8 @@
         "lastAction": { "description": "Fills {last action} in the Unexpected copy, from the action log. Absent when nothing has run yet; the copy then drops that sentence and the Show what I did button.", "type": "string", "maxLength": 200 },
         "permission": { "description": "Fills {permission} in the Android permission copy with a plain name, for example location or camera.", "type": "string", "minLength": 1, "maxLength": 40 },
         "step": { "description": "Fills {step} in the stepFailed copy: the title of the subtask that could not finish, as the user would say it (SPEC-11 r14).", "type": "string", "minLength": 1, "maxLength": 200 },
-        "finishedSoFar": { "description": "For taskTookTooLong: what was finished.", "type": "string", "maxLength": 500 }
+        "finishedSoFar": { "description": "For taskTookTooLong: what was finished.", "type": "string", "maxLength": 500 },
+        "skippedAction": { "description": "Fills {action} in the blockedAction copy (SPEC-07 r5): the action that was blocked and skipped, in plain language as a verb phrase after I can't, for example click File in Keynote or press Command-Q in Keynote. Built from the action and the real element, never from model text, and never holding text Yumi would type. Absent when there is no plain name for it; the copy then says that.", "type": "string", "minLength": 1, "maxLength": 200 }
       }
     }
   }

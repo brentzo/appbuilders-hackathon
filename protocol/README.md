@@ -155,6 +155,7 @@ Pausing, approvals, and blocked actions (SPEC-06, SPEC-07, [OBJ-38](../objective
 - `pause` takes an optional `scope`: `everyLane` (the default) for the stop shortcut and the menu bar "Stop", or `uiLanes` when the user takes over the mouse or keyboard, so helpers keep running.
 - `showApprovalCard` resolves when the user answers, and the harness sends `approvalCancelled` when a pause or cancel drops the approval first; the app then closes the card and ignores a late tap.
 - A blocked action is a `userError` of kind `blockedAction`. The app shows "Keep going", which calls `resumeTask`, and "Stop", which calls `cancelTask` (gap G6, resolved in OBJ-45).
+  Its optional `skippedAction` names what was skipped in plain language ("click File in Keynote"), so the copy can say "I can't click File in Keynote."; without it the copy says "I can't do that." Added in version 4 without a version change, since older apps ignore it (SPEC-07 r5, decided 2026-10-10).
 
 Debug mode (SPEC-07 r22 and r23, [OBJ-52](../objectives/OBJ-52-harness-debug-logs.md)):
 

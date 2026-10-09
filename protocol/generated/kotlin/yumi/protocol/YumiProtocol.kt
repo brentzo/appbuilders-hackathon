@@ -1526,6 +1526,8 @@ data class UserError(
     val step: String? = null,
     /** For taskTookTooLong: what was finished. */
     val finishedSoFar: String? = null,
+    /** Fills {action} in the blockedAction copy (SPEC-07 r5): the action that was blocked and skipped, in plain language as a verb phrase after I can't, for example click File in Keynote or press Command-Q in Keynote. Built from the action and the real element, never from model text, and never holding text Yumi would type. Absent when there is no plain name for it; the copy then says that. */
+    val skippedAction: String? = null,
 )
 
 /** A subtask has waited 2 minutes for a busy window or for a free cursor (SPEC-03 r13). The spoken copy lives in the app. */
