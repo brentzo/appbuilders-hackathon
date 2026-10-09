@@ -62,7 +62,7 @@ After this objective, the phone and Mac can exchange messages in both directions
 
 ## Out of scope
 
-- Phone tools the Mac can call and phone-or-laptop routing: SPEC-09 and SPEC-10, not finalized.
+- Phone tools the Mac can call and phone-or-laptop routing: [SPEC-09](../specs/09-cross-device-routing.md) and [SPEC-10](../specs/10-android-companion.md), with the message kinds in [OBJ-25](OBJ-25-cross-device-messages.md).
 
 ## Outcome
 

@@ -41,12 +41,12 @@ It never sees plaintext, which keeps the "local AI" claim honest.
 ## Tasks
 
 - [ ] **OBJ-13.1** Set up `bridge/` as a TypeScript project on Node.js LTS, using the envelope types and reference crypto from `protocol/`.
-- [ ] **OBJ-13.2** Implement the device registry in SQLite: device id, public signing key, pair group, and revoked flag. Implement the pairing registration steps from `pairing.md`.
-- [ ] **OBJ-13.3** Accept WebSocket connections and authenticate each device with a signed challenge using its registered key. Reject unknown or revoked devices.
-- [ ] **OBJ-13.4** Route each envelope to its `to` device if online. Only allow routing between devices in the same pair group.
+- [ ] **OBJ-13.2** Implement the device registry in SQLite: device id, public signing key, and the pairings between two devices. Implement the pairing steps from `protocol/docs/pairing.md`: remember a `pairRequest` for 5 minutes, and record the pairing when the matching `pairAccept` passes through.
+- [ ] **OBJ-13.3** Accept WebSocket connections and authenticate each device with a signed challenge, as in `pairing.md` "Connecting". Register a new device id on first use when it is derived from its key, and refuse with the `RefusedReason` values otherwise.
+- [ ] **OBJ-13.4** Route each envelope to its `to` device if online. Only allow routing between paired devices, and answer anything else with `notPaired`.
 - [ ] **OBJ-13.5** Commands are never queued. If a command's target is offline, send the sender a `targetOffline` event at once. Hold results and events for a device that dropped off in SQLite until they expire, deliver them in order on reconnect, and delete each one after the receiver acknowledges it.
 - [ ] **OBJ-13.6** Expiry: never deliver an expired envelope. Send the sender an `expired` event for it (when the sender is online, or queued for it).
-- [ ] **OBJ-13.7** Revocation: on unpair, mark the device revoked, close its connection, and drop any results or events held for it.
+- [ ] **OBJ-13.7** Unpairing, as in `pairing.md` "Unpairing": remove the pairing at once, delete every message held between the two devices, and hold the signed `unpair` frame until the other device acks it.
 - [ ] **OBJ-13.8** Logging: routing fields, connection events, and errors only. Never log payloads.
 - [ ] **OBJ-13.9** Deploy on Brent's VPS at `wss://yumibridge.studiokova.co`, behind the VPS's existing nginx, which handles TLS, in a Docker container on a current Node.js LTS image (see "Deployment" in `bridge/README.md`). Commit a `Dockerfile` and `docker-compose.yml` in `bridge/` that publish only `127.0.0.1:8787`, persist SQLite in a mounted `data/` folder, and restart unless stopped. Document the deploy steps, config, and how to read logs in `bridge/README.md`.
 - [ ] **OBJ-13.10** Tests: auth success and failure, routing, cross-group routing refused, offline notice for commands, result held through a short reconnect, expiry with sender notice, revocation.

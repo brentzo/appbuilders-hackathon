@@ -63,6 +63,9 @@ This objective defines what goes inside it, so the harness, the Android app, and
 - [ ] **OBJ-25.6** Write example JSON for every kind, covering the three demo moments end to end: the alarm from the Mac, the Keynote export from the phone with progress and a finish, and Stop from the phone with the pause confirmed.
 - [ ] **OBJ-25.7** Tests: every example validates, a kind sent with the wrong envelope type is rejected, an approval request gets the 5-minute expiry and every other command gets 2 minutes, and a delete `approvalResponse` with `method: voice` is marked invalid by the helper the apps use.
 - [ ] **OBJ-25.8** Regenerate TypeScript, Swift, and Kotlin types, and update `protocol/README.md`.
+- [ ] **OBJ-25.9** A result that tells the sender a command expired before it ran, with `ErrorKind` `commandExpired`. The relay's `expired` frame only covers messages it never delivered; a command that reaches the receiver late needs this reply (SPEC-08 scenario "Expired command is not run", `protocol/docs/pairing.md`).
+- [ ] **OBJ-25.10** Give each kind its expiry from the constants in `protocol/schemas/bridge.json` (`COMMAND_EXPIRY_SECONDS`, `APPROVAL_REQUEST_EXPIRY_SECONDS`, `RESULT_EXPIRY_SECONDS`, `EVENT_EXPIRY_SECONDS`) instead of new ones, and a helper that checks an opened payload's expiry for its kind (`protocol/docs/crypto.md`, "Envelope").
+- [ ] **OBJ-25.11** A `ping` command and its result, for the connection tests in [OBJ-21](OBJ-21-mac-bridge-client-and-pairing.md) task 10 and [OBJ-23](OBJ-23-android-bridge-client.md) task 10.
 
 ## Expectations
 

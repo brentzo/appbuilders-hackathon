@@ -64,7 +64,7 @@ After this objective, the Mac can pair with a phone and exchange encrypted, sign
 
 ## Out of scope
 
-- Which commands the Mac sends to the phone and how goals are routed between devices: SPEC-09, not finalized.
+- Which commands the Mac sends to the phone and how goals are routed between devices: [SPEC-09](../specs/09-cross-device-routing.md), with the message kinds in [OBJ-25](OBJ-25-cross-device-messages.md).
 - The phone side: [OBJ-23](OBJ-23-android-bridge-client.md).
 
 ## Outcome
