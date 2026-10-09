@@ -30,22 +30,21 @@ tags: [objective, p0, mac, ux]
 
 Qwen3.5-9B takes a while to load, and until now nothing told the Mac app whether it was ready, so `ModelReadiness` is a placeholder that always says "unknown".
 [OBJ-45](OBJ-45-pause-scope-and-model-readiness-contracts.md) adds `ModelState`, the `modelStateChanged` event, and `HelloResult.modelState`.
-The Mac's event decoder is exhaustive over `RpcEvent`, so the new event fails the build until it is handled, and this objective lands in the same push as OBJ-45.3.
+The contract landed on `main` on 2026-10-10 with the decoder case in `HarnessEvent.swift`, so the Mac builds; `HarnessLink` logs the event as not handled yet, and this objective acts on it.
 
 ## Read first
 
-- The contract is ready on the branch `obj-45-model-readiness` (`feat(protocol): tell the Mac app whether the local model is loading, ready, or failed`); merge it into `main` together with the Mac's handling.
-- [OBJ-45](OBJ-45-pause-scope-and-model-readiness-contracts.md) and `ModelState`, `ModelStateChanged`, and `HelloResult` in [protocol/schemas/rpc.json](../protocol/schemas/rpc.json) once OBJ-45.3 is written.
+- [OBJ-45](OBJ-45-pause-scope-and-model-readiness-contracts.md) and `ModelState`, `ModelStateChanged`, and `HelloResult` in [protocol/schemas/rpc.json](../protocol/schemas/rpc.json).
 - [SPEC-11](../specs/11-user-facing-errors.md), the "Model failed to load" row.
 - `mac/Yumi/App/ModelReadiness.swift`, `mac/Yumi/Harness/HarnessEvent.swift`, and the status line in `AppModel`.
 
 ## Tasks
 
-- [ ] **OBJ-46.1** Decode `modelStateChanged` in `HarnessEvent` and read `HelloResult.modelState` after `hello`.
+- [ ] **OBJ-46.1** Handle `modelStateChanged` in `HarnessLink` (`HarnessEvent` already decodes it) and read `HelloResult.modelState` after `hello`.
 - [ ] **OBJ-46.2** Replace the `ModelReadiness` placeholder with `loading`, `ready`, and `failed`, and keep the status line on "Yumi is getting ready" while the model loads.
 - [ ] **OBJ-46.3** Decide, and record in the spec, what happens to a goal spoken while the model loads: hold it until the model is ready, or say so and drop it.
 - [ ] **OBJ-46.4** On `failed`, show the SPEC-11 "Model failed to load" copy, whose "Try again" restarts the harness.
-- [ ] **OBJ-46.5** Push together with OBJ-45.3, after the Mac tests pass against the mock harness's model states.
+- [ ] **OBJ-46.5** Test against the mock harness's model states: the `model-loading` and `model-failed` scripts.
 
 ## Expectations
 
