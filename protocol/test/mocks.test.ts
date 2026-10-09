@@ -73,6 +73,33 @@ describe("mock harness", () => {
     expect(await repeatBack).toMatchObject({ taskId: params.taskId });
   });
 
+  it("plays a goal from the phone reaching an approval: a banner on the Mac, closed once the phone answers", async () => {
+    const path = socketPath();
+    const harness = await startMockHarness({ socketPath: path, script: "delegated-approval", speed: 0, quiet: true });
+    cleanups.push(() => harness.close());
+    const received: { event: string; payload: unknown }[] = [];
+    const expected = loadScript("delegated-approval").events.length;
+    let hello: unknown;
+    await new Promise<void>((resolve) => {
+      void appClient(path, (event, payload) => {
+        received.push({ event, payload });
+        if (received.length === expected) resolve();
+      }).then(async (app) => (hello = await app.request("hello", { protocolVersion: PROTOCOL_VERSION })));
+    });
+    const events = received.map((r) => r.event);
+    // The app learns its own bridge device id from hello, and the bridge event names the same one.
+    const { deviceId } = hello as { deviceId: string };
+    expect(deviceId).toBeTruthy();
+    expect(received.find((r) => r.event === "bridgeStateChanged")?.payload).toMatchObject({ state: "connected", deviceId });
+    expect(events).not.toContain("goalRestated");
+    expect(events).not.toContain("speak");
+    const waiting = received.find((r) => r.event === "approvalWaitingElsewhere")?.payload as { approvalId: string };
+    const answered = received.find((r) => r.event === "approvalAnsweredElsewhere")?.payload;
+    expect(answered).toEqual({ approvalId: waiting.approvalId });
+    expect(events.indexOf("approvalWaitingElsewhere")).toBeLessThan(events.indexOf("approvalAnsweredElsewhere"));
+    expect(received.at(-1)).toMatchObject({ event: "taskStatusChanged", payload: { status: "done" } });
+  });
+
   it("returns a structured error for a method set to fail, the same shape the real harness returns", async () => {
     const path = socketPath();
     const harness = await startMockHarness({ socketPath: path, fail: { submitGoal: "bridgeDown" }, quiet: true });

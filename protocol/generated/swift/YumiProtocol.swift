@@ -112,6 +112,15 @@ public struct Approval: Codable, Equatable, Sendable {
     }
 }
 
+/// The other device's user answered the approval, either way. The app closes its banner; what happens next comes as usual events.
+public struct ApprovalAnsweredElsewhere: Codable, Equatable, Sendable {
+    public var approvalId: String
+
+    public init(approvalId: String) {
+        self.approvalId = approvalId
+    }
+}
+
 /// A pause cancelled a pending approval (SPEC-06 r5).
 public struct ApprovalCancelled: Codable, Equatable, Sendable {
     public var approvalId: String
@@ -187,6 +196,22 @@ public struct ApprovalResponsePayload: Codable, Equatable, Sendable {
     public init(approvalId: String, decision: ApprovalDecision) {
         self.approvalId = approvalId
         self.decision = decision
+    }
+}
+
+/// A task from another device reached an approval, and that device is asking the user (SPEC-09 r10). The app shows only a banner, for example "Waiting for your OK on your phone", with no buttons, until approvalAnsweredElsewhere or approvalCancelled names the same approval.
+public struct ApprovalWaitingElsewhere: Codable, Equatable, Sendable {
+    public var approvalId: String
+    public var taskId: String
+    /// The device asking the user: the task's origin device.
+    public var askingDeviceId: String
+    public var approvalKind: ApprovalKind
+
+    public init(approvalId: String, taskId: String, askingDeviceId: String, approvalKind: ApprovalKind) {
+        self.approvalId = approvalId
+        self.taskId = taskId
+        self.askingDeviceId = askingDeviceId
+        self.approvalKind = approvalKind
     }
 }
 
@@ -2843,6 +2868,8 @@ public enum RpcEvent: String, CaseIterable, Sendable {
     case questionAsked
     case cursorCommand
     case approvalCancelled
+    case approvalWaitingElsewhere
+    case approvalAnsweredElsewhere
     case interruptedTaskFound
     case userError
     case waitingForWindow

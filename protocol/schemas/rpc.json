@@ -26,7 +26,12 @@
       "executeAction": { "direction": "harnessToApp", "params": "ExecuteActionParams", "result": "ExecuteActionResult" },
       "observeWindow": { "direction": "harnessToApp", "params": "ObserveWindowParams", "result": "Observation" },
       "readFieldValues": { "direction": "harnessToApp", "params": "ReadFieldValuesParams", "result": "ReadFieldValuesResult" },
-      "showApprovalCard": { "direction": "harnessToApp", "params": "ShowApprovalCardParams", "result": "ApprovalDecision" },
+      "showApprovalCard": {
+        "direction": "harnessToApp",
+        "params": "ShowApprovalCardParams",
+        "result": "ApprovalDecision",
+        "description": "Only for a task whose originDeviceId is this Mac. The harness never calls it for a task from another device: that device asks, and this Mac gets approvalWaitingElsewhere and approvalAnsweredElsewhere instead (SPEC-09 r10)."
+      },
       "probeAppCapability": { "direction": "harnessToApp", "params": "ProbeAppCapabilityParams", "result": "AppCapability" },
       "getAppVersion": { "direction": "harnessToApp", "params": "GetAppVersionParams", "result": "AppVersionResult" },
       "resolveApp": { "direction": "harnessToApp", "params": "ResolveAppParams", "result": "ResolveAppResult" },
@@ -44,6 +49,8 @@
       "questionAsked": "QuestionAsked",
       "cursorCommand": "CursorCommand",
       "approvalCancelled": "ApprovalCancelled",
+      "approvalWaitingElsewhere": "ApprovalWaitingElsewhere",
+      "approvalAnsweredElsewhere": "ApprovalAnsweredElsewhere",
       "interruptedTaskFound": "TaskRef",
       "userError": "UserError",
       "waitingForWindow": "WaitingForWindow",
@@ -514,6 +521,25 @@
     },
     "ApprovalCancelled": {
       "description": "A pause cancelled a pending approval (SPEC-06 r5).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["approvalId"],
+      "properties": { "approvalId": { "$ref": "common.json#/$defs/Uuid" } }
+    },
+    "ApprovalWaitingElsewhere": {
+      "description": "A task from another device reached an approval, and that device is asking the user (SPEC-09 r10). The app shows only a banner, for example \"Waiting for your OK on your phone\", with no buttons, until approvalAnsweredElsewhere or approvalCancelled names the same approval.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["approvalId", "taskId", "askingDeviceId", "approvalKind"],
+      "properties": {
+        "approvalId": { "$ref": "common.json#/$defs/Uuid" },
+        "taskId": { "$ref": "common.json#/$defs/Uuid" },
+        "askingDeviceId": { "description": "The device asking the user: the task's origin device.", "$ref": "common.json#/$defs/DeviceId" },
+        "approvalKind": { "$ref": "approval.json#/$defs/ApprovalKind" }
+      }
+    },
+    "ApprovalAnsweredElsewhere": {
+      "description": "The other device's user answered the approval, either way. The app closes its banner; what happens next comes as usual events.",
       "type": "object",
       "additionalProperties": false,
       "required": ["approvalId"],

@@ -8,6 +8,8 @@ enum HarnessEvent: Sendable {
     case questionAsked(QuestionAsked)
     case cursorCommand(CursorCommand)
     case approvalCancelled(ApprovalCancelled)
+    case approvalWaitingElsewhere(ApprovalWaitingElsewhere)
+    case approvalAnsweredElsewhere(ApprovalAnsweredElsewhere)
     case interruptedTaskFound(TaskRef)
     case userError(UserError)
     case waitingForWindow(WaitingForWindow)
@@ -33,6 +35,8 @@ enum HarnessEvent: Sendable {
         case .questionAsked: return .questionAsked(try decoder.decode(QuestionAsked.self, from: payload))
         case .cursorCommand: return .cursorCommand(try decoder.decode(CursorCommand.self, from: payload))
         case .approvalCancelled: return .approvalCancelled(try decoder.decode(ApprovalCancelled.self, from: payload))
+        case .approvalWaitingElsewhere: return .approvalWaitingElsewhere(try decoder.decode(ApprovalWaitingElsewhere.self, from: payload))
+        case .approvalAnsweredElsewhere: return .approvalAnsweredElsewhere(try decoder.decode(ApprovalAnsweredElsewhere.self, from: payload))
         case .interruptedTaskFound: return .interruptedTaskFound(try decoder.decode(TaskRef.self, from: payload))
         case .userError: return .userError(UserErrorDecoding.decode(payload))
         case .waitingForWindow: return .waitingForWindow(try decoder.decode(WaitingForWindow.self, from: payload))
@@ -52,6 +56,8 @@ enum HarnessEvent: Sendable {
         case .questionAsked: RpcEvent.questionAsked.rawValue
         case .cursorCommand: RpcEvent.cursorCommand.rawValue
         case .approvalCancelled: RpcEvent.approvalCancelled.rawValue
+        case .approvalWaitingElsewhere: RpcEvent.approvalWaitingElsewhere.rawValue
+        case .approvalAnsweredElsewhere: RpcEvent.approvalAnsweredElsewhere.rawValue
         case .interruptedTaskFound: RpcEvent.interruptedTaskFound.rawValue
         case .userError: RpcEvent.userError.rawValue
         case .waitingForWindow: RpcEvent.waitingForWindow.rawValue

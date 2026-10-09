@@ -58,6 +58,11 @@ export interface Approval {
   decision?: ApprovalDecision;
 }
 
+/** The other device's user answered the approval, either way. The app closes its banner; what happens next comes as usual events. */
+export interface ApprovalAnsweredElsewhere {
+  approvalId: Uuid;
+}
+
 /** A pause cancelled a pending approval (SPEC-06 r5). */
 export interface ApprovalCancelled {
   approvalId: Uuid;
@@ -103,6 +108,15 @@ export interface ApprovalResponsePayload {
   kind: "approvalResponse";
   approvalId: Uuid;
   decision: ApprovalDecision;
+}
+
+/** A task from another device reached an approval, and that device is asking the user (SPEC-09 r10). The app shows only a banner, for example "Waiting for your OK on your phone", with no buttons, until approvalAnsweredElsewhere or approvalCancelled names the same approval. */
+export interface ApprovalWaitingElsewhere {
+  approvalId: Uuid;
+  taskId: Uuid;
+  /** The device asking the user: the task's origin device. */
+  askingDeviceId: DeviceId;
+  approvalKind: ApprovalKind;
 }
 
 /** The installed version, read from the app bundle without launching the app. */
@@ -1483,6 +1497,8 @@ export interface RpcEvents {
   questionAsked: QuestionAsked;
   cursorCommand: CursorCommand;
   approvalCancelled: ApprovalCancelled;
+  approvalWaitingElsewhere: ApprovalWaitingElsewhere;
+  approvalAnsweredElsewhere: ApprovalAnsweredElsewhere;
   interruptedTaskFound: TaskRef;
   userError: UserError;
   waitingForWindow: WaitingForWindow;

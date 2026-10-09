@@ -181,6 +181,16 @@ Pausing, approvals, and blocked actions (SPEC-06, SPEC-07, [OBJ-38](../objective
 - A blocked action is a `userError` of kind `blockedAction`. The app shows "Keep going", which calls `resumeTask`, and "Stop", which calls `cancelTask` (gap G6, resolved in OBJ-45).
   Its optional `skippedAction` names what was skipped in plain language ("click File in Keynote"), so the copy can say "I can't click File in Keynote."; without it the copy says "I can't do that." Added in version 4 without a version change, since older apps ignore it (SPEC-07 r5, decided 2026-10-10).
 
+Cross-device routing on the Mac (SPEC-09 requirements 3, 8, and 10, [OBJ-64](../objectives/OBJ-64-cross-device-local-rpc-contract.md)):
+
+- `HelloResult.deviceId` is this Mac's bridge device id, and `bridgeStateChanged` carries the same `deviceId` for an app that connected before the Mac had one.
+  The app sends it as `SubmitGoalParams.originDeviceId`, so it never needs a method call of its own to learn it.
+- A goal from the phone reaches the harness over the bridge, not from the app: the app sees no `goalRestated` and no `speak`, since the phone confirmed the goal and speaks the result, but it does see the task's status and its cursor.
+- The harness never calls `showApprovalCard` for a task from another device (`x-rpc` says so on the method).
+  Instead it sends `approvalWaitingElsewhere` with the approval id, task id, asking device, and approval kind, and the app shows only the banner "Waiting for your OK on your phone", with no buttons.
+- `approvalAnsweredElsewhere` closes the banner once the other device answers, either way; `approvalCancelled` closes it too.
+- The mock harness's `delegated-approval` script plays this on connect.
+
 Debug mode (SPEC-07 r22 and r23, [OBJ-52](../objectives/OBJ-52-harness-debug-logs.md)):
 
 - `setDebugMode` turns it on or off. The app sends it after every `hello` and whenever the user changes the setting, so the harness never keeps its own copy across restarts.
@@ -247,6 +257,7 @@ Options for both:
 | `approval-and-question` | A question from the model, then a pause that cancels a pending approval |
 | `windows-and-bridge` | Bridge state changes, a resumable task, a tiling suggestion, a busy window, and errors |
 | `goal-revision` | A revised goal repeated back after `reviseGoal`, naming what was left behind |
+| `delegated-approval` | A goal from the phone running on the Mac: its cursor, the approval banner while the phone asks, and the banner closing when the phone answers |
 
 ## Generator
 

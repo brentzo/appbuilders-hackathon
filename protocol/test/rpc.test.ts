@@ -77,6 +77,34 @@ describe("local RPC", () => {
     expect(validate("ModelStateChanged", {}).valid).toBe(false);
   });
 
+  it("tells the Mac app its bridge device id on connect and when the bridge changes, so it can send it as originDeviceId (OBJ-64)", () => {
+    const deviceId = "3f2a9c1e7b4d6a8f0e1c2b3a4d5e6f70";
+    expect(validate("HelloResult", { protocolVersion: 4, deviceId }).errors).toEqual([]);
+    expect(validate("BridgeStateChanged", { state: "connected", deviceId, peerDeviceId: "9a8b7c6d5e4f30211203f4e5d6c7b8a9" }).errors).toEqual([]);
+    expect(validate("HelloResult", { protocolVersion: 4, deviceId: "" }).valid).toBe(false);
+  });
+
+  it("shows a banner, never a card, for an approval asked on another device (SPEC-09 r10, OBJ-64)", () => {
+    const { methods, events } = rpc();
+    expect(events["approvalWaitingElsewhere"]).toBe("ApprovalWaitingElsewhere");
+    expect(events["approvalAnsweredElsewhere"]).toBe("ApprovalAnsweredElsewhere");
+    expect((methods["showApprovalCard"] as { description?: string }).description).toMatch(/never .*another device/);
+    const waiting = {
+      approvalId: "5b0c6f8e-2f4d-4c1a-9a57-1f0e2d3c4b5a",
+      taskId: "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+      askingDeviceId: "9a8b7c6d5e4f30211203f4e5d6c7b8a9",
+      approvalKind: "send",
+    };
+    expect(validate("ApprovalWaitingElsewhere", waiting).errors).toEqual([]);
+    expect(validate("ApprovalWaitingElsewhere", { ...waiting, approvalKind: "pay" }).valid).toBe(false);
+    for (const field of Object.keys(waiting)) {
+      const { [field as keyof typeof waiting]: _dropped, ...missing } = waiting;
+      expect(validate("ApprovalWaitingElsewhere", missing).valid, field).toBe(false);
+    }
+    expect(validate("ApprovalAnsweredElsewhere", { approvalId: waiting.approvalId }).errors).toEqual([]);
+    expect(validate("ApprovalAnsweredElsewhere", {}).valid).toBe(false);
+  });
+
   it("moves a cursor to an element or a point, and nothing else", () => {
     const move = (to: unknown) => ({ command: "move", cursorId: "main", to });
     expect(validate("CursorCommand", move({ kind: "point", x: 512, y: 300 })).valid).toBe(true);

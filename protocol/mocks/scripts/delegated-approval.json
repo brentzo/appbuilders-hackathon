@@ -1,0 +1,17 @@
+{
+  "description": "A goal from the phone runs on the Mac and reaches an approval: the cursor spawns, the Mac shows only a banner while the phone asks, and the banner closes when the phone answers. Nothing is repeated back or spoken on the Mac, since the phone confirmed the goal and speaks the result (SPEC-09 r5, r7, r8, r10).",
+  "trigger": "connect",
+  "events": [
+    { "afterMs": 200, "event": "bridgeStateChanged", "example": "BridgeStateChanged.connected" },
+    { "afterMs": 500, "event": "taskStatusChanged", "payload": { "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8", "status": "planning" } },
+    { "afterMs": 800, "event": "taskStatusChanged", "payload": { "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8", "status": "running" } },
+    { "afterMs": 100, "event": "cursorCommand", "payload": { "command": "spawn", "cursorId": "main", "cursorKind": "main" } },
+    { "afterMs": 1500, "event": "cursorCommand", "payload": { "command": "setState", "cursorId": "main", "state": "waitingForUser" } },
+    { "afterMs": 100, "event": "approvalWaitingElsewhere", "example": "ApprovalWaitingElsewhere.send-to-ana" },
+    { "afterMs": 3000, "event": "approvalAnsweredElsewhere", "example": "ApprovalAnsweredElsewhere.send-to-ana" },
+    { "afterMs": 100, "event": "cursorCommand", "payload": { "command": "setState", "cursorId": "main", "state": "acting" } },
+    { "afterMs": 800, "event": "cursorCommand", "payload": { "command": "setState", "cursorId": "main", "state": "done" } },
+    { "afterMs": 300, "event": "cursorCommand", "payload": { "command": "fade", "cursorId": "main" } },
+    { "afterMs": 100, "event": "taskStatusChanged", "payload": { "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8", "status": "done" } }
+  ]
+}

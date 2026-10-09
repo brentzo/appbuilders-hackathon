@@ -85,6 +85,12 @@ data class Approval(
     val decision: ApprovalDecision? = null,
 )
 
+/** The other device's user answered the approval, either way. The app closes its banner; what happens next comes as usual events. */
+@Serializable
+data class ApprovalAnsweredElsewhere(
+    val approvalId: String,
+)
+
 /** A pause cancelled a pending approval (SPEC-06 r5). */
 @Serializable
 data class ApprovalCancelled(
@@ -142,6 +148,16 @@ data class ApprovalResponsePayload(
     val approvalId: String,
     val decision: ApprovalDecision,
 ) : Payload
+
+/** A task from another device reached an approval, and that device is asking the user (SPEC-09 r10). The app shows only a banner, for example "Waiting for your OK on your phone", with no buttons, until approvalAnsweredElsewhere or approvalCancelled names the same approval. */
+@Serializable
+data class ApprovalWaitingElsewhere(
+    val approvalId: String,
+    val taskId: String,
+    /** The device asking the user: the task's origin device. */
+    val askingDeviceId: String,
+    val approvalKind: ApprovalKind,
+)
 
 /** The installed version, read from the app bundle without launching the app. */
 @Serializable
@@ -1752,6 +1768,8 @@ enum class RpcEvent(val wireName: String) {
     QuestionAsked("questionAsked"),
     CursorCommand("cursorCommand"),
     ApprovalCancelled("approvalCancelled"),
+    ApprovalWaitingElsewhere("approvalWaitingElsewhere"),
+    ApprovalAnsweredElsewhere("approvalAnsweredElsewhere"),
     InterruptedTaskFound("interruptedTaskFound"),
     UserError("userError"),
     WaitingForWindow("waitingForWindow"),
