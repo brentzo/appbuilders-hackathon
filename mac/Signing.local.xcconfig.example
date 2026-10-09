@@ -1,0 +1,11 @@
+// Copy this file to Signing.local.xcconfig (gitignored) and fill in your own values.
+// See "Signing" in mac/README.md.
+
+// Your Apple team ID. A free Apple account ("Personal Team") is enough. Find it in Xcode under
+// Settings > Accounts, or run:
+//   security find-certificate -c "Apple Development" -p | openssl x509 -noout -subject
+// and use the OU value.
+DEVELOPMENT_TEAM = ABCDE12345
+
+// Added to the shared bundle identifier prefix, so each person registers their own.
+YUMI_BUNDLE_ID_SUFFIX = .yourname

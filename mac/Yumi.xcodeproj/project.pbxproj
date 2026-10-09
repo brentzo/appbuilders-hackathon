@@ -31,6 +31,7 @@
 /* Begin PBXFileReference section */
 		A1000000000000000000F001 /* Yumi.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Yumi.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1000000000000000000F002 /* YumiTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = YumiTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1000000000000000000F006 /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
 		A1000000000000000000F003 /* Yumi.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Yumi.entitlements; sourceTree = "<group>"; };
 		A1000000000000000000F004 /* YumiProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = YumiProtocol.swift; path = ../protocol/generated/swift/YumiProtocol.swift; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000F005 /* libYumiProtocol.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libYumiProtocol.a; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -78,6 +79,7 @@
 		A10000000000000000000002 = {
 			isa = PBXGroup;
 			children = (
+				A1000000000000000000F006 /* Signing.xcconfig */,
 				A1000000000000000000F003 /* Yumi.entitlements */,
 				A10000000000000000000004 /* Protocol (generated) */,
 				A1000000000000000000D001 /* Yumi */,
@@ -266,6 +268,7 @@
 /* Begin XCBuildConfiguration section */
 		A1000000000000000000E002 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = A1000000000000000000F006 /* Signing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -293,6 +296,7 @@
 		};
 		A1000000000000000000E003 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = A1000000000000000000F006 /* Signing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -315,12 +319,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = Yumi.entitlements;
-				CODE_SIGN_IDENTITY = "-";
-				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				ENABLE_APP_SANDBOX = NO;
-				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Yumi;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
@@ -337,7 +337,7 @@
 					"-force_load",
 					"$(BUILT_PRODUCTS_DIR)/libYumiProtocol.a",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = ph.appbuilders.yumi;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(YUMI_BUNDLE_ID)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -348,12 +348,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = Yumi.entitlements;
-				CODE_SIGN_IDENTITY = "-";
-				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				ENABLE_APP_SANDBOX = NO;
-				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Yumi;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
@@ -370,7 +366,7 @@
 					"-force_load",
 					"$(BUILT_PRODUCTS_DIR)/libYumiProtocol.a",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = ph.appbuilders.yumi;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(YUMI_BUNDLE_ID)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -381,12 +377,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_IDENTITY = "-";
-				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = ph.appbuilders.yumi.tests;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(YUMI_BUNDLE_ID).tests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Yumi.app/Contents/MacOS/Yumi";
@@ -397,12 +391,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_IDENTITY = "-";
-				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = ph.appbuilders.yumi.tests;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(YUMI_BUNDLE_ID).tests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Yumi.app/Contents/MacOS/Yumi";
@@ -412,8 +404,6 @@
 		A1000000000000000000E032 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "-";
-				CODE_SIGN_STYLE = Manual;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
@@ -423,8 +413,6 @@
 		A1000000000000000000E033 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "-";
-				CODE_SIGN_STYLE = Manual;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;

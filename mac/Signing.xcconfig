@@ -1,0 +1,25 @@
+// Signing for every Yumi target. See "Signing" in mac/README.md.
+//
+// Shared settings live here. Each person's team and bundle identifier suffix live in the
+// gitignored Signing.local.xcconfig (copy Signing.local.xcconfig.example). Without that file the
+// build falls back to ad hoc signing, which builds anywhere but makes macOS forget Yumi's
+// Accessibility and Screen Recording permissions after every rebuild.
+
+ENABLE_APP_SANDBOX = NO
+ENABLE_HARDENED_RUNTIME = YES
+
+// The bundle identifier is YUMI_BUNDLE_ID_PREFIX plus your suffix, because Apple registers a
+// bundle identifier for one team only.
+YUMI_BUNDLE_ID_PREFIX = ph.appbuilders.yumi
+YUMI_BUNDLE_ID_SUFFIX =
+DEVELOPMENT_TEAM =
+
+#include? "Signing.local.xcconfig"
+
+// "Apple Development" with automatic signing when a team is set; ad hoc when it is not.
+YUMI_SIGNING_MODE = $(DEVELOPMENT_TEAM:default=adhoc)
+YUMI_CODE_SIGN_STYLE_adhoc = Manual
+YUMI_CODE_SIGN_IDENTITY_adhoc = -
+CODE_SIGN_STYLE = $(YUMI_CODE_SIGN_STYLE_$(YUMI_SIGNING_MODE):default=Automatic)
+CODE_SIGN_IDENTITY = $(YUMI_CODE_SIGN_IDENTITY_$(YUMI_SIGNING_MODE):default=Apple Development)
+YUMI_BUNDLE_ID = $(YUMI_BUNDLE_ID_PREFIX)$(YUMI_BUNDLE_ID_SUFFIX)

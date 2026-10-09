@@ -106,23 +106,25 @@ What happens is logged under the subsystem `ph.appbuilders.yumi`, including the 
 
 ### Signing and permissions
 
-The project signs ad hoc, so it builds on any Mac without an Apple account.
-macOS ties an ad hoc app's privacy permissions to that exact build, so after a rebuild you may need to allow Accessibility and Screen Recording again.
-To keep permissions across rebuilds, sign with your own development certificate and team:
+This is how the project implements "Signing" above.
 
-```sh
-xcodebuild -project Yumi.xcodeproj -scheme Yumi -derivedDataPath build build \
-  CODE_SIGN_IDENTITY="Apple Development" DEVELOPMENT_TEAM=<your team ID>
-```
+- `Signing.xcconfig` (committed) holds the shared settings for every target: "Apple Development" with automatic signing, App Sandbox off, and Hardened Runtime. The Audio Input entitlement is in `Yumi.entitlements`.
+- `Signing.local.xcconfig` (gitignored) holds your `DEVELOPMENT_TEAM` and `YUMI_BUNDLE_ID_SUFFIX`.
+  Create it from the example:
 
-Your team ID is the `OU` of your certificate: `security find-certificate -c "Apple Development" -p | openssl x509 -noout -subject`.
+  ```sh
+  cp Signing.local.xcconfig.example Signing.local.xcconfig
+  ```
 
-To reset Yumi's permissions while testing onboarding: `tccutil reset All ph.appbuilders.yumi`.
-
-With ad hoc signing, Debug builds are not signed with the hardened runtime, but Release builds are.
-Use a Release build for demos and smoke tests, so Yumi runs under the same rules macOS applies to a shipped app.
-
-The app is not sandboxed, because controlling other apps through Accessibility does not work from the sandbox.
+  Your team ID is in Xcode under Settings > Accounts, or is the `OU` of your certificate: `security find-certificate -c "Apple Development" -p | openssl x509 -noout -subject`.
+- The bundle identifier is `YUMI_BUNDLE_ID_PREFIX` from `Signing.xcconfig` plus your suffix, for example `ph.appbuilders.yumi.brent`.
+  The prefix `ph.appbuilders.yumi` is a placeholder until the real one is chosen.
+- Without `Signing.local.xcconfig`, a fresh checkout still builds, signed ad hoc.
+  That is enough to compile and run the tests, but not to use Yumi: macOS forgets its Accessibility and Screen Recording permissions after every ad hoc rebuild.
+  Ad hoc Debug builds also lack the hardened runtime; Release builds have it.
+  With your team, Debug and Release builds both have it.
+- Use a Release build for demos and smoke tests.
+- To reset Yumi's permissions while testing onboarding: `tccutil reset All <your bundle identifier>`.
 
 ### Checking the UI without clicking
 
