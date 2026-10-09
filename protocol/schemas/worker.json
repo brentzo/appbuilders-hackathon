@@ -39,7 +39,8 @@
       "properties": {
         "action": { "$ref": "action.json#/$defs/ModelAction" },
         "observation": { "description": "One line: what changed.", "type": "string", "maxLength": 300 },
-        "outcome": { "$ref": "common.json#/$defs/StepOutcome" }
+        "outcome": { "$ref": "common.json#/$defs/StepOutcome" },
+        "toolOutput": { "$ref": "task.json#/$defs/ToolOutput" }
       }
     },
     "WorkerOutput": {

@@ -999,6 +999,7 @@ data class Step(
     val observation: String? = null,
     /** Absent until the action finished. */
     val outcome: StepOutcome? = null,
+    val toolOutput: String? = null,
     /** p1, for debugging and the dashboard. */
     val screenshotPath: String? = null,
     val startedAt: String,
@@ -1023,6 +1024,7 @@ data class StepSummary(
     /** One line: what changed. */
     val observation: String,
     val outcome: StepOutcome,
+    val toolOutput: String? = null,
 )
 
 /** Store a secret in the macOS Keychain (OBJ-27). Secrets never touch files or logs; the socket is only readable by the user. */

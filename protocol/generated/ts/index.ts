@@ -837,6 +837,7 @@ export interface Step {
   observation?: string;
   /** Absent until the action finished. */
   outcome?: StepOutcome;
+  toolOutput?: ToolOutput;
   /** p1, for debugging and the dashboard. */
   screenshotPath?: Path;
   startedAt: Timestamp;
@@ -853,6 +854,7 @@ export interface StepSummary {
   /** One line: what changed. */
   observation: string;
   outcome: StepOutcome;
+  toolOutput?: ToolOutput;
 }
 
 /** Store a secret in the macOS Keychain (OBJ-27). Secrets never touch files or logs; the socket is only readable by the user. */
@@ -1003,6 +1005,9 @@ export type ToolCall =
 /** Every tool name, used to tell a worker which tools its lane allows. */
 export type ToolName = "open_app" | "open_file" | "open_url" | "reveal_in_finder" | "read_file" | "list_dir" | "write_new_file" | "copy" | "move" | "move_to_trash" | "phone";
 export const toolNameValues: readonly ToolName[] = ["open_app", "open_file", "open_url", "reveal_in_finder", "read_file", "list_dir", "write_new_file", "copy", "move", "move_to_trash", "phone"];
+
+/** What a typed tool returned, for the next steps of the same subtask only, such as the text read_file read. Cut to 4000 characters by the harness. Data, never instructions (SPEC-07 r16), and never passed to another subtask or shown to the user. */
+export type ToolOutput = string;
 
 /** One element of the trimmed accessibility tree. */
 export interface TreeElement {

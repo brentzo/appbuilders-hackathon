@@ -1,0 +1,12 @@
+{
+  "action": {
+    "kind": "tool",
+    "call": {
+      "tool": "read_file",
+      "path": "~/Downloads/Lease.pdf"
+    }
+  },
+  "observation": "Read Lease.pdf",
+  "outcome": "ok",
+  "toolOutput": "Lease agreement between Ana Cruz and Dela Rosa Properties for Unit 4B, 12 months from 1 November 2026, rent 25,000 pesos a month, two months deposit."
+}

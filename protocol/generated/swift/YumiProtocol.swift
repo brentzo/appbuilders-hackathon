@@ -1613,12 +1613,13 @@ public struct Step: Codable, Equatable, Sendable {
     public var observation: String?
     /// Absent until the action finished.
     public var outcome: StepOutcome?
+    public var toolOutput: String?
     /// p1, for debugging and the dashboard.
     public var screenshotPath: String?
     public var startedAt: String
     public var durationMs: Int?
 
-    public init(id: String, subtaskId: String, index: Int, lane: Lane, action: RecordedAction, observation: String? = nil, outcome: StepOutcome? = nil, screenshotPath: String? = nil, startedAt: String, durationMs: Int? = nil) {
+    public init(id: String, subtaskId: String, index: Int, lane: Lane, action: RecordedAction, observation: String? = nil, outcome: StepOutcome? = nil, toolOutput: String? = nil, screenshotPath: String? = nil, startedAt: String, durationMs: Int? = nil) {
         self.id = id
         self.subtaskId = subtaskId
         self.index = index
@@ -1626,6 +1627,7 @@ public struct Step: Codable, Equatable, Sendable {
         self.action = action
         self.observation = observation
         self.outcome = outcome
+        self.toolOutput = toolOutput
         self.screenshotPath = screenshotPath
         self.startedAt = startedAt
         self.durationMs = durationMs
@@ -1648,11 +1650,13 @@ public struct StepSummary: Codable, Equatable, Sendable {
     /// One line: what changed.
     public var observation: String
     public var outcome: StepOutcome
+    public var toolOutput: String?
 
-    public init(action: ModelAction, observation: String, outcome: StepOutcome) {
+    public init(action: ModelAction, observation: String, outcome: StepOutcome, toolOutput: String? = nil) {
         self.action = action
         self.observation = observation
         self.outcome = outcome
+        self.toolOutput = toolOutput
     }
 }
 

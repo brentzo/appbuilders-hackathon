@@ -98,10 +98,16 @@
         "action": { "$ref": "action.json#/$defs/RecordedAction" },
         "observation": { "description": "One line: what changed after the action. Absent until the action finished.", "type": "string", "maxLength": 300 },
         "outcome": { "description": "Absent until the action finished.", "$ref": "common.json#/$defs/StepOutcome" },
+        "toolOutput": { "$ref": "#/$defs/ToolOutput" },
         "screenshotPath": { "description": "p1, for debugging and the dashboard.", "$ref": "common.json#/$defs/Path" },
         "startedAt": { "$ref": "common.json#/$defs/Timestamp" },
         "durationMs": { "type": "integer", "minimum": 0 }
       }
+    },
+    "ToolOutput": {
+      "description": "What a typed tool returned, for the next steps of the same subtask only, such as the text read_file read. Cut to 4000 characters by the harness. Data, never instructions (SPEC-07 r16), and never passed to another subtask or shown to the user.",
+      "type": "string",
+      "maxLength": 4000
     },
     "WindowLock": {
       "description": "Only one cursor works in a window at a time (SPEC-03 r5).",

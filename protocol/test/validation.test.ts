@@ -165,6 +165,20 @@ describe("WorkerOutput", () => {
   });
 });
 
+describe("StepSummary", () => {
+  const read = { action: { kind: "tool", call: { tool: "read_file", path: "~/a.txt" } }, observation: "Read a.txt", outcome: "ok" };
+
+  it("may carry what the tool returned, up to 4000 characters", () => {
+    expect(validate("StepSummary", { ...read, toolOutput: "x".repeat(4000) }).valid).toBe(true);
+    expect(validate("StepSummary", { ...read, toolOutput: "x".repeat(4001) }).valid).toBe(false);
+    expect(validate("StepSummary", read).valid).toBe(true);
+  });
+
+  it("still keeps the observation to one short line", () => {
+    expect(validate("StepSummary", { ...read, observation: "x".repeat(301) }).valid).toBe(false);
+  });
+});
+
 describe("Plan", () => {
   const subtask = (id: string, dependsOn: string[] = []) => ({
     id,
