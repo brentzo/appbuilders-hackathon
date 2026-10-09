@@ -29,6 +29,9 @@ enum ErrorButtonAction: Equatable, Sendable {
     case typeGoal
     /// Loads Yumi's voice again ("Try again" on "Voice didn't load (Mac)", OBJ-51).
     case reloadVoice
+    /// Restarts the harness, which checks the model server again ("Try again" on "Model failed to
+    /// load", OBJ-46.4).
+    case restartHarness
     /// The feature behind this button is built in a later objective. Shown disabled.
     case notAvailableYet
 }
@@ -107,6 +110,8 @@ enum ErrorPresenter {
             action = .typeGoal
         case "Try again" where error.kind == .voiceFailedToLoad:
             action = .reloadVoice
+        case "Try again" where error.kind == .modelFailedToLoad:
+            action = .restartHarness
         case "Try again" where error.kind == .didNotCatchSpeech:
             // Push-to-talk: trying again is holding the shortcut again, so this only closes the error.
             action = .dismiss

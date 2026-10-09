@@ -9,7 +9,8 @@ final class AppModel {
     var harnessReady = false
     /// Set when the harness in use is the mock, so the menu says so.
     var mockHarnessName: String?
-    var modelReadiness: ModelReadiness = .unknown
+    /// Whether the local model can take a goal yet (OBJ-46). Loading until the harness says.
+    var modelReadiness: ModelReadiness = .loading
     /// True while push-to-talk has the microphone on (OBJ-15).
     var isListening = false
     /// True while Yumi says something out loud, so the wake word pauses (OBJ-58.4).
@@ -31,6 +32,7 @@ final class AppModel {
     var status: AppStatus {
         if let statusOverride { return statusOverride }
         if isListening { return .listening }
-        return harnessReady ? taskStatus : .startingUp
+        // "Yumi is getting ready" until the harness answers and its model has loaded (OBJ-46).
+        return harnessReady && modelReadiness == .ready ? taskStatus : .startingUp
     }
 }

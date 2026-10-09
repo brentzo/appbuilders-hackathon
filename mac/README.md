@@ -92,7 +92,10 @@ Yumi starts the harness itself: the real one from `harness/` by default ([OBJ-27
 It finds `node` through your login shell, runs the harness with `node --import tsx`, restarts it whenever it exits, and stops it when Yumi quits.
 Run `npm install` in `harness/` and `protocol/` first.
 With the mock, the menu says "Using the mock harness" so it is never demoed by accident.
-The status line says "Yumi is getting ready" until the harness answers `hello` and `ping`.
+The status line says "Yumi is getting ready" until the harness answers `hello` and `ping` and its model is ready (OBJ-46, `Yumi/App/ModelReadiness.swift`).
+The model's state comes in `hello`'s answer and then as `modelStateChanged`.
+A goal spoken or typed while the model loads is held: Yumi says "I'm still waking up. I'll start on that as soon as I'm ready." and starts it once the model is ready (a proposal in SPEC-11's open questions).
+When the model fails, Yumi shows SPEC-11 "Model failed to load", whose "Try again" restarts the harness so it checks the model server again.
 The harness's socket, pid file, task store, and log live in its folder, `~/Library/Application Support/Yumi` (`HarnessFolder`), which Yumi passes to the harness as `YUMI_SUPPORT_DIR`.
 When Yumi starts, it stops a harness left in that folder's pid file by an earlier Yumi.
 The unit test host starts no harness and uses a temporary folder, so running the tests never stops or replaces the harness of a Yumi that is running.
@@ -364,9 +367,8 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 - The menu bar icon is the SF Symbol `cat` until the Rive cat ([OBJ-19](../objectives/OBJ-19-cat-cursor.md)) exists.
 - Settings changes go to `PendingHarnessSettingsSink`, which only logs.
   The protocol has no method for settings yet, except Debug mode, which goes to the harness with `setDebugMode`.
-- Model readiness is a placeholder that is always unknown (`ModelReadiness`).
   The protocol cannot report it yet; this is open with the protocol and harness owners.
-- Error buttons whose feature comes in a later objective are shown disabled: for example "Try again" outside "Didn't catch speech", and "Stop" or "Keep going" when the error names no task.
+- Error buttons whose feature comes in a later objective are shown disabled: for example "Try again" outside "Didn't catch speech", "Voice didn't load", and "Model failed to load", and "Stop" or "Keep going" when the error names no task.
 - "Hey Yumi" is spotted by the speech recognizer for the demo ([OBJ-58](../objectives/OBJ-58-mac-hey-yumi-recognizer.md)) until a trained model is good enough. With `-YumiWakeWordEngine openWakeWord`, the model is openWakeWord's "hey jarvis" until "Hey Yumi" from [OBJ-12](../objectives/OBJ-12-hey-yumi-wake-word.md), with openWakeWord's default threshold, 0.5.
 - Cursors are the cat as static poses, one per state, with small Core Animation motion: ginger for the main cursor, mint, sky, and slate for ghosts. The Rive cat ([OBJ-19](../objectives/OBJ-19-cat-cursor.md)) replaces them.
 - A cursor moving to an element whose path does not resolve goes to the center of the target window, or the app's frontmost window.

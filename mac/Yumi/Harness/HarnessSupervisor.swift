@@ -68,6 +68,19 @@ final class HarnessSupervisor {
         launch()
     }
 
+    /// Starts a new harness now, as if the old one had exited: the user asked to try again.
+    func restart() {
+        failuresInARow = 0
+        guard let process, process.isRunning else {
+            restartTask?.cancel()
+            restartTask = nil
+            start()
+            return
+        }
+        // `processExited` starts the next one after the shortest delay.
+        process.terminate()
+    }
+
     /// Stops the harness and does not restart it. Waits briefly so it can clean up its socket.
     func stop() {
         stopping = true

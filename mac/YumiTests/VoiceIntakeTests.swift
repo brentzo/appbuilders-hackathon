@@ -99,6 +99,7 @@ struct VoiceIntakeTests {
     @Test func listeningShowsInTheStatusLine() {
         let model = AppModel()
         model.harnessReady = true
+        model.modelReadiness = .ready
         model.isListening = true
         #expect(model.status == .listening)
         model.isListening = false

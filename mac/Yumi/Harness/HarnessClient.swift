@@ -44,6 +44,9 @@ final class HarnessClient {
     /// This Mac's bridge device id, from the `hello` answer (OBJ-64, OBJ-72.1). Called on every
     /// reconnect; later changes arrive with `bridgeStateChanged`.
     var onDeviceId: ((String) -> Void)?
+    /// The local model's state from the `hello` answer, before the link turns connected (OBJ-46).
+    /// Nil from a harness that does not report it. Later changes arrive as `modelStateChanged`.
+    var onModelState: ((ModelState?) -> Void)?
 
     /// Every event from the harness, in order. One consumer.
     let events: AsyncStream<HarnessEvent>
@@ -194,6 +197,7 @@ final class HarnessClient {
                 return true
             }
             if let deviceId = hello.deviceId { onDeviceId?(deviceId) }
+            onModelState?(hello.modelState)
             try await ping()
         } catch {
             log.error("Handshake with the harness failed: \(String(describing: error), privacy: .public)")

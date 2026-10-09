@@ -29,6 +29,9 @@ struct AppStatusTests {
         let model = Self.isolatedModel()
         #expect(model.status == .startingUp)
         model.harnessReady = true
+        // The harness answered, but the model is still loading (OBJ-46).
+        #expect(model.status == .startingUp)
+        model.modelReadiness = .ready
         #expect(model.status == .ready)
         model.taskStatus = .working
         #expect(model.status == .working)

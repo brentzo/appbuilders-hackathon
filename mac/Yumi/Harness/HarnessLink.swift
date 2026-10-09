@@ -41,6 +41,8 @@ final class HarnessLink {
     let approvals: ApprovalCards
     /// Stop, take-over, and the paused panel (OBJ-35).
     let pause: PauseController
+    /// The model's state, and goals spoken before it is ready (OBJ-46).
+    private(set) var modelGate: ModelGate!
     private var stopShortcut: StopShortcut?
     private var takeOverWatcher: TakeOverWatcher?
     /// Helper subtasks shown as chips, by subtask id.
@@ -89,6 +91,19 @@ final class HarnessLink {
         )
         usesMock = launcher.isMock
         model.mockHarnessName = launcher.isMock ? launcher.displayName : nil
+        modelGate = ModelGate(
+            model: model,
+            submit: { [weak self] goal in self?.sendGoal(goal) },
+            say: { text in Task { await speech.speak(text) } },
+            showFailed: { [weak self] in self?.onUserError?(UserError(kind: .modelFailedToLoad)) }
+        )
+    }
+
+    /// "Try again" on "Model failed to load": a new harness checks the model server again from the
+    /// start (OBJ-46.4). The app reconnects on its own and learns the new state from `hello`.
+    func restartHarness() {
+        log.notice("Restarting the harness to load the model again")
+        supervisor.restart()
     }
 
     func start() {
@@ -120,6 +135,7 @@ final class HarnessLink {
         client.onLinkStateChange = { [weak self] state in
             guard let self else { return }
             model.harnessReady = state == .connected
+            if state != .connected { modelGate.harnessDisconnected() }
             // Without a harness no task is running, so no cursor may stay (SPEC-04 r9).
             if state != .connected { overlay.fadeAll() }
             if state == .connected {
@@ -130,6 +146,10 @@ final class HarnessLink {
             log.notice("Status line: \(self.model.status.menuTitle, privacy: .public)")
         }
         client.onDeviceId = { [weak self] deviceId in self?.bridgeDeviceId = deviceId }
+        client.onModelState = { [weak self] state in
+            self?.log.notice("Model state from hello: \(state?.rawValue ?? "not reported", privacy: .public)")
+            self?.modelGate.update(state)
+        }
         eventsTask = Task { [weak self, client] in
             for await event in client.events {
                 self?.handle(event)
@@ -199,8 +219,11 @@ final class HarnessLink {
             Task { await questions.asked(question) }
         case .workerThought(let thought):
             overlay.receive(thought)
+        case .modelStateChanged(let change):
+            log.notice("Model state: \(change.state.rawValue, privacy: .public)")
+            modelGate.update(change.state)
         default:
-            // interruptedTaskFound, waitingForWindow and modelStateChanged (OBJ-46) are consumed in later objectives.
+            // interruptedTaskFound and waitingForWindow are consumed in later objectives.
             log.info("Not handled yet: \(event.name, privacy: .public)")
         }
     }
@@ -276,6 +299,15 @@ final class HarnessLink {
     /// once (OBJ-17.3); the harness then restates the goal, or in Auto mode starts it, and Yumi
     /// shows what it heard and says "On it." (OBJ-50). Voice intake (OBJ-15) calls this.
     func submitGoal(_ transcript: String) {
+        // While the model loads the goal waits, and while it has failed the failure shows (OBJ-46.3).
+        guard !modelGate.hold(transcript) else {
+            log.notice("Goal kept back: the model is \(String(describing: self.model.modelReadiness), privacy: .public)")
+            return
+        }
+        sendGoal(transcript)
+    }
+
+    private func sendGoal(_ transcript: String) {
         summary.goalSubmitted()
         confirmation.goalSubmitted()
         let autoMode = model.settings.autoMode

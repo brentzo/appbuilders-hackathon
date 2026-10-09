@@ -119,6 +119,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             showTypeGoal()
         case .reloadVoice:
             ((harness.speech as? TrackedSpeech)?.inner as? NeuralSpeech)?.reload()
+        case .restartHarness:
+            harness.restartHarness()
         case .dismiss, .notAvailableYet:
             break
         }
