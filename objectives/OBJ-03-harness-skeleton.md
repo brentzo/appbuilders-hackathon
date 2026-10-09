@@ -82,22 +82,24 @@ Every other harness objective plugs into this skeleton.
   - `harness/scripts/model-check.ts` (the real-server test script, with `--image` for vision) and `harness/scripts/check-grammar.py`.
   - `harness/README.md`: layout, commands, configuration, and how to install, start, and check the model server, including vision.
 - **Commits:**
-  - `8b2dddc docs(objectives): start OBJ-03`
-  - `16304a6 feat(harness): set up the TypeScript project and fork Pi's agent loop`
-  - `7584d08 feat(harness): add the model client, tool registry, step validation, and local RPC server`
-  - This Outcome is in the commit `docs(objectives): record OBJ-03 progress`.
+  - `0eae410 docs(objectives): start OBJ-03`
+  - `3121fa4 feat(harness): set up the TypeScript project and fork Pi's agent loop`
+  - `6fc3f21 feat(harness): add the model client, tool registry, step validation, and local RPC server`
+  - `62a1b3f docs(objectives): record OBJ-03 progress`
+  - `f1575ff test(harness): use the generated protocol version in the RPC tests`
 - **Expectations:**
   - Real server: not verified yet (see below).
   - "Worker returns an invalid action": `test/worker-step.test.ts`, "Scenario: Worker returns an invalid action". The first invalid reply is recorded as `invalidOutput`, and the retry prompt holds the validation error. A second invalid reply ends the step as `invalidOutput` with no third request.
   - `ping`: `test/rpc-server.test.ts` sends `ping` from a bare socket client and gets `{"result":{}}`. The same file runs `npm run mock:mac` from `protocol/`, which says hello, receives an event, and answers `listWindows`. `npm start` and `npm run mock:mac` were also run together from the command line.
   - No raw errors: `test/model-client.test.ts`, "no user-facing string contains raw model or server errors". It covers an unreachable server, HTTP 500, 422, an unhandled exception, and a timeout. Each gives a contract-valid `UserError` (`modelFailedToLoad` or `unexpected`) that contains no detail text, status code, or transport string, and the detail is in the log.
-  - `npm run verify` passes: typecheck, ESLint, Prettier, and 55 tests. The suite also passed three repeated runs.
+  - `npm run verify` passes on protocol version 2 (`main` at `149a835`): typecheck, ESLint, Prettier, and 55 tests. The suite also passed three repeated runs.
+  - `python3 scripts/verify.py` passes, but it only runs the docs check for `harness/` changes; it does not build or test the harness yet.
 - **Not verified:**
   - "With the model server running, a test script sends a prompt and gets back a validated action." The script is written, and it runs end to end against the mock server. It has not run against the real server, because the model must not be loaded while another agent uses the Mac's memory. To verify, start the server as in `harness/README.md`, then run `npm run model:check` in `harness/`. It must print `OK: validated action ...`.
   - Qwen3.5 vision through the server: also not run. Run `npm run model:check -- --image <screenshot.png>` and check that the description matches the image.
   - The mock model server's shapes come from mlx-vlm 0.7.6's source (`server/schemas.py`, `openai.py`). Run the real check above to confirm them.
 - **Decisions and deviations:**
-  - `RpcPeer` was not exported from `@yumi/protocol`, despite OBJ-01's Outcome. Brent chose to export it from the package root (`746c72e`), and the harness imports it from `@yumi/protocol`.
+  - `RpcPeer` was not exported from `@yumi/protocol`, despite OBJ-01's Outcome. Brent chose to export it from the package root (`00c4dd8` and `003ea46`), and the harness imports it from `@yumi/protocol`.
   - Pi's agent core never contained the coding tools; they live in Pi's coding agent. So the registry simply starts empty.
   - Pi's provider package is not a dependency. Only the message types and transcript helpers the loop needs were copied.
   - mlx-vlm 0.7.6 compiles `response_format` with llguidance 1.9.1, which fails the request on `uniqueItems`. The protocol's `WorkerOutput` uses it, so the schema sent to the model omits it. Replies are still validated against the full protocol schema.
@@ -108,7 +110,7 @@ Every other harness objective plugs into this skeleton.
   - Sampling follows the Qwen3.5 model card's instruct settings (temperature 0.7, top_p 0.8, top_k 20), with thinking off.
 - **For the next objectives:**
   - Run a step with `runWorkerStep(input, { client, logger })` from `src/worker/step.ts`. Its outcome is `ok`, `invalidOutput`, `error` (with a `UserError`), or `aborted`, and `attempts` gives each attempt's step outcome for the task store (OBJ-04).
-  - Protocol version 2 renames `axPress` to `click`. Update `src/worker/actions.ts` and regenerate the types; the prompt, schema narrowing, and validation read the names from there.
+  - The coming rename of `axPress` to `click` (and of the vision click) is a change to `src/worker/actions.ts` plus the generated types; the prompt, schema narrowing, and validation read the names from there. Tests that use literal action JSON in `test/` need the new names too.
   - Register tools with `ToolRegistry.register` and offer them with `select(names)`. `ToolSet.toAgentTools()` feeds the forked `Agent`, and `createLocalStreamFn(client)` connects the loop to the model server.
   - Add app-to-harness methods through `HarnessRpcServer.start({ handlers })`. Send events with `emit`, and call the Mac app with `request`.
   - Tests use `test/mock-model-server.ts`. Add new error shapes there only after reading them in mlx-vlm's source.
