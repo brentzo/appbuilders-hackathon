@@ -59,8 +59,8 @@ Decisions and their reasons are recorded in each spec's "Decisions" section.
 
 ## For coding agents
 
-Read [CLAUDE.md](CLAUDE.md) first.
-It lists the rules of this repo and the skills in [.claude/skills/](.claude/skills/) that describe how we work: objectives, specs, products, git, orchestration, contracts and stand-ins, user-facing errors, and grounding facts.
+Read [AGENTS.md](AGENTS.md) first in Codex, or [CLAUDE.md](CLAUDE.md) in Claude Code.
+The repository skills in [.agents/skills/](.agents/skills/) and [.claude/skills/](.claude/skills/) describe how we work: objectives, specs, products, git, orchestration, contracts and stand-ins, user-facing errors, and grounding facts.
 
 ## Writing rules
 
