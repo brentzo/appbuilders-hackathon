@@ -7,6 +7,32 @@ The Mac and the phone control each other through an end-to-end encrypted bridge 
 All AI runs on the devices.
 The harness, not the model, owns planning state, routing, checkpoints, and safety.
 
+## Try Yumi
+
+Judges and anyone new: start with the [setup guide](wiki/judges-setup.md).
+It has four paths, from quickest to fullest:
+
+1. **The Mac app with the scripted harness:** the whole interface in about 15 minutes, with no model download.
+2. **The real harness and model:** Qwen3.5-9B running on your Mac through mlx-vlm.
+3. **The Android app:** build and install the phone app.
+4. **The tests:** every product's checks, on macOS, Linux, or Windows.
+
+The quickest start, on a Mac with Apple silicon, Xcode 26, and Node.js 24:
+
+```sh
+git clone https://github.com/brentzo/appbuilders-hackathon.git
+cd appbuilders-hackathon
+(cd protocol && npm install) && (cd harness && npm install)
+cd mac && cp Signing.local.xcconfig.example Signing.local.xcconfig   # then set your team ID in it
+xcodebuild -project Yumi.xcodeproj -scheme Yumi -configuration Release -derivedDataPath build build
+open build/Build/Products/Release/Yumi.app --args -YumiMockHarness YES
+```
+
+Then choose "Send sample goal to the mock" in Yumi's menu bar menu, or hold ⌥Space and say a goal.
+
+Yumi is a hackathon build and some parts are still being finished.
+[Demo readiness](wiki/demo-readiness.md) says what works end to end today.
+
 ## Repository map
 
 | Path | What it is |
@@ -14,6 +40,7 @@ The harness, not the model, owns planning state, routing, checkpoints, and safet
 | [docs/](docs/yumi.md) | Design background: overview, lane router, task record schema, device bridge |
 | [specs/](specs/README.md) | Requirement specs with Gherkin scenarios (what to build) |
 | [objectives/](objectives/README.md) | Implementation objectives with tasks, expectations, and status (how we build it) |
+| [wiki/](wiki/README.md) | Reports and guides: the setup guide for judges, demo readiness, and what was measured |
 | [protocol/](protocol/README.md) | Shared schemas and crypto: task records, actions, bridge messages |
 | [harness/](harness/README.md) | The agent harness on the Mac (TypeScript): loop, task store, planner, lane router |
 | [mac/](mac/README.md) | The Mac app (Swift): voice, cursors, screen capture, input, permissions |
