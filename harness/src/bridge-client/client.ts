@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import Database from "better-sqlite3";
 import { RpcFailure, type Handler } from "@yumi/protocol";
 import { validate } from "@yumi/protocol";
@@ -74,7 +74,8 @@ export class BridgeClient {
       CREATE TABLE IF NOT EXISTS processed (message_id TEXT PRIMARY KEY, result TEXT NOT NULL, created_at TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS outbox (message_id TEXT PRIMARY KEY, frame TEXT NOT NULL, expires_at TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS message_tasks (message_id TEXT PRIMARY KEY, task_id TEXT NOT NULL);
-      CREATE TABLE IF NOT EXISTS pending_unpairs (device_id TEXT PRIMARY KEY, frame TEXT NOT NULL);`);
+      CREATE TABLE IF NOT EXISTS pending_unpairs (device_id TEXT PRIMARY KEY, frame TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS received_unpairs (from_device TEXT NOT NULL, message_id TEXT NOT NULL, PRIMARY KEY (from_device, message_id));`);
     this.db.prepare("DELETE FROM processed WHERE julianday(created_at) < julianday('now', '-1 day')").run();
   }
 
@@ -109,6 +110,7 @@ export class BridgeClient {
       if (seed.length !== 64) throw new Error("Invalid device seed length");
       this.keys = deviceKeysFromSeeds(seed.slice(0, 32), seed.slice(32));
     }
+    this.resignLegacyPendingUnpairs();
     this.stopped = false;
     this.connect();
   }
@@ -144,14 +146,21 @@ export class BridgeClient {
     if (!peer || !this.keys) throw new RpcFailure({ kind: "unpairedDevice", device: deviceId });
     if (this.db.prepare("SELECT 1 FROM pending_unpairs WHERE device_id = ?").get(deviceId)) return {};
     const at = new Date().toISOString();
+    const id = randomUUID();
     const frame: UnpairFrame = {
       frame: "unpair",
+      id,
       from: this.keys.deviceId,
       to: deviceId,
       at,
-      signature: toBase64(sign(unpairSigningBytes({ from: this.keys.deviceId, to: deviceId, at }), this.keys.signing.secretKey)),
+      signature: toBase64(
+        sign(unpairSigningBytes({ id, from: this.keys.deviceId, to: deviceId, at }), this.keys.signing.secretKey),
+      ),
     };
-    this.db.prepare("INSERT INTO pending_unpairs VALUES (?, ?)").run(deviceId, JSON.stringify(frame));
+    this.db.transaction(() => {
+      this.db.prepare("INSERT INTO pending_unpairs VALUES (?, ?)").run(deviceId, JSON.stringify(frame));
+      this.db.prepare("DELETE FROM peers WHERE device_id = ?").run(deviceId);
+    })();
     this.send(frame);
     return {};
   }
@@ -241,6 +250,15 @@ export class BridgeClient {
     } else if (frame.frame === "pairRequest") {
       void this.acceptPairRequest(frame);
     } else if (frame.frame === "ack") {
+      const pendingUnpairs = this.db.prepare("SELECT device_id, frame FROM pending_unpairs").all() as Array<{
+        device_id: string;
+        frame: string;
+      }>;
+      const unpair = pendingUnpairs.find(({ frame: text }) => (JSON.parse(text) as UnpairFrame).id === frame.messageId);
+      if (unpair) {
+        this.db.prepare("DELETE FROM pending_unpairs WHERE device_id = ?").run(unpair.device_id);
+        return;
+      }
       this.db.prepare("DELETE FROM outbox WHERE message_id = ?").run(frame.messageId);
       this.db.prepare("DELETE FROM message_tasks WHERE message_id = ?").run(frame.messageId);
     } else if (frame.frame === "targetOffline" || frame.frame === "expired" || frame.frame === "notPaired") {
@@ -297,6 +315,7 @@ export class BridgeClient {
       .prepare("INSERT OR REPLACE INTO peers VALUES (?, ?, ?, ?, ?, ?)")
       .run(frame.from, request.deviceName, request.platform, request.signingPublicKey, request.kxPublicKey, at);
     this.db.prepare("DELETE FROM pending_unpairs WHERE device_id = ?").run(frame.from);
+    this.db.prepare("DELETE FROM received_unpairs WHERE from_device IN (?, ?)").run(frame.from, this.keys.deviceId);
     const accept = {
       signature: toBase64(
         sign(
@@ -314,6 +333,13 @@ export class BridgeClient {
   }
 
   private receiveUnpair(frame: UnpairFrame): void {
+    const seen = this.db
+      .prepare("SELECT 1 FROM received_unpairs WHERE from_device = ? AND message_id = ?")
+      .get(frame.from, frame.id);
+    if (seen) {
+      this.send({ frame: "ack", messageId: frame.id });
+      return;
+    }
     const peer = this.peer(frame.from);
     if (
       !peer ||
@@ -322,10 +348,39 @@ export class BridgeClient {
       !verify(fromBase64(frame.signature), unpairSigningBytes(frame), fromBase64(peer.signing_key))
     )
       return;
-    this.db.prepare("DELETE FROM peers WHERE device_id = ?").run(frame.from);
-    this.db.prepare("DELETE FROM pending_unpairs WHERE device_id = ?").run(frame.from);
-    // The current schema has no message id on UnpairFrame, so a correlatable ACK cannot be formed.
-    this.options.onLog?.("unpair-ack-contract-pending");
+    this.db.transaction(() => {
+      this.db.prepare("DELETE FROM peers WHERE device_id = ?").run(frame.from);
+      this.db.prepare("DELETE FROM pending_unpairs WHERE device_id = ?").run(frame.from);
+      this.db.prepare("INSERT INTO received_unpairs VALUES (?, ?)").run(frame.from, frame.id);
+    })();
+    this.send({ frame: "ack", messageId: frame.id });
+  }
+
+  private resignLegacyPendingUnpairs(): void {
+    if (!this.keys) return;
+    const rows = this.db.prepare("SELECT device_id, frame FROM pending_unpairs").all() as Array<{
+      device_id: string;
+      frame: string;
+    }>;
+    for (const row of rows) {
+      const old = JSON.parse(row.frame) as {
+        frame: "unpair";
+        id?: string;
+        from: string;
+        to: string;
+        at: string;
+        signature?: string;
+      };
+      if ("id" in old) continue;
+      const id = randomUUID();
+      const unsigned = { id, from: old.from, to: old.to, at: old.at };
+      const frame: UnpairFrame = {
+        frame: "unpair",
+        ...unsigned,
+        signature: toBase64(sign(unpairSigningBytes(unsigned), this.keys.signing.secretKey)),
+      };
+      this.db.prepare("UPDATE pending_unpairs SET frame = ? WHERE device_id = ?").run(JSON.stringify(frame), row.device_id);
+    }
   }
 
   private async receiveEnvelope(envelope: Extract<BridgeFrame, { frame: "envelope" }>["envelope"]): Promise<void> {

@@ -55,8 +55,8 @@ describe("bridge client non-functional behavior", () => {
     try {
       Object.assign(mac.handlers, client.handlers);
       await client.start();
+      await client.waitForState("reconnecting", 5000);
       await client.waitForState("offline", 5000);
-      await new Promise((resolve) => setTimeout(resolve, 50));
       expect(mac.events.filter((e) => e.event === "userError")).toEqual([]);
       expect(logs).toContain("relay-offline");
     } finally {

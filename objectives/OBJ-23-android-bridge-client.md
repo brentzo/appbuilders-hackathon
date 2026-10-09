@@ -47,7 +47,7 @@ After this objective, the phone and Mac can exchange messages in both directions
 - [ ] **OBJ-23.6** At-most-once execution: remember processed message ids and their results; on a duplicate, resend the stored result.
 - [ ] **OBJ-23.7** Never run an expired command. Treat a `targetOffline` event as a structured error for the command that caused it.
 - [ ] **OBJ-23.8** Show connection state (connected, reconnecting, offline) on the home screen and in the notification. Use the SPEC-11 "Bridge down" and "Unpaired device" copy.
-- [ ] **OBJ-23.9** Unpair from settings, which revokes the device at the bridge.
+- [ ] **OBJ-23.9** Unpair from settings. Sign a stable UUID with the unpair fields, retry the same frame until the relay acknowledges durable receipt, and have the phone atomically record and ACK that UUID on receipt. Duplicate deliveries are idempotent; re-pairing clears receipt state.
 - [ ] **OBJ-23.10** End-to-end test with the Mac from [OBJ-21](OBJ-21-mac-bridge-client-and-pairing.md) (or a test client until it is ready): a test `ping` command each way, with the phone app in the background.
 
 ## Expectations

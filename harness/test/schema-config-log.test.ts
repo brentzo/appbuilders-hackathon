@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import Ajv2020 from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 import { describe, expect, it } from "vitest";
@@ -69,7 +69,7 @@ describe("the config", () => {
       YUMI_MODEL_TIMEOUT_MS: "5000",
       YUMI_MODEL_STRUCTURED_OUTPUT: "0",
     });
-    expect(config.socketPath).toBe(join("/tmp/yumi-test", "harness.sock"));
+    expect(config.socketPath).toBe(join(resolve("/tmp/yumi-test"), "harness.sock"));
     expect(config.model).toMatchObject({
       baseUrl: "http://localhost:9000/v1",
       model: "mlx-community/Qwen3.5-4B-4bit",

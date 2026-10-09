@@ -46,14 +46,14 @@ It never sees plaintext, which keeps the "local AI" claim honest.
 - [x] **OBJ-13.4** Route each envelope to its `to` device if online. Only allow routing between paired devices, and answer anything else with `notPaired`.
 - [x] **OBJ-13.5** Commands are never queued. If a command's target is offline, send the sender a `targetOffline` event at once. Hold results and events for a device that dropped off in SQLite until they expire, deliver them in order on reconnect, and delete each one after the receiver acknowledges it.
 - [x] **OBJ-13.6** Expiry: never deliver an expired envelope. Send the sender an `expired` event for it (when the sender is online, or queued for it).
-- [ ] **OBJ-13.7** Unpairing, as in `pairing.md` "Unpairing": remove the pairing at once, delete every message held between the two devices, and hold the signed `unpair` frame until the other device acks it. The current frame has no correlatable acknowledgement id; finish ACK deletion against the contract in [OBJ-31](OBJ-31-unpair-delivery-ack-contract.md).
+- [ ] **OBJ-13.7** Unpairing, as in `pairing.md` "Unpairing": remove the pairing at once, delete every message held between the two devices, acknowledge durable receipt to the sender, and hold the signed `unpair` frame until the recipient acks its signed UUID. Preserve the receipt for idempotent retries, ignore stale or wrong-device ACKs, and clear it on re-pairing.
 - [x] **OBJ-13.8** Logging: routing fields, connection events, and errors only. Never log payloads.
 - [x] **OBJ-13.9** Package the relay in a Docker image and Compose service that binds only `127.0.0.1:8787`, persists SQLite in a mounted `data/` folder, and restarts unless stopped. Document configuration, deploy steps, and log access in `bridge/README.md`. The VPS rollout and live check are tracked in [OBJ-32](OBJ-32-production-bridge-deployment.md).
 - [x] **OBJ-13.10** Tests: auth success and failure, routing, cross-group routing refused, offline notice for commands, result held through a short reconnect, expiry with sender notice, revocation.
 
 ## Expectations
 
-- [ ] SPEC-08 scenarios pass at the bridge level: "VPS cannot read messages", "Message from an unknown device is dropped" (bridge refuses it; the device-side check is in client objectives), "Command to an offline device fails at once", "Result survives a short reconnect", "Expired command is not run", "Unpair a device".
+- [ ] SPEC-08 scenarios pass at the bridge level: "VPS cannot read messages", "Message from an unknown device is dropped" (bridge refuses it; the device-side check is in client objectives), "Command to an offline device fails at once", "Result survives a short reconnect", "Expired command is not run", "Unpair a device" including duplicate retry, offline recipient, and re-pairing.
 - [x] A test client using the protocol's test vectors can authenticate, pair, send, and receive through a local relay. Production endpoint acceptance is tracked in [OBJ-30](OBJ-30-live-cross-device-bridge-acceptance.md).
 - [x] Database and logs contain no plaintext payloads.
 

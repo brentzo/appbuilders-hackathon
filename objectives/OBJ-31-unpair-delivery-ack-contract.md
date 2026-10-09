@@ -3,9 +3,9 @@ id: OBJ-31
 title: Define unpair delivery acknowledgement
 product: protocol
 assignee: Jepoy
-touches: []
+touches: [bridge, harness]
 specs: [SPEC-08]
-status: todo
+status: done
 priority: p0
 depends-on: [OBJ-02]
 integrates-with: [OBJ-13, OBJ-21, OBJ-23]
@@ -34,10 +34,10 @@ The protocol therefore cannot correlate the acknowledgement or reliably remove a
 
 ## Tasks
 
-- [ ] Decide the stable acknowledgement identifier and replay behavior for unpair frames.
-- [ ] Align SPEC-08, pairing documentation, schema, examples, and generated protocol types.
-- [ ] Add protocol validation vectors and relay/client coverage for online delivery, offline queueing, reconnect, duplicate delivery, and re-pairing.
-- [ ] Update OBJ-13, OBJ-21, and OBJ-23 acceptance criteria to use the finalized contract.
+- [x] Decide the stable acknowledgement identifier and replay behavior for unpair frames.
+- [x] Align SPEC-08, pairing documentation, schema, examples, and generated protocol types.
+- [x] Add protocol validation vectors and relay/client coverage for online delivery, offline queueing, reconnect, duplicate delivery, and re-pairing.
+- [x] Update OBJ-13, OBJ-21, and OBJ-23 acceptance criteria to use the finalized contract.
 
 ## Expectations
 
@@ -54,4 +54,8 @@ The protocol therefore cannot correlate the acknowledgement or reliably remove a
 
 ## Outcome
 
-An unpair acknowledgement contract that senders, recipients, and relays can implement consistently.
+Protocol v4 gives each unpair a signed UUID.
+The sender retries that exact frame until durable relay receipt is acknowledged; the relay holds it until the recipient acknowledges the same UUID.
+Recipient tombstones make duplicate delivery idempotent, and re-pairing clears old receipts.
+SPEC-08, protocol docs/schema/vectors, relay and Mac harness client tests, and OBJ-13/21/23 criteria now describe this contract.
+The protocol version bump exposes an upgrade recovery gap, tracked in [OBJ-34](OBJ-34-protocol-version-upgrade-recovery.md); Android implementation remains scoped in OBJ-23.9.

@@ -50,13 +50,13 @@ After this objective, the Mac can pair with a phone and exchange encrypted, sign
 - [x] **OBJ-21.7** Never run an expired command. Surface `expired` and `targetOffline` events from the bridge to the task that sent the command, as structured errors.
 - [x] **OBJ-21.8** Emit `bridgeStateChanged` (connected, reconnecting, offline) and structured `userError` kinds for "Bridge down" and "Unpaired device". The Mac app shows them (OBJ-27).
 - [x] **OBJ-21.9** When [OBJ-03](OBJ-03-harness-skeleton.md) is done, wire the module into the harness (coordinate with Brent) and expose its RPC methods on the harness socket.
-- [x] **OBJ-21.10** Run local end-to-end tests through a protocol-compliant relay stand-in and Mac RPC stand-in: pairing, authenticated reconnect, encrypted round trip, unknown device dropped, duplicate delivery, expiry, and an offline queued unpair delivered after restart. Unpair acknowledgement correlation remains pending OBJ-31.
+- [x] **OBJ-21.10** Run local end-to-end tests through a protocol-compliant relay stand-in and Mac RPC stand-in: pairing, authenticated reconnect, encrypted round trip, unknown device dropped, duplicate delivery, expiry, and an offline queued unpair delivered after restart. The sender reuses its signed UUID until the relay ACKs durable receipt; the receiving device ACKs the same UUID after idempotently deleting the peer.
 
 ## Expectations
 
 - [x] SPEC-08 scenarios pass from the Mac side: "Pair the phone with the Mac", "Unpair a device", "Message from an unknown device is dropped", "Duplicate delivery runs once", "Expired command is not run".
 - [x] Keys never appear in files, logs, or the task store.
-- [x] The Mac uses the shared protocol crypto implementation covered by the protocol v3 test vectors.
+- [x] The Mac uses the shared protocol crypto implementation covered by the protocol v4 test vectors.
 - [x] End-to-end flows pass against the local relay and Mac RPC stand-ins; deployed Mac and phone acceptance is tracked by [OBJ-30](OBJ-30-live-cross-device-bridge-acceptance.md).
 
 ## Expected outcomes
@@ -70,4 +70,4 @@ After this objective, the Mac can pair with a phone and exchange encrypted, sign
 
 ## Outcome
 
-Complete for local stand-in coverage. The harness now starts the bridge client after the Mac RPC handshake, exposes the pairing methods, and closes the client during shutdown. Device acceptance against the deployed relay is tracked in OBJ-30. Unpair acknowledgement correlation requires the contract tracked in OBJ-31.
+Complete for local stand-in coverage. The harness now starts the bridge client after the Mac RPC handshake, exposes the pairing methods, and closes the client during shutdown. Device acceptance against the deployed relay is tracked in OBJ-30.

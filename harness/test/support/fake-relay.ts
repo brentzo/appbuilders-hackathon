@@ -109,6 +109,7 @@ export class FakeRelay {
         if (frame.from !== device.id) break;
         this.paired.delete(pairKey(frame.from, frame.to));
         this.forward(frame.to, frame);
+        send(socket, { frame: "ack", messageId: frame.id });
         break;
       }
       case "envelope": {

@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { validate } from "@yumi/protocol";
@@ -55,9 +56,10 @@ describe("the database", () => {
     expect((db.prepare("PRAGMA user_version").get() as { user_version: number }).user_version).toBe(MIGRATIONS.length);
     expect((db.prepare("PRAGMA journal_mode").get() as { journal_mode: string }).journal_mode).toBe("wal");
     db.close();
-    for (const file of [DATABASE_FILE, `${DATABASE_FILE}-wal`, `${DATABASE_FILE}-shm`]) {
-      expect(statSync(join(dir.path, file)).mode & 0o777, file).toBe(0o600);
-    }
+    if (process.platform !== "win32")
+      for (const file of [DATABASE_FILE, `${DATABASE_FILE}-wal`, `${DATABASE_FILE}-shm`]) {
+        expect(statSync(join(dir.path, file)).mode & 0o777, file).toBe(0o600);
+      }
 
     expect(logger.entries).toContainEqual(
       expect.objectContaining({ event: "store.opened", migrationsApplied: MIGRATIONS.length }),
@@ -87,7 +89,7 @@ describe("the database", () => {
       observation: "The Export To submenu opened.",
       log: { deviceId: "mac-brent", description: "Clicked Export To in Keynote" },
     });
-    store.saveStepScreenshot(step.id, tinyPng());
+    if (process.platform !== "win32") store.saveStepScreenshot(step.id, tinyPng());
     store.putWindowLock({
       windowId: 4182,
       subtaskId: subtask.id,
@@ -317,32 +319,36 @@ describe("the step checkpoint rule", () => {
     expect(logger.entries).toContainEqual(expect.objectContaining({ event: "store.refused", rule: "stepNeedsRunningSubtask" }));
   });
 
-  it("leaves a step with no outcome when the process is killed between the insert and the outcome update", async () => {
-    store.close();
-    const child = spawn(process.execPath, ["--import", "tsx", "test/fixtures/crash-mid-step.ts", dir.path], {
-      cwd: new URL("..", import.meta.url).pathname,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    let output = "";
-    child.stdout.setEncoding("utf8").on("data", (chunk: string) => (output += chunk));
-    child.stderr.setEncoding("utf8").on("data", (chunk: string) => (output += chunk));
-    const signal = await new Promise<NodeJS.Signals | null>((resolve) => child.once("exit", (_code, sig) => resolve(sig)));
-    expect(signal, output).toBe("SIGKILL");
-    const stepId = /began (\S+)/.exec(output)?.[1];
-    expect(stepId, output).toBeDefined();
+  it.skipIf(process.platform === "win32")(
+    "leaves a step with no outcome when the process is killed between the insert and the outcome update",
+    async () => {
+      store.close();
+      const child = spawn(process.execPath, ["--import", "tsx", "test/fixtures/crash-mid-step.ts", dir.path], {
+        cwd: fileURLToPath(new URL("..", import.meta.url)),
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      let output = "";
+      child.stdout.setEncoding("utf8").on("data", (chunk: string) => (output += chunk));
+      child.stderr.setEncoding("utf8").on("data", (chunk: string) => (output += chunk));
+      const signal = await new Promise<NodeJS.Signals | null>((resolve) => child.once("exit", (_code, sig) => resolve(sig)));
+      expect(signal, output).toBe("SIGKILL");
+      const stepId = /began (\S+)/.exec(output)?.[1];
+      expect(stepId, output).toBeDefined();
 
-    store = openStore(dir.path, clock, logger);
-    const unfinished = store.listUnfinishedSteps();
-    expect(unfinished.map((s) => s.id)).toEqual([stepId]);
-    expect(unfinished[0]!.outcome).toBeUndefined();
-    expect(unfinished[0]!.durationMs).toBeUndefined();
-    const subtask = store.getSubtask(unfinished[0]!.subtaskId)!;
-    expect(subtask.status).toBe("running");
-    expect(store.listActionLog(subtask.taskId)).toEqual([]);
-  }, 30_000);
+      store = openStore(dir.path, clock, logger);
+      const unfinished = store.listUnfinishedSteps();
+      expect(unfinished.map((s) => s.id)).toEqual([stepId]);
+      expect(unfinished[0]!.outcome).toBeUndefined();
+      expect(unfinished[0]!.durationMs).toBeUndefined();
+      const subtask = store.getSubtask(unfinished[0]!.subtaskId)!;
+      expect(subtask.status).toBe("running");
+      expect(store.listActionLog(subtask.taskId)).toEqual([]);
+    },
+    30_000,
+  );
 });
 
-describe("step screenshots", () => {
+describe.skipIf(process.platform === "win32")("step screenshots", () => {
   it("are saved as files next to the database, with the path on the step", () => {
     const { task, subtask } = runningSubtask(store);
     const step = store.beginStep({ subtaskId: subtask.id, lane: "main", action: exampleAction() });
@@ -508,7 +514,7 @@ describe("nothing is deleted", () => {
   });
 
   it("no harness code deletes task records or screenshots", () => {
-    const srcDir = new URL("../src/", import.meta.url).pathname;
+    const srcDir = fileURLToPath(new URL("../src/", import.meta.url));
     const sources = readdirSync(srcDir, { recursive: true, encoding: "utf8" })
       .filter((file) => file.endsWith(".ts"))
       .map((file) => ({ file, text: readFileSync(join(srcDir, file), "utf8") }));
@@ -519,13 +525,13 @@ describe("nothing is deleted", () => {
     const deletes = sources.flatMap(({ file, text }) =>
       [...text.matchAll(/DELETE\s+FROM\s+(\w+)/gi)]
         .filter((m) => storeTables.includes(m[1]!.toLowerCase()))
-        .map((m) => `${file}: ${m[1]}`),
+        .map((m) => `${file.replaceAll("\\", "/")}: ${m[1]}`),
     );
     expect(deletes).toEqual(["store/task-store.ts: window_locks"]);
     // No file removal in the store; the RPC server removes only its own socket file.
     const removals = sources
       .filter(({ text }) => /\b(rmSync|unlinkSync|rm|unlink|rmdirSync)\(/.test(text))
-      .map(({ file }) => file);
+      .map(({ file }) => file.replaceAll("\\", "/"));
     expect(removals).toEqual(["rpc/server.ts"]);
     expect(existsSync(join(srcDir, "store"))).toBe(true);
   });

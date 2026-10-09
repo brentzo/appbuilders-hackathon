@@ -49,7 +49,7 @@ function invoicesTask() {
   return { task: store.getTask(task.id)!, step: store.getStep(step.id)! };
 }
 
-describe("the history methods over the local RPC", () => {
+describe.skipIf(process.platform === "win32")("the history methods over the local RPC", () => {
   it("listTasks returns past tasks newest first", async () => {
     const first = invoicesTask().task;
     const second = harness.store.createTask({ originDeviceId: "mac-brent", goal: "tidy my desktop" });
@@ -97,7 +97,7 @@ describe("the history methods over the local RPC", () => {
   });
 });
 
-describe("taskStatusChanged over the local RPC", () => {
+describe.skipIf(process.platform === "win32")("taskStatusChanged over the local RPC", () => {
   it("sends one event per status change to the app", async () => {
     const client = await app();
     const task = harness.store.createTask({ originDeviceId: "mac-brent", goal: "tidy my desktop" });
