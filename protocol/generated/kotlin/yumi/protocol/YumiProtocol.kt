@@ -125,10 +125,13 @@ data class AxPressAction(
 enum class AXRole {
     @SerialName("button") Button,
     @SerialName("menuItem") MenuItem,
+    @SerialName("menuBarItem") MenuBarItem,
     @SerialName("textField") TextField,
     @SerialName("secureTextField") SecureTextField,
+    @SerialName("textArea") TextArea,
     @SerialName("link") Link,
     @SerialName("checkbox") Checkbox,
+    @SerialName("radioButton") RadioButton,
     @SerialName("popUpButton") PopUpButton;
 }
 

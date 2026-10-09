@@ -98,8 +98,8 @@ export interface AxPressAction {
 }
 
 /** Actionable roles kept in the trimmed tree (SPEC-05 r2). Secure text fields are listed so Yumi can ask the user to type there, but their value is never read (SPEC-05 r7). */
-export type AXRole = "button" | "menuItem" | "textField" | "secureTextField" | "link" | "checkbox" | "popUpButton";
-export const aXRoleValues: readonly AXRole[] = ["button", "menuItem", "textField", "secureTextField", "link", "checkbox", "popUpButton"];
+export type AXRole = "button" | "menuItem" | "menuBarItem" | "textField" | "secureTextField" | "textArea" | "link" | "checkbox" | "radioButton" | "popUpButton";
+export const aXRoleValues: readonly AXRole[] = ["button", "menuItem", "menuBarItem", "textField", "secureTextField", "textArea", "link", "checkbox", "radioButton", "popUpButton"];
 
 /** One WebSocket text frame between a device and the relay. Each frame says who sends it. See protocol/docs/pairing.md. */
 export type BridgeFrame =

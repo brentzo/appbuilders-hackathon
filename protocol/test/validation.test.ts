@@ -23,6 +23,14 @@ describe("ModelAction", () => {
   });
 });
 
+describe("AXRole", () => {
+  it("accepts all documented actionable roles", () => {
+    for (const role of ["button", "menuItem", "menuBarItem", "textField", "secureTextField", "textArea", "link", "checkbox", "radioButton", "popUpButton"]) {
+      expect(validate("TreeElement", { n: 1, role, label: "Control", enabled: true }).valid, role).toBe(true);
+    }
+  });
+});
+
 describe("KeyAction", () => {
   it("accepts punctuation and named keys", () => {
     for (const combo of ["cmd+,", "cmd+/", "cmd+shift+d", "return", "cmd+delete", "cmd+shift+delete", "escape", "f5"]) {

@@ -135,7 +135,7 @@
     "AXRole": {
       "description": "Actionable roles kept in the trimmed tree (SPEC-05 r2). Secure text fields are listed so Yumi can ask the user to type there, but their value is never read (SPEC-05 r7).",
       "type": "string",
-      "enum": ["button", "menuItem", "textField", "secureTextField", "link", "checkbox", "popUpButton"]
+      "enum": ["button", "menuItem", "menuBarItem", "textField", "secureTextField", "textArea", "link", "checkbox", "radioButton", "popUpButton"]
     },
     "ResolvedElement": {
       "description": "The real element behind an element number, resolved by the harness before acting.",

@@ -167,10 +167,13 @@ public struct AxPressAction: Codable, Equatable, Sendable {
 public enum AXRole: String, Codable, Equatable, Sendable, CaseIterable {
     case button
     case menuItem
+    case menuBarItem
     case textField
     case secureTextField
+    case textArea
     case link
     case checkbox
+    case radioButton
     case popUpButton
 }
 
