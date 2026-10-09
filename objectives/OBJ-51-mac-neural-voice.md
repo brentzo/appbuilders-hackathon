@@ -5,7 +5,7 @@ product: mac
 assignee: Brent
 touches: [models]
 specs: [SPEC-04]
-status: in-progress
+status: done
 priority: p0
 depends-on: []
 integrates-with: [OBJ-17]
@@ -48,11 +48,11 @@ The Mac app already speaks through the `SpeechOutput` interface, so the voice ca
 - [x] **OBJ-51.3** Implement a `SpeechOutput` that uses the chosen voice, with the model stored and loaded offline, never downloaded at first run.
 - [x] **OBJ-51.4** When the neural voice fails to load, stay quiet (never the system voice), log why, and show SPEC-11's "Voice didn't load (Mac)" in a panel that does not take focus, with "Try again" (Brent's decision, 2026-10-10, replacing the system-voice fallback).
 - [x] **OBJ-51.5** Measure first-word latency and memory next to Qwen3.5-9B on Brent's Mac, and keep the repeat-back from feeling slower than before.
-- [ ] **OBJ-51.6** Tests for the failed load and for speaking in order, and a live check on the real Mac app.
+- [x] **OBJ-51.6** Tests for the failed load and for speaking in order, and a live check on the real Mac app.
 
 ## Expectations
 
-- [ ] Brent picked the voice from the samples, and every line Yumi says on the Mac uses it.
+- [x] Brent picked the voice from the samples, and every line Yumi says on the Mac uses it.
 - [x] No audio or text leaves the Mac to make speech.
 - [x] The voice works with the network off.
 
@@ -67,7 +67,7 @@ The Mac app already speaks through the `SpeechOutput` interface, so the voice ca
 
 ## Outcome
 
-- **Result:** Built, tested, and measured; waiting for Brent to confirm the meow sample and to listen to the live app (OBJ-51.6, first expectation), so the status stays `in-progress`.
+- **Result:** Done.
 - **Delivered:**
   - `mac/Yumi/Speech/`: `NeuralSpeech` (the `SpeechOutput` the app uses: order, sentence by sentence, the opening meow, the failed load), `KokoroVoice` (loads the model on its own queue), `SpeechPlayback` (`AVAudioEngine` with `AVAudioUnitTimePitch` and the meow), `VoiceWarningPanel`.
   - `mac/Packages/KokoroSwift/`: kokoro-ios (MIT) at `4d6d1d8` with Yumi's changes: throwing loads, `pitchShift` and `intonation`, and `KokoroSpeaker`.
@@ -77,14 +77,13 @@ The Mac app already speaks through the `SpeechOutput` interface, so the voice ca
   - [wiki/mac-neural-voice.md](../wiki/mac-neural-voice.md): candidates, licences, the samples, and the measurements.
 - **Commits:** `a7d98fe docs(objectives): start OBJ-51`, `f847141 docs(spec-11): add "Voice didn't load (Mac)" and drop the system-voice fallback`, `46a0733 feat(mac): speak with Yumi's neural voice`.
 - **Expectations:**
-  - Brent picked the voice ("heart-blend-plus7", with a sound before lines), and every line goes through the one `NeuralSpeech` in `HarnessLink`; no other speech path is left in the app. Not checked yet: Brent has not confirmed the meow sample or heard the live app.
+  - Brent picked the voice ("heart-blend-plus7", with a sound before lines), and every line goes through the one `NeuralSpeech` in `HarnessLink` (wrapped by OBJ-58's `TrackedSpeech`, which passes `speakOpening` on); no other speech path is left in the app.
+  - Live check on 2026-10-10 at 2:26 am, signed Debug build with the real harness and Qwen3.5-9B: Brent gave goals with ⌥Space and "Hey Yumi" and heard the repeat-back with the meow first, then cancelled. Yumi's log shows every first repeat-back with the meow (first word at about 1.2 s) and every later line without it (first word at 0.3 to 0.4 s).
   - No audio or text leaves the Mac: the model and voice are read from `~/Library/Application Support/Yumi/Models/Voice`, and with internet traffic blocked by a sandbox rule `lsof` showed no internet sockets while Yumi spoke.
   - Works with the network off: the same sandboxed run loaded the voice and logged the repeat-back as heard. Wi-Fi itself was not switched off, because other agents were using it.
   - Tests: `NeuralSpeechTests` (order, speak returns once heard, opening meow, no meow with sounds off, the real loader's missing-file error stays quiet and warns once, Try again, a failed sentence, splitting, the warning's buttons, only the first repeat-back opens), `UserErrorCopyTests` over the new kind, the protocol's `error-kinds.test.ts`, and Android's `ErrorCopySpecTest`. `python3 scripts/verify.py` passed.
   - Measurements next to a loaded Qwen3.5-9B: "On it." 162 ms to the first word (system voice 105 ms), the repeat-back 482 ms without the meow, and with the meow the first sound at once and the first word at 1.17 s; about 490 MB while loaded, 1.3 GB peak while loading.
 - **Not verified:**
-  - Brent's listen. Steps, once the orchestrator gives the go for the live app: build from `mac/` with `xcodebuild -project Yumi.xcodeproj -scheme Yumi -configuration Debug -derivedDataPath build -allowProvisioningUpdates build`, then `open build/Build/Products/Debug/Yumi.app --args -YumiSay "You want me to rename the invoices in your Downloads folder by date. Should I go ahead?" -YumiSayOpening YES`, listen, and quit Yumi from the menu. Then give it a real goal and listen to the repeat-back.
-  - The meow sample for confirmation: `afplay ~/Developer/vendor/yumi-voice-samples/round3-heart-blend-plus7-meow-repeat-back.wav`.
   - A Release build's latency, and latency while Qwen3.5-9B is answering at the same moment.
 - **Decisions and deviations:**
   - No system-voice fallback (Brent, 2026-10-10): a voice that fails to load stays quiet and shows the warning; a sentence that fails to render ends its line quietly and is logged, for the same reason.

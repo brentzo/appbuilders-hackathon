@@ -108,14 +108,14 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-48](OBJ-48-unpair-without-device-clocks.md) | Bind unpair to the pairing instead of device clocks | protocol | Jepoy | 08 | 31 | 13, 23, 30, 41 | todo |
 | [OBJ-49](OBJ-49-mac-bridge-test-support.md) | Mac answers ping and has bridge test hooks | harness | Brent | 08 | 21, 25 | 23, 30 | todo |
 | [OBJ-50](OBJ-50-mac-auto-mode.md) | Auto mode skips the repeat-back | mac | Brent | 01 | - | 17 | in-progress |
-| [OBJ-51](OBJ-51-mac-neural-voice.md) | Yumi's neural voice on the Mac | mac | Brent | 04 | - | 17 | in-progress |
+| [OBJ-51](OBJ-51-mac-neural-voice.md) | Yumi's neural voice on the Mac | mac | Brent | 04 | - | 17 | done |
 | [OBJ-52](OBJ-52-harness-debug-logs.md) | Debug mode keeps full local logs | harness | Brent | 07 | - | 53 | done |
 | [OBJ-53](OBJ-53-mac-thoughts-panel.md) | Expand a cursor to see what it is thinking | mac | Brent | 07 | 52 | - | in-progress |
 | [OBJ-54](OBJ-54-mac-cats-avoid-pointer.md) | Cats avoid the user's pointer | mac | Brent | 04 | - | - | in-progress |
 | [OBJ-55](OBJ-55-voice-stop-keyword-models.md) | Voice stop keyword models | models | Jepoy | 06 | - | 35 | todo |
 | [OBJ-56](OBJ-56-unclassified-action-approval-contract.md) | Approval contract for unclassified risky actions | protocol | Jepoy | 07 | 01 | 36, 38, 40 | todo |
 | [OBJ-57](OBJ-57-route-classified-gui-deletes-through-strict-delete.md) | Route classified GUI delete asks through strict delete | harness | Brent | 07 | 37, 38 | 36, 40 | todo |
-| [OBJ-58](OBJ-58-mac-hey-yumi-recognizer.md) | "Hey Yumi" on the Mac with the on-device recognizer | mac | Brent | 01 | - | 16 | in-progress |
+| [OBJ-58](OBJ-58-mac-hey-yumi-recognizer.md) | "Hey Yumi" on the Mac with the on-device recognizer | mac | Brent | 01 | - | 16 | done |
 <!-- generated:objectives-index:end -->
 
 ## Priority and blocking
