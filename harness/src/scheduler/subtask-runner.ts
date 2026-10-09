@@ -36,6 +36,8 @@ export const MAX_STEPS_PER_SUBTASK = 25;
 
 /** Longest observation line a step can store (`Step.observation`). */
 const MAX_OBSERVATION = 300;
+/** Longest tool output a step can store (`ToolOutput`): about a page of text. */
+export const MAX_TOOL_OUTPUT = 4000;
 
 export type SubtaskRun =
   /** The worker finished: `result.status` is done or stuck. */
@@ -171,12 +173,22 @@ async function runTool(
     logger.error("tool.threw", { taskId: subtask.taskId, tool: call.tool, ...describeError(error) });
     run = { outcome: "error" as const, output: "The tool failed, so nothing was done." };
   }
+  const description = describeToolRun(call, run.outcome === "ok", run.path);
   store.finishStep(step.id, {
     outcome: run.outcome,
-    observation: fit(run.output),
-    log: { deviceId: deps.deviceId, description: describeToolRun(call, run.outcome === "ok", run.path) },
+    // The one line says what happened; what the tool returned goes in its own bounded field (Brent, 2026-10-09).
+    observation: run.outcome === "ok" ? fit(description) : fit(run.output),
+    ...(run.outcome === "ok" && run.output !== "" ? { toolOutput: cut(run.output) } : {}),
+    log: { deviceId: deps.deviceId, description },
   });
   return run.outcome === "ok" ? run.path : undefined;
+}
+
+/** Cuts tool output to `MAX_TOOL_OUTPUT`, saying so, so the worker knows it saw only the start. */
+function cut(output: string): string {
+  if (output.length <= MAX_TOOL_OUTPUT) return output;
+  const note = `\n[Cut: only the first part of ${output.length} characters.]`;
+  return output.slice(0, MAX_TOOL_OUTPUT - note.length) + note;
 }
 
 function fit(line: string): string {

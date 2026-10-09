@@ -33,7 +33,12 @@ function isFinished(step: Step): step is Step & { outcome: NonNullable<Step["out
   return step.outcome !== undefined;
 }
 
-/** A step as the next worker sees it: the action, one line on what changed, and the outcome. */
+/** A step as the next worker sees it: the action, one line on what changed, the outcome, and what its tool returned. */
 function summarizeStep(step: Step & { outcome: NonNullable<Step["outcome"]> }): StepSummary {
-  return { action: step.action.action, observation: step.observation ?? "", outcome: step.outcome };
+  return {
+    action: step.action.action,
+    observation: step.observation ?? "",
+    outcome: step.outcome,
+    ...(step.toolOutput !== undefined ? { toolOutput: step.toolOutput } : {}),
+  };
 }

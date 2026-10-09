@@ -259,6 +259,7 @@ Only `allowed` may run without the user; asking and the Trash are [OBJ-38](../ob
    Only `allowed` runs; `ask` and `blocked` are recorded as blocked steps and not run, until approvals come with [OBJ-38](../objectives/OBJ-38-approvals-pause-and-action-log.md).
    The helper lane's tools are OBJ-37's typed file tools (`fileHelperLane` in `src/scheduler/lanes.ts`).
    Each step's worker input is exactly the confirmed goal, the subtask instruction, the subtask's last 5 finished steps, a fresh observation, and the lane's tools.
+   Each recent step carries one line on what happened and, for a tool, what the tool returned (`toolOutput`, at most 4000 characters, cut with a note).
    A helper has no window, so its observation is empty.
    Workers never see each other's steps, so the planner is told to pass work between subtasks through files named in both instructions.
 5. **Result.** Each subtask stores a `SubtaskResult`: done or stuck from the worker's `finish`, the real paths its tools created or changed, and a note of at most 200 characters.

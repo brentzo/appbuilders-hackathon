@@ -105,6 +105,10 @@ export const MIGRATIONS: readonly string[] = [
   `
   ALTER TABLE subtasks ADD COLUMN needs_keyboard INTEGER;
   `,
+  // 3: what a typed tool returned, for the next steps of the same subtask (Step.toolOutput). NULL for other steps.
+  `
+  ALTER TABLE steps ADD COLUMN tool_output TEXT;
+  `,
 ];
 
 /** Thrown when the database was written by a newer harness, whose schema this one does not know. */

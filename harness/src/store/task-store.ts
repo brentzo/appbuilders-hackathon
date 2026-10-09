@@ -123,7 +123,14 @@ export interface StepLogLine {
  */
 export type StepResult =
   | { outcome: "invalidOutput"; observation?: string; durationMs?: number }
-  | { outcome: Exclude<StepOutcome, "invalidOutput">; observation?: string; durationMs?: number; log: StepLogLine };
+  | {
+      outcome: Exclude<StepOutcome, "invalidOutput">;
+      observation?: string;
+      /** What a typed tool returned, for the next steps of this subtask. At most 4000 characters. */
+      toolOutput?: string;
+      durationMs?: number;
+      log: StepLogLine;
+    };
 
 /** A task with everything recorded about it: the protocol's `TaskDetail`, always with its action log. */
 export interface TaskHistory extends TaskDetail {
@@ -417,13 +424,17 @@ export class TaskStore {
         ...current,
         outcome: result.outcome,
         ...optional("observation", result.observation),
+        ...optional("toolOutput", "toolOutput" in result ? result.toolOutput : undefined),
         durationMs: result.durationMs ?? Math.max(0, time.getTime() - row.started_ms),
       };
       this.check("Step", step);
-      this.stmt("UPDATE steps SET outcome = $outcome, observation = $observation, duration_ms = $durationMs WHERE id = $id").run({
+      this.stmt(
+        "UPDATE steps SET outcome = $outcome, observation = $observation, tool_output = $toolOutput, duration_ms = $durationMs WHERE id = $id",
+      ).run({
         id,
         outcome: step.outcome!,
         observation: step.observation ?? null,
+        toolOutput: step.toolOutput ?? null,
         durationMs: step.durationMs!,
       });
       if (result.outcome !== "invalidOutput") {
@@ -801,6 +812,7 @@ interface StepRow {
   action: string;
   observation: string | null;
   outcome: StepOutcome | null;
+  tool_output: string | null;
   screenshot_path: string | null;
   started_at: string;
   started_ms: number;
@@ -876,6 +888,7 @@ function stepFromRow(row: StepRow): Step {
     action: JSON.parse(row.action) as RecordedAction,
     ...optional("observation", row.observation),
     ...optional("outcome", row.outcome),
+    ...optional("toolOutput", row.tool_output),
     ...optional("screenshotPath", row.screenshot_path),
     startedAt: row.started_at,
     ...optional("durationMs", row.duration_ms),
