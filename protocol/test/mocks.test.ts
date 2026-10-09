@@ -203,6 +203,14 @@ describe("mock Mac app capability answers", () => {
   });
 });
 
+describe("mock Mac app screen lock", () => {
+  it("answers that the screen is unlocked, as a Mac in use is, unless a test scripts it locked", async () => {
+    expect(await (await harnessWithMockMacApp()).request("getScreenLock", {})).toEqual({ locked: false });
+    const locked = await harnessWithMockMacApp({ getScreenLock: () => ({ locked: true }) });
+    expect(await locked.request("getScreenLock", {})).toEqual({ locked: true });
+  });
+});
+
 describe("mock Mac app approvals and the Trash", () => {
   it("returns a tap decision for a generic action approval", async () => {
     const harness = await harnessWithMockMacApp();

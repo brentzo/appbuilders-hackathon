@@ -105,6 +105,12 @@ describe("local RPC", () => {
     expect(validate("ApprovalAnsweredElsewhere", {}).valid).toBe(false);
   });
 
+  it("lets the harness ask the Mac app whether the screen is locked, with no shell (SPEC-09 r20, SPEC-07 r3, OBJ-80)", () => {
+    expect(rpc().methods["getScreenLock"]).toEqual({ direction: "harnessToApp", params: "Empty", result: "ScreenLockState" });
+    expect(validate("ScreenLockState", { locked: true }).errors).toEqual([]);
+    expect(validate("ScreenLockState", {}).valid).toBe(false);
+  });
+
   it("moves a cursor to an element or a point, and nothing else", () => {
     const move = (to: unknown) => ({ command: "move", cursorId: "main", to });
     expect(validate("CursorCommand", move({ kind: "point", x: 512, y: 300 })).valid).toBe(true);

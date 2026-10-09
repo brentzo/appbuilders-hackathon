@@ -960,6 +960,11 @@ export interface RouteDecided {
 export type RouteReason = "noUI" | "backgroundCapable" | "appNotBackgroundCapable" | "windowLocked" | "openedSecondWindow" | "atCapacity" | "promotedAfterFailure" | "needsKeyboard";
 export const routeReasonValues: readonly RouteReason[] = ["noUI", "backgroundCapable", "appNotBackgroundCapable", "windowLocked", "openedSecondWindow", "atCapacity", "promotedAfterFailure", "needsKeyboard"];
 
+/** Whether the Mac's screen is locked, read by the app from the console session (SPEC-09 r20, OBJ-80). The harness holds a goal from the phone while it is locked, since the cursor cannot work. Nothing here reads or types a password. */
+export interface ScreenLockState {
+  locked: boolean;
+}
+
 /** A point in global screen coordinates, in points, which may be negative on displays left of or above the main one. */
 export interface ScreenPoint {
   kind: "point";
@@ -1505,6 +1510,7 @@ export interface RpcMethods {
   setWindowFrame: { direction: "harnessToApp"; params: SetWindowFrameParams; result: Empty };
   storeSecret: { direction: "harnessToApp"; params: StoreSecretParams; result: Empty };
   loadSecret: { direction: "harnessToApp"; params: SecretRef; result: LoadSecretResult };
+  getScreenLock: { direction: "harnessToApp"; params: Empty; result: ScreenLockState };
 }
 
 /** Every local RPC event (a JSON-RPC notification from the harness), with its payload. */

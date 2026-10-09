@@ -206,6 +206,8 @@ Cross-device routing on the Mac (SPEC-09 requirements 3, 8, and 10, [OBJ-64](../
   Instead it sends `approvalWaitingElsewhere` with the approval id, task id, asking device, and approval kind, and the app shows only the banner "Waiting for your OK on your phone", with no buttons.
 - `approvalAnsweredElsewhere` closes the banner once the other device answers, either way; `approvalCancelled` closes it too.
 - The mock harness's `delegated-approval` script plays this on connect.
+- `getScreenLock` asks the app whether the screen is locked, which it reads from the console session, so the harness can hold a goal from the phone until the user unlocks the Mac (SPEC-09 r20) without running anything itself (SPEC-07 r3).
+  The mock Mac app answers unlocked.
 
 Debug mode (SPEC-07 r22 and r23, [OBJ-52](../objectives/OBJ-52-harness-debug-logs.md)):
 

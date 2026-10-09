@@ -1146,6 +1146,12 @@ enum class RouteReason {
     @SerialName("needsKeyboard") NeedsKeyboard;
 }
 
+/** Whether the Mac's screen is locked, read by the app from the console session (SPEC-09 r20, OBJ-80). The harness holds a goal from the phone while it is locked, since the cursor cannot work. Nothing here reads or types a password. */
+@Serializable
+data class ScreenLockState(
+    val locked: Boolean,
+)
+
 /** A point in global screen coordinates, in points, which may be negative on displays left of or above the main one. */
 @Serializable
 @SerialName("point")
@@ -1773,7 +1779,8 @@ enum class RpcMethod(val wireName: String) {
     GetWindowFrame("getWindowFrame"),
     SetWindowFrame("setWindowFrame"),
     StoreSecret("storeSecret"),
-    LoadSecret("loadSecret");
+    LoadSecret("loadSecret"),
+    GetScreenLock("getScreenLock");
 }
 
 /** Every local RPC event name. */

@@ -120,6 +120,8 @@ const ANSWERS: Record<string, Handler> = {
   },
   // Answers for the paths it was asked about, as the real app does, but moves nothing: the mock never touches files.
   moveToTrash: (params): MoveToTrashResult => ({ trashed: [...(params as MoveToTrashParams).paths] }),
+  // A Mac in use is unlocked; a test scripts `answers.getScreenLock` for a locked one.
+  getScreenLock: () => exampleOf("ScreenLockState.unlocked"),
 };
 
 export async function connectMockMacApp(options: MockMacAppOptions = {}): Promise<MockMacApp> {

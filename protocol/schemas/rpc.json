@@ -41,7 +41,8 @@
       "getWindowFrame": { "direction": "harnessToApp", "params": "WindowRef", "result": "Rect" },
       "setWindowFrame": { "direction": "harnessToApp", "params": "SetWindowFrameParams", "result": "Empty" },
       "storeSecret": { "direction": "harnessToApp", "params": "StoreSecretParams", "result": "Empty" },
-      "loadSecret": { "direction": "harnessToApp", "params": "SecretRef", "result": "LoadSecretResult" }
+      "loadSecret": { "direction": "harnessToApp", "params": "SecretRef", "result": "LoadSecretResult" },
+      "getScreenLock": { "direction": "harnessToApp", "params": "Empty", "result": "ScreenLockState" }
     },
     "events": {
       "taskStatusChanged": "TaskStatusChanged",
@@ -685,6 +686,13 @@
       "properties": {
         "value": { "description": "Base64 encoded. Absent when no secret is stored under the key.", "type": "string", "pattern": "^[A-Za-z0-9+/]*={0,2}$" }
       }
+    },
+    "ScreenLockState": {
+      "description": "Whether the Mac's screen is locked, read by the app from the console session (SPEC-09 r20, OBJ-80). The harness holds a goal from the phone while it is locked, since the cursor cannot work. Nothing here reads or types a password.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["locked"],
+      "properties": { "locked": { "type": "boolean" } }
     },
     "BridgeState": {
       "description": "The connection state both apps show (SPEC-08 r10).",
