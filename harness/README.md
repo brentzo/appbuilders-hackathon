@@ -257,7 +257,7 @@ Claims run one at a time.
 1. **Cursor cap:** every ghost is a cursor, and `main` is one more, of which there is only one. With `YUMI_CURSOR_CAP` cursors visible (3), or `main` busy, the subtask is queued with reason `atCapacity`.
 2. **Window:** the window the subtask worked in before, else the app's first window from `listWindows`, else a window another subtask of the task worked in. The first one no other cursor holds is locked, and stored on the subtask as `target.windowId`.
 3. **Busy window:** if every one is held, the Mac app's `openNewWindow` opens a new window and the subtask works there, reason `openedSecondWindow`. If the app cannot, the subtask is queued with reason `windowLocked`, and `openNewWindow` is not asked again while it waits.
-4. **Waiting notice:** after 2 minutes waiting for a window, the apps get `waitingForWindow` with the task, the subtask, and the app name, once per wait. The Mac app says the sentence.
+4. **Waiting notice:** after 2 minutes waiting, for a window or for a free cursor, the apps get `waitingForWindow` with the task, the subtask, its title, and the app name, once per wait. The Mac app says the sentence.
 5. **Tiling:** when a task holds more windows at once than before, and at least 2, the apps get `tilingSuggested` with those windows. The Mac app asks before it arranges them (OBJ-20).
 
 A queued decision is stored and sent as `routeDecided` like any other.

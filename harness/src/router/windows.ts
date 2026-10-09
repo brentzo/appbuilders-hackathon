@@ -32,8 +32,10 @@ import { ProbeFailure, reportedUserError, type MacAppCaller } from "./capability
  *    of the same task worked in. The first of those that no other cursor holds is locked in the task store.
  * 3. A busy window: every candidate is held by another cursor, so the Mac app opens a new window of the app
  *    (`openNewWindow`) and the subtask works there, reason `openedSecondWindow`. If the app cannot, the subtask
- *    queues with reason `windowLocked` until a lock is released. After `WAIT_NOTICE_MS` of waiting for a window, the
- *    apps get `waitingForWindow` once, and the Mac app says what Yumi is waiting for. The copy lives in the app.
+ *    queues with reason `windowLocked` until a lock is released.
+ * After `WAIT_NOTICE_MS` of waiting, for a window or for a free cursor (Brent's decision of 2026-10-10), the apps get
+ * `waitingForWindow` once per wait, with the app and the subtask's title, and the Mac app says what Yumi is waiting
+ * for. The copy lives in the app.
  * 4. When a task holds more windows at once than it did before, and at least 2, the apps get `tilingSuggested` with
  *    those windows. The Mac app asks before it arranges anything (SPEC-03 r14, OBJ-20).
  *
@@ -46,7 +48,7 @@ import { ProbeFailure, reportedUserError, type MacAppCaller } from "./capability
 /** How long a lock lasts without being renewed. Cursors that are working renew theirs every third of this. */
 export const LOCK_TTL_MS = 60_000;
 
-/** How long a subtask waits for a busy window before the user is told (SPEC-03 r13). */
+/** How long a subtask waits, for a busy window or a free cursor, before the user is told (SPEC-03 r13). */
 export const WAIT_NOTICE_MS = 2 * 60_000;
 
 /** The Mac app's windows of one app, and opening another one. */
@@ -106,14 +108,20 @@ interface Cursor {
   lock?: WindowLock;
 }
 
-/** A subtask waiting for a busy window. Its app could not open another one, so the claim does not ask again. */
-interface WindowWait {
+/** A subtask waiting for a cursor or a window, from the first time it was queued until it gets one or stops. */
+interface Wait {
   notice: NodeJS.Timeout;
+  /** The app it waits to work in, as the user knows it: the latest name learned. */
+  appName: string;
+  /** Its app could not open another window, so the claim does not ask again during this wait. */
+  noSecondWindow: boolean;
 }
 
 export class WindowCoordinator {
   private readonly cursors = new Map<Uuid, Cursor>();
-  private readonly waits = new Map<Uuid, WindowWait>();
+  private readonly waits = new Map<Uuid, Wait>();
+  /** App names from the Mac app's window lists, by bundle id, for a subtask queued before its windows are listed. */
+  private readonly appNames = new Map<string, string>();
   /** The most windows suggested for tiling per task, so the app is asked again only when a task uses more. */
   private readonly suggested = new Map<Uuid, number>();
   private readonly wakers = new Set<() => void>();
@@ -165,18 +173,22 @@ export class WindowCoordinator {
     this.releaseExpired();
     const others = [...this.cursors.values()].filter((cursor) => cursor.subtaskId !== subtask.id);
     if (lane === "main" && others.some((cursor) => cursor.lane === "main")) {
-      return this.queued(subtask, "atCapacity", { mainBusy: true });
+      return this.queued(subtask, "atCapacity", this.appNameOf(subtask, bundleId), { mainBusy: true });
     }
-    if (others.length >= this.cap) return this.queued(subtask, "atCapacity", { visible: others.length });
+    if (others.length >= this.cap) {
+      return this.queued(subtask, "atCapacity", this.appNameOf(subtask, bundleId), { visible: others.length });
+    }
 
     const windows = await this.options.windows.list(bundleId);
+    const listedName = windows.find((window) => window.appName)?.appName;
+    if (listedName) this.appNames.set(bundleId, listedName);
     const candidates = this.candidates(subtask, bundleId, windows);
     for (const windowId of candidates) {
       const lock = this.lock(subtask, lane, windowId);
       if (lock) return this.grant(subtask, lane, { bundleId, windowId }, lock);
     }
     // Every window is held by another cursor, or the app has none. A wait means the app already could not open one.
-    if (candidates.length === 0 || !this.waits.has(subtask.id)) {
+    if (candidates.length === 0 || !this.waits.get(subtask.id)?.noSecondWindow) {
       const opened = await this.options.windows.open(bundleId);
       const lock = opened === undefined ? undefined : this.lock(subtask, lane, opened);
       if (lock) {
@@ -190,8 +202,8 @@ export class WindowCoordinator {
       return this.grant(subtask, lane, { bundleId }, undefined);
     }
     const heldBy = store.getWindowLock(candidates[0]!)?.subtaskId;
-    const appName = windows.find((window) => window.windowId === candidates[0])?.appName || subtask.targetApp?.name || bundleId;
-    return this.queued(subtask, "windowLocked", { bundleId, windowId: candidates[0], heldBy, appName });
+    const appName = windows.find((window) => window.windowId === candidates[0])?.appName || this.appNameOf(subtask, bundleId);
+    return this.queued(subtask, "windowLocked", appName, { bundleId, windowId: candidates[0], heldBy });
   }
 
   /**
@@ -254,22 +266,37 @@ export class WindowCoordinator {
     };
   }
 
-  private queued(subtask: Subtask, reason: "windowLocked" | "atCapacity", detail: Record<string, unknown>): CursorClaim {
-    if (reason === "windowLocked" && !this.waits.has(subtask.id)) {
-      const appName = String(detail["appName"]);
-      const notice = setTimeout(() => this.notice(subtask, appName), this.noticeAfter);
+  private queued(
+    subtask: Subtask,
+    reason: "windowLocked" | "atCapacity",
+    appName: string,
+    detail: Record<string, unknown>,
+  ): CursorClaim {
+    let wait = this.waits.get(subtask.id);
+    if (!wait) {
+      const notice = setTimeout(() => this.notice(subtask), this.noticeAfter);
       notice.unref();
-      this.waits.set(subtask.id, { notice });
+      wait = { notice, appName, noSecondWindow: false };
+      this.waits.set(subtask.id, wait);
     }
-    this.options.logger.info("windows.queued", { taskId: subtask.taskId, subtaskId: subtask.id, reason, ...detail });
+    wait.appName = appName;
+    if (reason === "windowLocked") wait.noSecondWindow = true;
+    this.options.logger.info("windows.queued", { taskId: subtask.taskId, subtaskId: subtask.id, reason, appName, ...detail });
     return { granted: false, reason, wait: (signal) => this.waitForChange(subtask.id, signal) };
   }
 
-  /** The 2-minute notice: once per wait, and only while the subtask still waits for its window. */
-  private notice(subtask: Subtask, appName: string): void {
-    if (!this.waits.has(subtask.id)) return;
-    this.options.logger.info("windows.waitNotice", { taskId: subtask.taskId, subtaskId: subtask.id, appName });
-    this.options.emit("waitingForWindow", { taskId: subtask.taskId, subtaskId: subtask.id, appName });
+  /** The name the user knows the app by: the planner's, else one the Mac app listed, else the bundle id. */
+  private appNameOf(subtask: Subtask, bundleId: string): string {
+    return subtask.targetApp?.name || this.appNames.get(bundleId) || bundleId;
+  }
+
+  /** The 2-minute notice: once per wait, and only while the subtask still waits. */
+  private notice(subtask: Subtask): void {
+    const wait = this.waits.get(subtask.id);
+    if (!wait) return;
+    const notice = { taskId: subtask.taskId, subtaskId: subtask.id, appName: wait.appName, title: subtask.title };
+    this.options.logger.info("windows.waitNotice", { taskId: subtask.taskId, subtaskId: subtask.id, appName: wait.appName });
+    this.options.emit("waitingForWindow", notice);
   }
 
   private endWait(subtaskId: Uuid): void {

@@ -375,7 +375,7 @@ describe("the window coordinator (OBJ-08.2 to OBJ-08.7)", () => {
       await vi.advanceTimersByTimeAsync(WAIT_NOTICE_MS - 1);
       expect(events.filter((e) => e.event === "waitingForWindow")).toEqual([]);
       await vi.advanceTimersByTimeAsync(1);
-      const notice = { taskId: chart!.taskId, subtaskId: chart!.id, appName: "Keynote" };
+      const notice = { taskId: chart!.taskId, subtaskId: chart!.id, appName: "Keynote", title: chart!.title };
       expect(events.filter((e) => e.event === "waitingForWindow")).toEqual([{ event: "waitingForWindow", payload: notice }]);
       // Structured: no copy, only what the app fills its sentence with.
       expect(validate("WaitingForWindow", notice).errors).toEqual([]);
@@ -384,6 +384,47 @@ describe("the window coordinator (OBJ-08.2 to OBJ-08.7)", () => {
       await coordinator.claim(chart!, "ghost", KEYNOTE);
       await vi.advanceTimersByTimeAsync(10 * 60_000);
       expect(events.filter((e) => e.event === "waitingForWindow")).toHaveLength(1);
+    });
+
+    it("also tells the apps after 2 minutes waiting for a free cursor, with the app's name and the subtask's title", async () => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval"] });
+      coordinator.close();
+      coordinator = coordinatorWith({ cursorCap: 1 });
+      const [form] = uiSubtasks(CHROME);
+      const chart = store.addSubtask({
+        taskId: form!.taskId,
+        title: "Add the chart",
+        instruction: "Add the chart in Keynote.",
+        proposedLane: "ghost",
+        targetApp: { name: "Keynote" },
+        status: "ready",
+      });
+      granted(await coordinator.claim(form!, "ghost", CHROME));
+      expect(await coordinator.claim(chart, "ghost", KEYNOTE)).toMatchObject({ granted: false, reason: "atCapacity" });
+
+      await vi.advanceTimersByTimeAsync(WAIT_NOTICE_MS - 1);
+      expect(events.filter((e) => e.event === "waitingForWindow")).toEqual([]);
+      await vi.advanceTimersByTimeAsync(1);
+      const notice = { taskId: chart.taskId, subtaskId: chart.id, appName: "Keynote", title: "Add the chart" };
+      expect(events.filter((e) => e.event === "waitingForWindow")).toEqual([{ event: "waitingForWindow", payload: notice }]);
+      expect(validate("WaitingForWindow", notice).errors).toEqual([]);
+    });
+
+    it("counts one wait from the first time a subtask is queued, whatever it waits for", async () => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval"] });
+      coordinator.close();
+      coordinator = coordinatorWith({ cursorCap: 2 });
+      const [keynote, other, chart] = uiSubtasks(KEYNOTE, CHROME, KEYNOTE);
+      granted(await coordinator.claim(keynote!, "ghost", KEYNOTE));
+      granted(await coordinator.claim(other!, "ghost", CHROME));
+      // First the cap, then, once a cursor is free, the busy Keynote window.
+      expect(await coordinator.claim(chart!, "ghost", KEYNOTE)).toMatchObject({ reason: "atCapacity" });
+      await vi.advanceTimersByTimeAsync(60_000);
+      finish(other!);
+      expect(await coordinator.claim(chart!, "ghost", KEYNOTE)).toMatchObject({ reason: "windowLocked" });
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(events.filter((e) => e.event === "waitingForWindow")).toHaveLength(1);
+      expect((events.find((e) => e.event === "waitingForWindow")!.payload as { appName: string }).appName).toBe("Keynote");
     });
 
     it("says nothing when the window is free before 2 minutes, or when the wait is cancelled", async () => {
@@ -734,7 +775,7 @@ describe.skipIf(process.platform === "win32")("SPEC-03 busy windows and the curs
     // "Then Yumi says ...": the harness sends the structured notice; the Mac app owns the sentence.
     await until(() => macEvents("waitingForWindow").length === 1);
     const notice = macEvents("waitingForWindow")[0];
-    expect(notice).toEqual({ taskId: waiter.taskId, subtaskId: waiter.id, appName: "Keynote" });
+    expect(notice).toEqual({ taskId: waiter.taskId, subtaskId: waiter.id, appName: "Keynote", title: waiter.title });
     expect(validate("WaitingForWindow", notice).errors).toEqual([]);
   });
 
