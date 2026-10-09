@@ -1,5 +1,6 @@
 import AppKit
 import QuartzCore
+import SwiftUI
 
 /// Helpers work without a cursor, so they show as small status chips in the top-right corner of
 /// the main display (SPEC-04 r6).
@@ -9,6 +10,30 @@ final class HelperChips {
     private var panelSize: CGSize = .zero
     private var scale: CGFloat = 2
     private var chips: [(id: String, layer: CALayer)] = []
+    private var nextColor = 0
+
+    /// A chip's colors: a littermate's fur, its line for the dot and edge, and its label text.
+    struct ChipColors {
+        let fill: NSColor
+        let line: NSColor
+        let text: NSColor
+    }
+
+    /// The littermates in order (mint, sky, slate), as the design README gives ghost labels.
+    /// The label colors are `cat.labelText` in character/design/tokens.json, which the generated
+    /// Swift does not carry yet.
+    static let palette: [ChipColors] = [
+        chipColors(YumiCatColors.mint, text: 0x1F3D35),
+        chipColors(YumiCatColors.sky, text: 0x22324F),
+        chipColors(YumiCatColors.slate, text: 0x2A2E35),
+    ]
+
+    private static func chipColors(_ cat: YumiCatPalette, text: UInt32) -> ChipColors {
+        let red = CGFloat((text >> 16) & 0xFF) / 255
+        let green = CGFloat((text >> 8) & 0xFF) / 255
+        let blue = CGFloat(text & 0xFF) / 255
+        return ChipColors(fill: NSColor(cat.fur), line: NSColor(cat.line), text: NSColor(srgbRed: red, green: green, blue: blue, alpha: 1))
+    }
 
     func attach(to panel: OverlayPanel) {
         let layer = CALayer()
@@ -19,24 +44,40 @@ final class HelperChips {
         scale = panel.backingScaleFactor
         let existing = chips
         chips = []
-        for chip in existing { show(id: chip.id, text: (chip.layer.sublayers?.first as? CATextLayer)?.string as? String ?? "") }
+        for chip in existing {
+            show(id: chip.id, text: (chip.layer.sublayers?.first as? CATextLayer)?.string as? String ?? "", colors: chip.layer.value(forKey: "colors") as? Int)
+        }
     }
 
     func show(id: String, text: String) {
+        show(id: id, text: text, colors: nil)
+    }
+
+    private func show(id: String, text: String, colors index: Int?) {
         remove(id: id, animated: false)
+        let colorIndex = index ?? {
+            defer { nextColor += 1 }
+            return nextColor % Self.palette.count
+        }()
+        let colors = Self.palette[colorIndex]
         let font = NSFont.systemFont(ofSize: 12, weight: .semibold)
         let width = ceil((text as NSString).size(withAttributes: [.font: font]).width) + 34
         let chip = CALayer()
         chip.bounds = CGRect(x: 0, y: 0, width: width, height: 24)
         chip.cornerRadius = 12
-        chip.backgroundColor = NSColor.white.cgColor
-        chip.borderColor = NSColor.black.cgColor
-        chip.borderWidth = 1.5
+        chip.backgroundColor = colors.fill.cgColor
+        chip.borderColor = colors.line.withAlphaComponent(0.35).cgColor
+        chip.borderWidth = 1
+        chip.shadowColor = colors.line.cgColor
+        chip.shadowOpacity = 0.18
+        chip.shadowRadius = 6
+        chip.shadowOffset = CGSize(width: 0, height: -2)
         chip.contentsScale = scale
+        chip.setValue(colorIndex, forKey: "colors")
         let dot = CALayer()
         dot.frame = CGRect(x: 10, y: 8, width: 8, height: 8)
         dot.cornerRadius = 4
-        dot.backgroundColor = NSColor.black.cgColor
+        dot.backgroundColor = colors.line.cgColor
         let pulse = CABasicAnimation(keyPath: "opacity")
         pulse.fromValue = 1
         pulse.toValue = 0.25
@@ -48,7 +89,7 @@ final class HelperChips {
         label.string = text
         label.font = font
         label.fontSize = 12
-        label.foregroundColor = NSColor.black.cgColor
+        label.foregroundColor = colors.text.cgColor
         label.contentsScale = scale
         label.frame = CGRect(x: 24, y: 4, width: width - 30, height: 16)
         chip.addSublayer(label)
