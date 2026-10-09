@@ -43,9 +43,9 @@ If the answer is no, the team needs to know before building the harness around i
 
 ## Tasks
 
-- [ ] **OBJ-26.1** Run Qwen3.5-9B at 4-bit with an OpenAI-compatible MLX server on the 16 GB Mac. Record the server, version, and whether it supports schema-constrained decoding.
-- [ ] **OBJ-26.2** Write a throwaway script (Python with pyobjc is fine) that reads the target window's accessibility tree, trims it as in SPEC-05 requirement 2, numbers the elements, and presses or sets the chosen element. No cursor animation, no harness.
-- [ ] **OBJ-26.3** Write the prompt: confirmed goal, subtask instruction, last 3-5 steps, the trimmed tree, and the allowed actions. The model answers with one `ModelAction` as JSON.
+- [x] **OBJ-26.1** Run Qwen3.5-9B at 4-bit with an OpenAI-compatible MLX server on the 16 GB Mac. Record the server, version, and whether it supports schema-constrained decoding.
+- [x] **OBJ-26.2** Write a throwaway script (Python with pyobjc is fine) that reads the target window's accessibility tree, trims it as in SPEC-05 requirement 2, numbers the elements, and presses or sets the chosen element. No cursor animation, no harness.
+- [x] **OBJ-26.3** Write the prompt: confirmed goal, subtask instruction, last 3-5 steps, the trimmed tree, and the allowed actions. The model answers with one `ModelAction` as JSON.
 - [ ] **OBJ-26.4** Run each demo task 5 times from the same starting state: Keynote export to PDF, Mail draft to Ana with the PDF attached (stop before Send), and a new note in Notes with a summary.
 - [ ] **OBJ-26.5** For every run, record: success, steps used (limit 10), seconds per step, how many outputs failed validation, how many steps had no effect, and peak memory.
 - [ ] **OBJ-26.6** Repeat with constrained decoding on and off, if the server supports it.
@@ -54,9 +54,9 @@ If the answer is no, the team needs to know before building the harness around i
 ## Expectations
 
 - [ ] Each demo task has 5 recorded runs.
-- [ ] The verdict uses SPEC-05's bar: a task passes with 4 or more successful runs out of 5.
-- [ ] If any task fails, the doc names the failure pattern (wrong element, invalid output, no effect, too many elements) and suggests a fix to try.
-- [ ] Peak memory with the model loaded is recorded, for the Whisper choice in [OBJ-11](OBJ-11-whisper-bake-off.md).
+- [x] The verdict uses SPEC-05's bar: a task passes with 4 or more successful runs out of 5.
+- [x] If any task fails, the doc names the failure pattern (wrong element, invalid output, no effect, too many elements) and suggests a fix to try.
+- [x] Peak memory with the model loaded is recorded, for the Whisper choice in [OBJ-11](OBJ-11-whisper-bake-off.md).
 
 ## Expected outcomes
 
@@ -71,4 +71,26 @@ If the answer is no, the team needs to know before building the harness around i
 
 ## Outcome
 
-_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._
+- **Result:** In progress. The Keynote task is done and fails, 0 of 5 runs succeeding in both decoding modes. Mail and Notes are parked by Brent, so the objective stays `in-progress`.
+- **Delivered:** `models/gui/SMOKE-TEST.md` (numbers, prompt, verdict, fixes to try), `models/gui/smoke.py` (throwaway script, marked as not product code), `models/gui/results/runs.jsonl` (10 counted Keynote runs), `models/gui/results/pilot.jsonl` (1 uncounted pilot run), `models/gui/results/bench.jsonl` (model-only latency and memory benchmark).
+- **Commits:** `86751ab docs(objectives): start OBJ-26`, `eaa4368 feat(models): add throwaway OBJ-26 GUI smoke test script`, `3cbc274 fix(models): keep smoke test fixtures in ~/Yumi smoke test`, `6b833c9 feat(models): use SPEC-05 menu bar item, text area, and radio button roles in the smoke test`, `9524405 feat(models): add model-only benchmark to the smoke test and record first numbers`, `07bf5d1 fix(models): use Keynote's real bundle id com.apple.Keynote in the smoke test`, `770276f fix(models): keep the window title while a Keynote sheet is open, and record the pilot run`, `9d7edc3 docs(models): add OBJ-26 smoke test results for the Keynote task`.
+- **Expectations:**
+  - Each demo task has 5 recorded runs: not met. Keynote has 5 constrained and 5 unconstrained runs in `results/runs.jsonl`; Mail and Notes have none.
+  - Verdict uses SPEC-05's bar: met. SMOKE-TEST.md "Verdict" applies 4 of 5 to Keynote (fails in both modes).
+  - Failure pattern and fix: met. SMOKE-TEST.md names "no effect" (a wrong action type: typing a file name into the export options dialog instead of pressing Save…) and lists 5 fixes to try.
+  - Peak memory: met. 7.2 GiB during the Keynote runs and 8.6 GiB at 200 elements in the benchmark, measured as physical footprint with `proc_pid_rusage`.
+- **Not verified:**
+  - Mail and Notes runs. Parked by Brent: Mail account and Notes location not decided. To run them: decide both, open Mail and Notes in their starting state, then `smoke.py run --task mail|notes --run N --mode constrained|free` 5 times per mode. The Mail fixture is `~/Yumi smoke test/Q3 Report.pdf`. The Mail and Notes success checks in `smoke.py` have never run against real windows, so check them on the first run.
+  - None of the fixes in SMOKE-TEST.md were tried, because the runs were limited to the 10 counted Keynote runs.
+  - The script follows the `Observation` and `ModelAction` shapes in docs/task-record-schema.md, because OBJ-01 was not done. Recheck `action_schema()` in `smoke.py` against `protocol/schemas/` when OBJ-01 lands.
+- **Decisions and deviations:**
+  - Server: `mlx_vlm.server` (mlx-vlm 0.7.6), because Qwen3.5 is a vision-language model converted with mlx-vlm and `mlx_lm.server` has no `response_format`. Model `mlx-community/Qwen3.5-9B-4bit` at revision `8b2b98c00a6b4d291155e4890773ca8f769aee53`. Python 3.14.5.
+  - Thinking mode off, temperature 0.7, top_p 0.8, top_k 20 (Qwen3.5 model card, instruct mode).
+  - `ModelAction` is encoded as one JSON object tagged by an `action` field. `tool` and `click` are left out. `type` and `key` are allowed, as on the main lane.
+  - The subtask instruction gives the file name ("Q3 Report run N") so runs never replace each other's files. This likely triggered the failure; see SMOKE-TEST.md fix 4.
+  - Safety is stricter than SPEC-07 for running on a real Mac: Send stops the run, and Delete, Replace, Quit, Share, Print, and similar labels and delete keys are blocked. Nothing was blocked in the runs.
+  - The deck was made with AppleScript as a setup step, not by the model. Fixtures live in `~/Yumi smoke test/`, because `~/Downloads` is not readable from the agent sandbox.
+- **For the next objectives:**
+  - OBJ-03 (harness): 9B navigates menus reliably and never produced invalid JSON, but it repeats an action that had no effect. The harness should explain why a step had no effect, and treat a repeated no-effect action as invalid. Latency is mostly prompt processing: about 4 seconds per step at 1,000 prompt tokens and 11 seconds at 3,200, so keep the tree and history short. llguidance 1.9.1 rejects `uniqueItems`; strip it from schemas sent for constrained decoding and validate against the full schema.
+  - OBJ-11 (Whisper): plan for about 7.2 to 8.6 GiB for the 9B server, leaving roughly 7 GiB for macOS, the apps, and Whisper on 16 GB.
+  - Demo Mac: the 9B model cannot run next to Gradle and the Android emulator. A 618-token prompt took 3 minutes 41 seconds and then timed out.
