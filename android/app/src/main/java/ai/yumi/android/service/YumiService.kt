@@ -35,6 +35,9 @@ class YumiService : LifecycleService() {
     private var started = false
     private var holdsMicrophone = false
 
+    /** True between a successful startForeground and stopping. Status updates only touch the notification then. */
+    private var inForeground = false
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
         if (intent?.action == ACTION_STOP) {
@@ -65,7 +68,7 @@ class YumiService : LifecycleService() {
                 .collect { updateWakeWord(it) }
         }
         lifecycleScope.launch {
-            graph.status.collect { YumiNotifications.updateService(this@YumiService, it) }
+            graph.status.collect { if (inForeground) YumiNotifications.updateService(this@YumiService, it) }
         }
     }
 
@@ -98,6 +101,7 @@ class YumiService : LifecycleService() {
                 YumiNotifications.service(this, graph.status.value),
                 types,
             )
+            inForeground = true
             true
         } catch (e: ForegroundServiceStartNotAllowedException) {
             Log.w(TAG, "Android did not allow the foreground service (microphone=$withMicrophone)", e)
@@ -110,15 +114,20 @@ class YumiService : LifecycleService() {
 
     private fun stopFromUser() {
         Log.i(TAG, "Stopped from the notification")
+        inForeground = false
         graph.appScope.launch { graph.settings.setRunInBackground(false) }
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
     override fun onDestroy() {
+        // Stop notification updates first: the status change below would otherwise post the notification again,
+        // as a plain notification that outlives the service.
+        inForeground = false
         graph.wakeWord.stop()
         graph.bridge.stop()
         graph.serviceRunning.value = false
+        YumiNotifications.cancelService(this)
         super.onDestroy()
     }
 

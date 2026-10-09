@@ -80,6 +80,8 @@ object YumiNotifications {
 
     fun updateService(context: Context, status: YumiStatus) = post(context, ID_SERVICE, service(context, status))
 
+    fun cancelService(context: Context) = NotificationManagerCompat.from(context).cancel(ID_SERVICE)
+
     /**
      * Asks for a permission while the app is in the background, where Android cannot show the dialog.
      * Tapping it opens the app, which shows the Android permission dialog.
