@@ -471,7 +471,7 @@ BLOCKED_KEYS = {"delete", "backspace", "forwarddelete"}
 
 def check_safety(task, action, el):
     """Return (verdict, reason). verdict: ok, approval (would ask to send), blocked."""
-    kind = action["action"]
+    kind = action["kind"]
     if el is not None:
         if el.secure and kind == "setValue":
             return "blocked", "password field (SPEC-05 r7)"
@@ -500,7 +500,8 @@ def check_safety(task, action, el):
 
 
 def action_schema(n_elements):
-    """JSON Schema for one ModelAction. Stand-in for OBJ-01; tagged with an "action" field.
+    """JSON Schema for one reply, in the shape of the protocol's WorkerOutput (version 3):
+    {"action": {"kind": ..., ...}}. A copy of protocol/schemas/action.json, not the file itself.
 
     The element number range is set per step, so constrained decoding cannot pick a number
     that is not in the list. `tool` is left out (no typed tools in this smoke test) and
@@ -512,37 +513,33 @@ def action_schema(n_elements):
     def obj(props, req):
         return {"type": "object", "properties": props, "required": req, "additionalProperties": False}
 
-    return {
-        "oneOf": [
-            obj({"action": {"const": "click"}, "element": el}, ["action", "element"]),
-            obj({"action": {"const": "setValue"}, "element": el, "text": s(2000)}, ["action", "element", "text"]),
-            obj({"action": {"const": "type"}, "text": s(2000)}, ["action", "text"]),
-            obj({"action": {"const": "key"}, "combo": s(40)}, ["action", "combo"]),
-            obj(
-                {"action": {"const": "scroll"}, "element": el, "direction": {"enum": ["up", "down", "left", "right"]}},
-                ["action", "element", "direction"],
-            ),
-            obj({"action": {"const": "ask"}, "question": s(300)}, ["action", "question"]),
-            obj(
-                {"action": {"const": "finish"}, "status": {"enum": ["done", "partial", "stuck", "blocked"]}, "note": s(200)},
-                ["action", "status", "note"],
-            ),
-        ]
-    }
+    variants = [
+        obj({"kind": {"const": "click"}, "element": el}, ["kind", "element"]),
+        obj({"kind": {"const": "setValue"}, "element": el, "text": s(2000)}, ["kind", "element", "text"]),
+        obj({"kind": {"const": "type"}, "text": {"type": "string", "minLength": 1, "maxLength": 2000}}, ["kind", "text"]),
+        obj({"kind": {"const": "key"}, "combo": s(40)}, ["kind", "combo"]),
+        obj(
+            {"kind": {"const": "scroll"}, "element": el, "direction": {"enum": ["up", "down", "left", "right"]}},
+            ["kind", "element", "direction"],
+        ),
+        obj({"kind": {"const": "ask"}, "question": {"type": "string", "minLength": 1, "maxLength": 300}}, ["kind", "question"]),
+        obj({"kind": {"const": "finish"}, "status": {"enum": ["done", "stuck"]}, "note": s(200)}, ["kind", "status", "note"]),
+    ]
+    return obj({"action": {"oneOf": variants}}, ["action"])
 
 
 SYSTEM_PROMPT = """You control one app on a Mac for a user, one action at a time, through the accessibility API.
 Each turn you get the user's confirmed goal, your current subtask, your last few steps, and a numbered list of the visible, actionable elements in the app's front window, its open menus, and its menu bar.
-Reply with exactly one action as a single JSON object and nothing else. No prose, no code fences.
+Reply with exactly one JSON object and nothing else: {"action": {...}}. No prose, no code fences.
 
 Actions:
-{"action": "click", "element": N}                      click element N (buttons, menu items, menu bar items, checkboxes, radio buttons, links, pop-up buttons, menu buttons)
-{"action": "setValue", "element": N, "text": "..."}     replace the text in text field or text area N
-{"action": "type", "text": "..."}                       type text into whatever has keyboard focus
-{"action": "key", "combo": "cmd+shift+g"}               press a key or shortcut, for example "return", "escape", "tab", "down", "cmd+n"
-{"action": "scroll", "element": N, "direction": "down"} scroll the area that contains element N
-{"action": "ask", "question": "..."}                    stop and ask the user, only if you cannot continue without them
-{"action": "finish", "status": "done", "note": "..."}   end the subtask. status is done, partial, stuck, or blocked. note is at most 200 characters
+{"kind": "click", "element": N}                      click element N (buttons, menu items, menu bar items, checkboxes, radio buttons, links, pop-up buttons, menu buttons)
+{"kind": "setValue", "element": N, "text": "..."}     replace the text in text field or text area N
+{"kind": "type", "text": "..."}                       type text into whatever has keyboard focus
+{"kind": "key", "combo": "cmd+shift+g"}               press a key or shortcut, for example "return", "escape", "tab", "down", "cmd+n"
+{"kind": "scroll", "element": N, "direction": "down"} scroll the area that contains element N
+{"kind": "ask", "question": "..."}                    stop and ask the user, only if you cannot continue without them
+{"kind": "finish", "status": "done", "note": "..."}   end the subtask. status is done or stuck. note is at most 200 characters
 
 Rules:
 - Use only element numbers from the current list. Numbers change every turn.
@@ -599,7 +596,7 @@ def call_model(messages, mode, n_elements):
     if mode == "constrained":
         body["response_format"] = {
             "type": "json_schema",
-            "json_schema": {"name": "ModelAction", "schema": action_schema(n_elements)},
+            "json_schema": {"name": "WorkerOutput", "schema": action_schema(n_elements)},
         }
     req = urllib.request.Request(
         f"{SERVER}/v1/chat/completions", data=json.dumps(body).encode(), headers={"Content-Type": "application/json"}
@@ -613,17 +610,18 @@ def call_model(messages, mode, n_elements):
 
 
 def parse_action(raw, obs):
-    """Strict: the reply must be one JSON object matching the schema. Returns (action, error)."""
+    """Strict: the reply must be one JSON object matching the schema. Returns (inner action, error)."""
     s = raw.strip()
     try:
-        action = json.loads(s)
+        reply = json.loads(s)
     except json.JSONDecodeError as e:
         return None, f"not valid JSON ({e.msg})"
     try:
-        jsonschema.validate(action, action_schema(len(obs.elements)))
+        jsonschema.validate(reply, action_schema(len(obs.elements)))
     except jsonschema.ValidationError as e:
         return None, f"does not match the action schema ({e.message[:120]})"
-    if action["action"] == "key":
+    action = reply["action"]
+    if action["kind"] == "key":
         try:
             parse_combo(action["combo"])
         except ValueError as e:
@@ -632,7 +630,7 @@ def parse_action(raw, obs):
 
 
 def describe(action, el):
-    k = action["action"]
+    k = action["kind"]
     if k in ("click", "setValue", "scroll"):
         tgt = f"[{el.n}] {el.role} \"{el.label}\"" if el else f"[{action['element']}]"
         extra = f" text=\"{text(action['text'], 60)}\"" if k == "setValue" else ""
@@ -654,7 +652,7 @@ TEXT_ROLES = ("AXTextField", "AXTextArea", "AXComboBox", "AXSearchField")
 
 def explain_no_effect(app_el, action):
     """Fix 1: say why a step had no effect, instead of only "nothing changed"."""
-    if action["action"] == "type":
+    if action["kind"] == "type":
         focused = ax(app_el, "AXFocusedUIElement")
         if focused is None or ax(focused, "AXRole") not in TEXT_ROLES:
             return "nothing changed. Typing had no effect: no text field has keyboard focus. Press a button to continue."
@@ -973,7 +971,7 @@ def cmd_bench(args):
             for i in range(args.n):
                 raw, secs, usage = call_model(msgs, mode, len(obs.elements))
                 action, err = parse_action(raw, obs)
-                right = action == {"action": "click", "element": 1}
+                right = action == {"kind": "click", "element": 1}
                 rows.append({"mode": mode, "secs": round(secs, 2), "valid": err is None, "right_element": right, "raw": raw, "usage": usage})
                 print(f"{mode} #{i+1}: {secs:.2f}s valid={err is None} right={right} tokens={usage.get('prompt_tokens')}/{usage.get('completion_tokens')} raw={raw!r}")
     _, lifetime = footprint(spid) if spid else (None, None)
@@ -1125,14 +1123,14 @@ def cmd_run(args):
             rec["action"] = action
             rec["target"] = el.line() if el else None
 
-            if action["action"] == "finish":
+            if action["kind"] == "finish":
                 status, end_reason = action["status"], f"model finished: {action['note']}"
                 rec.update(outcome="ok", step_s=round(time.monotonic() - t_step, 2))
                 steps.append(rec)
                 log.write(json.dumps(rec) + "\n")
                 print(f"  {index}: {desc}")
                 break
-            if action["action"] == "ask":
+            if action["kind"] == "ask":
                 status, end_reason = "stuck", f"model asked: {action['question']}"
                 rec.update(outcome="ok", step_s=round(time.monotonic() - t_step, 2))
                 steps.append(rec)
@@ -1155,7 +1153,7 @@ def cmd_run(args):
                 continue
 
             bring_to_front(app_el)
-            k = action["action"]
+            k = action["kind"]
             if k == "click":
                 code = press(el.ref)
             elif k == "setValue":
@@ -1208,7 +1206,7 @@ def cmd_run(args):
         "run_s": round(run_secs, 1),
         "server_peak_gib": round(sampler.peak / 2**30, 2) if sampler.peak else None,
         "server_lifetime_peak_gib": round(lifetime_peak / 2**30, 2) if lifetime_peak else None,
-        "actions": [s.get("action", {}).get("action", s["outcome"]) + ":" + s["outcome"] for s in steps],
+        "actions": [s.get("action", {}).get("kind", s["outcome"]) + ":" + s["outcome"] for s in steps],
         "env": env, "log": log_path.name, "time": time.strftime("%Y-%m-%d %I:%M:%S %p"),
     }
     log.write(json.dumps({"result": result}) + "\n")

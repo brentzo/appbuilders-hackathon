@@ -90,6 +90,13 @@ Keep fix 1 (the explanation) in the harness design: it is what got the model to 
 | Keynote | Keynote 15.2.1, bundle id `com.apple.Keynote`, app at `/Applications/Keynote Creator Studio.app` |
 | Deck | `~/Yumi smoke test/Q3 Report.key`, 4 slides, made with AppleScript as a setup step (not by the model) |
 
+From round 3, `smoke.py` uses protocol version 3 ([OBJ-29](../../objectives/OBJ-29-protocol-mac-fixes.md)), so round 3 measures the real contract rather than matching rounds 1 and 2:
+
+- The reply is the real `WorkerOutput` shape, `{"action": {"kind": "click", "element": N}}`, instead of the flat `{"action": "axPress", "element": N}` used in rounds 1 and 2.
+- The element press is `click`, and `finish` takes only `done` or `stuck`, as in the protocol.
+- Combo boxes and menu buttons keep their own roles (`comboBox`, `menuButton`) instead of counting as text fields and pop-up buttons.
+- `enter` is the keypad Enter key (key code 76), not Return.
+
 A note for OBJ-03 and OBJ-01: llguidance 1.9.1 rejects schemas that use `uniqueItems` ("Unimplemented keys"), as the OBJ-03 agent reported.
 The smoke test's action schema has no `uniqueItems`, and the server log shows no grammar errors across 67 requests.
 When the OBJ-01 schemas are used for constrained decoding, strip `uniqueItems` from the schema sent to the model and validate replies against the full schema.
