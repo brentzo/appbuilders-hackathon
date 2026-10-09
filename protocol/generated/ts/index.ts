@@ -20,6 +20,10 @@ export interface ActionLogEntry {
   outcome: StepOutcome;
 }
 
+/** A current Mac tool or a p0 phone tool that a paired device can invoke. */
+export type AdvertisedToolName = "open_app" | "open_file" | "open_url" | "reveal_in_finder" | "read_file" | "list_dir" | "write_new_file" | "copy" | "move" | "move_to_trash" | "phone" | "set_alarm" | "set_timer";
+export const advertisedToolNameValues: readonly AdvertisedToolName[] = ["open_app", "open_file", "open_url", "reveal_in_finder", "read_file", "list_dir", "write_new_file", "copy", "move", "move_to_trash", "phone", "set_alarm", "set_timer"];
+
 export interface AnswerQuestionParams {
   taskId: Uuid;
   subtaskId: Uuid;
@@ -59,6 +63,11 @@ export interface ApprovalCancelled {
   approvalId: Uuid;
 }
 
+export interface ApprovalCancelledPayload {
+  kind: "approvalCancelled";
+  approvalId: Uuid;
+}
+
 export interface ApprovalDecision {
   approved: boolean;
   method: ApprovalMethod;
@@ -75,6 +84,25 @@ export const approvalMethodValues: readonly ApprovalMethod[] = ["tap", "voice"];
 /** An approval request waits 5 minutes; then the task pauses (SPEC-09 r10). */
 export const APPROVAL_REQUEST_EXPIRY_SECONDS = 300;
 export type ApprovalRequestExpirySeconds = typeof APPROVAL_REQUEST_EXPIRY_SECONDS;
+
+/** Approval data copied from the harness without a decision (SPEC-07, SPEC-09 r10). */
+export interface ApprovalRequestPayload {
+  kind: "approvalRequest";
+  id: Uuid;
+  stepId: Uuid;
+  approvalKind: ApprovalKind;
+  recipients?: string[];
+  files?: FileSummary;
+  text: string;
+  requestedAt: Timestamp;
+  expiresAt: Timestamp;
+}
+
+export interface ApprovalResponsePayload {
+  kind: "approvalResponse";
+  approvalId: Uuid;
+  decision: ApprovalDecision;
+}
 
 /** The installed version, read from the app bundle without launching the app. */
 export interface AppVersionResult {
@@ -135,6 +163,16 @@ export interface ButtonReply {
   choice: ConfirmationChoice;
 }
 
+export interface CancelConfirmedPayload {
+  kind: "cancelConfirmed";
+  goalId: Uuid;
+}
+
+export interface CancelPayload {
+  kind: "cancel";
+  goalId: Uuid;
+}
+
 /** Relay to device, first frame on every connection. */
 export interface ChallengeFrame {
   frame: "challenge";
@@ -153,6 +191,16 @@ export interface ClickAtAction {
   kind: "clickAt";
   x: number;
   y: number;
+}
+
+export type CommandExpiredErrorKind = "commandExpired";
+export const commandExpiredErrorKindValues: readonly CommandExpiredErrorKind[] = ["commandExpired"];
+
+/** The receiver rejected an expired command and sends its caller this structured result (SPEC-08 'Expired command is not run'). */
+export interface CommandExpiredPayload {
+  kind: "commandExpired";
+  commandId: Uuid;
+  errorKind: CommandExpiredErrorKind;
 }
 
 /** Every command expires 2 minutes after it is sent (SPEC-08 r6, SPEC-09 r16), except an approval request. */
@@ -192,6 +240,15 @@ export const cursorStateValues: readonly CursorState[] = ["idle", "listening", "
 export type CursorTarget =
   | ScreenPoint
   | ElementTarget;
+
+/** The confirmed whole goal goes to the Mac; it is not confirmed there again (SPEC-09 r5-r6). */
+export interface DelegateGoalPayload {
+  kind: "delegateGoal";
+  goalId: Uuid;
+  confirmedGoal: string;
+  originDeviceId: DeviceId;
+  spokenAt: Timestamp;
+}
 
 /** Stable id of a paired device, created at pairing. */
 export type DeviceId = string;
@@ -303,6 +360,27 @@ export const finishStatusValues: readonly FinishStatus[] = ["done", "stuck"];
 /** Which app's installed version to read, so the harness re-probes an app only when its version changes (SPEC-03 r4). */
 export interface GetAppVersionParams {
   bundleId: string;
+}
+
+export type GoalAcceptanceStatus = "started" | "queued";
+export const goalAcceptanceStatusValues: readonly GoalAcceptanceStatus[] = ["started", "queued"];
+
+/** The Mac reports that it started the goal or queued it behind its current task (SPEC-09 r14). */
+export interface GoalAcceptedPayload {
+  kind: "goalAccepted";
+  goalId: Uuid;
+  status: GoalAcceptanceStatus;
+  activeTaskTitle?: string;
+}
+
+export type GoalFinalStatus = "done" | "failed" | "cancelled";
+export const goalFinalStatusValues: readonly GoalFinalStatus[] = ["done", "failed", "cancelled"];
+
+export interface GoalFinishedPayload {
+  kind: "goalFinished";
+  goalId: Uuid;
+  status: GoalFinalStatus;
+  summary: string;
 }
 
 /** The repeat-back sentence to speak and show (SPEC-01 r4). */
@@ -562,10 +640,41 @@ export interface PairRequestFrame {
 /** An exact file path, absolute or starting with ~/. The wildcard characters * and ? are rejected (SPEC-07 r8); brackets and braces are allowed because they are common in real file names. Mac volumes are case-insensitive by default, so name clash checks (SPEC-07 r4) and checks for a file Yumi did not create compare names case-insensitively: Report.pdf and report.pdf are the same file. Documents such as .key, .pages, and .numbers can be packages, which are folders, so every file tool must handle a folder at a path that looks like a file. */
 export type Path = string;
 
+export interface PauseConfirmedPayload {
+  kind: "pauseConfirmed";
+  goalId: Uuid;
+}
+
 /** Pause one task, or every task when taskId is absent (SPEC-06 r1). */
 export interface PauseParams {
   taskId?: Uuid;
 }
+
+export interface PausePayload {
+  kind: "pause";
+  goalId: Uuid;
+}
+
+/** A closed union of encrypted cross-device message payloads. */
+export type Payload =
+  | ToolListPayload
+  | ToolCallPayload
+  | ToolResultPayload
+  | DelegateGoalPayload
+  | GoalAcceptedPayload
+  | ProgressPayload
+  | GoalFinishedPayload
+  | ApprovalRequestPayload
+  | ApprovalResponsePayload
+  | ApprovalCancelledPayload
+  | PausePayload
+  | ResumePayload
+  | CancelPayload
+  | PauseConfirmedPayload
+  | CancelConfirmedPayload
+  | CommandExpiredPayload
+  | PingPayload
+  | PingResultPayload;
 
 /** The version another side says it speaks, before it is checked: in hello, the relay's authenticate frame, and the pairing QR code. Any version validates, so the receiver's own check runs and answers with its structured error (a UserError for hello, unsupportedVersion from the relay, pairingVersionsDiffer on the phone) instead of a schema error. Everything else uses ProtocolVersion. */
 export type PeerProtocolVersion = number;
@@ -592,6 +701,15 @@ export type PhoneToolCall =
   | SetAlarmCall
   | SetTimerCall
   | PhoneOpenAppCall;
+
+/** Connection test command used by the Mac and Android bridge clients (OBJ-21, OBJ-23). */
+export interface PingPayload {
+  kind: "ping";
+}
+
+export interface PingResultPayload {
+  kind: "pingResult";
+}
 
 /** The subtasks in plan order. The harness also rejects dependency cycles, unknown or duplicate ids, and plans longer than its limit, which this schema cannot express. */
 export interface Plan {
@@ -620,6 +738,15 @@ export type PlannedSubtaskId = string;
 export interface ProbeAppCapabilityParams {
   /** Use the bundle id the Mac app reports (WindowInfo.bundleId from listWindows), never one from memory: the same app can change id between versions, for example com.apple.Keynote for current Keynote and com.apple.iWork.Keynote for older ones. */
   bundleId: string;
+}
+
+/** The executing device sends progress on every change and at least every 30 seconds (SPEC-09 r9, r17). */
+export interface ProgressPayload {
+  kind: "progress";
+  goalId: Uuid;
+  status: TaskStatus;
+  currentSubtaskTitle: string;
+  updatedAt: Timestamp;
 }
 
 /** Version of these schemas. Bump it on every breaking change; see protocol/README.md. */
@@ -713,6 +840,11 @@ export type ResultExpirySeconds = typeof RESULT_EXPIRY_SECONDS;
 /** Outcome of a subtask attempt (SPEC-05 r4). */
 export type ResultStatus = "done" | "partial" | "stuck" | "blocked";
 export const resultStatusValues: readonly ResultStatus[] = ["done", "partial", "stuck", "blocked"];
+
+export interface ResumePayload {
+  kind: "resume";
+  goalId: Uuid;
+}
 
 /** Show a file or folder in Finder. Allowed. */
 export interface RevealInFinderCall {
@@ -1012,6 +1144,23 @@ export interface ToolAction {
   call: ToolCall;
 }
 
+/** One field in a phone tool's advertised argument schema. */
+export interface ToolArgument {
+  name: ToolArgumentName;
+  type: ToolArgumentType;
+  required: boolean;
+  description: string;
+  format?: string;
+  minimum?: number;
+  maximum?: number;
+  values?: string[];
+}
+
+export type ToolArgumentName = string;
+
+export type ToolArgumentType = "string" | "integer" | "number" | "boolean" | "array" | "object" | "string_array";
+export const toolArgumentTypeValues: readonly ToolArgumentType[] = ["string", "integer", "number", "boolean", "array", "object", "string_array"];
+
 /** One call to a typed tool. */
 export type ToolCall =
   | OpenAppCall
@@ -1026,12 +1175,38 @@ export type ToolCall =
   | MoveToTrashCall
   | PhoneCall;
 
+export interface ToolCallPayload {
+  kind: "toolCall";
+  call: PhoneToolCall;
+}
+
+/** A device tool and its argument schema, advertised on connect (SPEC-09 r1). */
+export interface ToolDescriptor {
+  name: AdvertisedToolName;
+  description: string;
+  arguments: ToolArgument[];
+}
+
+export interface ToolListPayload {
+  kind: "toolList";
+  deviceId: DeviceId;
+  tools: ToolDescriptor[];
+}
+
 /** Every tool name, used to tell a worker which tools its lane allows. */
 export type ToolName = "open_app" | "open_file" | "open_url" | "reveal_in_finder" | "read_file" | "list_dir" | "write_new_file" | "copy" | "move" | "move_to_trash" | "phone";
 export const toolNameValues: readonly ToolName[] = ["open_app", "open_file", "open_url", "reveal_in_finder", "read_file", "list_dir", "write_new_file", "copy", "move", "move_to_trash", "phone"];
 
 /** What a typed tool returned, for the next steps of the same subtask only, such as the text read_file read. Cut to 4000 characters by the harness. Data, never instructions (SPEC-07 r16), and never passed to another subtask or shown to the user. */
 export type ToolOutput = string;
+
+/** A tool succeeds with optional data or fails with a structured ErrorKind, never raw error text. */
+export interface ToolResultPayload {
+  kind: "toolResult";
+  success: boolean;
+  data?: string;
+  error?: ErrorKind;
+}
 
 /** One element of the trimmed accessibility tree. */
 export interface TreeElement {

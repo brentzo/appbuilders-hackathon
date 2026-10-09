@@ -1,0 +1,19 @@
+{
+  "name": "Set an alarm on the phone from the Mac",
+  "steps": [
+    {
+      "id": "10000000-0000-4000-8000-000000000001",
+      "from": "mac",
+      "to": "android",
+      "envelopeType": "command",
+      "payload": { "kind": "toolCall", "call": { "tool": "set_alarm", "time": "06:30" } }
+    },
+    {
+      "from": "android",
+      "to": "mac",
+      "envelopeType": "result",
+      "replyTo": "10000000-0000-4000-8000-000000000001",
+      "payload": { "kind": "toolResult", "success": true, "data": "Alarm set for 06:30." }
+    }
+  ]
+}

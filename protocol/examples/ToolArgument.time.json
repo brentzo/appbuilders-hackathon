@@ -1,0 +1,7 @@
+{
+  "name": "time",
+  "type": "string",
+  "required": true,
+  "description": "Local phone time in 24-hour HH:MM format.",
+  "format": "HH:MM"
+}

@@ -1,0 +1,10 @@
+{
+  "kind": "approvalRequest",
+  "id": "5b0c6f8e-2f4d-4c1a-9a57-1f0e2d3c4b5a",
+  "stepId": "6b0c6f8e-2f4d-4c1a-9a57-1f0e2d3c4b5a",
+  "approvalKind": "send",
+  "recipients": ["ana@example.com"],
+  "text": "I'm about to send this email to Ana. Should I send it?",
+  "requestedAt": "2026-10-09T12:00:00.000Z",
+  "expiresAt": "2026-10-09T12:05:00.000Z"
+}

@@ -1,0 +1,19 @@
+{
+  "name": "Stop from the phone and wait for pause confirmation",
+  "steps": [
+    {
+      "id": "30000000-0000-4000-8000-000000000001",
+      "from": "android",
+      "to": "mac",
+      "envelopeType": "command",
+      "payload": { "kind": "pause", "goalId": "5b0c6f8e-2f4d-4c1a-9a57-1f0e2d3c4b5a" }
+    },
+    {
+      "from": "mac",
+      "to": "android",
+      "envelopeType": "result",
+      "replyTo": "30000000-0000-4000-8000-000000000001",
+      "payload": { "kind": "pauseConfirmed", "goalId": "5b0c6f8e-2f4d-4c1a-9a57-1f0e2d3c4b5a" }
+    }
+  ]
+}

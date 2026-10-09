@@ -1,0 +1,30 @@
+{
+  "kind": "toolList",
+  "deviceId": "a1b2c3d4e5f60718293a4b5c6d7e8f90",
+  "tools": [
+    {
+      "name": "set_alarm",
+      "description": "Set an alarm on this phone.",
+      "arguments": [
+        { "name": "time", "type": "string", "required": true, "description": "Local time in 24-hour HH:MM format.", "format": "HH:MM" },
+        { "name": "label", "type": "string", "required": false, "description": "Optional alarm label." },
+        { "name": "days", "type": "string_array", "required": false, "description": "Optional repeat weekdays.", "values": ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] }
+      ]
+    },
+    {
+      "name": "set_timer",
+      "description": "Start a timer on this phone.",
+      "arguments": [
+        { "name": "seconds", "type": "integer", "required": true, "description": "Timer duration in seconds.", "minimum": 1, "maximum": 86400 },
+        { "name": "label", "type": "string", "required": false, "description": "Optional timer label." }
+      ]
+    },
+    {
+      "name": "open_app",
+      "description": "Open an installed app on this phone.",
+      "arguments": [
+        { "name": "app", "type": "string", "required": true, "description": "App name or Android package name." }
+      ]
+    }
+  ]
+}

@@ -30,6 +30,24 @@ data class ActionLogEntry(
     val outcome: StepOutcome,
 )
 
+/** A current Mac tool or a p0 phone tool that a paired device can invoke. */
+@Serializable
+enum class AdvertisedToolName {
+    @SerialName("open_app") OpenApp,
+    @SerialName("open_file") OpenFile,
+    @SerialName("open_url") OpenUrl,
+    @SerialName("reveal_in_finder") RevealInFinder,
+    @SerialName("read_file") ReadFile,
+    @SerialName("list_dir") ListDir,
+    @SerialName("write_new_file") WriteNewFile,
+    @SerialName("copy") Copy,
+    @SerialName("move") Move,
+    @SerialName("move_to_trash") MoveToTrash,
+    @SerialName("phone") Phone,
+    @SerialName("set_alarm") SetAlarm,
+    @SerialName("set_timer") SetTimer;
+}
+
 @Serializable
 data class AnswerQuestionParams(
     val taskId: String,
@@ -74,6 +92,12 @@ data class ApprovalCancelled(
 )
 
 @Serializable
+@SerialName("approvalCancelled")
+data class ApprovalCancelledPayload(
+    val approvalId: String,
+) : Payload
+
+@Serializable
 data class ApprovalDecision(
     val approved: Boolean,
     val method: ApprovalMethod,
@@ -95,6 +119,27 @@ enum class ApprovalMethod {
 
 /** An approval request waits 5 minutes; then the task pauses (SPEC-09 r10). */
 const val APPROVAL_REQUEST_EXPIRY_SECONDS: Long = 300L
+
+/** Approval data copied from the harness without a decision (SPEC-07, SPEC-09 r10). */
+@Serializable
+@SerialName("approvalRequest")
+data class ApprovalRequestPayload(
+    val id: String,
+    val stepId: String,
+    val approvalKind: ApprovalKind,
+    val recipients: List<String>? = null,
+    val files: FileSummary? = null,
+    val text: String,
+    val requestedAt: String,
+    val expiresAt: String,
+) : Payload
+
+@Serializable
+@SerialName("approvalResponse")
+data class ApprovalResponsePayload(
+    val approvalId: String,
+    val decision: ApprovalDecision,
+) : Payload
 
 /** The installed version, read from the app bundle without launching the app. */
 @Serializable
@@ -171,6 +216,18 @@ data class ButtonReply(
     val choice: ConfirmationChoice,
 ) : ConfirmationReply
 
+@Serializable
+@SerialName("cancelConfirmed")
+data class CancelConfirmedPayload(
+    val goalId: String,
+) : Payload
+
+@Serializable
+@SerialName("cancel")
+data class CancelPayload(
+    val goalId: String,
+) : Payload
+
 /** Relay to device, first frame on every connection. */
 @Serializable
 @SerialName("challenge")
@@ -193,6 +250,19 @@ data class ClickAtAction(
     val x: Long,
     val y: Long,
 ) : ModelAction
+
+@Serializable
+enum class CommandExpiredErrorKind {
+    @SerialName("commandExpired") CommandExpired;
+}
+
+/** The receiver rejected an expired command and sends its caller this structured result (SPEC-08 'Expired command is not run'). */
+@Serializable
+@SerialName("commandExpired")
+data class CommandExpiredPayload(
+    val commandId: String,
+    val errorKind: CommandExpiredErrorKind,
+) : Payload
 
 /** Every command expires 2 minutes after it is sent (SPEC-08 r6, SPEC-09 r16), except an approval request. */
 const val COMMAND_EXPIRY_SECONDS: Long = 120L
@@ -245,6 +315,16 @@ enum class CursorState {
 @Serializable
 @JsonClassDiscriminator("kind")
 sealed interface CursorTarget
+
+/** The confirmed whole goal goes to the Mac; it is not confirmed there again (SPEC-09 r5-r6). */
+@Serializable
+@SerialName("delegateGoal")
+data class DelegateGoalPayload(
+    val goalId: String,
+    val confirmedGoal: String,
+    val originDeviceId: String,
+    val spokenAt: String,
+) : Payload
 
 @Serializable
 enum class DevicePlatform {
@@ -397,6 +477,36 @@ enum class FinishStatus {
 data class GetAppVersionParams(
     val bundleId: String,
 )
+
+@Serializable
+enum class GoalAcceptanceStatus {
+    @SerialName("started") Started,
+    @SerialName("queued") Queued;
+}
+
+/** The Mac reports that it started the goal or queued it behind its current task (SPEC-09 r14). */
+@Serializable
+@SerialName("goalAccepted")
+data class GoalAcceptedPayload(
+    val goalId: String,
+    val status: GoalAcceptanceStatus,
+    val activeTaskTitle: String? = null,
+) : Payload
+
+@Serializable
+enum class GoalFinalStatus {
+    @SerialName("done") Done,
+    @SerialName("failed") Failed,
+    @SerialName("cancelled") Cancelled;
+}
+
+@Serializable
+@SerialName("goalFinished")
+data class GoalFinishedPayload(
+    val goalId: String,
+    val status: GoalFinalStatus,
+    val summary: String,
+) : Payload
 
 /** The repeat-back sentence to speak and show (SPEC-01 r4). */
 @Serializable
@@ -681,11 +791,28 @@ data class PairRequestFrame(
     val sealed: String,
 ) : BridgeFrame
 
+@Serializable
+@SerialName("pauseConfirmed")
+data class PauseConfirmedPayload(
+    val goalId: String,
+) : Payload
+
 /** Pause one task, or every task when taskId is absent (SPEC-06 r1). */
 @Serializable
 data class PauseParams(
     val taskId: String? = null,
 )
+
+@Serializable
+@SerialName("pause")
+data class PausePayload(
+    val goalId: String,
+) : Payload
+
+/** A closed union of encrypted cross-device message payloads. */
+@Serializable
+@JsonClassDiscriminator("kind")
+sealed interface Payload
 
 /** Decided by the harness for every action, never by the model (SPEC-07 r1). */
 @Serializable
@@ -715,6 +842,15 @@ data class PhoneOpenAppCall(
 @JsonClassDiscriminator("tool")
 sealed interface PhoneToolCall
 
+/** Connection test command used by the Mac and Android bridge clients (OBJ-21, OBJ-23). */
+@Serializable
+@SerialName("ping")
+data object PingPayload : Payload
+
+@Serializable
+@SerialName("pingResult")
+data object PingResultPayload : Payload
+
 /** The subtasks in plan order. The harness also rejects dependency cycles, unknown or duplicate ids, and plans longer than its limit, which this schema cannot express. */
 @Serializable
 data class Plan(
@@ -743,6 +879,16 @@ data class ProbeAppCapabilityParams(
     /** Use the bundle id the Mac app reports (WindowInfo.bundleId from listWindows), never one from memory: the same app can change id between versions, for example com.apple.Keynote for current Keynote and com.apple.iWork.Keynote for older ones. */
     val bundleId: String,
 )
+
+/** The executing device sends progress on every change and at least every 30 seconds (SPEC-09 r9, r17). */
+@Serializable
+@SerialName("progress")
+data class ProgressPayload(
+    val goalId: String,
+    val status: TaskStatus,
+    val currentSubtaskTitle: String,
+    val updatedAt: String,
+) : Payload
 
 /** Version of these schemas. Bump it on every breaking change; see protocol/README.md. */
 const val PROTOCOL_VERSION: Long = 4L
@@ -854,6 +1000,12 @@ enum class ResultStatus {
     @SerialName("stuck") Stuck,
     @SerialName("blocked") Blocked;
 }
+
+@Serializable
+@SerialName("resume")
+data class ResumePayload(
+    val goalId: String,
+) : Payload
 
 /** Show a file or folder in Finder. Allowed. */
 @Serializable
@@ -1215,10 +1367,55 @@ data class ToolAction(
     val call: ToolCall,
 ) : ModelAction
 
+/** One field in a phone tool's advertised argument schema. */
+@Serializable
+data class ToolArgument(
+    val name: String,
+    val type: ToolArgumentType,
+    val required: Boolean,
+    val description: String,
+    val format: String? = null,
+    val minimum: Double? = null,
+    val maximum: Double? = null,
+    val values: List<String>? = null,
+)
+
+@Serializable
+enum class ToolArgumentType {
+    @SerialName("string") String,
+    @SerialName("integer") Integer,
+    @SerialName("number") Number,
+    @SerialName("boolean") Boolean,
+    @SerialName("array") Array,
+    @SerialName("object") Object,
+    @SerialName("string_array") StringArray;
+}
+
 /** One call to a typed tool. */
 @Serializable
 @JsonClassDiscriminator("tool")
 sealed interface ToolCall
+
+@Serializable
+@SerialName("toolCall")
+data class ToolCallPayload(
+    val call: PhoneToolCall,
+) : Payload
+
+/** A device tool and its argument schema, advertised on connect (SPEC-09 r1). */
+@Serializable
+data class ToolDescriptor(
+    val name: AdvertisedToolName,
+    val description: String,
+    val arguments: List<ToolArgument>,
+)
+
+@Serializable
+@SerialName("toolList")
+data class ToolListPayload(
+    val deviceId: String,
+    val tools: List<ToolDescriptor>,
+) : Payload
 
 /** Every tool name, used to tell a worker which tools its lane allows. */
 @Serializable
@@ -1235,6 +1432,15 @@ enum class ToolName {
     @SerialName("move_to_trash") MoveToTrash,
     @SerialName("phone") Phone;
 }
+
+/** A tool succeeds with optional data or fails with a structured ErrorKind, never raw error text. */
+@Serializable
+@SerialName("toolResult")
+data class ToolResultPayload(
+    val success: Boolean,
+    val data: String? = null,
+    val error: ErrorKind? = null,
+) : Payload
 
 /** One element of the trimmed accessibility tree. */
 @Serializable

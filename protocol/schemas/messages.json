@@ -1,0 +1,270 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yumi.local/protocol/messages.json",
+  "title": "Cross-device messages",
+  "description": "Encrypted payload kinds exchanged by paired devices (SPEC-09).",
+  "$defs": {
+    "Payload": {
+      "description": "A closed union of encrypted cross-device message payloads.",
+      "type": "object",
+      "discriminator": { "propertyName": "kind" },
+      "oneOf": [
+        { "$ref": "#/$defs/ToolListPayload" },
+        { "$ref": "#/$defs/ToolCallPayload" },
+        { "$ref": "#/$defs/ToolResultPayload" },
+        { "$ref": "#/$defs/DelegateGoalPayload" },
+        { "$ref": "#/$defs/GoalAcceptedPayload" },
+        { "$ref": "#/$defs/ProgressPayload" },
+        { "$ref": "#/$defs/GoalFinishedPayload" },
+        { "$ref": "#/$defs/ApprovalRequestPayload" },
+        { "$ref": "#/$defs/ApprovalResponsePayload" },
+        { "$ref": "#/$defs/ApprovalCancelledPayload" },
+        { "$ref": "#/$defs/PausePayload" },
+        { "$ref": "#/$defs/ResumePayload" },
+        { "$ref": "#/$defs/CancelPayload" },
+        { "$ref": "#/$defs/PauseConfirmedPayload" },
+        { "$ref": "#/$defs/CancelConfirmedPayload" },
+        { "$ref": "#/$defs/CommandExpiredPayload" },
+        { "$ref": "#/$defs/PingPayload" },
+        { "$ref": "#/$defs/PingResultPayload" }
+      ]
+    },
+    "GoalAcceptanceStatus": { "type": "string", "enum": ["started", "queued"] },
+    "GoalFinalStatus": { "type": "string", "enum": ["done", "failed", "cancelled"] },
+    "AdvertisedToolName": {
+      "description": "A current Mac tool or a p0 phone tool that a paired device can invoke.",
+      "type": "string",
+      "enum": ["open_app", "open_file", "open_url", "reveal_in_finder", "read_file", "list_dir", "write_new_file", "copy", "move", "move_to_trash", "phone", "set_alarm", "set_timer"]
+    },
+    "ToolArgumentName": { "type": "string", "minLength": 1 },
+    "ToolArgumentType": { "type": "string", "enum": ["string", "integer", "number", "boolean", "array", "object", "string_array"] },
+    "ToolArgument": {
+      "description": "One field in a phone tool's advertised argument schema.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "type", "required", "description"],
+      "properties": {
+        "name": { "$ref": "#/$defs/ToolArgumentName" },
+        "type": { "$ref": "#/$defs/ToolArgumentType" },
+        "required": { "type": "boolean" },
+        "description": { "type": "string", "minLength": 1 },
+        "format": { "type": "string", "minLength": 1 },
+        "minimum": { "type": "number" },
+        "maximum": { "type": "number" },
+        "values": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "ToolDescriptor": {
+      "description": "A device tool and its argument schema, advertised on connect (SPEC-09 r1).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "description", "arguments"],
+      "properties": {
+        "name": { "$ref": "#/$defs/AdvertisedToolName" },
+        "description": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "arguments": { "type": "array", "items": { "$ref": "#/$defs/ToolArgument" } }
+      }
+    },
+    "ToolListPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "deviceId", "tools"],
+      "properties": {
+        "kind": { "const": "toolList" },
+        "deviceId": { "$ref": "common.json#/$defs/DeviceId" },
+        "tools": { "type": "array", "items": { "$ref": "#/$defs/ToolDescriptor" } }
+      }
+    },
+    "ToolCallPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "call"],
+      "properties": {
+        "kind": { "const": "toolCall" },
+        "call": { "$ref": "tools.json#/$defs/PhoneToolCall" }
+      }
+    },
+    "ToolResultPayload": {
+      "description": "A tool succeeds with optional data or fails with a structured ErrorKind, never raw error text.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "success"],
+      "properties": {
+        "kind": { "const": "toolResult" },
+        "success": { "type": "boolean" },
+        "data": { "type": "string" },
+        "error": { "$ref": "errors.json#/$defs/ErrorKind" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "success": { "const": true } } },
+          "then": { "properties": { "error": false } }
+        },
+        {
+          "if": { "properties": { "success": { "const": false } } },
+          "then": { "required": ["error"], "properties": { "data": false } }
+        }
+      ]
+    },
+    "DelegateGoalPayload": {
+      "description": "The confirmed whole goal goes to the Mac; it is not confirmed there again (SPEC-09 r5-r6).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "goalId", "confirmedGoal", "originDeviceId", "spokenAt"],
+      "properties": {
+        "kind": { "const": "delegateGoal" },
+        "goalId": { "$ref": "common.json#/$defs/Uuid" },
+        "confirmedGoal": { "type": "string", "minLength": 1 },
+        "originDeviceId": { "$ref": "common.json#/$defs/DeviceId" },
+        "spokenAt": { "$ref": "common.json#/$defs/Timestamp" }
+      }
+    },
+    "GoalAcceptedPayload": {
+      "description": "The Mac reports that it started the goal or queued it behind its current task (SPEC-09 r14).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "goalId", "status"],
+      "properties": {
+        "kind": { "const": "goalAccepted" },
+        "goalId": { "$ref": "common.json#/$defs/Uuid" },
+        "status": { "$ref": "#/$defs/GoalAcceptanceStatus" },
+        "activeTaskTitle": { "type": "string", "minLength": 1, "maxLength": 60 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "queued" } } },
+          "then": { "required": ["activeTaskTitle"] }
+        },
+        {
+          "if": { "properties": { "status": { "const": "started" } } },
+          "then": { "properties": { "activeTaskTitle": false } }
+        }
+      ]
+    },
+    "ProgressPayload": {
+      "description": "The executing device sends progress on every change and at least every 30 seconds (SPEC-09 r9, r17).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "goalId", "status", "currentSubtaskTitle", "updatedAt"],
+      "properties": {
+        "kind": { "const": "progress" },
+        "goalId": { "$ref": "common.json#/$defs/Uuid" },
+        "status": { "$ref": "task.json#/$defs/TaskStatus" },
+        "currentSubtaskTitle": { "type": "string", "minLength": 1, "maxLength": 60 },
+        "updatedAt": { "$ref": "common.json#/$defs/Timestamp" }
+      }
+    },
+    "GoalFinishedPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "goalId", "status", "summary"],
+      "properties": {
+        "kind": { "const": "goalFinished" },
+        "goalId": { "$ref": "common.json#/$defs/Uuid" },
+        "status": { "$ref": "#/$defs/GoalFinalStatus" },
+        "summary": { "type": "string", "minLength": 1 }
+      }
+    },
+    "ApprovalRequestPayload": {
+      "description": "Approval data copied from the harness without a decision (SPEC-07, SPEC-09 r10).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id", "stepId", "approvalKind", "text", "requestedAt", "expiresAt"],
+      "properties": {
+        "kind": { "const": "approvalRequest" },
+        "id": { "$ref": "common.json#/$defs/Uuid" },
+        "stepId": { "$ref": "common.json#/$defs/Uuid" },
+        "approvalKind": { "$ref": "approval.json#/$defs/ApprovalKind" },
+        "recipients": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "files": { "$ref": "approval.json#/$defs/FileSummary" },
+        "text": { "type": "string", "minLength": 1 },
+        "requestedAt": { "$ref": "common.json#/$defs/Timestamp" },
+        "expiresAt": { "$ref": "common.json#/$defs/Timestamp" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "approvalKind": { "const": "send" } } },
+          "then": { "required": ["recipients"], "properties": { "files": false } }
+        },
+        {
+          "if": { "properties": { "approvalKind": { "const": "delete" } } },
+          "then": { "required": ["files"], "properties": { "recipients": false } }
+        }
+      ]
+    },
+    "ApprovalResponsePayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "approvalId", "decision"],
+      "properties": {
+        "kind": { "const": "approvalResponse" },
+        "approvalId": { "$ref": "common.json#/$defs/Uuid" },
+        "decision": { "$ref": "approval.json#/$defs/ApprovalDecision" }
+      }
+    },
+    "ApprovalCancelledPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "approvalId"],
+      "properties": {
+        "kind": { "const": "approvalCancelled" },
+        "approvalId": { "$ref": "common.json#/$defs/Uuid" }
+      }
+    },
+    "PausePayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "goalId"],
+      "properties": { "kind": { "const": "pause" }, "goalId": { "$ref": "common.json#/$defs/Uuid" } }
+    },
+    "ResumePayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "goalId"],
+      "properties": { "kind": { "const": "resume" }, "goalId": { "$ref": "common.json#/$defs/Uuid" } }
+    },
+    "CancelPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "goalId"],
+      "properties": { "kind": { "const": "cancel" }, "goalId": { "$ref": "common.json#/$defs/Uuid" } }
+    },
+    "PauseConfirmedPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "goalId"],
+      "properties": { "kind": { "const": "pauseConfirmed" }, "goalId": { "$ref": "common.json#/$defs/Uuid" } }
+    },
+    "CancelConfirmedPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "goalId"],
+      "properties": { "kind": { "const": "cancelConfirmed" }, "goalId": { "$ref": "common.json#/$defs/Uuid" } }
+    },
+    "CommandExpiredErrorKind": { "type": "string", "enum": ["commandExpired"] },
+    "CommandExpiredPayload": {
+      "description": "The receiver rejected an expired command and sends its caller this structured result (SPEC-08 'Expired command is not run').",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "commandId", "errorKind"],
+      "properties": {
+        "kind": { "const": "commandExpired" },
+        "commandId": { "$ref": "common.json#/$defs/Uuid" },
+        "errorKind": { "$ref": "#/$defs/CommandExpiredErrorKind" }
+      }
+    },
+    "PingPayload": {
+      "description": "Connection test command used by the Mac and Android bridge clients (OBJ-21, OBJ-23).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": { "kind": { "const": "ping" } }
+    },
+    "PingResultPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": { "kind": { "const": "pingResult" } }
+    }
+  }
+}

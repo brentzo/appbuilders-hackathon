@@ -35,6 +35,23 @@ public struct ActionLogEntry: Codable, Equatable, Sendable {
     }
 }
 
+/// A current Mac tool or a p0 phone tool that a paired device can invoke.
+public enum AdvertisedToolName: String, Codable, Equatable, Sendable, CaseIterable {
+    case openApp = "open_app"
+    case openFile = "open_file"
+    case openUrl = "open_url"
+    case revealInFinder = "reveal_in_finder"
+    case readFile = "read_file"
+    case listDir = "list_dir"
+    case writeNewFile = "write_new_file"
+    case copy
+    case move
+    case moveToTrash = "move_to_trash"
+    case phone
+    case setAlarm = "set_alarm"
+    case setTimer = "set_timer"
+}
+
 public struct AnswerQuestionParams: Codable, Equatable, Sendable {
     public var taskId: String
     public var subtaskId: String
@@ -104,6 +121,14 @@ public struct ApprovalCancelled: Codable, Equatable, Sendable {
     }
 }
 
+public struct ApprovalCancelledPayload: Codable, Equatable, Sendable {
+    public var approvalId: String
+
+    public init(approvalId: String) {
+        self.approvalId = approvalId
+    }
+}
+
 public struct ApprovalDecision: Codable, Equatable, Sendable {
     public var approved: Bool
     public var method: ApprovalMethod
@@ -129,6 +154,39 @@ public enum ApprovalMethod: String, Codable, Equatable, Sendable, CaseIterable {
 
 /// An approval request waits 5 minutes; then the task pauses (SPEC-09 r10).
 public let APPROVAL_REQUEST_EXPIRY_SECONDS: Int = 300
+
+/// Approval data copied from the harness without a decision (SPEC-07, SPEC-09 r10).
+public struct ApprovalRequestPayload: Codable, Equatable, Sendable {
+    public var id: String
+    public var stepId: String
+    public var approvalKind: ApprovalKind
+    public var recipients: [String]?
+    public var files: FileSummary?
+    public var text: String
+    public var requestedAt: String
+    public var expiresAt: String
+
+    public init(id: String, stepId: String, approvalKind: ApprovalKind, recipients: [String]? = nil, files: FileSummary? = nil, text: String, requestedAt: String, expiresAt: String) {
+        self.id = id
+        self.stepId = stepId
+        self.approvalKind = approvalKind
+        self.recipients = recipients
+        self.files = files
+        self.text = text
+        self.requestedAt = requestedAt
+        self.expiresAt = expiresAt
+    }
+}
+
+public struct ApprovalResponsePayload: Codable, Equatable, Sendable {
+    public var approvalId: String
+    public var decision: ApprovalDecision
+
+    public init(approvalId: String, decision: ApprovalDecision) {
+        self.approvalId = approvalId
+        self.decision = decision
+    }
+}
 
 /// The installed version, read from the app bundle without launching the app.
 public struct AppVersionResult: Codable, Equatable, Sendable {
@@ -312,6 +370,22 @@ public struct ButtonReply: Codable, Equatable, Sendable {
     }
 }
 
+public struct CancelConfirmedPayload: Codable, Equatable, Sendable {
+    public var goalId: String
+
+    public init(goalId: String) {
+        self.goalId = goalId
+    }
+}
+
+public struct CancelPayload: Codable, Equatable, Sendable {
+    public var goalId: String
+
+    public init(goalId: String) {
+        self.goalId = goalId
+    }
+}
+
 /// Relay to device, first frame on every connection.
 public struct ChallengeFrame: Codable, Equatable, Sendable {
     /// 32 random bytes, new for every connection.
@@ -339,6 +413,21 @@ public struct ClickAtAction: Codable, Equatable, Sendable {
     public init(x: Int, y: Int) {
         self.x = x
         self.y = y
+    }
+}
+
+public enum CommandExpiredErrorKind: String, Codable, Equatable, Sendable, CaseIterable {
+    case commandExpired
+}
+
+/// The receiver rejected an expired command and sends its caller this structured result (SPEC-08 'Expired command is not run').
+public struct CommandExpiredPayload: Codable, Equatable, Sendable {
+    public var commandId: String
+    public var errorKind: CommandExpiredErrorKind
+
+    public init(commandId: String, errorKind: CommandExpiredErrorKind) {
+        self.commandId = commandId
+        self.errorKind = errorKind
     }
 }
 
@@ -490,6 +579,21 @@ public enum CursorTarget: Codable, Equatable, Sendable {
             try container.encode("element", forKey: .discriminator)
             try value.encode(to: encoder)
         }
+    }
+}
+
+/// The confirmed whole goal goes to the Mac; it is not confirmed there again (SPEC-09 r5-r6).
+public struct DelegateGoalPayload: Codable, Equatable, Sendable {
+    public var goalId: String
+    public var confirmedGoal: String
+    public var originDeviceId: String
+    public var spokenAt: String
+
+    public init(goalId: String, confirmedGoal: String, originDeviceId: String, spokenAt: String) {
+        self.goalId = goalId
+        self.confirmedGoal = confirmedGoal
+        self.originDeviceId = originDeviceId
+        self.spokenAt = spokenAt
     }
 }
 
@@ -687,6 +791,42 @@ public struct GetAppVersionParams: Codable, Equatable, Sendable {
 
     public init(bundleId: String) {
         self.bundleId = bundleId
+    }
+}
+
+public enum GoalAcceptanceStatus: String, Codable, Equatable, Sendable, CaseIterable {
+    case started
+    case queued
+}
+
+/// The Mac reports that it started the goal or queued it behind its current task (SPEC-09 r14).
+public struct GoalAcceptedPayload: Codable, Equatable, Sendable {
+    public var goalId: String
+    public var status: GoalAcceptanceStatus
+    public var activeTaskTitle: String?
+
+    public init(goalId: String, status: GoalAcceptanceStatus, activeTaskTitle: String? = nil) {
+        self.goalId = goalId
+        self.status = status
+        self.activeTaskTitle = activeTaskTitle
+    }
+}
+
+public enum GoalFinalStatus: String, Codable, Equatable, Sendable, CaseIterable {
+    case done
+    case failed
+    case cancelled
+}
+
+public struct GoalFinishedPayload: Codable, Equatable, Sendable {
+    public var goalId: String
+    public var status: GoalFinalStatus
+    public var summary: String
+
+    public init(goalId: String, status: GoalFinalStatus, summary: String) {
+        self.goalId = goalId
+        self.status = status
+        self.summary = summary
     }
 }
 
@@ -1150,12 +1290,141 @@ public struct PairRequestFrame: Codable, Equatable, Sendable {
     }
 }
 
+public struct PauseConfirmedPayload: Codable, Equatable, Sendable {
+    public var goalId: String
+
+    public init(goalId: String) {
+        self.goalId = goalId
+    }
+}
+
 /// Pause one task, or every task when taskId is absent (SPEC-06 r1).
 public struct PauseParams: Codable, Equatable, Sendable {
     public var taskId: String?
 
     public init(taskId: String? = nil) {
         self.taskId = taskId
+    }
+}
+
+public struct PausePayload: Codable, Equatable, Sendable {
+    public var goalId: String
+
+    public init(goalId: String) {
+        self.goalId = goalId
+    }
+}
+
+/// A closed union of encrypted cross-device message payloads.
+public enum Payload: Codable, Equatable, Sendable {
+    case toolList(ToolListPayload)
+    case toolCall(ToolCallPayload)
+    case toolResult(ToolResultPayload)
+    case delegateGoal(DelegateGoalPayload)
+    case goalAccepted(GoalAcceptedPayload)
+    case progress(ProgressPayload)
+    case goalFinished(GoalFinishedPayload)
+    case approvalRequest(ApprovalRequestPayload)
+    case approvalResponse(ApprovalResponsePayload)
+    case approvalCancelled(ApprovalCancelledPayload)
+    case pause(PausePayload)
+    case resume(ResumePayload)
+    case cancel(CancelPayload)
+    case pauseConfirmed(PauseConfirmedPayload)
+    case cancelConfirmed(CancelConfirmedPayload)
+    case commandExpired(CommandExpiredPayload)
+    case ping(PingPayload)
+    case pingResult(PingResultPayload)
+
+    private enum DiscriminatorKey: String, CodingKey {
+        case discriminator = "kind"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: DiscriminatorKey.self)
+        let value = try container.decode(String.self, forKey: .discriminator)
+        switch value {
+        case "toolList": self = .toolList(try ToolListPayload(from: decoder))
+        case "toolCall": self = .toolCall(try ToolCallPayload(from: decoder))
+        case "toolResult": self = .toolResult(try ToolResultPayload(from: decoder))
+        case "delegateGoal": self = .delegateGoal(try DelegateGoalPayload(from: decoder))
+        case "goalAccepted": self = .goalAccepted(try GoalAcceptedPayload(from: decoder))
+        case "progress": self = .progress(try ProgressPayload(from: decoder))
+        case "goalFinished": self = .goalFinished(try GoalFinishedPayload(from: decoder))
+        case "approvalRequest": self = .approvalRequest(try ApprovalRequestPayload(from: decoder))
+        case "approvalResponse": self = .approvalResponse(try ApprovalResponsePayload(from: decoder))
+        case "approvalCancelled": self = .approvalCancelled(try ApprovalCancelledPayload(from: decoder))
+        case "pause": self = .pause(try PausePayload(from: decoder))
+        case "resume": self = .resume(try ResumePayload(from: decoder))
+        case "cancel": self = .cancel(try CancelPayload(from: decoder))
+        case "pauseConfirmed": self = .pauseConfirmed(try PauseConfirmedPayload(from: decoder))
+        case "cancelConfirmed": self = .cancelConfirmed(try CancelConfirmedPayload(from: decoder))
+        case "commandExpired": self = .commandExpired(try CommandExpiredPayload(from: decoder))
+        case "ping": self = .ping(try PingPayload(from: decoder))
+        case "pingResult": self = .pingResult(try PingResultPayload(from: decoder))
+        default:
+            throw DecodingError.dataCorruptedError(forKey: .discriminator, in: container, debugDescription: "Unknown Payload kind: \(value)")
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: DiscriminatorKey.self)
+        switch self {
+        case .toolList(let value):
+            try container.encode("toolList", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .toolCall(let value):
+            try container.encode("toolCall", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .toolResult(let value):
+            try container.encode("toolResult", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .delegateGoal(let value):
+            try container.encode("delegateGoal", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .goalAccepted(let value):
+            try container.encode("goalAccepted", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .progress(let value):
+            try container.encode("progress", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .goalFinished(let value):
+            try container.encode("goalFinished", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .approvalRequest(let value):
+            try container.encode("approvalRequest", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .approvalResponse(let value):
+            try container.encode("approvalResponse", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .approvalCancelled(let value):
+            try container.encode("approvalCancelled", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .pause(let value):
+            try container.encode("pause", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .resume(let value):
+            try container.encode("resume", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .cancel(let value):
+            try container.encode("cancel", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .pauseConfirmed(let value):
+            try container.encode("pauseConfirmed", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .cancelConfirmed(let value):
+            try container.encode("cancelConfirmed", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .commandExpired(let value):
+            try container.encode("commandExpired", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .ping(let value):
+            try container.encode("ping", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .pingResult(let value):
+            try container.encode("pingResult", forKey: .discriminator)
+            try value.encode(to: encoder)
+        }
     }
 }
 
@@ -1223,6 +1492,19 @@ public enum PhoneToolCall: Codable, Equatable, Sendable {
     }
 }
 
+/// Connection test command used by the Mac and Android bridge clients (OBJ-21, OBJ-23).
+public struct PingPayload: Codable, Equatable, Sendable {
+
+    public init() {
+    }
+}
+
+public struct PingResultPayload: Codable, Equatable, Sendable {
+
+    public init() {
+    }
+}
+
 /// The subtasks in plan order. The harness also rejects dependency cycles, unknown or duplicate ids, and plans longer than its limit, which this schema cannot express.
 public struct Plan: Codable, Equatable, Sendable {
     public var subtasks: [PlannedSubtask]
@@ -1264,6 +1546,21 @@ public struct ProbeAppCapabilityParams: Codable, Equatable, Sendable {
 
     public init(bundleId: String) {
         self.bundleId = bundleId
+    }
+}
+
+/// The executing device sends progress on every change and at least every 30 seconds (SPEC-09 r9, r17).
+public struct ProgressPayload: Codable, Equatable, Sendable {
+    public var goalId: String
+    public var status: TaskStatus
+    public var currentSubtaskTitle: String
+    public var updatedAt: String
+
+    public init(goalId: String, status: TaskStatus, currentSubtaskTitle: String, updatedAt: String) {
+        self.goalId = goalId
+        self.status = status
+        self.currentSubtaskTitle = currentSubtaskTitle
+        self.updatedAt = updatedAt
     }
 }
 
@@ -1418,6 +1715,14 @@ public enum ResultStatus: String, Codable, Equatable, Sendable, CaseIterable {
     case partial
     case stuck
     case blocked
+}
+
+public struct ResumePayload: Codable, Equatable, Sendable {
+    public var goalId: String
+
+    public init(goalId: String) {
+        self.goalId = goalId
+    }
 }
 
 /// Show a file or folder in Finder. Allowed.
@@ -1933,6 +2238,39 @@ public struct ToolAction: Codable, Equatable, Sendable {
     }
 }
 
+/// One field in a phone tool's advertised argument schema.
+public struct ToolArgument: Codable, Equatable, Sendable {
+    public var name: String
+    public var `type`: ToolArgumentType
+    public var required: Bool
+    public var description: String
+    public var format: String?
+    public var minimum: Double?
+    public var maximum: Double?
+    public var values: [String]?
+
+    public init(name: String, `type`: ToolArgumentType, required: Bool, description: String, format: String? = nil, minimum: Double? = nil, maximum: Double? = nil, values: [String]? = nil) {
+        self.name = name
+        self.type = `type`
+        self.required = required
+        self.description = description
+        self.format = format
+        self.minimum = minimum
+        self.maximum = maximum
+        self.values = values
+    }
+}
+
+public enum ToolArgumentType: String, Codable, Equatable, Sendable, CaseIterable {
+    case string
+    case integer
+    case number
+    case boolean
+    case array
+    case object
+    case stringArray = "string_array"
+}
+
 /// One call to a typed tool.
 public enum ToolCall: Codable, Equatable, Sendable {
     case openApp(OpenAppCall)
@@ -2011,6 +2349,37 @@ public enum ToolCall: Codable, Equatable, Sendable {
     }
 }
 
+public struct ToolCallPayload: Codable, Equatable, Sendable {
+    public var call: PhoneToolCall
+
+    public init(call: PhoneToolCall) {
+        self.call = call
+    }
+}
+
+/// A device tool and its argument schema, advertised on connect (SPEC-09 r1).
+public struct ToolDescriptor: Codable, Equatable, Sendable {
+    public var name: AdvertisedToolName
+    public var description: String
+    public var arguments: [ToolArgument]
+
+    public init(name: AdvertisedToolName, description: String, arguments: [ToolArgument]) {
+        self.name = name
+        self.description = description
+        self.arguments = arguments
+    }
+}
+
+public struct ToolListPayload: Codable, Equatable, Sendable {
+    public var deviceId: String
+    public var tools: [ToolDescriptor]
+
+    public init(deviceId: String, tools: [ToolDescriptor]) {
+        self.deviceId = deviceId
+        self.tools = tools
+    }
+}
+
 /// Every tool name, used to tell a worker which tools its lane allows.
 public enum ToolName: String, Codable, Equatable, Sendable, CaseIterable {
     case openApp = "open_app"
@@ -2024,6 +2393,19 @@ public enum ToolName: String, Codable, Equatable, Sendable, CaseIterable {
     case move
     case moveToTrash = "move_to_trash"
     case phone
+}
+
+/// A tool succeeds with optional data or fails with a structured ErrorKind, never raw error text.
+public struct ToolResultPayload: Codable, Equatable, Sendable {
+    public var success: Bool
+    public var data: String?
+    public var error: ErrorKind?
+
+    public init(success: Bool, data: String? = nil, error: ErrorKind? = nil) {
+        self.success = success
+        self.data = data
+        self.error = error
+    }
 }
 
 /// One element of the trimmed accessibility tree.
