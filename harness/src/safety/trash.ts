@@ -5,9 +5,9 @@ import { entryKind, hasWildcard, homeRelative, isProtectedFolder, nameKey, pathP
 import { APP_BUNDLE_EXTENSION, PACKAGE_EXTENSIONS, type RuleId } from "./rules.ts";
 
 /**
- * The checks for `move_to_trash` (SPEC-07 r7-r10, OBJ-42.6). A delete is never allowed outright: it either asks,
+ * The checks for `move_to_trash` (SPEC-07 r7-r10, OBJ-37.6). A delete is never allowed outright: it either asks,
  * with a `FileSummary` built from the real file list, or it is blocked. Approving, checking the list again, and
- * moving to the Trash are OBJ-43.
+ * moving to the Trash are OBJ-38.
  */
 
 export type TrashCheck = { level: "ask"; rule: "delete"; files: FileSummary } | { level: "blocked"; rule: RuleId };

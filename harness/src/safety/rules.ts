@@ -10,7 +10,7 @@ import type { PermissionLevel, PhoneToolCall } from "@yumi/protocol/types";
  */
 
 /**
- * Why the gate chose a level. Every decision names exactly one rule, for the log and for OBJ-43, which turns a
+ * Why the gate chose a level. Every decision names exactly one rule, for the log and for OBJ-38, which turns a
  * blocked or asking decision into the right card. The first group are the rows of the SPEC-07 r1 table.
  */
 export const RULE = {
@@ -85,7 +85,7 @@ export const SECRET_LOCATIONS = [
 /** SPEC-07 r9: never deleted or moved themselves. Relative to the home folder; "" is the home folder. */
 export const PROTECTED_FOLDERS = ["", "Desktop", "Documents", "Downloads", "Library"] as const;
 
-/** The Library folder in the home folder. Nothing in it is read, written, or deleted (SPEC-07 r1, OBJ-42.4). */
+/** The Library folder in the home folder. Nothing in it is read, written, or deleted (SPEC-07 r1, OBJ-37.4). */
 export const LIBRARY_FOLDER = "Library";
 
 /**
@@ -203,7 +203,7 @@ export const KEY_RULES: readonly { combo: string; app?: string; rule: RuleId }[]
 ];
 
 /**
- * Phone tool levels. SPEC-09 and SPEC-10 have not given them yet (OBJ-42 Out of scope), so this is a stand-in: the
+ * Phone tool levels. SPEC-09 and SPEC-10 have not given them yet (OBJ-37 Out of scope), so this is a stand-in: the
  * p0 phone tools set an alarm, set a timer, or open an app, which SPEC-09 r4 runs on the phone without asking.
  */
 export const PHONE_TOOL_LEVELS: Record<PhoneToolCall["tool"], RuleId> = {

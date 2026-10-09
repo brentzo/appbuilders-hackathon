@@ -83,10 +83,9 @@ The approval flow that runs when the gate says "ask" is [OBJ-38](OBJ-38-approval
   - Tests: `harness/test/permission-gate.test.ts`, `file-tools.test.ts`, `strict-delete.test.ts`, and `safety-helpers.ts` (a temporary home laid out like a Mac's).
   - `harness/README.md`: layout rows and a Safety section.
 - **Commits:**
-  - `4d993e7 docs(objectives): start OBJ-37`
-  - `7ad4996 test(harness): wait for the relay to give up before checking no error was sent`
-  - `05d8ddf feat(harness): add the permission gate, typed file tools, and strict delete checks`
-  - `docs(objectives): finish OBJ-37` (this Outcome)
+  - `30fc345 docs(objectives): start OBJ-42` (written before the renumbering to OBJ-37)
+  - `6bbf26c feat(harness): add the permission gate, typed file tools, and strict delete checks`
+  - `docs(objectives): finish OBJ-42`, and `docs(objectives): renumber OBJ-42 to OBJ-37` (this Outcome and the new ids)
 - **Expectations:**
   - "Permission levels": `test/permission-gate.test.ts`, "Feature: Permission levels", has "Scenario: Reading and writing need no approval (the gate part)", "Scenario: Blocked action is refused even with a yes", and "Scenario: Secret folders cannot be read". "Scenario: Model asks for a shell command" runs a worker step against the mock model server: both shell replies are refused as `invalidOutput`, the gate blocks the action and the tool call, and the file is still there. "Scenario: Copy never replaces a file" is in `test/file-tools.test.ts` and runs the real copy: the new file is `Report 2.pdf` and the original is unchanged.
   - "Strict delete": `test/strict-delete.test.ts` has "Scenario: Protected folder cannot be deleted" and "Scenario: Wildcards are rejected", each checking that nothing in the temporary home changed. `test/permission-gate.test.ts` has "Scenario: Emptying the Trash is blocked" and "Scenario: Quitting an app is blocked".
@@ -112,7 +111,7 @@ The approval flow that runs when the gate says "ask" is [OBJ-38](OBJ-38-approval
   - Delete summaries: a document package (`.key`, `.pages`, `.numbers`, and others in `PACKAGE_EXTENSIONS`) counts as one file, an empty folder is listed as one entry, a link is listed as itself, and a folder with an app bundle inside is blocked. `folder` is the shared parent of the requested paths. A path with nothing at it is blocked as `missingPath`.
   - `read_file` returns at most 64 KB of text and says when a file is not text. `list_dir` leaves out dotfiles. A taken name is numbered on the last extension only.
   - Phone tools (`set_alarm`, `set_timer`, `open_app`) are allowed, as a stand-in in `PHONE_TOOL_LEVELS` until SPEC-09 and SPEC-10 give their levels.
-  - Unrelated flaky test fixed: `test/nonfunctional.test.ts`, "does not tell the user the bridge is down when no phone is paired", failed about one run in six because the bridge client starts offline. It now waits for the relay to give up.
+  - The flaky bridge test in `test/nonfunctional.test.ts` ("does not tell the user the bridge is down when no phone is paired") failed about one run in six here. Main fixed it in `712e727` before this branch was rebased, so this branch's own fix was dropped.
 - **Questions for Brent:**
   - SPEC-07 r1 allows reading files in the home folder, but OBJ-37.4 blocks every file tool in `~/Library` and on dotfiles, including reads. The gate follows the objective, which is stricter. Should SPEC-07 r1 say so?
   - SPEC-07 r6 makes every unlisted key press ask, in every app, so Tab, Escape, and Command-S in Keynote ask. Is that intended, or should there be a short list of safe keys like the safe labels?

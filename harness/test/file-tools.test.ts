@@ -144,7 +144,7 @@ describe("the typed file tools", () => {
   });
 });
 
-// SPEC-07 r4 and OBJ-42.5.
+// SPEC-07 r4 and OBJ-37.5.
 describe("no-replace", () => {
   it("numbers a taken name", () => {
     expect(numberedName("Report.pdf", 1)).toBe("Report.pdf");

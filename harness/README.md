@@ -211,7 +211,7 @@ Search matches tasks whose goal, confirmed goal, summary, or subtask titles cont
 
 Every action goes through `checkAction(action, { home, app })` in `src/safety/gate.ts` before it runs ([SPEC-07](../specs/07-safety.md)).
 It returns the level (`allowed`, `ask`, or `blocked`), the rule that decided it, and the `RecordedAction` with the level stored on it.
-Only `allowed` may run without the user; asking and the Trash are [OBJ-43](../objectives/OBJ-43-approvals-pause-and-action-log.md).
+Only `allowed` may run without the user; asking and the Trash are [OBJ-38](../objectives/OBJ-38-approvals-pause-and-action-log.md).
 
 - The gate reads only the resolved action, the app the Mac app reported, and the real file system. It never reads model text.
 - The rules are data in `src/safety/rules.ts`. A rule changes only with a change to SPEC-07.

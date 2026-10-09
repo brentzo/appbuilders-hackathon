@@ -3,7 +3,7 @@ import { basename, dirname, isAbsolute, join, resolve, sep } from "node:path";
 import { LIBRARY_FOLDER, PROTECTED_FOLDERS, SECRET_LOCATIONS, type RuleId } from "./rules.ts";
 
 /**
- * Path checks for the typed file tools and the delete checks (SPEC-07 r1, r2, r8, r9; OBJ-42.4). Every path is
+ * Path checks for the typed file tools and the delete checks (SPEC-07 r1, r2, r8, r9; OBJ-37.4). Every path is
  * resolved on the real file system, through `..` and every symlink, before it is checked, so a link into `~/.ssh`
  * is a path in `~/.ssh`. Names are compared without regard to case or Unicode form, as Mac volumes do by default.
  */
@@ -115,7 +115,7 @@ function startsWithParts(parts: readonly string[], prefix: readonly string[]): b
 }
 
 /**
- * What the file tools may touch (OBJ-42.4): inside the home folder, not in `~/Library`, not a dotfile or inside a
+ * What the file tools may touch (OBJ-37.4): inside the home folder, not in `~/Library`, not a dotfile or inside a
  * dot folder, and not a secret location. Undefined when the path is fine. A secret location is named as such even
  * though it is also a dotfile or in `~/Library`, so the log says why.
  */

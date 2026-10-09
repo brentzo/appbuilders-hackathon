@@ -20,7 +20,7 @@ import {
 import { checkTrash } from "./trash.ts";
 
 /**
- * The permission gate (SPEC-07 r1, OBJ-42.1). Every action from every lane, including typed tools and phone tools,
+ * The permission gate (SPEC-07 r1, OBJ-37.1). Every action from every lane, including typed tools and phone tools,
  * goes through `checkAction` before it runs, and only an `allowed` decision may run without the user.
  *
  * The gate reads only the resolved action (its kind, tool arguments, and the real element the Mac app resolved) and
@@ -56,7 +56,7 @@ declare const decidedByGate: unique symbol;
  */
 export interface GateDecision {
   level: PermissionLevel;
-  /** The rule that decided, for the log and for OBJ-43's cards. */
+  /** The rule that decided, for the log and for OBJ-38's cards. */
   rule: RuleId;
   /** The action with the level stored on it. */
   recorded: RecordedAction;
@@ -174,7 +174,7 @@ function checkKey(combo: string, app: string | undefined): Verdict {
   return { rule: strictest(matched) ?? "unclassified" };
 }
 
-/** SPEC-07 r1, r3, and OBJ-42.4: the typed tools. */
+/** SPEC-07 r1, r3, and OBJ-37.4: the typed tools. */
 function checkTool(call: ToolCall, home: string): Verdict {
   switch (call.tool) {
     case "open_app": {

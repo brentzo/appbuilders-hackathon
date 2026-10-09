@@ -25,13 +25,13 @@ import { bundleType } from "../schema/bundle.ts";
 import type { ToolDefinition, ToolRegistry } from "./registry.ts";
 
 /**
- * The typed file tools (SPEC-07 r3 and r4, OBJ-42.4 and OBJ-42.5): `read_file`, `list_dir`, `write_new_file`,
+ * The typed file tools (SPEC-07 r3 and r4, OBJ-37.4 and OBJ-37.5): `read_file`, `list_dir`, `write_new_file`,
  * `copy`, and `move`. There is no shell, no AppleScript, and no edit tool. Each tool takes only its protocol schema's
  * arguments and checks its own call with the permission gate when it runs, so a call that skipped the step loop is
  * still refused. Nothing here ever replaces a file: a taken name gets a number ("Report.pdf" becomes "Report 2.pdf"),
  * compared without regard to case as on a default Mac volume.
  *
- * `move_to_trash` is checked by the gate here but runs in OBJ-43, after the user taps Delete. `open_file`,
+ * `move_to_trash` is checked by the gate here but runs in OBJ-38, after the user taps Delete. `open_file`,
  * `open_app`, `open_url`, and `reveal_in_finder` run in the Mac app.
  */
 
