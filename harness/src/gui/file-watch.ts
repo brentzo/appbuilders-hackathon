@@ -42,7 +42,14 @@ export interface FileWatch {
 export type WatchHome = (home: string, logger: Logger) => Promise<FileWatch>;
 
 /** Document packages are folders that the user sees as one file. A change inside one is a change to the package. */
-const PACKAGE = /\.(?:key|pages|numbers|rtfd|app|bundle|pkg|photoslibrary)$/i;
+const PACKAGE = /\.(?:key|pages|numbers|rtfd|app|bundle|pkg)$/i;
+
+/**
+ * App libraries, such as the Music, TV, and Photos libraries: the apps write inside them on their own, like in
+ * `~/Library`, so nothing inside one is reported. On task d608891a (2026-10-10) a Keynote step was told "Changed
+ * file: MusicCatalogData.db" and "New file: Library.tvdb".
+ */
+const APP_LIBRARY = /\.(?:musiclibrary|tvlibrary|photoslibrary|photolibrary|imovielibrary|fcpbundle)$/i;
 
 /** Some file systems round timestamps; a file written in the same second the attempt began still counts. */
 const CLOCK_SLACK_MS = 1000;
@@ -180,11 +187,12 @@ export const watchHome: WatchHome = async (home, logger) => {
 
 /**
  * The path to report for a change event, relative to the home folder: the package around it when there is one, and
- * nothing for `~/Library`, hidden files, or anything inside a hidden folder.
+ * nothing for `~/Library`, hidden files, anything inside a hidden folder, or anything inside an app library.
  */
 function visibleFile(relative: string): string | undefined {
   const parts = relative.split(sep).filter((part) => part !== "");
   if (parts.length === 0 || parts[0] === "Library" || parts.some((part) => part.startsWith("."))) return undefined;
+  if (parts.some((part) => APP_LIBRARY.test(part))) return undefined;
   const packageEnd = parts.findIndex((part) => PACKAGE.test(part));
   return (packageEnd >= 0 ? parts.slice(0, packageEnd + 1) : parts).join(sep);
 }

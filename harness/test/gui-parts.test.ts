@@ -180,6 +180,25 @@ describe("finding files an app wrote (OBJ-36.8)", () => {
       watch.close();
     }
   });
+
+  it("never reports files inside the Music, TV, or Photos library (task d608891a)", async () => {
+    const home = dir.path;
+    const music = join(home, "Music", "Music", "Music Library.musiclibrary", "com.apple.MusicKit", "downloaded_catalog_data");
+    const tv = join(home, "Movies", "TV", "TV Library.tvlibrary");
+    const photos = join(home, "Pictures", "Photos Library.photoslibrary", "database");
+    for (const folder of [music, tv, photos, join(home, "Documents")]) mkdirSync(folder, { recursive: true });
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    const watch = await watchHome(home, new MemoryLogger());
+    try {
+      writeFileSync(join(music, "MusicCatalogData.db-wal"), "x");
+      writeFileSync(join(tv, "Library.tvdb"), "x");
+      writeFileSync(join(photos, "Photos.sqlite"), "x");
+      writeFileSync(join(home, "Documents", "Q3 Report.pdf"), "%PDF-");
+      expect(await watch.takeNew()).toEqual([{ path: "~/Documents/Q3 Report.pdf", created: true }]);
+    } finally {
+      watch.close();
+    }
+  });
 });
 
 describe("gui_act against the harness's RPC server", () => {
