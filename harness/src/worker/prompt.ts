@@ -17,6 +17,10 @@ import type { ChatContentPart, ChatMessage } from "../model/openai.ts";
 const ACTION_LINES: readonly [ModelAction["kind"], string][] = [
   [ACTION.tool, `- {"kind": "${ACTION.tool}", "call": {"tool": "<name>", ...}} calls one of the available tools.`],
   [ACTION.click, `- {"kind": "${ACTION.click}", "element": N} clicks element N. Clicking a row selects it.`],
+  [
+    ACTION.clickAt,
+    `- {"kind": "${ACTION.clickAt}", "x": X, "y": Y} clicks pixel X, Y in the attached screenshot of the window. Use it when the element list has nothing that matches.`,
+  ],
   [ACTION.setValue, `- {"kind": "${ACTION.setValue}", "element": N, "text": "..."} sets the text of element N.`],
   [
     ACTION.scroll,
@@ -58,7 +62,7 @@ const UI_RULES: readonly string[] = [
  * The system prompt for a step in `lane`. It lists only the actions the lane allows (SPEC-03 r7). With `explain`
  * (Debug mode), the model also says why, for the thoughts panel (SPEC-07 r23).
  */
-export function workerSystemPrompt(lane: Lane, explain = false): string {
+export function workerSystemPrompt(lane: Lane, explain = false, vision = false): string {
   return [
     "You are Yumi, operating apps on a Mac for the user, one action at a time.",
     "Each turn you see the user's goal, your current instruction, your last steps, and the elements of one window.",
@@ -67,12 +71,17 @@ export function workerSystemPrompt(lane: Lane, explain = false): string {
       : 'Reply with exactly one JSON object and nothing else: {"action": {...}}.',
     "",
     "Actions:",
-    ...ACTION_LINES.filter(([kind]) => laneAllows(lane, kind)).map(([, line]) => line),
+    ...ACTION_LINES.filter(([kind]) => laneAllows(lane, kind) && (kind !== ACTION.clickAt || vision)).map(([, line]) => line),
     "",
     "Rules:",
     "- Do only what the instruction says. Never send, delete, or change anything it does not mention.",
     ...(laneAllows(lane, ACTION.click) ? UI_RULES : []),
     "- Use only element numbers from the element list, and only the available tools.",
+    ...(vision && laneAllows(lane, ACTION.clickAt)
+      ? [
+          "- A screenshot of the window is attached. When nothing in the element list matches, use clickAt with the pixel coordinates (x, y) in that image.",
+        ]
+      : []),
     ...(laneAllows(lane, ACTION.setValue)
       ? [
           `- To fill a text field or text area, use ${ACTION.setValue} on it. Clicking it only puts the cursor there.`,
@@ -112,11 +121,12 @@ export async function buildWorkerMessages(input: WorkerInput, lane: Lane, explai
   lines.push("", "Your next action as JSON:");
 
   const text = lines.join("\n");
-  const content: string | ChatContentPart[] = input.observation.screenshotPath
-    ? [await imagePart({ path: input.observation.screenshotPath }), { type: "text", text }]
+  const vision = input.observation.screenshotPath !== undefined;
+  const content: string | ChatContentPart[] = vision
+    ? [await imagePart({ path: input.observation.screenshotPath! }), { type: "text", text }]
     : text;
   return [
-    { role: "system", content: workerSystemPrompt(lane, explain) },
+    { role: "system", content: workerSystemPrompt(lane, explain, vision) },
     { role: "user", content },
   ];
 }

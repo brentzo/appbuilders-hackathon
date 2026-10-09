@@ -1,5 +1,5 @@
 import { workerSystemPrompt } from "../src/worker/prompt.ts";
-import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { validate } from "@yumi/protocol";
@@ -335,6 +335,95 @@ describe("SPEC-05 Mac GUI control", () => {
       expect(JSON.stringify(call.body["messages"])).not.toContain("image_url");
       expect(JSON.stringify(call.body["response_format"])).not.toContain("ClickAtAction");
     }
+  });
+
+  it("Scenario: Vision fallback for an app without accessibility", async () => {
+    // Given the target app exposes no actionable accessibility tree
+    const shot = join(dir.path, "vision.png");
+    writeFileSync(shot, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+    let playing = false;
+    const spotify: FakeAppModel = {
+      bundleId: "com.spotify.client",
+      name: "Spotify",
+      screen: () => ({
+        app: "Spotify",
+        title: playing ? "Spotify Premium - playing" : "Spotify Premium",
+        screenshotPath: shot,
+        windowFrame: { x: 0, y: 34, width: 1470, height: 810 },
+        elements: [
+          { role: "button", label: "close" },
+          { role: "button", label: "minimize" },
+          { role: "button", label: "zoom" },
+          { role: "menuBarItem", label: "File" },
+        ],
+      }),
+    };
+    const fake = await connect(spotify);
+    fake.onExecute = (params) => {
+      if (params.action.action.kind === "clickAt") playing = true;
+    };
+    const calls = scriptModel((_text, call) =>
+      call === 1
+        ? reply({ kind: "clickAt", x: 900, y: 120 })
+        : reply({ kind: "finish", status: "done", note: "Clicked the search box." }),
+    );
+    const { subtask } = guiSubtask({
+      lane: "main",
+      bundleId: "com.spotify.client",
+      instruction: "Open my Spotify and play the chill mix.",
+    });
+
+    const run = ended(await act(subtask));
+
+    // Then a screenshot of the target window is sent to the model
+    expect(JSON.stringify(calls[0]!.body["messages"])).toContain("image_url");
+    // And clickAt is offered and described
+    expect(calls[0]!.system).toContain('"kind": "clickAt"');
+    expect(calls[0]!.system).toContain("A screenshot of the window is attached");
+    expect(JSON.stringify((calls[0]!.body["response_format"] as { json_schema: unknown }).json_schema)).toContain(
+      "ClickAtAction",
+    );
+    // And the returned coordinates are converted and clicked by the Mac app
+    expect(fake.executed.some((c) => c.params.action.action.kind === "clickAt")).toBe(true);
+    expect(run.result.status).toBe("done");
+  });
+
+  it("Scenario: Window moved before the click", async () => {
+    // Given the model returned a click for a window
+    const shot = join(dir.path, "vision-moved.png");
+    writeFileSync(shot, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+    let shift = 0;
+    const spotify: FakeAppModel = {
+      bundleId: "com.spotify.client",
+      name: "Spotify",
+      screen: () => ({
+        app: "Spotify",
+        title: "Spotify Premium",
+        screenshotPath: shot,
+        windowFrame: { x: shift, y: 34, width: 1470, height: 810 },
+        elements: [
+          { role: "button", label: "close" },
+          { role: "menuBarItem", label: "File" },
+        ],
+      }),
+    };
+    const fake = await connect(spotify);
+    const calls = scriptModel((_text, call) => {
+      if (call === 1) {
+        shift = 60; // the window moves right after the model sees the screenshot
+        return reply({ kind: "clickAt", x: 900, y: 120 });
+      }
+      return reply({ kind: "finish", status: "done", note: "The window moved; nothing was clicked." });
+    });
+    const { subtask } = guiSubtask({ lane: "main", bundleId: "com.spotify.client", instruction: "Play the chill mix." });
+
+    await act(subtask);
+
+    // Then the click is not sent
+    expect(fake.executed.some((c) => c.params.action.action.kind === "clickAt")).toBe(false);
+    // And the screen is captured again: the model is asked again from a fresh look
+    expect(calls.length).toBeGreaterThanOrEqual(2);
+    expect(logger.entries.some((e) => e.event === "gui.windowMoved")).toBe(true);
   });
 
   it("Scenario: The model sees a trimmed tree", async () => {

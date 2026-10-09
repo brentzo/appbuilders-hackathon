@@ -70,6 +70,15 @@ describe("lane tool sets (SPEC-03 r7)", () => {
     expect(workerSystemPrompt("helper")).not.toMatch(/"kind": "(click|setValue|scroll|type|key)"/);
   });
 
+  it("offers a vision click only to a UI lane that has a screenshot (OBJ-75)", () => {
+    expect(workerSystemPrompt("main", false, true)).toContain(`"kind": "${ACTION.clickAt}"`);
+    expect(workerSystemPrompt("main", false, true)).toContain("A screenshot of the window is attached");
+    // Without a screenshot the model is never told about it.
+    expect(workerSystemPrompt("main", false, false)).not.toContain(`"kind": "${ACTION.clickAt}"`);
+    // A ghost never clicks at screen coordinates: it would move the real mouse.
+    expect(workerSystemPrompt("ghost", false, true)).not.toContain(`"kind": "${ACTION.clickAt}"`);
+  });
+
   it("rejects a keystroke from a ghost and points it at setValue", () => {
     for (const reply of [TYPE, KEY]) {
       const check = checkWorkerOutput(JSON.stringify(reply), exampleWorkerInput(), "ghost");

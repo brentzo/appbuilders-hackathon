@@ -43,6 +43,10 @@ export interface FakeScreen {
   layer?: { kind: Layer["kind"]; title?: string; defaultButton?: string; cancelButton?: string };
   /** The label of the focused element. */
   focused?: string;
+  /** A screenshot the real Mac app captured because the window has no accessible content (OBJ-75). */
+  screenshotPath?: string;
+  /** The window frame, in global top-left points, for the moved-window check (SPEC-05 r13). */
+  windowFrame?: { x: number; y: number; width: number; height: number };
   elements: FakeElement[];
 }
 
@@ -123,6 +127,8 @@ export async function connectFakeMac(socketPath: string, apps: FakeAppModel[]): 
       app: screen.app,
       windowTitle: screen.title,
       ...(focused !== undefined ? { focused } : {}),
+      ...(screen.screenshotPath !== undefined ? { screenshotPath: screen.screenshotPath } : {}),
+      ...(screen.windowFrame !== undefined ? { windowFrame: screen.windowFrame } : {}),
       ...(layer
         ? {
             layer: {
@@ -190,6 +196,10 @@ export async function connectFakeMac(socketPath: string, apps: FakeAppModel[]): 
           default:
             return result("invalidOutput", "This tool runs in the harness, not the Mac app.");
         }
+      }
+      case "clickAt": {
+        executed.push({ params });
+        return result("ok", `Clicked at ${action.x}, ${action.y}.`);
       }
       default:
         executed.push({ params });

@@ -262,6 +262,8 @@ class Attempt {
   /** Steps of this attempt whose action worked. */
   private worked = 0;
   private readonly streaks: Streaks = { noEffect: 0, invalidOutput: 0 };
+  /** Vision clicks skipped because the window moved, so a window that keeps moving cannot loop forever. */
+  private movedSkips = 0;
   /** Actions blocked in this attempt, so the same one is never asked about again. */
   private readonly blockedActions = new Set<string>();
   /** How often the model proposed an action that was already blocked. */
@@ -431,6 +433,19 @@ class Attempt {
   }
 
   /**
+   * One fresh look at the window without waiting for it to settle, for the check before a vision click
+   * (SPEC-05 r13). The click's coordinates point into this look's screenshot, so a moved window is seen
+   * before the model's click is sent.
+   */
+  private async lookWithoutSettling(): Promise<ActResult> {
+    try {
+      return { next: this.remember(await this.deps.mac.observe(this.target, this.options.signal)) };
+    } catch (error) {
+      return this.lookFailed(error);
+    }
+  }
+
+  /**
    * Resolves, checks, records, and runs one action, then looks again. `before` is what the model saw; it is absent
    * only for the `open_app` the harness runs when the app had no window.
    */
@@ -445,6 +460,22 @@ class Attempt {
     // SPEC-06 r4: nothing is written or sent once a pause covers this lane. Checked right before the step is written.
     const stop = this.stopped();
     if (stop) return { end: stop };
+    // SPEC-05 r13: a vision click is only sent when the target window has not moved, resized, or
+    // lost focus since the screenshot. Read the window again; if it changed, the click is skipped
+    // and the model is asked again from the fresh screen.
+    if (action.kind === ACTION.clickAt && before?.screenshotPath !== undefined) {
+      const fresh = await this.lookWithoutSettling();
+      if ("end" in fresh) return fresh;
+      if (!sameWindow(before, fresh.next)) {
+        this.deps.logger.info("gui.windowMoved", { taskId: this.taskId, subtaskId: this.subtask.id });
+        this.movedSkips++;
+        if (this.movedSkips >= NO_EFFECT_LIMIT) {
+          return { end: this.end("noEffect", "stuck", { kind: "stuckOnScreen", taskId: this.taskId }) };
+        }
+        return { next: fresh.next };
+      }
+      this.movedSkips = 0;
+    }
     const step = store.beginStep({ subtaskId: this.subtask.id, lane: this.lane, action: decision.recorded });
     this.steps++;
     const notDone = (outcome: "blocked" | "declined" | "noEffect", why: NotDone) =>
@@ -945,6 +976,24 @@ function fit(line: string): string {
 /** The Mac app could not find the target window or app: "Stuck on screen". */
 function isMissingWindow(error: unknown): boolean {
   return error instanceof MacGuiFailure && error.userError?.kind === "stuckOnScreen";
+}
+
+/**
+ * Whether two looks show the same window in the same place: the title and the frame, within half a
+ * point (an accessibility frame can shift by a fraction without the window having moved). A window
+ * that moved, resized, or was replaced since the screenshot must not take a vision click (SPEC-05 r13).
+ */
+function sameWindow(before: Observation, after: Observation): boolean {
+  if (before.windowTitle !== after.windowTitle) return false;
+  const a = before.windowFrame;
+  const b = after.windowFrame;
+  if (a === undefined || b === undefined) return true;
+  return (
+    Math.abs(a.x - b.x) < 0.5 &&
+    Math.abs(a.y - b.y) < 0.5 &&
+    Math.abs(a.width - b.width) < 0.5 &&
+    Math.abs(a.height - b.height) < 0.5
+  );
 }
 
 /**
