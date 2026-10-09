@@ -249,7 +249,7 @@ function work(h: Harness): RunTaskDeps {
       main: helperLane({ tools: [], run: () => Promise.reject(new Error("the note stand-in runs no tools")) }),
     },
     slots: 1,
-    voice: localVoice(h.server, logger, "mac-brent"),
+    voice: localVoice(h.server),
   };
 }
 
