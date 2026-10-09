@@ -60,3 +60,18 @@ Treat results as local until the transcripts are reviewed and consent to commit 
 
 - [WhisperKit local server](https://github.com/argmaxinc/argmax-oss-swift#local-server)
 - [whisper.cpp server](https://github.com/ggml-org/whisper.cpp/tree/master/examples/server)
+
+## Recording the corpus
+
+`record/record.py` records the goals in `record/prompts.jsonl` (20 Taglish, 10 English) on the Mac's microphone, one at a time:
+
+```sh
+python3 models/whisper/record/record.py
+```
+
+- It shows each goal, records while you speak, and lets you play it back, redo it, or type what you actually said.
+- Audio is saved as 16 kHz mono WAV in `~/Yumi recordings/whisper`, outside git. Pass `--out` to put it in shared storage instead.
+- It writes `transcripts.jsonl`, the manifest `benchmark.py` reads, after every clip, so you can stop and continue later.
+- `--redo tl-03` records one goal again.
+- It uses only Apple's frameworks: the first run compiles a small Swift recorder, and macOS asks once for microphone access for your terminal.
+- References are written the way the goal is spoken, with numbers as words.
