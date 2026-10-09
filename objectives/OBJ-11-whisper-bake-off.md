@@ -5,7 +5,7 @@ product: models
 assignee: Jepoy
 touches: [mac, android]
 specs: [SPEC-01]
-status: todo
+status: in-progress
 priority: p0
 depends-on: []
 integrates-with: []
@@ -29,8 +29,8 @@ tags: [objective, p0, models, voice]
 ## Why this objective
 
 Users will speak Taglish, and Whisper is weakest when speakers switch languages mid-sentence.
-Which Whisper size and runtime to use on each device was left to be decided by testing real recordings.
-This objective runs that test and records the choice that the Mac and Android voice objectives will use.
+This p0 objective benchmarks the Mac options with real recordings and records the choice for Mac voice intake.
+Android Whisper is p1 in SPEC-01 and SPEC-10, so its phone-specific benchmark is tracked separately in [OBJ-28](OBJ-28-android-whisper-bake-off.md).
 
 ## Read first
 
@@ -41,26 +41,27 @@ This objective runs that test and records the choice that the Mac and Android vo
 
 - [ ] **OBJ-11.1** Record about 20 real Taglish goals from the team, with consent, including names, numbers, and app names. Store them in the team's shared storage, not in git.
 - [ ] **OBJ-11.2** Write the correct transcript for each and commit the transcripts to `models/whisper/transcripts/`.
-- [ ] **OBJ-11.3** Write a script that runs each option (small, medium, large-v3-turbo, large-v3, and any Tagalog fine-tune worth testing) through each Mac runtime: WhisperKit and whisper.cpp. The Android demo phone run (whisper.cpp) waits for SPEC-10 Part B (p1); keep the script ready for it.
-- [ ] **OBJ-11.4** Measure word error rate and time from end of speech to transcript for every combination. Also run about 10 plain English commands, to see whether Whisper alone is fast enough for every goal on the Mac. If it is, the Mac can skip the native recognizer and the rule for choosing between the two (SPEC-01 r2 and r3).
+- [x] **OBJ-11.3** Write a script that runs each selected option (small, medium, large-v3-turbo, large-v3, and any compatible Tagalog fine-tune worth testing) through both Mac runtimes: WhisperKit and whisper.cpp. The runner uses their local HTTP servers so each model stays loaded across samples.
+- [ ] **OBJ-11.4** Measure word error rate and warm end-of-speech-to-transcript latency for every Mac combination. Also run about 10 plain English commands to decide whether Whisper alone is fast enough for English on the Mac under SPEC-01 requirements 2 and 3.
 - [ ] **OBJ-11.5** Measure memory on the Mac while Qwen3.5-9B and the wake word model are also loaded. Use the peak memory recorded in [OBJ-26](OBJ-26-gui-smoke-test.md) if it is done.
 - [ ] **OBJ-11.6** Check confirmed model sizes against the estimates in SPEC-01 and correct the table if they differ.
-- [ ] **OBJ-11.7** Pick the smallest option per device whose errors would not change what Yumi repeats back. Write results and the choice to `models/whisper/RESULTS.md`.
-- [ ] **OBJ-11.8** Record the decision in SPEC-01's open question and in the models manifest (download source and checksum).
+- [ ] **OBJ-11.7** Pick the smallest Mac option whose errors would not change what Yumi repeats back. Write results and the Mac choice to `models/whisper/RESULTS.md`.
+- [ ] **OBJ-11.8** Record the Mac decision in SPEC-01 and `models/manifest.json` with the download source and checksum. Leave the Android p1 question open for OBJ-28.
 
 ## Expectations
 
-- [ ] Results cover every option and runtime on the Mac, or explain why one was skipped. The phone results follow with SPEC-10 Part B (p1).
-- [ ] The chosen option fits in memory alongside Qwen3.5-9B and the wake word on the Mac.
+- [ ] Results cover every selected option and Mac runtime, or explain why one was skipped. Android results are tracked in OBJ-28 after SPEC-10 Part B (p1).
+- [ ] The chosen Mac option fits in memory alongside Qwen3.5-9B and the wake word.
 - [ ] The results say whether Whisper alone is fast enough for English commands on the Mac.
-- [ ] SPEC-01 no longer lists the Whisper choice as open.
+- [ ] SPEC-01 records the Mac choice and keeps the Android p1 choice open for OBJ-28.
 - [ ] No voice recordings are in git.
 
 ## Expected outcomes
 
 - `models/whisper/RESULTS.md` with numbers and the decision.
-- Committed transcripts and the benchmark script.
-- Updated SPEC-01 and models manifest.
+- A benchmark script and committed transcripts, with recordings kept in approved shared storage.
+- A focused local HTTP-server and WER test for the benchmark runner.
+- Updated SPEC-01 and `models/manifest.json` with the Mac decision.
 
 ## Out of scope
 

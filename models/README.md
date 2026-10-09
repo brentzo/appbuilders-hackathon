@@ -5,11 +5,13 @@ The apps load models; this product decides which ones, proves they are good enou
 
 Owner: Jepoy.
 
-Status: empty scaffold, nothing built yet.
+Status: Whisper bake-off tooling is in progress; no model choice has been verified yet.
 
 ## Responsibilities
 
 - **Whisper bake-off:** pick the Whisper option and runtime for the Mac and the phone using real Taglish recordings ([SPEC-01](../specs/01-voice-intake.md)).
+- **Mac Whisper benchmark (p0):** implemented by [OBJ-11](../objectives/OBJ-11-whisper-bake-off.md); the real recording run and model choice are pending Mac access and consented recordings.
+- **Android Whisper benchmark (p1):** tracked separately in [OBJ-28](../objectives/OBJ-28-android-whisper-bake-off.md), after SPEC-10 Part B.
 - **Wake word:** train and test the "Hey Yumi" model with openWakeWord ([SPEC-01](../specs/01-voice-intake.md)).
 - **GUI smoke test (p0):** check that Qwen3.5-9B at 4-bit completes the 3 demo tasks from the trimmed accessibility tree ([SPEC-05](../specs/05-mac-gui-control.md), [OBJ-26](../objectives/OBJ-26-gui-smoke-test.md)).
 - **GUI model bake-off (p1):** compare Qwen3.5-4B, Qwen3.5-9B, and UI-TARS-1.5-7B on the 3 demo tasks, 5 runs each ([SPEC-05](../specs/05-mac-gui-control.md) r14). UI-TARS is a vision model, so this matters for the p1 vision fallback.
@@ -49,9 +51,10 @@ The public GUI scores (ScreenSpot-Pro, OSWorld) measure vision, which p0 does no
 <!-- generated:product-objectives:start -->
 | ID | Objective | Assignee | Status |
 |---|---|---|---|
-| [OBJ-11](../objectives/OBJ-11-whisper-bake-off.md) | Whisper bake-off | Jepoy | todo |
+| [OBJ-11](../objectives/OBJ-11-whisper-bake-off.md) | Whisper bake-off | Jepoy | in-progress |
 | [OBJ-12](../objectives/OBJ-12-hey-yumi-wake-word.md) | "Hey Yumi" wake word model | Jepoy | todo |
 | [OBJ-26](../objectives/OBJ-26-gui-smoke-test.md) | Qwen3.5-9B smoke test on the demo tasks | Brent | todo |
+| [OBJ-28](../objectives/OBJ-28-android-whisper-bake-off.md) | Android Whisper bake-off | Jepoy | todo |
 <!-- generated:product-objectives:end -->
 
 Not written yet: the p1 GUI model bake-off and the p1 voice stop keywords.

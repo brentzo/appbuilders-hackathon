@@ -68,7 +68,7 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-08](OBJ-08-locks-busy-windows-cap.md) | Window locks, busy windows, and cursor cap | harness | Brent | 03 | 07 | 27 | todo |
 | [OBJ-09](OBJ-09-ghost-handoff.md) | Ghost handoff | harness | Brent | 03 | 06, 08 | - | todo |
 | [OBJ-10](OBJ-10-yumi-cat-v0.md) | Yumi cat v0 in Rive | character | Patrick | 04 | - | - | todo |
-| [OBJ-11](OBJ-11-whisper-bake-off.md) | Whisper bake-off | models | Jepoy | 01 | - | - | todo |
+| [OBJ-11](OBJ-11-whisper-bake-off.md) | Whisper bake-off | models | Jepoy | 01 | - | - | in-progress |
 | [OBJ-12](OBJ-12-hey-yumi-wake-word.md) | "Hey Yumi" wake word model | models | Jepoy | 01 | - | - | todo |
 | [OBJ-13](OBJ-13-bridge-relay-server.md) | Bridge relay server | bridge | Jepoy | 08 | 02 | - | todo |
 | [OBJ-14](OBJ-14-mac-app-shell.md) | Mac app shell, permissions, and harness link | mac | Patrick | 01, 04 | 01 | 03 | todo |
@@ -85,6 +85,7 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-25](OBJ-25-cross-device-messages.md) | Cross-device message kinds | protocol | Jepoy | 09, 06, 07, 08, 10 | 01, 02 | - | todo |
 | [OBJ-26](OBJ-26-gui-smoke-test.md) | Qwen3.5-9B smoke test on the demo tasks | models | Brent | 05 | - | - | todo |
 | [OBJ-27](OBJ-27-mac-native-services.md) | Mac native services for the harness | mac | Patrick | 03, 08 | 14 | 07, 08, 21 | todo |
+| [OBJ-28](OBJ-28-android-whisper-bake-off.md) | Android Whisper bake-off | models | Jepoy | 01, 10 | - | 11, 24 | todo |
 <!-- generated:objectives-index:end -->
 
 ## Priority and blocking
@@ -133,7 +134,7 @@ Workload:
 | Person | Objectives | Count |
 |---|---|---|
 | Brent | 03, 04, 05, 06, 07, 08, 09, 22, 23, 24, 26 | 11 |
-| Jepoy | 01, 02, 11, 12, 13, 21, 25 | 7 |
+| Jepoy | 01, 02, 11, 12, 13, 21, 25, 28 | 8 |
 | Patrick | 10, 14, 15, 16, 17, 18, 19, 20, 27 | 9 |
 <!-- generated:objectives-workload:end -->
 ## Suggested order
@@ -143,7 +144,7 @@ Waves come from hard dependencies only. Each person works their column top to bo
 <!-- generated:objectives-waves:start -->
 | Wave | Brent | Jepoy | Patrick |
 |---|---|---|---|
-| 1 | OBJ-22, OBJ-26 | OBJ-01, OBJ-02, OBJ-11, OBJ-12 | OBJ-10 |
+| 1 | OBJ-22, OBJ-26 | OBJ-01, OBJ-02, OBJ-11, OBJ-12, OBJ-28 | OBJ-10 |
 | 2 | OBJ-03, OBJ-24 | OBJ-13, OBJ-25 | OBJ-14 |
 | 3 | OBJ-04, OBJ-23 | OBJ-21 | OBJ-15, OBJ-18, OBJ-27 |
 | 4 | OBJ-05, OBJ-07 | - | OBJ-16, OBJ-17, OBJ-19, OBJ-20 |

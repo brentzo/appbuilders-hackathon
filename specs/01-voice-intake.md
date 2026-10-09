@@ -195,5 +195,6 @@ Work this needs:
 
 ## Open questions
 
-- Which Whisper option and runtime on each device? Decide with the test above.
+- Which Whisper option and runtime should the Mac use? Decide with the p0 test in OBJ-11.
+- Which Whisper option should Android use with whisper.cpp? Decide with the p1 phone test in OBJ-28 after SPEC-10 Part B is ready.
 - Confirm openWakeWord's false-trigger rate for "Hey Yumi" is acceptable, using the test in "Wake word detector".
