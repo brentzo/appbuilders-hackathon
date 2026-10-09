@@ -25,7 +25,11 @@ nonisolated final class EndpointedSession: RecognitionSession, @unchecked Sendab
 /// said at all.
 ///
 /// The noise floor is learned from the first moments of the recording, so a quiet room and a
-/// noisy one both work. Runs on the audio thread.
+/// noisy one both work. A sound counts as the user talking only once it lasts `minSpeech`, so a
+/// click or the tail of Yumi's own voice does not end the listen before the user starts: on
+/// 2026-10-10 (task 4ecaff1c) a blip right after the repeat-back ended it within 1.5 s, and
+/// Brent's "Yes, in a note" was never heard. The user gets `waitForSpeech` to start talking.
+/// Runs on the audio thread.
 nonisolated final class SpeechEndpoint: @unchecked Sendable {
     enum Outcome: Equatable {
         /// Speech, then enough silence.
@@ -39,8 +43,10 @@ nonisolated final class SpeechEndpoint: @unchecked Sendable {
     struct Timing {
         var floorLearning: TimeInterval = 0.3
         var silenceAfterSpeech: TimeInterval = 0.9
-        var waitForSpeech: TimeInterval = 5
-        var longest: TimeInterval = 10
+        /// How long a sound must last, in total, before it counts as the user talking.
+        var minSpeech: TimeInterval = 0.25
+        var waitForSpeech: TimeInterval = 8
+        var longest: TimeInterval = 15
     }
 
     private let timing: Timing
@@ -49,6 +55,8 @@ nonisolated final class SpeechEndpoint: @unchecked Sendable {
     private var floorSum: Float = 0
     private var floorCount = 0
     private var heardSpeech = false
+    /// Sound above the room since the last long quiet, before it counts as speech.
+    private var voicedFor: TimeInterval = 0
     private var quietFor: TimeInterval = 0
     private var outcome: Outcome?
     private let ended: (Outcome) -> Void
@@ -91,10 +99,13 @@ nonisolated final class SpeechEndpoint: @unchecked Sendable {
             // Speech is clearly above the room: three times its level, and never below -40 dBFS.
             let isSpeech = level > max(floor * 3, 0.01)
             if isSpeech {
-                heardSpeech = true
+                voicedFor += duration
+                if voicedFor >= timing.minSpeech { heardSpeech = true }
                 quietFor = 0
             } else {
                 quietFor += duration
+                // A short sound followed by quiet was not the user talking.
+                if !heardSpeech, quietFor >= timing.silenceAfterSpeech { voicedFor = 0 }
             }
             if heardSpeech, quietFor >= timing.silenceAfterSpeech {
                 result = .spoke

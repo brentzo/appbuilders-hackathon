@@ -256,6 +256,10 @@ final class HarnessLink {
             log.notice("Speech taken as the answer to the repeat-back")
             return
         }
+        guard !questions.takeSpokenAnswer(transcript) else {
+            log.notice("Speech taken as the answer to a worker's question")
+            return
+        }
         guard !summary.takeSpokenSave(transcript) else {
             log.notice("Speech taken as saving the summary card's list")
             return

@@ -71,6 +71,29 @@ struct TaskQuestionTests {
         #expect(sent.params.count == 1)
     }
 
+    /// Nothing was heard after the question: the card stays, and "Hey Yumi, <answer>" (or the
+    /// shortcut) answers it instead of starting a new goal (task 4ecaff1c, 2026-10-10).
+    @Test func whenNothingIsHeardTheWakeWordAnswersTheCard() async throws {
+        let (questions, panel, _, sent) = make(heard: nil)
+        await questions.asked(Self.question)
+        #expect(panel.closed.isEmpty, "the card stays up")
+        #expect(questions.takeSpokenAnswer("the Q3 Report"))
+        try await settle { !sent.params.isEmpty }
+        #expect(sent.params == [AnswerQuestionParams(taskId: "t1", subtaskId: "s1", answer: "the Q3 Report")])
+        #expect(!questions.takeSpokenAnswer("export my deck"), "no question waits, so this is a new goal")
+    }
+
+    @Test func aSpokenAnswerGoesToTheNewestQuestionAndNeverToThePasswordCard() async throws {
+        let (questions, _, _, sent) = make(heard: nil)
+        let password = QuestionAsked(taskId: "t1", subtaskId: "s2", question: QuestionCopy.passwordQuestion)
+        await questions.asked(Self.question)
+        await questions.asked(password)
+        #expect(questions.takeSpokenAnswer("the Q3 Report"))
+        try await settle { !sent.params.isEmpty }
+        #expect(sent.params.map(\.subtaskId) == ["s1"])
+        #expect(!questions.takeSpokenAnswer("done"), "only the password card is left")
+    }
+
     @Test func aSpokenAnswerGoesBackToo() async throws {
         let (questions, panel, _, sent) = make(heard: "  the one in Yumi smoke test  ")
         await questions.asked(Self.question)

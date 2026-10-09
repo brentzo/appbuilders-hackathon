@@ -50,6 +50,8 @@ final class TaskQuestions {
     var failed: (Error) -> Void = { _ in }
     /// The questions waiting on the user, by subtask.
     private(set) var open: [String: QuestionAsked] = [:]
+    /// The subtasks with a question, oldest first, so a spoken answer goes to the newest.
+    private var asking: [String] = []
     /// How many answers reached the harness.
     private(set) var sent = 0
     var presenterForTests: QuestionPresenting { presenter }
@@ -67,6 +69,8 @@ final class TaskQuestions {
 
     func asked(_ question: QuestionAsked) async {
         open[question.subtaskId] = question
+        asking.removeAll { $0 == question.subtaskId }
+        asking.append(question.subtaskId)
         // Only the length: the question can quote what is on the user's screen.
         log.notice("Question for the user, \(question.question.count, privacy: .public) characters")
         presenter.show(question, password: question.question == QuestionCopy.passwordQuestion) { [weak self] choice in
@@ -78,6 +82,19 @@ final class TaskQuestions {
         let text = heard.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         answered(question, .answer(text))
+    }
+
+    /// Speech from the wake word or the shortcut while a question card is up answers the newest
+    /// question, so "Hey Yumi, the October one" is the answer and not a new goal. The password card
+    /// takes no spoken answer: the user types the password into the app and presses Done. Returns
+    /// false when no question waits.
+    func takeSpokenAnswer(_ text: String) -> Bool {
+        let answer = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !answer.isEmpty,
+              let question = asking.reversed().compactMap({ open[$0] }).first(where: { $0.question != QuestionCopy.passwordQuestion })
+        else { return false }
+        answered(question, .answer(answer))
+        return true
     }
 
     /// The task stopped waiting: its cards go.

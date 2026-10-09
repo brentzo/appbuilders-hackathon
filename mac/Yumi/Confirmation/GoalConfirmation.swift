@@ -127,7 +127,15 @@ final class GoalConfirmation {
         waiting[taskId]?.listensLeft = entry.listensLeft - 1
         guard let heard = await listener.listenForReply()?.trimmingCharacters(in: .whitespacesAndNewlines), !heard.isEmpty,
               waiting[taskId] != nil
-        else { return }
+        else {
+            // Nothing heard: the panel stays with its buttons, and "Hey Yumi" or the shortcut
+            // answers it (`takeSpokenAnswer`). The cat waits rather than looking like it listens.
+            if waiting[taskId] != nil {
+                log.notice("No spoken answer heard; waiting for a button, the wake word, or the shortcut")
+                overlay.update(Self.mainCursorId) { $0.state = .waitingForUser }
+            }
+            return
+        }
         await send(.spoken(SpokenReply(text: heard)), for: taskId)
     }
 

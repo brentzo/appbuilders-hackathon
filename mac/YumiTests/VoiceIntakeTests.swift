@@ -46,8 +46,25 @@ struct VoiceIntakeTests {
     @Test func endpointGivesUpWhenNothingIsSaid() {
         var outcomes: [SpeechEndpoint.Outcome] = []
         let endpoint = SpeechEndpoint { outcomes.append($0) }
-        for _ in 0..<60 { endpoint.measure(level: 0.002, duration: 0.1) }
+        for _ in 0..<79 { endpoint.measure(level: 0.002, duration: 0.1) }
+        #expect(outcomes.isEmpty, "a person gets 8 seconds to start talking")
+        for _ in 0..<2 { endpoint.measure(level: 0.002, duration: 0.1) }
         #expect(outcomes == [.silent])
+    }
+
+    /// Task 4ecaff1c (2026-10-10): a blip right after the repeat-back ended the listen within
+    /// 1.5 s with nothing transcribed, so "Yes, in a note" said a moment later was never heard.
+    @Test func endpointIgnoresAShortSoundAndWaitsForTheAnswer() {
+        var outcomes: [SpeechEndpoint.Outcome] = []
+        let endpoint = SpeechEndpoint { outcomes.append($0) }
+        for _ in 0..<3 { endpoint.measure(level: 0.002, duration: 0.1) }
+        endpoint.measure(level: 0.1, duration: 0.1)
+        for _ in 0..<20 { endpoint.measure(level: 0.002, duration: 0.1) }
+        #expect(outcomes.isEmpty, "a click is not an answer")
+        // The user starts talking 2.5 s in and says "yes, in a note" for a second.
+        for _ in 0..<10 { endpoint.measure(level: 0.1, duration: 0.1) }
+        for _ in 0..<10 { endpoint.measure(level: 0.002, duration: 0.1) }
+        #expect(outcomes == [.spoke])
     }
 
     /// OBJ-17.5 with the real listener: after the repeat-back, a spoken "yes" is transcribed on the

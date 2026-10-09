@@ -145,6 +145,24 @@ struct GoalConfirmationTests {
         #expect(flow.waitingTaskIds == [Self.taskId], "the same task is still being confirmed")
     }
 
+    /// Task 4ecaff1c (2026-10-10): the hands-free listen after the note offer heard nothing, and
+    /// the task waited forever. The panel stays with its buttons, the cat shows it waits, and
+    /// "Hey Yumi, yes in a note" answers it.
+    @Test func whenNothingIsHeardThePanelStaysAndTheWakeWordAnswersIt() async throws {
+        let sent = Sent()
+        let flow = confirmation(FakeListener([nil]), sent: sent)
+        flow.goalSubmitted()
+        let offer = "You want me to list the files in your Downloads folder. Want it in a note too?"
+        await flow.goalRestated(GoalRestated(taskId: Self.taskId, text: offer))
+        #expect(sent.replies.isEmpty)
+        #expect(panel.isOpen, "the buttons still work")
+        #expect(overlay.cursors[GoalConfirmation.mainCursorId]?.state == .waitingForUser)
+
+        #expect(flow.takeSpokenAnswer("yes, in a note"))
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(sent.replies == [.spoken(SpokenReply(text: "yes, in a note"))])
+    }
+
     @Test func pushToTalkWithNothingWaitingIsANewGoal() async throws {
         let sent = Sent()
         let flow = confirmation(FakeListener([]), sent: sent)
