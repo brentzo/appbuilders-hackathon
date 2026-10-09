@@ -54,6 +54,7 @@ Until OBJ-38 exists, drive the cards from the mock harness in [OBJ-01](OBJ-01-ta
 - [ ] **OBJ-40.6** While a card is open, the cursor shows the "waiting for the user" state. On `approvalCancelled`, close the card at once and ignore any late tap.
 - [ ] **OBJ-40.7** `moveToTrash`: move each exact path with `FileManager.trashItem` and return a result per path. Refuse wildcard characters and relative paths as a second guard. Nothing is ever deleted permanently.
 - [ ] **OBJ-40.8** Check the cards in light and dark mode, on every display and scale, with long file names and long recipient lists. Test every card against the mock harness, then against the real harness when [OBJ-38](OBJ-38-approvals-pause-and-action-log.md) is done.
+- [ ] **OBJ-40.9** "Show what I did" on the "Unexpected" error opens a window with that task's action log, read from `getTask`'s `actionLog`, oldest first, times in am/pm (SPEC-11 Decisions, gap G13). Opening the log from the menu bar stays p1.
 
 ## Expectations
 
