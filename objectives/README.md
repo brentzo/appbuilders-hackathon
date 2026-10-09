@@ -75,7 +75,7 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-15](OBJ-15-mac-voice-intake.md) | Mac voice intake | mac | Patrick | 01 | 14 | 11 | todo |
 | [OBJ-16](OBJ-16-mac-wake-word.md) | Mac wake word | mac | Patrick | 01 | 15 | 12 | todo |
 | [OBJ-17](OBJ-17-goal-confirmation.md) | Goal confirmation loop | mac | Patrick | 01 | 04, 15, 18 | - | todo |
-| [OBJ-18](OBJ-18-cursor-overlay-and-motion.md) | Cursor overlay and motion | mac | Patrick | 04 | 14 | - | todo |
+| [OBJ-18](OBJ-18-cursor-overlay-and-motion.md) | Cursor overlay and motion | mac | Patrick | 04 | 14 | - | in-progress |
 | [OBJ-19](OBJ-19-rive-cat-cursor.md) | Rive cat cursor | mac | Patrick | 04 | 10, 18 | - | todo |
 | [OBJ-20](OBJ-20-window-tiling.md) | Window tiling with consent | mac | Patrick | 03 | 18, 27 | 08 | todo |
 | [OBJ-21](OBJ-21-mac-bridge-client-and-pairing.md) | Mac bridge client and pairing | harness | Jepoy | 08 | 02 | 03, 13, 27 | done |
