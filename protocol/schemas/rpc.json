@@ -15,6 +15,7 @@
       "pause": { "direction": "appToHarness", "params": "PauseParams", "result": "Empty" },
       "resumeTask": { "direction": "appToHarness", "params": "TaskRef", "result": "Empty" },
       "cancelTask": { "direction": "appToHarness", "params": "TaskRef", "result": "Empty" },
+      "saveListToNote": { "direction": "appToHarness", "params": "TaskRef", "result": "SubmitGoalResult" },
       "listTasks": { "direction": "appToHarness", "params": "ListTasksParams", "result": "TaskList" },
       "searchTasks": { "direction": "appToHarness", "params": "SearchTasksParams", "result": "TaskList" },
       "getTask": { "direction": "appToHarness", "params": "TaskRef", "result": "TaskDetail" },
@@ -676,7 +677,23 @@
       "required": ["text"],
       "properties": {
         "text": { "type": "string", "minLength": 1 },
-        "taskId": { "$ref": "common.json#/$defs/Uuid" }
+        "taskId": { "$ref": "common.json#/$defs/Uuid" },
+        "list": {
+          "description": "With a task's summary, when the task found a list (SPEC-02 r13): the full list for the summary card. Only text is said; the list is shown. Missing when the task found no list.",
+          "$ref": "#/$defs/FoundList"
+        }
+      }
+    },
+    "FoundList": {
+      "description": "The full list a task found, built by the harness from the steps' real tool output, never from the model (SPEC-02 r9, r13). The summary card shows it, with a \"Save to Notes\" button that calls saveListToNote unless inNote is true.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "items", "inNote"],
+      "properties": {
+        "title": { "description": "What the list is, for example \"Files in your Downloads folder\". Also the new note's title.", "type": "string", "minLength": 1, "maxLength": 200 },
+        "items": { "description": "Every item, in the order found. A folder ends with \" (folder)\".", "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "more": { "description": "How many more items there were past the listing's limit. Missing when the list is complete.", "type": "integer", "minimum": 1 },
+        "inNote": { "description": "True when this task already wrote the list into a new note in Notes.", "type": "boolean" }
       }
     },
     "SetDebugModeParams": {

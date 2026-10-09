@@ -41,6 +41,17 @@ describe("local RPC", () => {
     expect(validate("GoalRestated", { taskId, text: "Put it in Keynote", autoMode: true }).valid).toBe(true);
   });
 
+  it("sends a found list with the summary and saves it into a note on request (SPEC-02 r13)", () => {
+    const taskId = "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8";
+    const list = { title: "Files in your Downloads folder", items: ["a.pdf", "Receipts (folder)"], inNote: false };
+    expect(validate("Speak", { taskId, text: "You have 2 items in Downloads.", list }).errors).toEqual([]);
+    expect(validate("Speak", { taskId, text: "Done." }).errors).toEqual([]);
+    expect(validate("FoundList", { ...list, more: 12 }).errors).toEqual([]);
+    expect(validate("FoundList", { ...list, items: [] }).valid).toBe(false);
+    expect(validate("FoundList", { title: list.title, items: list.items }).valid).toBe(false);
+    expect(rpc().methods["saveListToNote"]).toEqual({ direction: "appToHarness", params: "TaskRef", result: "SubmitGoalResult" });
+  });
+
   it("refers only to types that exist", () => {
     const { methods, events } = rpc();
     const referenced = [...Object.values(methods).flatMap((m) => [m.params, m.result]), ...Object.values(events)];

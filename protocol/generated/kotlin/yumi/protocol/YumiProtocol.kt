@@ -476,6 +476,19 @@ enum class FinishStatus {
     @SerialName("stuck") Stuck;
 }
 
+/** The full list a task found, built by the harness from the steps' real tool output, never from the model (SPEC-02 r9, r13). The summary card shows it, with a "Save to Notes" button that calls saveListToNote unless inNote is true. */
+@Serializable
+data class FoundList(
+    /** What the list is, for example "Files in your Downloads folder". Also the new note's title. */
+    val title: String,
+    /** Every item, in the order found. A folder ends with " (folder)". */
+    val items: List<String>,
+    /** How many more items there were past the listing's limit. Missing when the list is complete. */
+    val more: Long? = null,
+    /** True when this task already wrote the list into a new note in Notes. */
+    val inNote: Boolean,
+)
+
 /** A rectangle in global screen points, the origin at the top-left of the main display and y growing down (the Quartz and Accessibility convention; negative x or y on a display left of or above the main one). */
 @Serializable
 data class Frame(
@@ -1209,6 +1222,8 @@ data class SpawnCursor(
 data class Speak(
     val text: String,
     val taskId: String? = null,
+    /** With a task's summary, when the task found a list (SPEC-02 r13): the full list for the summary card. Only text is said; the list is shown. Missing when the task found no list. */
+    val list: FoundList? = null,
 )
 
 /** Speech the harness classifies as confirm, cancel, or correction. */
@@ -1702,6 +1717,7 @@ enum class RpcMethod(val wireName: String) {
     Pause("pause"),
     ResumeTask("resumeTask"),
     CancelTask("cancelTask"),
+    SaveListToNote("saveListToNote"),
     ListTasks("listTasks"),
     SearchTasks("searchTasks"),
     GetTask("getTask"),

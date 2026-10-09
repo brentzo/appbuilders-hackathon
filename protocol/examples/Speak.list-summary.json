@@ -1,0 +1,9 @@
+{
+  "taskId": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
+  "text": "You have 3 files and 1 folder in Downloads. Some of them are invoice-oct.pdf, notes.txt and photo.jpg.",
+  "list": {
+    "title": "Files in your Downloads folder",
+    "items": ["invoice-oct.pdf", "notes.txt", "photo.jpg", "Receipts (folder)"],
+    "inNote": true
+  }
+}

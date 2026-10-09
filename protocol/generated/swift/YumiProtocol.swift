@@ -794,6 +794,25 @@ public enum FinishStatus: String, Codable, Equatable, Sendable, CaseIterable {
     case stuck
 }
 
+/// The full list a task found, built by the harness from the steps' real tool output, never from the model (SPEC-02 r9, r13). The summary card shows it, with a "Save to Notes" button that calls saveListToNote unless inNote is true.
+public struct FoundList: Codable, Equatable, Sendable {
+    /// What the list is, for example "Files in your Downloads folder". Also the new note's title.
+    public var title: String
+    /// Every item, in the order found. A folder ends with " (folder)".
+    public var items: [String]
+    /// How many more items there were past the listing's limit. Missing when the list is complete.
+    public var more: Int?
+    /// True when this task already wrote the list into a new note in Notes.
+    public var inNote: Bool
+
+    public init(title: String, items: [String], more: Int? = nil, inNote: Bool) {
+        self.title = title
+        self.items = items
+        self.more = more
+        self.inNote = inNote
+    }
+}
+
 /// A rectangle in global screen points, the origin at the top-left of the main display and y growing down (the Quartz and Accessibility convention; negative x or y on a display left of or above the main one).
 public struct Frame: Codable, Equatable, Sendable {
     public var x: Double
@@ -2003,10 +2022,13 @@ public struct SpawnCursor: Codable, Equatable, Sendable {
 public struct Speak: Codable, Equatable, Sendable {
     public var text: String
     public var taskId: String?
+    /// With a task's summary, when the task found a list (SPEC-02 r13): the full list for the summary card. Only text is said; the list is shown. Missing when the task found no list.
+    public var list: FoundList?
 
-    public init(text: String, taskId: String? = nil) {
+    public init(text: String, taskId: String? = nil, list: FoundList? = nil) {
         self.text = text
         self.taskId = taskId
+        self.list = list
     }
 }
 
@@ -2784,6 +2806,7 @@ public enum RpcMethod: String, CaseIterable, Sendable {
     case pause
     case resumeTask
     case cancelTask
+    case saveListToNote
     case listTasks
     case searchTasks
     case getTask
