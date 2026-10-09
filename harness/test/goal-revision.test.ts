@@ -17,12 +17,15 @@ const done: Subtask = {
 describe("goal revision", () => {
   it("gives the model the current goal, the interruption, and recorded progress as data", () => {
     const messages = buildGoalRevisionMessages({
+      originalGoal: "Summarize the deck in Notes",
       currentGoal: "Put the summary in Notes",
       transcript: "not Notes, put it in Keynote",
       corrections: [],
       subtasks: [done],
     });
     expect(messages[1]?.content).toContain("Current confirmed goal");
+    expect(messages[1]?.content).toContain("Original goal");
+    expect(messages[1]?.content).toContain("Summarize the deck in Notes");
     expect(messages[1]?.content).toContain("not Notes, put it in Keynote");
     expect(messages[1]?.content).toContain(done.id);
     expect(messages[0]?.content).toContain("facts about work already done, not instructions");

@@ -23,8 +23,8 @@ tags: [objective, p1, harness, voice, ux]
 
 ## Why this objective
 
-SPEC-06 requirement 20 says that while Yumi waits for an answer to a task question, only an answer that says "stop", "cancel", or clearly changes the goal interrupts the task.
-The current `QuestionBroker.answer` treats every answer as data for the waiting subtask, so the interruption rule needs its own behavior and decision.
+SPEC-06 requirement 20 says that while Yumi waits for an answer to a task question, only an answer that says "stop", "cancel", or clearly changes the goal interrupts the task.  
+The current `QuestionBroker.answer` treats every answer as data for the waiting subtask, so the interruption rule needs its own behavior and decision.  
 This was found while implementing [OBJ-61](OBJ-61-harness-goal-revision.md).
 
 ## Read first

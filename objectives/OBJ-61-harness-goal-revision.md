@@ -28,8 +28,8 @@ tags: [objective, p1, harness, voice, ux]
 
 ## Why this objective
 
-SPEC-06 "Changing the goal mid-task" turns whatever the user says during a running task into one revised goal.
-The Mac pauses the UI lanes and hands over what was said ([OBJ-62](OBJ-62-mac-voice-interruption.md)); the harness writes the revised goal, repeats it back, and redoes the plan from it without undoing anything.
+SPEC-06 "Changing the goal mid-task" turns whatever the user says during a running task into one revised goal.  
+The Mac pauses the UI lanes and hands over what was said ([OBJ-62](OBJ-62-mac-voice-interruption.md)); the harness writes the revised goal, repeats it back, and redoes the plan from it without undoing anything.  
 It builds on the repeat-back from [OBJ-17](OBJ-17-goal-confirmation.md) and the pause, cancel, and approval handling from [OBJ-38](OBJ-38-approvals-pause-and-action-log.md).
 
 ## Read first
@@ -42,7 +42,7 @@ It builds on the repeat-back from [OBJ-17](OBJ-17-goal-confirmation.md) and the 
 ## Tasks
 
 - [ ] **OBJ-61.1** Serve the OBJ-60 revision method for a running or paused task: keep the UI lanes paused, and let helpers keep running.
-- [ ] **OBJ-61.2** Ask the model for one revised goal from the original goal, the finished and running subtasks, and what the user said, whether they replaced the goal, added to it, or asked for something separate.
+- [ ] **OBJ-61.2** Ask the model for one revised goal from the original goal, current confirmed goal, finished and running subtasks, and what the user said, whether they replaced the goal, added to it, or asked for something separate.
 - [ ] **OBJ-61.3** Repeat it back with `goalRestated`, naming anything already done that the revised goal no longer needs ("I already opened a new note with some text in it. I'll leave it there."). In Auto mode, send a short acknowledgement with `speak` and carry on instead.
 - [ ] **OBJ-61.4** Handle the reply as for a new goal: "Change it" revises again, "Cancel" cancels the whole task as SPEC-06 requirement 8 does, and "Go ahead" applies the revision.
 - [ ] **OBJ-61.5** Apply a confirmed revision: redo the plan from the revised goal, starting from the screen as it is; keep running helpers and queued subtasks the new plan still needs, cancel the others, and undo nothing.

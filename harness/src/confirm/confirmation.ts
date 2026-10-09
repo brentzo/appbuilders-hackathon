@@ -54,6 +54,7 @@ interface OpenQuestion {
   expectCorrection: boolean;
   kind: "goal" | "revision";
   autoMode?: boolean;
+  revisionOriginalGoal?: string;
   revisionBaseGoal?: string;
   /** Answers for this task, handled one at a time. */
   queue: Promise<void>;
@@ -157,6 +158,7 @@ export class GoalConfirmation {
       expectCorrection: false,
       kind: "revision",
       autoMode: params.autoMode === true,
+      revisionOriginalGoal: task.goal,
       revisionBaseGoal: task.confirmedGoal,
       queue: Promise.resolve(),
     };
@@ -297,6 +299,7 @@ export class GoalConfirmation {
     if (!question.revisionBaseGoal) return;
     const result = await reviseGoalWords(
       {
+        originalGoal: question.revisionOriginalGoal ?? question.revisionBaseGoal,
         currentGoal: question.revisionBaseGoal,
         transcript: question.transcript,
         corrections: question.corrections,
