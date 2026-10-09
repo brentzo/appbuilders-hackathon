@@ -27,7 +27,7 @@ Yumi transcribes it on the device, repeats it back in its own words, and waits f
 9. The user can start speaking in two ways, on both devices:
    - **Wake word:** saying "Hey Yumi" starts listening, hands-free.
    - **Push-to-talk:** a global keyboard shortcut on the Mac, or the mic button in the phone app.
-10. Wake word detection runs on the device with a small dedicated detector (see "Wake word detector" below). Audio before the wake word is never transcribed, stored, or sent anywhere.
+10. Wake word detection runs on the device with a small dedicated detector (see "Wake word detector" below). Audio before the wake word is never transcribed, stored, or sent anywhere. For the hackathon demo, the Mac instead spots "Hey Yumi" with its on-device speech recognizer (see Decisions): what it hears before the wake word is checked for the phrase and thrown away at once, never stored or sent.
 11. The user can turn the wake word off on each device. Push-to-talk always works.
 12. On Android, wake word listening in the background runs inside the foreground service from [SPEC-10](10-android-companion.md), with its persistent notification.
 13. On the Mac, the recognizer follows an "I speak Taglish" setting, off by default:
@@ -207,6 +207,7 @@ Work this needs:
 - **The phone's repeat-back in p0 uses fixed templates,** defined in SPEC-10 requirement 8. Decided 2026-10-09.
 - **The Mac picks its recognizer with an "I speak Taglish" setting** (requirement 13). Whisper handles Tagalog and English mixed, and the native recognizer is faster for English commands, so the user who speaks Taglish says so once instead of Yumi guessing per goal. Decided 2026-10-09.
 - **Confirming a goal is a setting.** Confirmation stays on by default; "Auto mode" (requirement 14) skips the repeat-back for users who find it slows them down. Safety approvals are unaffected. Decided 2026-10-10 by Brent.
+- **"Hey Yumi" on the Mac uses the on-device speech recognizer for the demo,** because there is no time to train the openWakeWord model before submission. Sound-alikes such as "hey you me" or "hey yummy" are accepted on purpose. The phone also wakes on "Hey Yumi", never "Hey Jarvis": a quick openWakeWord model is trained on this Mac with synthetic voices, with no large negative dataset, and both apps load it in place of the stand-in. If it is good enough on the Mac too, the Mac may use it instead of the recognizer. Decided 2026-10-10 by Brent.
 
 ## Open questions
 
