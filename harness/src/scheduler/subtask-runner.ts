@@ -1,25 +1,30 @@
 import type {
   DeviceId,
   Lane,
-  ModelAction,
-  RecordedAction,
+  Observation,
+  Path,
   ResultStatus,
   Subtask,
   SubtaskResult,
+  ToolCall,
   UserError,
 } from "@yumi/protocol/types";
-import type { Logger } from "../log.ts";
+import { describeError, type Logger } from "../log.ts";
 import type { ModelClient } from "../model/client.ts";
+import { checkAction } from "../safety/gate.ts";
 import type { TaskStore } from "../store/task-store.ts";
 import { ACTION } from "../worker/actions.ts";
 import { runWorkerStep } from "../worker/step.ts";
+import { describeNotRun, describeToolRun } from "./describe.ts";
 import type { LaneRunner } from "./lanes.ts";
 import { buildSubtaskResult } from "./result.ts";
 import { buildWorkerInput } from "./worker-input.ts";
 
 /**
  * Runs one subtask on its lane, one step at a time, until the worker finishes it: each step gets a fresh worker
- * input (SPEC-02 r5), returns one validated action (r6), and is written before it runs and finished after (r3).
+ * input (SPEC-02 r5) and returns one validated action for its lane (r6, SPEC-03 r7). Every action goes through the
+ * permission gate (SPEC-07 r1), is written with the gate's level before it runs, and is finished after (r3). Only
+ * `allowed` runs: approvals are OBJ-38, so an action that asks is recorded as not run, and the worker is told why.
  * The outcome carries the subtask's structured result (OBJ-05.6). The caller changes the subtask's status.
  */
 
@@ -29,10 +34,13 @@ import { buildWorkerInput } from "./worker-input.ts";
  */
 export const MAX_STEPS_PER_SUBTASK = 25;
 
+/** Longest observation line a step can store (`Step.observation`). */
+const MAX_OBSERVATION = 300;
+
 export type SubtaskRun =
   /** The worker finished: `result.status` is done or stuck. */
   | { outcome: "finished"; result: SubtaskResult }
-  /** The subtask cannot go on: the model's replies were invalid twice, it needs something a helper cannot do, or it hit the step guard. */
+  /** The subtask cannot go on: the model's replies were invalid twice, it needs an answer, or it hit the step guard. */
   | { outcome: "failed"; result: SubtaskResult; userError?: UserError }
   /** The model could not answer. */
   | { outcome: "error"; result: SubtaskResult; userError: UserError }
@@ -45,6 +53,8 @@ export interface SubtaskRunDeps {
   logger: Logger;
   /** This device, for the action log. */
   deviceId: DeviceId;
+  /** The user's home folder, for the permission gate. Tests pass a temporary one. */
+  home: string;
 }
 
 export async function runSubtask(
@@ -56,7 +66,9 @@ export async function runSubtask(
   signal: AbortSignal,
 ): Promise<SubtaskRun> {
   const { store, logger } = deps;
-  const result = (status: ResultStatus, note: string) => buildSubtaskResult(status, note, store.listSteps(subtask.id));
+  /** Real paths the tools created or changed, as they reported them (a taken name gets a number). */
+  const files: Path[] = [];
+  const result = (status: ResultStatus, note: string) => buildSubtaskResult(status, note, files);
   const lastAction = () => store.listActionLog(subtask.taskId).at(-1)?.description;
 
   for (;;) {
@@ -103,67 +115,70 @@ export async function runSubtask(
       // Questions to the user are not wired up yet (waitingForUser, OBJ-38): end the subtask instead of guessing.
       return { outcome: "failed", result: result("blocked", "Needs an answer from the user, and asking is not available yet.") };
     }
-    if (action.kind === ACTION.tool) {
-      await runTool(subtask, lane, runner, action, deps, signal);
-    } else {
-      refuse(subtask, lane, action, deps);
+    if (action.kind !== ACTION.tool) {
+      // The step's validation only accepts the lane's actions, and only the helper lane runs here (OBJ-36 adds UI
+      // lanes), so this is a bug. Stop rather than act on the screen without a lane that can.
+      throw new Error(`The ${lane} lane cannot run a ${action.kind} action yet`);
+    }
+    const path = await runTool(subtask, lane, runner, action.call, observation, deps, signal);
+    if (path !== undefined && action.call.tool !== "read_file" && action.call.tool !== "list_dir" && !files.includes(path)) {
+      files.push(path);
     }
   }
 }
 
-/** Runs one tool call as a step: written before it runs, finished with its outcome and log line after (SPEC-02 r3). */
+/**
+ * Runs one tool call as a step. The gate decides its level from the call and the real file system, and the step is
+ * written with that level before anything runs (SPEC-02 r3, SPEC-07 r1). Returns the real path the tool used.
+ */
 async function runTool(
   subtask: Subtask,
   lane: Lane,
   runner: LaneRunner,
-  action: Extract<ModelAction, { kind: "tool" }>,
+  call: ToolCall,
+  observation: Observation,
   deps: SubtaskRunDeps,
   signal: AbortSignal,
-): Promise<void> {
-  const permission = runner.tools.permission(action.call);
-  const recorded: RecordedAction = { action, permission };
-  const step = deps.store.beginStep({ subtaskId: subtask.id, lane, action: recorded });
-  if (permission !== "allowed") {
-    // Approvals (permission "ask") are not wired up yet (OBJ-38), so only allowed calls run.
-    deps.store.finishStep(step.id, {
-      outcome: "blocked",
-      observation: `The tool ${action.call.tool} is not allowed here.`,
-      log: {
-        deviceId: deps.deviceId,
-        description: `Did not use ${action.call.tool}, because it needs your approval or is blocked`,
-      },
+): Promise<Path | undefined> {
+  const { store, logger } = deps;
+  const decision = checkAction({ action: { kind: ACTION.tool, call } }, { home: deps.home, app: observation.app });
+  const step = store.beginStep({ subtaskId: subtask.id, lane, action: decision.recorded });
+
+  if (decision.level !== "allowed") {
+    // Approvals come in OBJ-38: an action that asks is not run, and neither is a blocked one (SPEC-07 r5).
+    logger.warn(decision.level === "ask" ? "step.needsApproval" : "step.blocked", {
+      taskId: subtask.taskId,
+      subtaskId: subtask.id,
+      tool: call.tool,
+      rule: decision.rule,
     });
-    return;
+    store.finishStep(step.id, {
+      outcome: "blocked",
+      observation:
+        decision.level === "ask"
+          ? `Not done: ${call.tool} needs the user's approval, which is not available yet.`
+          : `Not done: Yumi's safety rules do not allow this ${call.tool}.`,
+      log: { deviceId: deps.deviceId, description: describeNotRun(call, decision.level) },
+    });
+    return undefined;
   }
+
   let run;
   try {
-    run = await runner.tools.run(action.call, signal);
+    run = await runner.tools.run(call, signal);
   } catch (error) {
     // A tool that throws is a bug in the tool; the step still gets an outcome so it is never left open.
-    deps.logger.error("tool.threw", { taskId: subtask.taskId, tool: action.call.tool, errorName: (error as Error)?.name });
-    run = { outcome: "error" as const, observation: "The tool failed.", description: `Tried to use ${action.call.tool}` };
+    logger.error("tool.threw", { taskId: subtask.taskId, tool: call.tool, ...describeError(error) });
+    run = { outcome: "error" as const, output: "The tool failed, so nothing was done." };
   }
-  deps.store.finishStep(step.id, {
+  store.finishStep(step.id, {
     outcome: run.outcome,
-    observation: run.observation,
-    log: { deviceId: deps.deviceId, description: run.description },
+    observation: fit(run.output),
+    log: { deviceId: deps.deviceId, description: describeToolRun(call, run.outcome === "ok", run.path) },
   });
+  return run.outcome === "ok" ? run.path : undefined;
 }
 
-/**
- * An action this lane cannot take: on a helper, anything that is not a tool, such as keystrokes (only main sends
- * keystrokes, SPEC-03 r7). It is recorded as a blocked step, so the next worker sees why, and nothing runs.
- */
-function refuse(subtask: Subtask, lane: Lane, action: ModelAction, deps: SubtaskRunDeps): void {
-  const recorded: RecordedAction = { action, permission: "blocked" };
-  const step = deps.store.beginStep({ subtaskId: subtask.id, lane, action: recorded });
-  deps.store.finishStep(step.id, {
-    outcome: "blocked",
-    observation: `The ${lane} lane cannot ${action.kind}. Use the available tools.`,
-    log: {
-      deviceId: deps.deviceId,
-      description: `Did not ${action.kind === ACTION.type || action.kind === ACTION.key ? "use the keyboard" : "act on the screen"} from a background helper`,
-    },
-  });
-  deps.logger.warn("subtask.actionRefused", { taskId: subtask.taskId, subtaskId: subtask.id, lane, action: action.kind });
+function fit(line: string): string {
+  return line.length <= MAX_OBSERVATION ? line : `${line.slice(0, MAX_OBSERVATION - 3)}...`;
 }

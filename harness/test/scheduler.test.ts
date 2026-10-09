@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { validate } from "@yumi/protocol";
@@ -10,15 +10,14 @@ import { ModelClient } from "../src/model/client.ts";
 import type { ChatRequest } from "../src/model/openai.ts";
 import { PLANNER_SYSTEM_PROMPT } from "../src/planner/prompt.ts";
 import { SUMMARY_SYSTEM_PROMPT } from "../src/planner/summary.ts";
-import { helperLane, routeWith, type RouteSubtask } from "../src/scheduler/lanes.ts";
+import { fileHelperLane, helperLane, routeWith, type LaneTools, type RouteSubtask } from "../src/scheduler/lanes.ts";
 import { localVoice, runTask, type RunTaskDeps } from "../src/scheduler/run-task.ts";
-import { createStandInFileTools } from "./support/stand-in-file-tools.ts";
 import { workerSystemPrompt } from "../src/worker/prompt.ts";
 import { modelConfig, rawClient, tempDir } from "./helpers.ts";
 import { startMockModelServer, type MockModelServer, type MockReply } from "./mock-model-server.ts";
 
 /**
- * The planner, scheduler, and summary end to end, with a mocked model server, the real task store, the stand-in
+ * The planner, scheduler, and summary end to end, with a mocked model server, the real task store, the typed
  * file tools on a temporary home folder, and the real local RPC server with a bare app client.
  */
 
@@ -105,8 +104,8 @@ function pdfWorker(instruction: string, steps: number, text: string): MockReply 
     return finish(`Summarized ${pdf}.`);
   }
   // The note worker sees only its last 5 steps, so it decides from what they show, like a real worker must.
-  if (text.includes(`Created ${NOTE}.`)) return finish("Wrote PDF Summary.md with all five summaries.");
-  const unread = PDFS.find((pdf) => !text.includes(`Read ${PARTS}/${stem(pdf)}.txt:`));
+  if (/Created \/.*\/PDF Summary\.md\./.test(text)) return finish("Wrote PDF Summary.md with all five summaries.");
+  const unread = PDFS.find((pdf) => !text.includes(JSON.stringify(`${PARTS}/${stem(pdf)}.txt`)));
   if (unread && steps < PDFS.length) return tool({ tool: "read_file", path: `${PARTS}/${stem(unread)}.txt` });
   return tool({ tool: "write_new_file", path: NOTE, content: PDFS.map((p) => `Summary of ${p}.`).join("\n") });
 }
@@ -140,7 +139,8 @@ function deps(overrides: Partial<RunTaskDeps> = {}): RunTaskDeps {
     logger,
     deviceId: "mac-brent",
     route: routeWith(harness.router),
-    lanes: { helper: helperLane(createStandInFileTools({ home })) },
+    home,
+    lanes: { helper: fileHelperLane({ home, logger }) },
     slots: 3,
     voice: localVoice(harness.server, logger, "mac-brent"),
     ...overrides,
@@ -228,14 +228,15 @@ describe("SPEC-02 task lifecycle", () => {
     const task = confirmedTask();
     await runTask(task.id, deps());
     const subtasks = harness.store.listSubtasks(task.id);
+    const real = realpathSync(home);
     expect(subtasks[0]!.result).toEqual({
       status: "done",
-      files: [`${PARTS}/Invoice March.txt`],
+      files: [join(real, "Documents", "PDF Summary parts", "Invoice March.txt")],
       note: "Summarized Invoice March.pdf.",
     });
     expect(subtasks[PDFS.length]!.result).toEqual({
       status: "done",
-      files: [NOTE],
+      files: [join(real, "Documents", "PDF Summary.md")],
       note: "Wrote PDF Summary.md with all five summaries.",
     });
     for (const s of subtasks) expect(s).toMatchObject({ lane: "helper", routeReason: "noUI", attempts: 1 });
@@ -340,6 +341,64 @@ describe("routing through the lane router (OBJ-07.8)", () => {
       taskId: task.id,
     });
     client.close();
+  });
+});
+
+describe("the permission gate (OBJ-37)", () => {
+  const onePlan = (instruction: string) =>
+    JSON.stringify({ subtasks: [{ id: "a", title: "A", instruction, dependsOn: [], proposedLane: "helper" }] });
+
+  it("checks every tool call, stores its level, and never runs a blocked one", async () => {
+    mkdirSync(join(home, ".ssh"));
+    writeFileSync(join(home, ".ssh", "id_ed25519"), "SECRET KEY");
+    let sawRefusal = false;
+    scriptedModel(server, {
+      plan: onePlan("Read ~/.ssh/id_ed25519."),
+      worker: (_instruction, steps, text) => {
+        if (steps === 0) return tool({ tool: "read_file", path: "~/.ssh/id_ed25519" });
+        sawRefusal = text.includes("-> blocked: Not done: Yumi's safety rules do not allow this read_file.");
+        if (text.includes("SECRET KEY")) throw new Error("the secret reached the model");
+        return content({ action: { kind: "finish", status: "stuck", note: "Not allowed." } });
+      },
+    });
+    const task = confirmedTask();
+    await runTask(task.id, deps());
+    const [step] = harness.store.listSteps(harness.store.listSubtasks(task.id)[0]!.id);
+    expect(step).toMatchObject({ outcome: "blocked", action: { permission: "blocked" } });
+    expect(sawRefusal).toBe(true);
+    expect(harness.store.listActionLog(task.id)).toMatchObject([
+      { outcome: "blocked", description: "Did not read id_ed25519, because Yumi's safety rules do not allow it" },
+    ]);
+    expect(logger.entries.some((e) => e.event === "step.blocked")).toBe(true);
+  });
+
+  it("does not run a call that asks, since approvals are not built yet (OBJ-38)", async () => {
+    let ran = false;
+    const trashTools: LaneTools = {
+      tools: [{ name: "move_to_trash", description: "Move files to the Trash." }],
+      run: () => {
+        ran = true;
+        return Promise.resolve({ outcome: "ok", output: "Trashed." });
+      },
+    };
+    writeFileSync(join(home, "Downloads", "old.txt"), "old");
+    scriptedModel(server, {
+      plan: onePlan("Trash ~/Downloads/old.txt."),
+      worker: (_instruction, steps) =>
+        steps === 0
+          ? tool({ tool: "move_to_trash", paths: ["~/Downloads/old.txt"] })
+          : content({ action: { kind: "finish", status: "stuck", note: "Needs approval." } }),
+    });
+    const task = confirmedTask();
+    await runTask(task.id, deps({ lanes: { helper: helperLane(trashTools) } }));
+    expect(ran).toBe(false);
+    const [step] = harness.store.listSteps(harness.store.listSubtasks(task.id)[0]!.id);
+    expect(step).toMatchObject({ outcome: "blocked", action: { permission: "ask" } });
+    expect(harness.store.listActionLog(task.id)[0]!.description).toBe(
+      "Did not move old.txt to the Trash, because it needs your approval first",
+    );
+    expect(logger.entries.some((e) => e.event === "step.needsApproval")).toBe(true);
+    expect(readFileSync(join(home, "Downloads", "old.txt"), "utf8")).toBe("old");
   });
 });
 

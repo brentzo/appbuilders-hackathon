@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { validate } from "@yumi/protocol";
@@ -11,9 +11,9 @@ import { checkPlan, findCycle, MAX_PLAN_SUBTASKS } from "../src/planner/check.ts
 import { makePlan, planSchemaForModel, subtasksFromPlan } from "../src/planner/planner.ts";
 import { checkSummary, FALLBACK_SUMMARY, sentenceCount, summarizeTask } from "../src/planner/summary.ts";
 import { HELPER_OBSERVATION } from "../src/scheduler/lanes.ts";
-import { buildSubtaskResult, changedFiles } from "../src/scheduler/result.ts";
+import { buildSubtaskResult } from "../src/scheduler/result.ts";
+import { fileHelperLane } from "../src/scheduler/lanes.ts";
 import { buildWorkerInput, RECENT_STEPS } from "../src/scheduler/worker-input.ts";
-import { createStandInFileTools } from "./support/stand-in-file-tools.ts";
 import type { TaskStore } from "../src/store/task-store.ts";
 import { modelConfig, tempDir } from "./helpers.ts";
 import { startMockModelServer, type MockModelServer } from "./mock-model-server.ts";
@@ -81,7 +81,7 @@ describe("the planner (OBJ-05.1)", () => {
   });
   afterEach(() => server.close());
 
-  const tools = createStandInFileTools({ home: "/tmp/never-used" }).tools;
+  const tools = fileHelperLane({ home: "/tmp/never-used" }).tools.tools;
 
   it("sends the goal and the tools, with the Plan schema limited to the most subtasks", async () => {
     server.reply({ kind: "content", content: planJson(sub("a")) });
@@ -92,7 +92,7 @@ describe("the planner (OBJ-05.1)", () => {
     expect(request.response_format?.json_schema.name).toBe("Plan");
     const user = request.messages[1]!.content as string;
     expect(user).toContain("Goal: tidy my notes");
-    expect(user).toContain("- read_file: Read a text file.");
+    expect(user).toContain("- read_file: Read a text file in the home folder.");
     expect(user).toContain("- write_new_file:");
     expect(request.messages[0]!.content as string).toContain(
       "- needsKeyboard: true when the subtask types text or uses keyboard shortcuts",
@@ -246,66 +246,14 @@ describe("the worker input (OBJ-05.5, SPEC-02 r5)", () => {
 });
 
 describe("the structured result (OBJ-05.6)", () => {
-  it("lists the files that ok steps created or changed, once each, and caps the note", () => {
-    const base = {
-      subtaskId: "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
-      lane: "helper" as const,
-      startedAt: "2026-10-09T15:40:00+08:00",
-    };
-    const steps: Step[] = [
-      {
-        ...base,
-        id: "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d701",
-        index: 0,
-        outcome: "ok",
-        action: { action: { kind: "tool", call: { tool: "read_file", path: "~/a.txt" } }, permission: "allowed" },
-      },
-      {
-        ...base,
-        id: "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d702",
-        index: 1,
-        outcome: "ok",
-        action: {
-          action: { kind: "tool", call: { tool: "write_new_file", path: "~/b.txt", content: "b" } },
-          permission: "allowed",
-        },
-      },
-      {
-        ...base,
-        id: "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d703",
-        index: 2,
-        outcome: "error",
-        action: {
-          action: { kind: "tool", call: { tool: "write_new_file", path: "~/c.txt", content: "c" } },
-          permission: "allowed",
-        },
-      },
-      {
-        ...base,
-        id: "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d704",
-        index: 3,
-        outcome: "ok",
-        action: { action: { kind: "tool", call: { tool: "copy", from: "~/b.txt", to: "~/d.txt" } }, permission: "allowed" },
-      },
-      {
-        ...base,
-        id: "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d705",
-        index: 4,
-        outcome: "ok",
-        action: {
-          action: { kind: "tool", call: { tool: "write_new_file", path: "~/b.txt", content: "b" } },
-          permission: "allowed",
-        },
-      },
-    ];
-    expect(changedFiles(steps)).toEqual(["~/b.txt", "~/d.txt"]);
-    const result = buildSubtaskResult("done", "x".repeat(250), steps);
-    expect(result.note).toHaveLength(200);
+  it("keeps the real paths it is given and caps the note at 200 characters", () => {
+    const result = buildSubtaskResult("done", "x".repeat(250), ["/Users/ana/b.txt", "/Users/ana/d 2.txt"]);
+    expect(result).toEqual({ status: "done", files: ["/Users/ana/b.txt", "/Users/ana/d 2.txt"], note: `${"x".repeat(197)}...` });
     expect(validate("SubtaskResult", result).errors).toEqual([]);
   });
 });
 
-describe("the stand-in file tools (OBJ-05.8)", () => {
+describe("the helper lane's tools (OBJ-37's typed file tools)", () => {
   let home: { path: string; cleanup: () => void };
   beforeEach(() => {
     home = tempDir();
@@ -314,34 +262,21 @@ describe("the stand-in file tools (OBJ-05.8)", () => {
   });
   afterEach(() => home.cleanup());
 
-  it("reads, lists, and creates files inside the home folder", async () => {
-    const tools = createStandInFileTools({ home: home.path });
+  it("offers the five file tools and runs them on the given home folder", async () => {
+    const { tools } = fileHelperLane({ home: home.path });
+    expect(tools.tools.map((t) => t.name)).toEqual(["read_file", "list_dir", "write_new_file", "copy", "move"]);
+    const real = realpathSync(home.path);
     expect(await tools.run({ tool: "read_file", path: "~/Downloads/a.pdf" })).toEqual({
       outcome: "ok",
-      observation: 'Read ~/Downloads/a.pdf: "Alpha report text."',
-      description: "Read a.pdf",
+      output: "Alpha report text.",
+      path: join(real, "Downloads", "a.pdf"),
     });
-    expect((await tools.run({ tool: "list_dir", path: "~/Downloads" })).observation).toBe('~/Downloads has 1 items: "a.pdf"');
-    const write = await tools.run({ tool: "write_new_file", path: "~/Documents/n.md", content: "note" });
-    expect(write.outcome).toBe("ok");
-    expect(readFileSync(join(home.path, "Documents", "n.md"), "utf8")).toBe("note");
-  });
-
-  it("never replaces a file and never leaves the home folder", async () => {
-    const tools = createStandInFileTools({ home: home.path });
-    expect((await tools.run({ tool: "write_new_file", path: "~/Downloads/a.pdf", content: "x" })).outcome).toBe("error");
+    const write = await tools.run({ tool: "write_new_file", path: "~/Downloads/a.pdf", content: "x" });
+    // A taken name gets a number, and the real path comes back.
+    expect(write).toMatchObject({ outcome: "ok", path: join(real, "Downloads", "a 2.pdf") });
     expect(readFileSync(join(home.path, "Downloads", "a.pdf"), "utf8")).toBe("Alpha report text.");
-    expect((await tools.run({ tool: "read_file", path: "/etc/hosts" })).outcome).toBe("error");
-    expect((await tools.run({ tool: "write_new_file", path: "~/../escape.txt", content: "x" })).outcome).toBe("error");
+    expect(await tools.run({ tool: "read_file", path: "~/Downloads/missing.txt" })).toMatchObject({ outcome: "error" });
     expect(existsSync(join(home.path, "..", "escape.txt"))).toBe(false);
-    expect(tools.permission({ tool: "move_to_trash", paths: ["~/Downloads/a.pdf"] })).toBe("blocked");
-    expect(tools.permission({ tool: "read_file", path: "~/Downloads/a.pdf" })).toBe("allowed");
-  });
-
-  it("keeps an observation within 300 characters", async () => {
-    writeFileSync(join(home.path, "Downloads", "long.txt"), "y".repeat(5000));
-    const tools = createStandInFileTools({ home: home.path });
-    expect((await tools.run({ tool: "read_file", path: "~/Downloads/long.txt" })).observation.length).toBe(300);
   });
 });
 
