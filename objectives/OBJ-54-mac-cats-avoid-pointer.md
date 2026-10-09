@@ -41,11 +41,11 @@ It keeps the screen usable and adds personality.
 
 ## Tasks
 
-- [ ] **OBJ-54.1** Track the user's pointer cheaply (no polling loop that wakes the CPU when the pointer is still) and find cats within a radius of it.
-- [ ] **OBJ-54.2** Idle, thinking, and paused cats scoot out of the way along a short eased hop with an ears-back pose, then drift back to their spot after the pointer leaves for about a second.
-- [ ] **OBJ-54.3** A cat that is acting stays put and fades to see-through while the pointer is near, then fades back.
-- [ ] **OBJ-54.4** With "Reduce motion" on, every cat fades instead of moving (SPEC-04 requirement 17).
-- [ ] **OBJ-54.5** Add the radius, hop distance, and fade level as design tokens in character/, and an ears-back pose if the art lacks one.
+- [x] **OBJ-54.1** Track the user's pointer cheaply (no polling loop that wakes the CPU when the pointer is still) and find cats within a radius of it.
+- [x] **OBJ-54.2** Idle, thinking, and paused cats scoot out of the way along a short eased hop with an ears-back pose, then drift back to their spot after the pointer leaves for about a second.
+- [x] **OBJ-54.3** A cat that is acting stays put and fades to see-through while the pointer is near, then fades back.
+- [x] **OBJ-54.4** With "Reduce motion" on, every cat fades instead of moving (SPEC-04 requirement 17).
+- [x] **OBJ-54.5** Add the radius, hop distance, and fade level as design tokens in character/, and an ears-back pose if the art lacks one.
 - [ ] **OBJ-54.6** Add it to the cursor demo, test the rules in the view model, and check it live with a real task.
 
 ## Expectations
