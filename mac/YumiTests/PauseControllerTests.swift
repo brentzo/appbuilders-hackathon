@@ -157,6 +157,44 @@ struct PauseControllerTests {
         #expect(approvals.openApprovalIds.isEmpty)
     }
 
+    @Test func aStopVoidsAnApprovedDeleteAndRefusesTheTrash() async throws {
+        approvals.isStopped = { [pause] in pause.isStopped }
+        let delete = Approval(
+            id: "4d5e6f7a-8b9c-4d0e-9f2a-3b4c5d6e7f80", stepId: "3c4d5e6f-7a8b-4c9d-8e1f-2a3b4c5d6e7f", kind: .delete,
+            files: FileSummary(folder: "~/Downloads", count: 1, firstNames: ["old-invoice.pdf"], allPaths: ["~/Downloads/old-invoice.pdf"]),
+            text: "I'm about to move old-invoice.pdf from Downloads to the Trash. Should I delete it?",
+            requestedAt: "2026-10-09T15:42:00+08:00", expiresAt: "2026-10-09T15:47:00+08:00"
+        )
+        // The user taps Delete, then presses Control-Option-Escape before the harness moves the file.
+        var tap: ((Bool) -> Void)?
+        let presenter = TapCard { tap = $0 }
+        let cards = ApprovalCards(speech: speech, listen: { nil }, presenter: presenter, overlay: overlay)
+        cards.isStopped = { [pause] in pause.isStopped }
+        let decided = Task { await cards.show(delete) }
+        try await settle()
+        tap?(true)
+        #expect((await decided.value).approved)
+        #expect(!cards.approvedTrashPaths.isEmpty)
+
+        let stopping = PauseController(speech: speech, listen: { nil }, panel: panel, overlay: overlay,
+                                       keystrokes: keystrokes, approvals: cards, tasks: tasks)
+        cards.isStopped = { [stopping] in stopping.isStopped }
+        stopping.stop(.shortcut)
+        #expect(throws: Trash.Failure.stopped) { try cards.moveToTrash(["~/Downloads/old-invoice.pdf"]) }
+        #expect(cards.approvedTrashPaths.isEmpty, "the approval is gone, even after resuming")
+
+        stopping.taskStatusChanged(Self.taskId, .cancelled)
+        cards.isStopped = { false }
+        #expect(throws: Trash.Failure.notApproved("~/Downloads/old-invoice.pdf")) { try cards.moveToTrash(["~/Downloads/old-invoice.pdf"]) }
+    }
+
+    final class TapCard: ApprovalPresenting {
+        let onShow: (@escaping (Bool) -> Void) -> Void
+        init(_ onShow: @escaping (@escaping (Bool) -> Void) -> Void) { self.onShow = onShow }
+        func show(_ approval: Approval, tap: @escaping (Bool) -> Void) { onShow(tap) }
+        func close(approvalId: String) {}
+    }
+
     @Test func userResumesBySayingContinue() async throws {
         pause.stop(.shortcut)
         try await waitUntil { !tasks.resumed.isEmpty }

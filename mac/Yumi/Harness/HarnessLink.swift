@@ -74,6 +74,7 @@ final class HarnessLink {
     func start() {
         overlay.start()
         gui.onUserError = { [weak self] error in self?.onUserError?(error) }
+        approvals.isStopped = { [pause] in pause.isStopped }
         gui.actionsAllowed = { [weak self] in
             guard let self else { return true }
             return !pause.isStopped && Self.actionsAllowed(for: Array(taskStatuses.values))

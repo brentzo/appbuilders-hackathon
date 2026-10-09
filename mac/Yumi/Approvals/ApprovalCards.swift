@@ -22,6 +22,8 @@ final class ApprovalCards {
     private var pending: [String: (approval: Approval, answer: CheckedContinuation<ApprovalDecision, Never>, cursorState: CursorState?)] = [:]
     /// Exact paths of deletes the user approved with a tap. `moveToTrash` refuses anything else.
     private(set) var approvedTrashPaths: Set<String> = []
+    /// True while Yumi is stopped (OBJ-35): then nothing is moved to the Trash. Set by the app.
+    var isStopped: () -> Bool = { false }
     private let log = Logger(subsystem: "ph.appbuilders.yumi", category: "approvals")
 
     init(speech: SpeechOutput, listen: @escaping () async -> String?, presenter: ApprovalPresenting, overlay: CursorOverlay) {
@@ -55,12 +57,16 @@ final class ApprovalCards {
         log.notice("Approval \(approvalId, privacy: .public) cancelled")
     }
 
+    /// A pause: every open card closes, and every approved delete is forgotten, so a
+    /// `moveToTrash` on its way, or sent after resuming, cannot use it (SPEC-06 r5, SPEC-07 r12).
     func cancelAll() {
         for id in Array(pending.keys) { cancel(approvalId: id) }
+        approvedTrashPaths.removeAll()
     }
 
     /// `moveToTrash`: only paths of a tapped delete approval, and each approval covers them once.
     func moveToTrash(_ paths: [String]) throws -> [String] {
+        guard !isStopped() else { throw Trash.Failure.stopped }
         let trashed = try Trash.move(paths, approved: approvedTrashPaths)
         approvedTrashPaths.subtract(paths.map(Trash.expand))
         return trashed
@@ -109,6 +115,8 @@ enum Trash {
     enum Failure: Error, Equatable {
         /// A wildcard or a relative path: refused before anything moves (second guard after the harness).
         case notAnExactPath(String)
+        /// Yumi is stopped: nothing moves until the task resumes and asks again.
+        case stopped
         /// A path no tapped delete approval covered (SPEC-07 r11, r12).
         case notApproved(String)
     }

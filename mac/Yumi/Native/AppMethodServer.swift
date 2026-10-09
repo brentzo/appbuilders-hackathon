@@ -93,7 +93,7 @@ final class AppMethodServer {
         switch error {
         case Trash.Failure.notAnExactPath:
             return .invalidParams("\(method): \(error)")
-        case Trash.Failure.notApproved:
+        case Trash.Failure.notApproved, Trash.Failure.stopped:
             return .failed(UserError(kind: .blockedAction), "\(method): \(error)")
         case let failure as GuiFailure:
             return .failed(failure.userError, "\(method): \(failure)")
