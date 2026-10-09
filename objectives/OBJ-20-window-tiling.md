@@ -36,7 +36,7 @@ Yumi asks first, puts every window back afterward, and has a demo mode that tile
 
 - [SPEC-03](../specs/03-lane-routing.md), requirements 14-16, the "Window tiling" scenarios, and Decisions.
 - The `tilingSuggested` event and window service contracts from [OBJ-01](OBJ-01-task-record-schemas.md). Brent's [OBJ-08](OBJ-08-locks-busy-windows-cap.md) emits the event; use the mock harness to script it until then.
-- [OBJ-27](OBJ-27-mac-native-services.md) completion notes (window frames).
+- [OBJ-27](OBJ-27-mac-native-services.md) Outcome (window frames).
 
 ## Tasks
 
@@ -55,7 +55,7 @@ Yumi asks first, puts every window back afterward, and has a demo mode that tile
 - [ ] No window is ever moved without a yes, unless demo mode is on.
 - [ ] Every moved window returns to its exact original frame.
 
-## Outcomes
+## Expected outcomes
 
 - The consent panel, tiling and restore on the Mac, and demo mode behavior.
 
@@ -63,6 +63,6 @@ Yumi asks first, puts every window back afterward, and has a demo mode that tile
 
 - Unminimizing windows for ghosts: part of GUI control (SPEC-05).
 
-## Completion notes
+## Outcome
 
-_Fill in when done: what was built, where, decisions made, and anything the next objective needs to know._
+_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._

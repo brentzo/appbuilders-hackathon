@@ -71,7 +71,7 @@ This objective defines what goes inside it, so the harness, the Android app, and
 - [ ] No payload carries raw error text.
 - [ ] Generated types compile in TypeScript, Swift, and Kotlin.
 
-## Outcomes
+## Expected outcomes
 
 - `protocol/schemas/` payload schemas and phone tool argument schemas, with generated types.
 - Example sequences for the three demo moments.
@@ -83,6 +83,6 @@ This objective defines what goes inside it, so the harness, the Android app, and
 - The 10-second liveness rule (SPEC-06 r13) is p1. The 30-second `progress` keepalive is enough for p0.
 - p1 phone tools (`get_location`, `read_recent_photos`, `phone_gui_act`) and Wake-on-LAN.
 
-## Completion notes
+## Outcome
 
-_Fill in when done: what was built, where, decisions made, and anything the next objective needs to know._
+_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._

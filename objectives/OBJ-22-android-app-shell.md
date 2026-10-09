@@ -59,7 +59,7 @@ Android only lets a background app stay alive this way, with a visible notificat
 - [ ] The cat plays and switches between idle and listening.
 - [ ] No raw Android or library error text reaches the user.
 
-## Outcomes
+## Expected outcomes
 
 - The `android/` project with home screen, cat, onboarding, settings, foreground service, and the error presenter.
 - Build, install, and sideload instructions in `android/README.md`.
@@ -70,6 +70,6 @@ Android only lets a background app stay alive this way, with a visible notificat
 - Phone-only goals, phone tools, and delegated goals: SPEC-09 and SPEC-10 Part A, objectives not written yet.
 - Everything in SPEC-10 Part B (p1).
 
-## Completion notes
+## Outcome
 
-_Fill in when done: what was built, where, decisions made, and anything the next objective needs to know._
+_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._

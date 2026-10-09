@@ -56,7 +56,7 @@ This objective defines the message envelope, the pairing flow, and the crypto ru
 - [ ] Nothing in the envelope's readable fields reveals what the message says (supports SPEC-08 scenario "VPS cannot read messages").
 - [ ] The pairing doc is clear enough that the Mac, Android, and bridge objectives can implement it without further design.
 
-## Outcomes
+## Expected outcomes
 
 - `protocol/schemas/` envelope and payload schemas, with generated types.
 - `protocol/docs/pairing.md`.
@@ -68,6 +68,6 @@ This objective defines the message envelope, the pairing flow, and the crypto ru
 - Client connections: [OBJ-21](OBJ-21-mac-bridge-client-and-pairing.md) (Mac), [OBJ-23](OBJ-23-android-bridge-client.md) (Android).
 - Payload kinds for SPEC-09 (tool calls, delegated goals, progress, approvals, pause, tool lists): [OBJ-25](OBJ-25-cross-device-messages.md).
 
-## Completion notes
+## Outcome
 
-_Fill in when done: what was built, where, decisions made, and anything the next objective needs to know._
+_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._

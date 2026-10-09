@@ -86,7 +86,7 @@ It also defines every contract between people's work (harness and Mac app, harne
 - [ ] Every RPC method and event in OBJ-01.11 and OBJ-01.16 has a schema and a valid example.
 - [ ] A client can connect to the mock harness, call every method, and receive a scripted event sequence. The mock Mac app answers every Mac-side method.
 
-## Outcomes
+## Expected outcomes
 
 - `protocol/schemas/*.json`: the source of truth.
 - Generated types for TypeScript, Swift, and Kotlin, and the recorded generator choice.
@@ -100,6 +100,6 @@ It also defines every contract between people's work (harness and Mac app, harne
 - Storing records in SQLite: [OBJ-04](OBJ-04-task-store.md).
 - Deciding permission levels at runtime and building approval text: harness objectives (not written yet for SPEC-07).
 
-## Completion notes
+## Outcome
 
-_Fill in when done: what was built, where, decisions made, and anything the next objective needs to know._
+_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._

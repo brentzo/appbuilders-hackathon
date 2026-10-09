@@ -52,6 +52,8 @@ To be defined in [OBJ-10](../objectives/OBJ-10-yumi-cat-v0.md).
 
 ## Objectives
 
-| ID | Objective | Status |
-|---|---|---|
-| [OBJ-10](../objectives/OBJ-10-yumi-cat-v0.md) | Yumi cat v0 in Rive | todo |
+<!-- generated:product-objectives:start -->
+| ID | Objective | Assignee | Status |
+|---|---|---|---|
+| [OBJ-10](../objectives/OBJ-10-yumi-cat-v0.md) | Yumi cat v0 in Rive | Patrick | todo |
+<!-- generated:product-objectives:end -->

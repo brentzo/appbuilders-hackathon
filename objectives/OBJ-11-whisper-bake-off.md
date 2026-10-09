@@ -56,7 +56,7 @@ This objective runs that test and records the choice that the Mac and Android vo
 - [ ] SPEC-01 no longer lists the Whisper choice as open.
 - [ ] No voice recordings are in git.
 
-## Outcomes
+## Expected outcomes
 
 - `models/whisper/RESULTS.md` with numbers and the decision.
 - Committed transcripts and the benchmark script.
@@ -66,6 +66,6 @@ This objective runs that test and records the choice that the Mac and Android vo
 
 - Wiring Whisper into the apps: [OBJ-15](OBJ-15-mac-voice-intake.md) (Mac), [OBJ-24](OBJ-24-android-voice-intake.md) (Android).
 
-## Completion notes
+## Outcome
 
-_Fill in when done: what was built, where, decisions made, and anything the next objective needs to know._
+_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._

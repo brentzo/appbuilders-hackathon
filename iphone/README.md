@@ -28,4 +28,6 @@ So the iPhone is a voice remote for the Mac plus a small set of phone tools, not
 
 ## Objectives
 
-None yet. Objectives will be written after SPEC-12 is reviewed and Android is working.
+<!-- generated:product-objectives:start -->
+None yet.
+<!-- generated:product-objectives:end -->

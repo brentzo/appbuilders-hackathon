@@ -36,8 +36,8 @@ After this objective, the Mac can pair with a phone and exchange encrypted, sign
 ## Read first
 
 - [SPEC-08](../specs/08-device-bridge.md), all requirements, scenarios, and Decisions.
-- `protocol/docs/pairing.md` and [OBJ-02](OBJ-02-bridge-envelope-and-crypto.md) completion notes.
-- [OBJ-13](OBJ-13-bridge-relay-server.md) completion notes (bridge URL, auth flow).
+- `protocol/docs/pairing.md` and [OBJ-02](OBJ-02-bridge-envelope-and-crypto.md) Outcome.
+- [OBJ-13](OBJ-13-bridge-relay-server.md) Outcome (bridge URL, auth flow).
 
 ## Tasks
 
@@ -58,7 +58,7 @@ After this objective, the Mac can pair with a phone and exchange encrypted, sign
 - [ ] Keys never appear in files, logs, or the task store.
 - [ ] The Mac's crypto output matches the protocol test vectors.
 
-## Outcomes
+## Expected outcomes
 
 - The bridge client module in the harness, pairing RPC methods, and connection state events.
 
@@ -67,6 +67,6 @@ After this objective, the Mac can pair with a phone and exchange encrypted, sign
 - Which commands the Mac sends to the phone and how goals are routed between devices: SPEC-09, not finalized.
 - The phone side: [OBJ-23](OBJ-23-android-bridge-client.md).
 
-## Completion notes
+## Outcome
 
-_Fill in when done: what was built, where, decisions made, and anything the next objective needs to know._
+_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._

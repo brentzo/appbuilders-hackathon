@@ -8,7 +8,8 @@ Each objective is a short, actionable group of tasks for one product, written so
 
 ## Objective format
 
-Every objective file has the same sections.
+Every objective follows the template in [.claude/skills/objective-lifecycle/template.md](../.claude/skills/objective-lifecycle/template.md).
+The [objective-lifecycle skill](../.claude/skills/objective-lifecycle/SKILL.md) is the full guide: creating, editing, working, blocking, and finishing an objective.
 
 | Section | Meaning |
 |---|---|
@@ -18,44 +19,43 @@ Every objective file has the same sections.
 | Read first | The specs, docs, and READMEs to read before starting |
 | Tasks | Child tasks as checkboxes, numbered `OBJ-NN.n` |
 | Expectations | What must be true when done. Each item is verified, usually by a spec scenario |
-| Outcomes | The concrete things that exist when done: code, files, interfaces |
+| Expected outcomes | The concrete things that should exist when done: code, files, interfaces |
 | Out of scope | What not to do here, and where it belongs |
-| Completion notes | Filled in when done: what was built, where, decisions, and anything the next objective needs to know |
+| Outcome | Written when the objective is finished: result, what was delivered, commits, how each expectation was verified, what was not verified, decisions and deviations, and notes for the objectives that come next |
 
 ## Owners
 
 Owners are assigned per product.
 
+<!-- generated:objectives-owners:start -->
 | Owner | Products |
 |---|---|
+| Brent | android, harness, iphone |
 | Jepoy | bridge, models, protocol |
 | Patrick | character, mac |
-| Brent | android, iphone, harness |
-
+<!-- generated:objectives-owners:end -->
 ## Status
 
 | Status | Meaning |
 |---|---|
 | `todo` | Not started |
-| `in-progress` | Someone is working on it |
-| `blocked` | Waiting on something outside the objective. Say what in Completion notes |
-| `done` | Every task checked, every expectation verified, completion notes written |
+| `in-progress` | Someone is working on it. Every hard dependency is `done` |
+| `blocked` | Waiting on something outside the objective. The Outcome section says what, until it is unblocked |
+| `done` | Every task and expectation checked, and the Outcome written |
 
-The frontmatter `status` is the source of truth.
-Update the tables in this file and in the product README in the same commit.
+The frontmatter is the source of truth.
+The tables in this file and in each product README are generated: run `python3 scripts/objectives.py index` after any change, and `python3 scripts/objectives.py check` before committing.
 
 ## How to work an objective
 
-1. Pick a `todo` objective assigned to you whose `depends-on` objectives are all `done`. Do not wait for `integrates-with` objectives; use the stand-in the objective names. Reassigning is fine; update `assignee` and the tables in the same commit.
-2. Read everything under "Read first".
-3. Set `status: in-progress` and commit.
-4. Work through the tasks in order and check each one off as it is done.
-5. Verify each expectation. Where a Gherkin scenario is named, it must pass as written.
-6. Write the completion notes, set `status: done`, and update the tables.
-7. If the spec turns out to be wrong or unclear, stop and raise it. Do not quietly change behavior.
+Follow the [objective-lifecycle skill](../.claude/skills/objective-lifecycle/SKILL.md).
+In short: pick a `todo` objective assigned to you whose `depends-on` objectives are all `done`, read everything under "Read first", set it `in-progress`, work the tasks in order, verify every expectation, write the Outcome, and set it `done`.
+Do not wait for `integrates-with` objectives; use the stand-in the objective names.
+If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly change behavior.
 
 ## Index
 
+<!-- generated:objectives-index:start -->
 | ID | Objective | Product | Assignee | Specs | Depends on | Integrates with | Status |
 |---|---|---|---|---|---|---|---|
 | [OBJ-01](OBJ-01-task-record-schemas.md) | Task record schemas and cross-team contracts | protocol | Jepoy | 02, 03, 05, 07, 11 | - | - | in-progress |
@@ -85,6 +85,7 @@ Update the tables in this file and in the product README in the same commit.
 | [OBJ-25](OBJ-25-cross-device-messages.md) | Cross-device message kinds | protocol | Jepoy | 09, 06, 07, 08, 10 | 01, 02 | - | todo |
 | [OBJ-26](OBJ-26-gui-smoke-test.md) | Qwen3.5-9B smoke test on the demo tasks | models | Jepoy | 05 | - | - | todo |
 | [OBJ-27](OBJ-27-mac-native-services.md) | Mac native services for the harness | mac | Patrick | 03, 08 | 14 | 07, 08, 21 | todo |
+<!-- generated:objectives-index:end -->
 
 ## Priority and blocking
 
@@ -96,6 +97,7 @@ How the work is split so nobody waits on someone else:
 
 Ranked by how many objectives each one holds up through hard dependencies:
 
+<!-- generated:objectives-priority:start -->
 | Rank | Objective | Assignee | Holds up (hard) | Holds up another person |
 |---|---|---|---|---|
 | 1 | OBJ-01 Task record schemas and cross-team contracts | Jepoy | 16 | Brent, Patrick |
@@ -113,9 +115,10 @@ Ranked by how many objectives each one holds up through hard dependencies:
 | 13 | OBJ-08 Window locks, busy windows, and cursor cap | Brent | 1 | No |
 | 14 | OBJ-10 Yumi cat v0 in Rive | Patrick | 1 | No |
 | 15 | OBJ-27 Mac native services for the harness | Patrick | 1 | No |
-
+<!-- generated:objectives-priority:end -->
 Hard dependencies that cross between people (everything else is within one person's queue):
 
+<!-- generated:objectives-cross:start -->
 - OBJ-01 (Jepoy) before OBJ-03 (Brent)
 - OBJ-01 (Jepoy) before OBJ-04 (Brent)
 - OBJ-01 (Jepoy) before OBJ-07 (Brent)
@@ -123,28 +126,30 @@ Hard dependencies that cross between people (everything else is within one perso
 - OBJ-04 (Brent) before OBJ-17 (Patrick)
 - OBJ-02 (Jepoy) before OBJ-23 (Brent)
 - OBJ-13 (Jepoy) before OBJ-23 (Brent)
-
+<!-- generated:objectives-cross:end -->
 Workload:
 
+<!-- generated:objectives-workload:start -->
 | Person | Objectives | Count |
 |---|---|---|
 | Brent | 03, 04, 05, 06, 07, 08, 09, 22, 23, 24 | 10 |
-| Patrick | 10, 14, 15, 16, 17, 18, 19, 20, 27 | 9 |
 | Jepoy | 01, 02, 11, 12, 13, 21, 25, 26 | 8 |
-
+| Patrick | 10, 14, 15, 16, 17, 18, 19, 20, 27 | 9 |
+<!-- generated:objectives-workload:end -->
 ## Suggested order
 
 Waves come from hard dependencies only. Each person works their column top to bottom; objectives in the same row can run in parallel.
 
-| Wave | Brent | Patrick | Jepoy |
+<!-- generated:objectives-waves:start -->
+| Wave | Brent | Jepoy | Patrick |
 |---|---|---|---|
-| 1 | OBJ-22 | OBJ-10 | OBJ-01, OBJ-02, OBJ-11, OBJ-12, OBJ-26 |
-| 2 | OBJ-03, OBJ-24 | OBJ-14 | OBJ-13, OBJ-25 |
-| 3 | OBJ-04, OBJ-23 | OBJ-15, OBJ-18, OBJ-27 | OBJ-21 |
-| 4 | OBJ-05, OBJ-07 | OBJ-16, OBJ-17, OBJ-19, OBJ-20 | - |
+| 1 | OBJ-22 | OBJ-01, OBJ-02, OBJ-11, OBJ-12, OBJ-26 | OBJ-10 |
+| 2 | OBJ-03, OBJ-24 | OBJ-13, OBJ-25 | OBJ-14 |
+| 3 | OBJ-04, OBJ-23 | OBJ-21 | OBJ-15, OBJ-18, OBJ-27 |
+| 4 | OBJ-05, OBJ-07 | - | OBJ-16, OBJ-17, OBJ-19, OBJ-20 |
 | 5 | OBJ-06, OBJ-08 | - | - |
 | 6 | OBJ-09 | - | - |
-
+<!-- generated:objectives-waves:end -->
 ## Not covered yet
 
 Objectives exist for specs whose decisions are final: SPEC-01, SPEC-02, SPEC-03, SPEC-04, and SPEC-08, plus the Android app shell and voice parts of SPEC-10 Part A.

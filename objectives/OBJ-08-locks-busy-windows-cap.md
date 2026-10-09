@@ -36,7 +36,7 @@ At most 3 cursors are visible at once.
 
 - [SPEC-03](../specs/03-lane-routing.md), requirements 5, 6, 11-13, the "Busy window" and "Cursor cap" scenarios, and the Decisions section.
 - [docs/lane-router.md](../docs/lane-router.md), "Checks" and "Lane-specific rules".
-- [OBJ-07](OBJ-07-lane-router-core.md) completion notes.
+- [OBJ-07](OBJ-07-lane-router-core.md) Outcome.
 
 ## Tasks
 
@@ -55,7 +55,7 @@ At most 3 cursors are visible at once.
 - [ ] No two cursors ever hold the same window at the same time, including after a crash and restart.
 - [ ] The 2-minute notice is a structured event; the spoken copy lives in the app.
 
-## Outcomes
+## Expected outcomes
 
 - Lock management, the `openNewWindow` call, the waiting notice and tiling suggestion events, and the cursor cap.
 
@@ -64,6 +64,6 @@ At most 3 cursors are visible at once.
 - Window tiling: [OBJ-20](OBJ-20-window-tiling.md).
 - Ghost failure and handoff: [OBJ-09](OBJ-09-ghost-handoff.md).
 
-## Completion notes
+## Outcome
 
-_Fill in when done: what was built, where, decisions made, and anything the next objective needs to know._
+_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._

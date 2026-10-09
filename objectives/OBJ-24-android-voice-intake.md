@@ -39,7 +39,7 @@ The transcript goes to a single entry point that the Part A routing objective wi
 - [SPEC-01](../specs/01-voice-intake.md), requirements 1, 2, 8-12, the "Listening modes" and "Voice intake on Android" scenarios, and "Wake word detector".
 - [SPEC-10](../specs/10-android-companion.md), Part A requirement 1 and the "English speech is transcribed on the phone" and "No on-device model for the language" scenarios.
 - [OBJ-12](OBJ-12-hey-yumi-wake-word.md) results (Jepoy), when available. Do not wait for them; build with a stand-in model.
-- [OBJ-22](OBJ-22-android-app-shell.md) completion notes.
+- [OBJ-22](OBJ-22-android-app-shell.md) Outcome.
 
 ## Tasks
 
@@ -59,9 +59,9 @@ The transcript goes to a single entry point that the Part A routing objective wi
 - [ ] SPEC-01 scenarios pass on the demo phone: "Push-to-talk on the phone", "Wake word starts listening", "Wake word turned off", "Speech before the wake word is ignored".
 - [ ] SPEC-10 scenarios pass: "English speech is transcribed on the phone", "No on-device model for the language".
 - [ ] No audio is sent to a cloud recognizer, verified by the recognizer choice and a traffic check.
-- [ ] Battery, CPU, miss, and false-trigger numbers are in the completion notes.
+- [ ] Battery, CPU, miss, and false-trigger numbers are in the Outcome.
 
-## Outcomes
+## Expected outcomes
 
 - Mic button, the on-device English recognizer, typed goals, the wake word in the foreground service, the Kotlin feature port, and the `onGoal` entry point.
 
@@ -70,6 +70,6 @@ The transcript goes to a single entry point that the Part A routing objective wi
 - Repeating the goal back and confirming on the phone, and deciding phone or Mac: the Part A routing objective (SPEC-09, SPEC-10 Part A), not written yet.
 - Whisper and Taglish on the phone: SPEC-10 Part B (p1).
 
-## Completion notes
+## Outcome
 
-_Fill in when done: what was built, where, decisions made, and anything the next objective needs to know._
+_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._

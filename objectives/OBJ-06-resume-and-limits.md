@@ -56,7 +56,7 @@ Resume never starts on its own: the user is always asked first.
 - [ ] No task resumes without an explicit user action.
 - [ ] Error events carry a structured kind, never raw error text.
 
-## Outcomes
+## Expected outcomes
 
 - Startup recovery, resume and cancel RPC methods, and limit enforcement with configurable defaults.
 
@@ -66,6 +66,6 @@ Resume never starts on its own: the user is always asked first.
 - Ghost-specific failure counting and handoff: [OBJ-09](OBJ-09-ghost-handoff.md).
 - User "stop" and mouse takeover: SPEC-06, not reviewed yet.
 
-## Completion notes
+## Outcome
 
-_Fill in when done: what was built, where, decisions made, and anything the next objective needs to know._
+_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._

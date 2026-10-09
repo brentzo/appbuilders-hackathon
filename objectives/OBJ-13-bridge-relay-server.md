@@ -36,7 +36,7 @@ It never sees plaintext, which keeps the "local AI" claim honest.
 
 - [SPEC-08](../specs/08-device-bridge.md), all requirements, scenarios, and Decisions.
 - [bridge/README.md](../bridge/README.md).
-- [OBJ-02](OBJ-02-bridge-envelope-and-crypto.md) completion notes and `protocol/docs/pairing.md`.
+- [OBJ-02](OBJ-02-bridge-envelope-and-crypto.md) Outcome and `protocol/docs/pairing.md`.
 
 ## Tasks
 
@@ -57,7 +57,7 @@ It never sees plaintext, which keeps the "local AI" claim honest.
 - [ ] A test client with the protocol's test vectors can connect, send, and receive through the deployed bridge.
 - [ ] Database and logs contain no plaintext payloads.
 
-## Outcomes
+## Expected outcomes
 
 - A deployed bridge on the VPS, with registry, routing, queue, expiry, and revocation.
 - Deploy and operations notes in `bridge/README.md`.
@@ -68,6 +68,6 @@ It never sees plaintext, which keeps the "local AI" claim honest.
 - Push notifications for iPhone: SPEC-12, later.
 - At-most-once execution: done on the receiving device, in the client objectives.
 
-## Completion notes
+## Outcome
 
-_Fill in when done: what was built, where, decisions made, and anything the next objective needs to know._
+_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._

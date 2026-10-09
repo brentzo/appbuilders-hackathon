@@ -36,7 +36,7 @@ When everything is done, Yumi speaks a short summary.
 
 - [SPEC-02](../specs/02-task-lifecycle.md), requirements 1, 5, 7, 9.
 - [docs/task-record-schema.md](../docs/task-record-schema.md), Subtask shape and "What a worker receives".
-- [OBJ-03](OBJ-03-harness-skeleton.md) and [OBJ-04](OBJ-04-task-store.md) completion notes.
+- [OBJ-03](OBJ-03-harness-skeleton.md) and [OBJ-04](OBJ-04-task-store.md) Outcome.
 
 ## Tasks
 
@@ -57,7 +57,7 @@ When everything is done, Yumi speaks a short summary.
 - [ ] A measured run shows independent subtasks overlapping in time, not running one after another.
 - [ ] A broken plan never reaches the scheduler.
 
-## Outcomes
+## Expected outcomes
 
 - Planner, plan validation, scheduler, worker input builder, and summary step.
 - Basic helper tools for files (read, write, list) used for testing.
@@ -67,6 +67,6 @@ When everything is done, Yumi speaks a short summary.
 - Lane choice and GUI work: [OBJ-07](OBJ-07-lane-router-core.md) and SPEC-05.
 - Step and attempt limits, resume: [OBJ-06](OBJ-06-resume-and-limits.md).
 
-## Completion notes
+## Outcome
 
-_Fill in when done: what was built, where, decisions made, and anything the next objective needs to know._
+_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._

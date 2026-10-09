@@ -35,7 +35,7 @@ The overlay must never get in the way of the user's own clicks.
 ## Read first
 
 - [SPEC-04](../specs/04-cursor-presence.md), requirements 1-9 and the "Cursor presence" scenarios.
-- [OBJ-14](OBJ-14-mac-app-shell.md) completion notes.
+- [OBJ-14](OBJ-14-mac-app-shell.md) Outcome.
 - The `cursorCommand` event schema from [OBJ-01](OBJ-01-task-record-schemas.md).
 
 ## Tasks
@@ -55,7 +55,7 @@ The overlay must never get in the way of the user's own clicks.
 - [ ] Clicks by the user anywhere on screen reach the app underneath while cursors are visible.
 - [ ] Motion stays smooth with 3 cursors moving at once.
 
-## Outcomes
+## Expected outcomes
 
 - The overlay, cursor model, motion system, ghost labels, helper chips, and `cursorCommand` handling, with a debug menu.
 
@@ -64,6 +64,6 @@ The overlay must never get in the way of the user's own clicks.
 - The cat art and animation: [OBJ-19](OBJ-19-rive-cat-cursor.md).
 - Performing the actual click or key press: SPEC-05, not finalized. The click point this objective exposes is what SPEC-05 will use.
 
-## Completion notes
+## Outcome
 
-_Fill in when done: what was built, where, decisions made, and anything the next objective needs to know._
+_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._

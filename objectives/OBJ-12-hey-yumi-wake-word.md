@@ -55,7 +55,7 @@ Push-to-talk is the fallback if the wake word is not reliable by demo day.
 - [ ] Miss rate and false triggers per hour are measured and written down.
 - [ ] Results are good enough for a live demo, or the doc says plainly that the demo uses push-to-talk.
 
-## Outcomes
+## Expected outcomes
 
 - `models/wake-word/hey_yumi.onnx` and the feature model list.
 - `models/wake-word/RESULTS.md`.
@@ -65,6 +65,6 @@ Push-to-talk is the fallback if the wake word is not reliable by demo day.
 - Running the model in the apps, including porting the audio feature step: [OBJ-16](OBJ-16-mac-wake-word.md) (Mac), [OBJ-24](OBJ-24-android-voice-intake.md) (Android).
 - The full training notebook. Skip it for the hackathon.
 
-## Completion notes
+## Outcome
 
-_Fill in when done: what was built, where, decisions made, and anything the next objective needs to know._
+_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._

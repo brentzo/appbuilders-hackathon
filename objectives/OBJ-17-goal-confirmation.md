@@ -35,7 +35,7 @@ This is also the moment the cat cursor appears, so it is the start of every demo
 ## Read first
 
 - [SPEC-01](../specs/01-voice-intake.md), requirements 4-7 and the "Voice intake and confirmation" scenarios with their exact copy.
-- [OBJ-04](OBJ-04-task-store.md), [OBJ-15](OBJ-15-mac-voice-intake.md), and [OBJ-18](OBJ-18-cursor-overlay-and-motion.md) completion notes.
+- [OBJ-04](OBJ-04-task-store.md), [OBJ-15](OBJ-15-mac-voice-intake.md), and [OBJ-18](OBJ-18-cursor-overlay-and-motion.md) Outcome.
 
 ## Tasks
 
@@ -54,7 +54,7 @@ This is also the moment the cat cursor appears, so it is the start of every demo
 - [ ] `confirmedGoal` and the raw `goal` are stored separately.
 - [ ] Nothing runs before a confirm.
 
-## Outcomes
+## Expected outcomes
 
 - The confirmation flow in the harness, the confirmation panel and `speak` interface on the Mac, and reply classification.
 
@@ -63,6 +63,6 @@ This is also the moment the cat cursor appears, so it is the start of every demo
 - Confirmation on Android: needs the phone model (SPEC-10, not finalized).
 - Kokoro voice: later, behind the same `speak` interface.
 
-## Completion notes
+## Outcome
 
-_Fill in when done: what was built, where, decisions made, and anything the next objective needs to know._
+_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._

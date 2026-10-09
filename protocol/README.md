@@ -45,8 +45,10 @@ Status: empty scaffold, nothing built yet.
 
 ## Objectives
 
-| ID | Objective | Status |
-|---|---|---|
-| [OBJ-01](../objectives/OBJ-01-task-record-schemas.md) | Task record schemas and cross-team contracts | in-progress |
-| [OBJ-02](../objectives/OBJ-02-bridge-envelope-and-crypto.md) | Bridge envelope and end-to-end crypto | todo |
-| [OBJ-25](../objectives/OBJ-25-cross-device-messages.md) | Cross-device message kinds | todo |
+<!-- generated:product-objectives:start -->
+| ID | Objective | Assignee | Status |
+|---|---|---|---|
+| [OBJ-01](../objectives/OBJ-01-task-record-schemas.md) | Task record schemas and cross-team contracts | Jepoy | in-progress |
+| [OBJ-02](../objectives/OBJ-02-bridge-envelope-and-crypto.md) | Bridge envelope and end-to-end crypto | Jepoy | todo |
+| [OBJ-25](../objectives/OBJ-25-cross-device-messages.md) | Cross-device message kinds | Jepoy | todo |
+<!-- generated:product-objectives:end -->

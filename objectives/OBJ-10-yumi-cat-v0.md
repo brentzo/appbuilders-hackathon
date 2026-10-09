@@ -58,7 +58,7 @@ Final art, colors, and timing come later and must not change the contract.
 - [ ] With `reduceMotion` on, no leap or pounce plays.
 - [ ] No state uses red or warning colors, including stuck.
 
-## Outcomes
+## Expected outcomes
 
 - `character/yumi-cat.riv`.
 - The state machine contract in `character/README.md`.
@@ -69,6 +69,6 @@ Final art, colors, and timing come later and must not change the contract.
 - Final art, colors, and animation timing: later design work, which keeps this contract.
 - Playing the cat in the apps: [OBJ-19](OBJ-19-rive-cat-cursor.md) (Mac), [OBJ-22](OBJ-22-android-app-shell.md) (Android).
 
-## Completion notes
+## Outcome
 
-_Fill in when done: what was built, where, decisions made, and anything the next objective needs to know._
+_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._

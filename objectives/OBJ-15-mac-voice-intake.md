@@ -53,9 +53,9 @@ Audio never leaves the Mac, and the native recognizer can never fall back to the
 
 - [ ] SPEC-01 scenarios pass: "Push-to-talk on the Mac", "Taglish goal is transcribed locally", "Audio stays on the device".
 - [ ] The native recognizer never sends audio to Apple's servers, verified by the forced on-device setting and the traffic check.
-- [ ] Time from releasing the shortcut to the transcript is measured and written in the completion notes.
+- [ ] Time from releasing the shortcut to the transcript is measured and written in the Outcome.
 
-## Outcomes
+## Expected outcomes
 
 - Push-to-talk, both recognizers, the recognizer rule, the typed-goal fallback, and the `submitGoal` RPC call.
 
@@ -64,6 +64,6 @@ Audio never leaves the Mac, and the native recognizer can never fall back to the
 - The wake word: [OBJ-16](OBJ-16-mac-wake-word.md).
 - Repeating the goal back and confirming: [OBJ-17](OBJ-17-goal-confirmation.md).
 
-## Completion notes
+## Outcome
 
-_Fill in when done: what was built, where, decisions made, and anything the next objective needs to know._
+_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._

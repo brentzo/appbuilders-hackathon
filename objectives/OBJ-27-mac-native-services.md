@@ -38,7 +38,7 @@ Each service follows a contract from [OBJ-01](OBJ-01-task-record-schemas.md), so
 - [SPEC-03](../specs/03-lane-routing.md) (lanes, busy windows) and [SPEC-08](../specs/08-device-bridge.md) (pairing, connection state).
 - [docs/lane-router.md](../docs/lane-router.md), "Checks".
 - [SPEC-11](../specs/11-user-facing-errors.md), "Bridge down" and "Unpaired device".
-- [OBJ-14](OBJ-14-mac-app-shell.md) completion notes.
+- [OBJ-14](OBJ-14-mac-app-shell.md) Outcome.
 
 ## Tasks
 
@@ -59,7 +59,7 @@ Each service follows a contract from [OBJ-01](OBJ-01-task-record-schemas.md), so
 - [ ] Secrets are only in the Keychain.
 - [ ] The pairing screen and connection state look right in light and dark mode.
 
-## Outcomes
+## Expected outcomes
 
 - Window services, Keychain secrets, the pairing screen, and connection state in the Mac app, all behind the OBJ-01 contracts.
 
@@ -69,6 +69,6 @@ Each service follows a contract from [OBJ-01](OBJ-01-task-record-schemas.md), so
 - Pairing logic, crypto, and the bridge connection: [OBJ-21](OBJ-21-mac-bridge-client-and-pairing.md) (Jepoy).
 - Tiling decisions and the consent panel: [OBJ-20](OBJ-20-window-tiling.md).
 
-## Completion notes
+## Outcome
 
-_Fill in when done: what was built, where, decisions made, and anything the next objective needs to know._
+_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._

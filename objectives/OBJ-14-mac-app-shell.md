@@ -56,7 +56,7 @@ Permission onboarding is the first thing users see, so it must be clear and frie
 - [ ] The app calls the harness `ping` and receives events.
 - [ ] No raw error text from the harness or macOS reaches the user.
 
-## Outcomes
+## Expected outcomes
 
 - The `mac/` Xcode project with menu bar, onboarding, settings, harness supervision, RPC client, and the error presenter.
 - Build and run instructions in `mac/README.md`.
@@ -66,6 +66,6 @@ Permission onboarding is the first thing users see, so it must be clear and frie
 - Voice: [OBJ-15](OBJ-15-mac-voice-intake.md). Overlay and cursors: [OBJ-18](OBJ-18-cursor-overlay-and-motion.md).
 - Executing GUI actions: SPEC-05, not finalized.
 
-## Completion notes
+## Outcome
 
-_Fill in when done: what was built, where, decisions made, and anything the next objective needs to know._
+_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._

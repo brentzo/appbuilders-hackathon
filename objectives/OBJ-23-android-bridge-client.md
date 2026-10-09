@@ -34,8 +34,8 @@ After this objective, the phone and Mac can exchange messages in both directions
 ## Read first
 
 - [SPEC-08](../specs/08-device-bridge.md), all requirements, scenarios, and Decisions.
-- `protocol/docs/pairing.md` and [OBJ-02](OBJ-02-bridge-envelope-and-crypto.md) completion notes, including the test vectors.
-- [OBJ-13](OBJ-13-bridge-relay-server.md) and [OBJ-22](OBJ-22-android-app-shell.md) completion notes.
+- `protocol/docs/pairing.md` and [OBJ-02](OBJ-02-bridge-envelope-and-crypto.md) Outcome, including the test vectors.
+- [OBJ-13](OBJ-13-bridge-relay-server.md) and [OBJ-22](OBJ-22-android-app-shell.md) Outcome.
 
 ## Tasks
 
@@ -56,7 +56,7 @@ After this objective, the phone and Mac can exchange messages in both directions
 - [ ] A command from the Mac reaches the backgrounded phone within 2 seconds on a normal connection.
 - [ ] Keys never appear in files or logs.
 
-## Outcomes
+## Expected outcomes
 
 - The bridge client in the foreground service, QR pairing, connection state, and unpairing.
 
@@ -64,6 +64,6 @@ After this objective, the phone and Mac can exchange messages in both directions
 
 - Phone tools the Mac can call and phone-or-laptop routing: SPEC-09 and SPEC-10, not finalized.
 
-## Completion notes
+## Outcome
 
-_Fill in when done: what was built, where, decisions made, and anything the next objective needs to know._
+_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._

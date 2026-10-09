@@ -56,7 +56,7 @@ The router checks what the target app actually supports and picks the cheapest l
 - [ ] A ghost can never receive a keystroke tool.
 - [ ] Every routed subtask has a stored reason.
 
-## Outcomes
+## Expected outcomes
 
 - Router module, capability cache, the probe call, and routing events.
 
@@ -67,6 +67,6 @@ The router checks what the target app actually supports and picks the cheapest l
 - Actually driving apps (clicks, presses, DevTools): SPEC-05, not finalized.
 - Drawing ghost cursors: [OBJ-18](OBJ-18-cursor-overlay-and-motion.md) and [OBJ-19](OBJ-19-rive-cat-cursor.md).
 
-## Completion notes
+## Outcome
 
-_Fill in when done: what was built, where, decisions made, and anything the next objective needs to know._
+_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._

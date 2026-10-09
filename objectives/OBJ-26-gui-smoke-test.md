@@ -58,7 +58,7 @@ If the answer is no, the team needs to know before building the harness around i
 - [ ] If any task fails, the doc names the failure pattern (wrong element, invalid output, no effect, too many elements) and suggests a fix to try.
 - [ ] Peak memory with the model loaded is recorded, for the Whisper choice in [OBJ-11](OBJ-11-whisper-bake-off.md).
 
-## Outcomes
+## Expected outcomes
 
 - `models/gui/SMOKE-TEST.md` with results and the verdict.
 - The throwaway script, committed under `models/gui/` for reruns, clearly marked as not product code.
@@ -69,6 +69,6 @@ If the answer is no, the team needs to know before building the harness around i
 - Vision, coordinates, and screenshots (p1).
 - Building `gui_act` in the harness.
 
-## Completion notes
+## Outcome
 
-_Fill in when done: what was built, where, decisions made, and anything the next objective needs to know._
+_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._

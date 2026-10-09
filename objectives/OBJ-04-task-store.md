@@ -57,7 +57,7 @@ Everything is kept forever, including screenshots, as a demo-phase decision.
 - [ ] Every status change produces exactly one event.
 - [ ] No code path deletes tasks, steps, logs, or screenshots.
 
-## Outcomes
+## Expected outcomes
 
 - The task store module, database migrations, and history RPC methods.
 - A documented on-disk layout in `harness/README.md`.
@@ -68,6 +68,6 @@ Everything is kept forever, including screenshots, as a demo-phase decision.
 - Resume behavior: [OBJ-06](OBJ-06-resume-and-limits.md).
 - The past-tasks screen in the Mac and phone apps. This objective only provides the queries.
 
-## Completion notes
+## Outcome
 
-_Fill in when done: what was built, where, decisions made, and anything the next objective needs to know._
+_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._

@@ -43,6 +43,8 @@ Status: empty scaffold, nothing built yet.
 
 ## Objectives
 
-| ID | Objective | Status |
-|---|---|---|
-| [OBJ-13](../objectives/OBJ-13-bridge-relay-server.md) | Bridge relay server | todo |
+<!-- generated:product-objectives:start -->
+| ID | Objective | Assignee | Status |
+|---|---|---|---|
+| [OBJ-13](../objectives/OBJ-13-bridge-relay-server.md) | Bridge relay server | Jepoy | todo |
+<!-- generated:product-objectives:end -->

@@ -52,9 +52,9 @@ Audio before the wake word is never transcribed, stored, or sent anywhere.
 
 - [ ] SPEC-01 scenarios pass: "Wake word starts listening", "Wake word turned off", "Speech before the wake word is ignored".
 - [ ] Swift features match the Python reference on a fixed test clip.
-- [ ] Idle CPU use and the in-app miss and false-trigger rates are in the completion notes.
+- [ ] Idle CPU use and the in-app miss and false-trigger rates are in the Outcome.
 
-## Outcomes
+## Expected outcomes
 
 - On-device "Hey Yumi" detection in the Mac app, with the Swift feature port and tests.
 
@@ -63,6 +63,6 @@ Audio before the wake word is never transcribed, stored, or sent anywhere.
 - Training or retraining the model: [OBJ-12](OBJ-12-hey-yumi-wake-word.md).
 - Android wake word: [OBJ-24](OBJ-24-android-voice-intake.md).
 
-## Completion notes
+## Outcome
 
-_Fill in when done: what was built, where, decisions made, and anything the next objective needs to know._
+_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._

@@ -57,7 +57,7 @@ Every other harness objective plugs into this skeleton.
 - [ ] A client can connect to the socket and get a `ping` reply.
 - [ ] No user-facing string contains raw model or server errors.
 
-## Outcomes
+## Expected outcomes
 
 - A runnable `harness/` package with the forked loop, model client, tool registry, validation, and RPC server.
 - Setup instructions for the local model server.
@@ -68,6 +68,6 @@ Every other harness objective plugs into this skeleton.
 - Planning and scheduling: [OBJ-05](OBJ-05-planner-and-scheduler.md).
 - GUI tools (`gui_act`, `look`): SPEC-05, not finalized.
 
-## Completion notes
+## Outcome
 
-_Fill in when done: what was built, where, decisions made, and anything the next objective needs to know._
+_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._

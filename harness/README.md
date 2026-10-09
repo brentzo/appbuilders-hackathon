@@ -50,13 +50,15 @@ Status: empty scaffold, nothing built yet.
 
 ## Objectives
 
-| ID | Objective | Status |
-|---|---|---|
-| [OBJ-03](../objectives/OBJ-03-harness-skeleton.md) | Harness skeleton and local model client | todo |
-| [OBJ-04](../objectives/OBJ-04-task-store.md) | Task store and history | todo |
-| [OBJ-05](../objectives/OBJ-05-planner-and-scheduler.md) | Planner, scheduler, and task summary | todo |
-| [OBJ-06](../objectives/OBJ-06-resume-and-limits.md) | Resume and limits | todo |
-| [OBJ-07](../objectives/OBJ-07-lane-router-core.md) | Lane router core | todo |
-| [OBJ-08](../objectives/OBJ-08-locks-busy-windows-cap.md) | Window locks, busy windows, and cursor cap | todo |
-| [OBJ-09](../objectives/OBJ-09-ghost-handoff.md) | Ghost handoff | todo |
-| [OBJ-21](../objectives/OBJ-21-mac-bridge-client-and-pairing.md) | Mac bridge client and pairing (assigned to Jepoy) | todo |
+<!-- generated:product-objectives:start -->
+| ID | Objective | Assignee | Status |
+|---|---|---|---|
+| [OBJ-03](../objectives/OBJ-03-harness-skeleton.md) | Harness skeleton and local model client | Brent | todo |
+| [OBJ-04](../objectives/OBJ-04-task-store.md) | Task store and history | Brent | todo |
+| [OBJ-05](../objectives/OBJ-05-planner-and-scheduler.md) | Planner, scheduler, and task summary | Brent | todo |
+| [OBJ-06](../objectives/OBJ-06-resume-and-limits.md) | Resume and limits | Brent | todo |
+| [OBJ-07](../objectives/OBJ-07-lane-router-core.md) | Lane router core | Brent | todo |
+| [OBJ-08](../objectives/OBJ-08-locks-busy-windows-cap.md) | Window locks, busy windows, and cursor cap | Brent | todo |
+| [OBJ-09](../objectives/OBJ-09-ghost-handoff.md) | Ghost handoff | Brent | todo |
+| [OBJ-21](../objectives/OBJ-21-mac-bridge-client-and-pairing.md) | Mac bridge client and pairing | Jepoy | todo |
+<!-- generated:product-objectives:end -->

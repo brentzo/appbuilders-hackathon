@@ -59,12 +59,8 @@ Decisions and their reasons are recorded in each spec's "Decisions" section.
 
 ## For coding agents
 
-1. Start at [objectives/README.md](objectives/README.md). Pick an objective whose dependencies are `done`.
-2. Read the objective fully. It links the specs, docs, and product README you need.
-3. Set its status to `in-progress` before starting, work through its tasks, and check them off.
-4. Verify every item under "Expectations".
-5. Fill in "Completion notes" and set the status to `done`.
-6. Specs are the source of truth for behavior. If a spec and an objective disagree, the spec wins. Raise the conflict instead of guessing.
+Read [CLAUDE.md](CLAUDE.md) first.
+It lists the rules of this repo and the skills in [.claude/skills/](.claude/skills/) that describe how we work: objectives, specs, products, git, orchestration, contracts and stand-ins, user-facing errors, and grounding facts.
 
 ## Writing rules
 

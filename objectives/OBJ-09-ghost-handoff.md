@@ -38,7 +38,7 @@ If the main cursor gets stuck too, Yumi asks the user for help.
 - [SPEC-03](../specs/03-lane-routing.md), requirements 8 and 9, and the "Ghost handoff" scenarios.
 - [docs/lane-router.md](../docs/lane-router.md), "Handoff (promotion)".
 - [SPEC-11](../specs/11-user-facing-errors.md), "Stuck on screen".
-- [OBJ-06](OBJ-06-resume-and-limits.md) and [OBJ-08](OBJ-08-locks-busy-windows-cap.md) completion notes.
+- [OBJ-06](OBJ-06-resume-and-limits.md) and [OBJ-08](OBJ-08-locks-busy-windows-cap.md) Outcome.
 
 ## Tasks
 
@@ -56,7 +56,7 @@ If the main cursor gets stuck too, Yumi asks the user for help.
 - [ ] The handed-off subtask never repeats steps that already had an `ok` outcome.
 - [ ] The step log is intact after a handoff.
 
-## Outcomes
+## Expected outcomes
 
 - Failure counters, the handoff path, handoff cursor events, and the stuck-on-main pause.
 
@@ -65,6 +65,6 @@ If the main cursor gets stuck too, Yumi asks the user for help.
 - Drawing the fade and move: [OBJ-18](OBJ-18-cursor-overlay-and-motion.md) and [OBJ-19](OBJ-19-rive-cat-cursor.md) consume these events.
 - The "I'll show you" interaction from the stuck error: SPEC-05 and SPEC-06, not finalized.
 
-## Completion notes
+## Outcome
 
-_Fill in when done: what was built, where, decisions made, and anything the next objective needs to know._
+_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._

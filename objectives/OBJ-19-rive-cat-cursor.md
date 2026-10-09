@@ -36,7 +36,7 @@ A click is a pounce, and the paw tip must land exactly on the click point.
 
 - [SPEC-04](../specs/04-cursor-presence.md), requirements 10-18 and the "Cursor character" scenarios.
 - [character/README.md](../character/README.md), "State machine contract".
-- [OBJ-10](OBJ-10-yumi-cat-v0.md) and [OBJ-18](OBJ-18-cursor-overlay-and-motion.md) completion notes.
+- [OBJ-10](OBJ-10-yumi-cat-v0.md) and [OBJ-18](OBJ-18-cursor-overlay-and-motion.md) Outcome.
 
 ## Tasks
 
@@ -53,9 +53,9 @@ A click is a pounce, and the paw tip must land exactly on the click point.
 
 - [ ] SPEC-04 "Cursor character" scenarios pass: "Cat reacts to the wake word", "Click is a pounce on the exact point", "Playfulness does not slow the task", "Ghost cursors are littermates", "Reduce motion", "Cat stays sharp", "Stuck cat is gentle".
 - [ ] The pounce lands within a pixel of the click point at every display scale.
-- [ ] CPU use with 3 animating cats is measured and written in the completion notes.
+- [ ] CPU use with 3 animating cats is measured and written in the Outcome.
 
-## Outcomes
+## Expected outcomes
 
 - The cat cursor on the Mac overlay, wired to cursor states, ghost colors, pounce, and Reduce motion.
 
@@ -64,6 +64,6 @@ A click is a pounce, and the paw tip must land exactly on the click point.
 - Changing the Rive file or its contract: [character](../character/README.md) and [OBJ-10](OBJ-10-yumi-cat-v0.md).
 - The cat in the Android app: [OBJ-22](OBJ-22-android-app-shell.md).
 
-## Completion notes
+## Outcome
 
-_Fill in when done: what was built, where, decisions made, and anything the next objective needs to know._
+_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._
