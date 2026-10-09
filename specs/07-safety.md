@@ -240,8 +240,8 @@ Until it is reviewed, objectives may build against it but must not treat it as f
 - "Quit", "Force Quit", Command-Q, and Command-Option-Escape are blocked, because the permission table blocks quitting and force-quitting apps and these are the ways to do it. Decided 2026-10-09.
 - "Anything the harness cannot classify asks" applies only to key presses and to clicks in apps on a short risky-app list (Mail, Messages, WhatsApp, Finder, System Settings). Other clicks are allowed, so ordinary clicks never ask. Decided 2026-10-09.
 - Editing files Yumi created in this task is dropped from the allowed list for p0. No typed tool edits a file, and `write_new_file` never replaces one. Decided 2026-10-09.
+- Risky apps get a short per-app list of safe click labels, which are allowed. Other unlisted clicks in a risky app still ask. Mail starts with "New Message" and "Attach", so demo task 2 in [SPEC-05](05-mac-gui-control.md) asks only before Send. The list lives with the permission table in code, and a label is added only with a change to this spec. Brent chose this over allowing every unlisted click in risky apps. Decided 2026-10-09.
 
 ## Open questions
 
 - Review the "Draft copy" table and make it final or change it.
-- Clicks in risky apps: with the rule above, every click in Mail whose label is not on a list asks, including "New Message" and attaching a file. Demo task 2 in [SPEC-05](05-mac-gui-control.md) drafts and attaches in Mail and asks only before Send. Options: (a) a short per-app list of safe labels for risky apps, such as "New Message" and "Attach" in Mail; (b) ask only for unclassified key presses in risky apps, and allow unlisted clicks. Recommendation: (a), so the demo asks only before Send while risky apps stay strict.
