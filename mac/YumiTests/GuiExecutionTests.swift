@@ -1,3 +1,4 @@
+import Carbon.HIToolbox
 import CoreGraphics
 import Foundation
 import Testing
@@ -188,6 +189,19 @@ struct GuiExecutionTests {
         // Focus moving to a password field also stops it.
         let secure = await KeystrokeSender(poster: RecordingPoster()).type("secret", focusIsSecure: { true })
         #expect(secure.typed == 0)
+    }
+
+    @Test func typingStopsWhenATabMovesFocusIntoAPasswordField() async {
+        let poster = RecordingPoster()
+        let sender = KeystrokeSender(poster: poster)
+        // The login form: focus moves to the password field once the Tab arrives.
+        var tabbed = false
+        poster.onPost = { [unowned poster] in
+            if poster.events.last?.getIntegerValueField(.keyboardEventKeycode) == Int64(kVK_Tab) { tabbed = true }
+        }
+        let result = await sender.type("username\tpassword", focusIsSecure: { tabbed })
+        #expect(result.typed == "username\t".count, "nothing after the Tab, not even within the same chunk")
+        #expect(poster.events.count == 2 * result.typed)
     }
 
     @Test func keyCombosFollowTheContract() {

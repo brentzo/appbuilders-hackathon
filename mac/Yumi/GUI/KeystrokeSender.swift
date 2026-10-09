@@ -49,22 +49,31 @@ final class KeystrokeSender {
         cancelRequested = true
     }
 
-    /// Types `text` into the focused element. `focusIsSecure` is asked before every chunk.
+    /// Types `text` into the focused element. `focusIsSecure` is asked before every character, so
+    /// a Tab or Return that moves focus into a password field stops typing at once (SPEC-05 r7).
+    /// The cancel flag is checked between chunks (SPEC-06 r4).
     func type(_ text: String, focusIsSecure: () -> Bool) async -> TypingResult {
         cancelRequested = false
         let characters = Array(text)
         var typed = 0
-        while typed < characters.count {
-            if cancelRequested || focusIsSecure() { break }
-            let chunk = characters[typed..<min(typed + Self.chunkSize, characters.count)]
-            for character in chunk {
-                send(character)
-                try? await Task.sleep(for: Self.pauseBetweenKeys)
+        for (index, character) in characters.enumerated() {
+            if index.isMultiple(of: Self.chunkSize) {
+                if index > 0 { try? await Task.sleep(for: Self.pauseBetweenChunks) }
+                if cancelRequested { break }
             }
-            typed += chunk.count
-            try? await Task.sleep(for: Self.pauseBetweenChunks)
+            if focusIsSecure() { break }
+            send(character)
+            typed += 1
+            // A key that moves focus lands in the app a moment later; wait for it before the next check.
+            try? await Task.sleep(for: Self.movesFocus(character) ? Self.settleAfterFocusKey : Self.pauseBetweenKeys)
         }
         return TypingResult(typed: typed, total: characters.count)
+    }
+
+    static let settleAfterFocusKey: Duration = .milliseconds(120)
+
+    static func movesFocus(_ character: Character) -> Bool {
+        character == "\t" || character == "\n" || character == "\r" || character == "\r\n"
     }
 
     /// Presses one combination, for example `cmd+shift+e`. Returns false for a combo outside the
