@@ -130,3 +130,4 @@ The router checks what the target app actually supports and picks the cheapest l
   - OBJ-09: handoff sets `lane: "main"` and `routeReason: "promotedAfterFailure"` on the subtask; the main step then gets keystrokes through `{ lane: "main" }`.
   - OBJ-36: `LANE_ACTIONS` in `src/router/lanes.ts` is the single place to change what a lane may do.
   - OBJ-27 (Patrick): serve `getAppVersion` as described under "Not verified".
+  - OBJ-27 (Patrick): serve `resolveApp`, added on the OBJ-05 branch for the planner's `targetApp`: decode `ResolveAppParams`, find the installed app with that name the same way `open_app` resolves a name, without launching it, and answer `ResolveAppResult(bundleId:)`, or no bundle id when no installed app has that name. Until then the real Mac app answers "method not found", and a subtask that names its app by name fails routing with `unexpected`.

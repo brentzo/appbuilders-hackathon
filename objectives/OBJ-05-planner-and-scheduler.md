@@ -71,11 +71,12 @@ When everything is done, Yumi speaks a short summary.
 
 - **Result:** Done.
 - **Delivered:**
-  - `protocol/schemas/plan.json`: `Plan`, `PlannedSubtask` (with the optional `needsKeyboard` from SPEC-03 r17), and `PlannedSubtaskId`. `protocol/schemas/task.json` and `worker.json`: the optional `toolOutput` (`ToolOutput`, at most 4000 characters) on `Step` and `StepSummary`. Examples, regenerated types, and validation tests. Not breaking; the protocol stays at version 3.
+  - `protocol/schemas/plan.json`: `Plan`, `PlannedSubtask` (with the optional `needsKeyboard` from SPEC-03 r17 and `targetApp`), and `PlannedSubtaskId`. `protocol/schemas/task.json`: `TargetApp` (exactly one of `bundleId` or `name`, like `open_app`) and an optional `targetApp` on `Subtask`. `protocol/schemas/task.json` and `worker.json`: the optional `toolOutput` (`ToolOutput`, at most 4000 characters) on `Step` and `StepSummary`. `protocol/schemas/rpc.json`: the `resolveApp` method (`ResolveAppParams`, `ResolveAppResult`), answered by the mock Mac app for its installed apps. Examples, regenerated types, and validation and mock tests. Not breaking; the protocol stays at version 3.
   - `harness/src/planner/`: the planner prompt, the plan checks (schema, repeated and unknown ids, cycles, at most 12 subtasks), `makePlan` with one retry, `subtasksFromPlan` (carrying `needsKeyboard`), and the summary step with the SPEC-02 r9 fallback sentence.
   - `harness/src/scheduler/`: `runTask`, the scheduler, one subtask's step loop (every action through `checkAction`), the worker input builder, the structured result, plain-language action log lines (`describe.ts`), the lane seams (`routeWith`, `LaneRunner`, `registryTools`, `fileHelperLane`), and `localVoice`.
   - `harness/src/harness.ts`: `startHarness` creates the lane router once (`harness.router`).
-  - `harness/src/store/`: `savePlan` (the plan and the move to running in one transaction), and migration 3, which stores `toolOutput` on steps.
+  - `harness/src/router/`: the router reads the planner's `targetApp`, resolves a name with `resolveApp` (`macAppResolve`), stores the result as `target`, and routes on it.
+  - `harness/src/store/`: `savePlan` (the plan and the move to running in one transaction), migration 3 (`toolOutput` on steps), and migration 4 (`targetApp` on subtasks).
   - `harness/src/worker/prompt.ts`: a recent step shows its tool output as one quoted JSON string, marked as data.
   - `harness/src/config.ts`: `parallelSlots` from `YUMI_MODEL_PARALLEL_SLOTS`, default 3.
   - `harness/test/mock-model-server.ts`: an optional responder, so concurrent requests are answered by what they ask.
@@ -95,22 +96,28 @@ When everything is done, Yumi speaks a short summary.
   - `d6bc62a test(harness): keep the scheduler tests steady on a loaded machine`
   - `a248b18 feat(protocol): add the tool output to a step and the worker's recent steps`
   - `0ac6cdf feat(harness): give the next steps what a tool returned`
-  - `docs(objectives): update the OBJ-05 outcome after the router, gate, and tool output` (this Outcome)
+  - `49c071d docs(objectives): update the OBJ-05 outcome after the router, gate, and tool output`
+  - `feat(protocol): let the planner name the app a subtask works in`
+  - `feat(harness): route planned subtasks by the app the planner named`
+  - `docs(objectives): record targetApp and leave submitGoal to OBJ-17` (this Outcome)
 - **Expectations:**
   - "Planner splits a goal into subtasks": `test/scheduler.test.ts`, "Scenario: Planner splits a goal into subtasks". For "summarize the 5 PDFs in Downloads into one note", at the moment the task leaves planning it has one subtask reading each of the 5 PDFs and one writing the note, the note depends on all 5, and the task is running. The run reads 5 text files in a temporary home folder with OBJ-37's typed file tools, through the router and the gate, and writes the note.
   - "Task finishes and reports back": same file, "Scenario: Task finishes and reports back". Every subtask is done, the task is done with the summary saved, and a bare app client on the real local socket receives `speak` with "Done. I put the summary of all 5 PDFs in a new note called PDF Summary.", valid as `Speak`.
   - Overlap, measured: "runs independent subtasks at the same time, up to the parallel slots". With the mock taking 60 ms per worker step and 3 slots, the first three reads ran over 0-222 ms, 1-223 ms, and 1-222 ms, the last two over 229-421 ms, and exactly 3 requests were in flight at most. 22 worker steps took 958 ms, against 1320 ms one after another. With one slot, one at a time. The note's first step started after the last read finished.
+  - Routing planned UI subtasks: `test/scheduler.test.ts`, "routing planned UI subtasks with the protocol's mock Mac app". With `npm run mock:mac` on the harness's socket, a planned subtask with `targetApp` "Google Chrome" is resolved to `com.google.Chrome` and routed to `ghost` (`backgroundCapable`), and one with `targetApp` "Keynote" and `needsKeyboard` to `main` (`needsKeyboard`). A name no installed app has fails the task with `unsupportedRequest`.
   - A broken plan never reaches the scheduler: "fails the task after the planner's second broken plan". Two cyclic plans: two requests, nothing routed, no subtasks saved, the task failed, and a `UserError` of kind `unexpected` with no technical text.
   - `python3 scripts/verify.py` passes: docs, protocol (282 tests), harness typecheck, lint, format, and 308 tests, bridge, the Mac build and tests, and Android. The harness suite also passed six runs at once, three suites in parallel twice.
 - **Not verified:**
   - The real model. The brief said not to load it, so the planner prompt, the summary prompt, and plan quality were tested only with the mock. To check: start the server as in `harness/README.md` with `--max-num-seqs 3`, then call `runTask` on a planning task.
   - Real parallel decoding. mlx-vlm 0.7.6 decodes concurrent requests in one continuous batch with per-request logits processors (`mlx_vlm/server/generation.py`, `--max-num-seqs` in `server/cli.py`), but neither the speed-up nor the memory use with 3 sequences on 16 GB was measured. The default of 3 is an estimate, and so is the 4000-character tool output bound (about a page of text per step, five steps per prompt).
   - The Docker Swift and Kotlin compile checks (Docker was not running). The Mac build compiled the generated Swift, and the generated Kotlin compiled locally with `kotlinc` 2.4.21, the serialization plugin, and `-Werror`. CI runs the Docker checks on push.
-  - `submitGoal` does not start a task yet; see "For the next objectives".
+  - `resolveApp` on the real Mac app: it does not serve it yet (OBJ-27, Patrick) and answers "method not found", so a subtask that names its app by name fails routing with `unexpected` until it does. Steps for Patrick are in OBJ-07's Outcome.
+  - `submitGoal` does not start a task: Brent left it to OBJ-17 (see "For the next objectives").
 - **Decisions and deviations:**
   - Plan ids are short planner-picked words, not Uuids, so the model can write dependencies. The harness gives each subtask a Uuid.
   - The plan limit is 12 subtasks (SPEC-02 sets no number). It is in the harness and in the schema sent to the model, not in the protocol.
-  - Plans carry no target app, so the router sends every planned subtask to `helper` (`noUI`). Only the helper lane has a runner until OBJ-36; a subtask routed to ghost or main fails until then.
+  - The planner names the app a UI subtask works in as `targetApp`, by the name the user sees, because bundle ids from memory are unreliable (see `OpenAppCall`). The router resolves a name through the Mac app's new `resolveApp` and stores the bundle id as `target`; a name no installed app has fails routing with `unsupportedRequest`, as the probe answers for an app that is not installed. No `targetApp` is a helper, as before. A `needsKeyboard` subtask's name is resolved too, though not probed, so the main lane knows its app.
+  - Only the helper lane has a runner until OBJ-36; a subtask routed to ghost or main fails until then.
   - Workers see only the last 5 steps of their own subtask, so the planner is told to pass work between subtasks through files named in both instructions. What a tool returned reaches the next steps of the same subtask in `toolOutput` (Brent's decision), never another subtask.
   - A helper's observation is empty (`windowTitle: ""`, no elements), because it has no window.
   - Every tool call goes through `checkAction` with the user's home folder, and the step stores the gate's level. Only `allowed` runs. `ask` and `blocked` are recorded as blocked steps with an action log line ("Did not ... because it needs your approval first" or "... because Yumi's safety rules do not allow it") and logged as `step.needsApproval` or `step.blocked`; the worker is told and can finish as stuck. `ask` ends the subtask as `blocked`, because questions are not wired up yet (OBJ-38).
@@ -122,7 +129,7 @@ When everything is done, Yumi speaks a short summary.
   - A task from the phone is spoken on the Mac until OBJ-25 (Brent's decision); `localVoice` logs `voice.originNotReachable` when it knows the Mac's device id.
   - `savePlan` emits the task's change to running first, then one event per subtask, all after the commit.
 - **For the next objectives:**
-  - Whoever wires confirmation (OBJ-17): when a task reaches planning, call `runTask(taskId, deps)` with `store: harness.store`, `route: routeWith(harness.router)`, `lanes: { helper: fileHelperLane({ home: os.homedir(), logger }) }`, `slots: config.model.parallelSlots`, `home: os.homedir()`, the Mac's `deviceId`, and `voice: localVoice(harness.server, logger, macDeviceId)`.
+  - OBJ-17: `submitGoal` is not wired to `runTask` on purpose. Starting work straight from `submitGoal` would skip the repeat-back and the confirm (SPEC-01 r4, OBJ-17.7), so Brent left it to OBJ-17's harness flow. When a task reaches planning, call `runTask(taskId, deps)` with `store: harness.store`, `route: routeWith(harness.router)`, `lanes: { helper: fileHelperLane({ home: os.homedir(), logger }) }`, `slots: config.model.parallelSlots`, `home: os.homedir()`, the Mac's `deviceId`, and `voice: localVoice(harness.server, logger, macDeviceId)`.
   - OBJ-36: add ghost and main to `lanes` as `LaneRunner`s (an `observe` that calls the Mac app and tools), and run element actions through `checkAction` with their resolved element and `observation.app`, as `runTool` does for tools.
   - OBJ-38: questions, approvals, pause, and cancel plug into `src/scheduler/subtask-runner.ts` (`ask`, the `ask` level) and the external `signal` of `runTask`. The Try again and Skip this step buttons of `stepFailed` need a way to rerun or skip one subtask.
   - OBJ-06: resume reads `toolOutput` from the stored steps, so a resumed worker sees what its tools returned.
