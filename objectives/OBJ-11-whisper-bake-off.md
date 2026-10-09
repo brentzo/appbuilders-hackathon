@@ -5,7 +5,7 @@ product: models
 assignee: Jepoy
 touches: [mac, android]
 specs: [SPEC-01]
-status: blocked
+status: in-progress
 priority: p0
 depends-on: []
 integrates-with: []
@@ -39,8 +39,8 @@ Android Whisper is p1 in SPEC-01 and SPEC-10, so its phone-specific benchmark is
 
 ## Tasks
 
-- [ ] **OBJ-11.1** Record about 20 real Taglish goals from the team, with consent, including names, numbers, and app names. Store them in the team's shared storage, not in git.
-- [ ] **OBJ-11.2** Write the correct transcript for each and commit the transcripts to `models/whisper/transcripts/`.
+- [x] **OBJ-11.1** Record about 20 real Taglish goals from the team, with consent, including names, numbers, and app names. Store them in the team's shared storage, not in git.
+- [x] **OBJ-11.2** Write the correct transcript for each and commit the transcripts to `models/whisper/transcripts/`.
 - [x] **OBJ-11.3** Write a script that evaluates one selected model against a preloaded local endpoint, supporting both Mac runtimes: WhisperKit and whisper.cpp. Run it once per selected model/runtime combination when Mac access and recordings are available.
 - [ ] **OBJ-11.4** Measure word error rate and warm end-of-speech-to-transcript latency for every Mac combination. Also run about 10 plain English commands to decide whether Whisper alone is fast enough for English on the Mac under SPEC-01 requirements 2 and 3.
 - [ ] **OBJ-11.5** Measure memory on the Mac while Qwen3.5-9B and the wake word model are also loaded. Use the peak memory recorded in [OBJ-26](OBJ-26-gui-smoke-test.md) if it is done.
@@ -69,6 +69,5 @@ Android Whisper is p1 in SPEC-01 and SPEC-10, so its phone-specific benchmark is
 
 ## Outcome
 
-Blocked: the team has not provided consented Taglish and English recordings or Mac access for the WhisperKit and whisper.cpp runs, latency and memory measurements, model-size verification, and model choice.
-The benchmark runner and its local-server test are complete, and Android p1 work is split into OBJ-28.
-Unblock when the team provides the approved recording corpus and access to the Mac.
+In progress, unblocked 2026-10-09: Brent recorded the corpus (20 Taglish and 10 English clips on the MacBook Air's built-in microphone, with his own consent) and the runs happen on his Mac.
+Recordings are in `~/Yumi recordings/whisper/` outside git; transcripts are in `models/whisper/transcripts.jsonl`.
