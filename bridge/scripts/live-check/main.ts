@@ -1,6 +1,6 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import { PROTOCOL_VERSION } from "@yumi/protocol/types";
-import { liveScenarios, runLiveCheck } from "./scenarios.ts";
+import { chooseScenarios, runLiveCheck } from "./scenarios.ts";
 
 // Runs the relay side of the SPEC-08 scenarios against a deployed relay and prints a Markdown report (OBJ-30).
 // Usage: npm run live-check -- [--url wss://yumibridge.studiokova.co] [--skip-slow]
@@ -17,8 +17,8 @@ if (!url.startsWith("wss://") && !url.startsWith("ws://127.0.0.1") && !url.start
 
 const health = await readHealth(url);
 const started = new Date();
-const results = await runLiveCheck(url, { advance: (ms) => sleep(ms) }, undefined, { skipSlow });
-const skipped = liveScenarios.filter((s) => skipSlow && s.slow).map((s) => s.name);
+const results = await runLiveCheck(url, { advance: (ms) => sleep(ms) }, { skipSlow });
+const skipped = chooseScenarios({ skipSlow }).skipped.map((s) => s.name);
 
 console.log(`# Relay live check\n`);
 console.log(`- Relay: \`${url}\``);

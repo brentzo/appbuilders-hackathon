@@ -22,7 +22,7 @@ export interface Scenario {
   spec: string;
   /** Waits out the 30-second pairing window on a real clock. */
   slow?: boolean;
-  run(context: Context): Promise<void>;
+  run(run: ScenarioRun): Promise<void>;
 }
 
 export interface ScenarioResult {
@@ -34,14 +34,31 @@ export interface ScenarioResult {
   ms: number;
 }
 
-/** Long enough for a deployed relay to notice that a socket closed. */
-const SETTLE_MS = 400;
-const BAD_SIGNATURE = `${"A".repeat(86)}==`;
-const UNPAIR_AFTER_MS = 3000;
+export interface LiveCheckOptions {
+  /** Run only the scenarios with these names. */
+  only?: string[];
+  /** Leave out the scenarios that wait out the pairing window. */
+  skipSlow?: boolean;
+  /** The scenarios to choose from; the live scenarios unless a test passes its own. */
+  scenarios?: Scenario[];
+}
 
-export class Context {
+/** Long enough for a deployed relay behind a proxy to notice a closed socket, or to deliver a frame it should not. */
+const SETTLE_MS = 1000;
+const BAD_SIGNATURE = `${"A".repeat(86)}==`;
+/**
+ * The relay compares an unpair's time, from the sending device's clock, with its own pairing time, so an unpair sent
+ * right after pairing can be dropped when the clocks differ (OBJ-48). The scenarios unpair a few seconds after
+ * pairing, as a person would, and the results say so.
+ */
+const UNPAIR_AFTER_MS = 3000;
+/** Far enough in the past that a PC clock running minutes fast still makes the message expired at the relay. */
+const LONG_AGO_MS = 10 * 60_000;
+
+/** The devices one scenario uses, and the pairings it must undo when it ends. */
+export class ScenarioRun {
   private readonly devices: RelayDevice[] = [];
-  private readonly pairs: Array<{ mac: RelayDevice; phone: RelayDevice }> = [];
+  private readonly pairingsToUndo: Array<{ mac: RelayDevice; phone: RelayDevice }> = [];
 
   constructor(
     readonly url: string,
@@ -61,18 +78,24 @@ export class Context {
     return device;
   }
 
-  /** Two fresh devices, paired, which the context unpairs again when the scenario ends. */
+  /** Two fresh devices, paired, which are unpaired again when the scenario ends. */
   async paired(): Promise<{ mac: RelayDevice; phone: RelayDevice }> {
     const mac = await this.ready();
     const phone = await this.ready();
+    this.unpairAtEnd(mac, phone);
     await pair(mac, phone);
-    this.pairs.push({ mac, phone });
     return { mac, phone };
   }
 
-  /** Unpairs these two when the scenario ends. */
-  track(mac: RelayDevice, phone: RelayDevice): void {
-    this.pairs.push({ mac, phone });
+  /** Unpairs these two when the scenario ends, unless the scenario unpaired them itself. */
+  unpairAtEnd(mac: RelayDevice, phone: RelayDevice): void {
+    this.pairingsToUndo.push({ mac, phone });
+  }
+
+  /** The scenario unpaired these two itself. */
+  unpaired(mac: RelayDevice, phone: RelayDevice): void {
+    const index = this.pairingsToUndo.findIndex((p) => p.mac === mac && p.phone === phone);
+    if (index >= 0) this.pairingsToUndo.splice(index, 1);
   }
 
   /** Lets the relay notice a closed socket before the next step. */
@@ -80,18 +103,25 @@ export class Context {
     return sleep(SETTLE_MS);
   }
 
-  /** Attempts every unpair and socket close, then throws if any cleanup failed. */
+  /**
+   * Unpairs every pairing the scenario left, and acknowledges the unpair as the Mac, so a deployed relay keeps no test
+   * pairing and no unpair waiting for an acknowledgement. Then closes every socket, and throws if any of it failed.
+   */
   async close(): Promise<void> {
     const errors: string[] = [];
-    for (const { mac, phone } of this.pairs) {
+    for (const { mac, phone } of this.pairingsToUndo) {
       try {
-        const cleaner = await this.ready(phone.keys);
-        // A minute ahead, so a device clock behind the relay cannot make the relay drop it (see OBJ-48).
-        const unpair = makeUnpair(cleaner, mac, new Date(Date.now() + 60_000).toISOString());
-        cleaner.send(unpair);
-        await cleaner.next("ack");
+        const phoneAgain = await this.ready(phone.keys);
+        // A minute ahead, so a PC clock behind the relay cannot make the relay drop it (OBJ-48).
+        const unpair = makeUnpair(phoneAgain, mac, new Date(Date.now() + 60_000).toISOString());
+        phoneAgain.send(unpair);
+        await phoneAgain.next("ack");
+        await mac.close();
+        const macAgain = await this.ready(mac.keys);
+        await macAgain.next("unpair");
+        macAgain.send({ frame: "ack", messageId: unpair.id });
       } catch (error) {
-        errors.push(error instanceof Error ? error.message : String(error));
+        errors.push(messageOf(error));
       }
     }
     await Promise.all(
@@ -99,12 +129,16 @@ export class Context {
         try {
           await device.close();
         } catch (error) {
-          errors.push(error instanceof Error ? error.message : String(error));
+          errors.push(messageOf(error));
         }
       }),
     );
     if (errors.length) throw new Error(`cleanup failed: ${errors.join("; ")}`);
   }
+}
+
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 async function expectNothing(device: RelayDevice, frame: string): Promise<void> {
@@ -118,30 +152,38 @@ async function expectNotPaired(sender: RelayDevice, recipient: RelayDevice): Pro
   assert.deepEqual(await sender.next("notPaired", "ack", "targetOffline"), { frame: "notPaired", messageId: probe.id, to: recipient.keys.deviceId });
 }
 
+async function expectRouted(sender: RelayDevice, recipient: RelayDevice): Promise<void> {
+  const command = makeEnvelope(sender, recipient, "command", { action: "ping" });
+  sender.send({ frame: "envelope", envelope: command });
+  assert.deepEqual(await recipient.next("envelope"), { frame: "envelope", envelope: command });
+  assert.deepEqual(await sender.next("ack", "notPaired", "targetOffline"), { frame: "ack", messageId: command.id });
+}
+
 export const liveScenarios: Scenario[] = [
   {
     name: "Devices authenticate",
     spec: "pairing.md \"Connecting\"",
-    run: async (context) => {
-      await context.ready();
+    run: async (run) => {
+      await run.ready();
     },
   },
   {
     name: "Refusals name their reason",
     spec: "pairing.md \"Connecting\", \"Another protocol version\"",
-    run: async (context) => {
-      const forged = await context.connect(undefined, PROTOCOL_VERSION, BAD_SIGNATURE);
+    run: async (run) => {
+      const forged = await run.connect(undefined, PROTOCOL_VERSION, BAD_SIGNATURE);
       assert.deepEqual(forged.handshake, { frame: "refused", reason: "badSignature" });
-      const other = await context.connect(undefined, 999);
+      const other = await run.connect(undefined, 999);
       assert.deepEqual(other.handshake, { frame: "refused", reason: "unsupportedVersion", protocolVersion: PROTOCOL_VERSION });
     },
   },
   {
     name: "Pair the phone with the Mac",
     spec: "SPEC-08 \"Pair the phone with the Mac\"",
-    run: async (context) => {
-      const mac = await context.ready();
-      const phone = await context.ready();
+    run: async (run) => {
+      const mac = await run.ready();
+      const phone = await run.ready();
+      run.unpairAtEnd(mac, phone);
       const request = makePairRequest(phone, mac);
       phone.send(request);
       assert.deepEqual(await mac.next("pairRequest"), request);
@@ -149,14 +191,13 @@ export const liveScenarios: Scenario[] = [
       mac.send(accept);
       assert.deepEqual(await phone.next("pairAccept"), accept);
       assert.deepEqual(await mac.next("paired", "pairExpired"), { frame: "paired", device: phone.keys.deviceId });
-      context.track(mac, phone);
     },
   },
   {
     name: "Messages pass through unchanged",
     spec: "SPEC-08 \"VPS cannot read messages\" (the relay forwards ciphertext as is)",
-    run: async (context) => {
-      const { mac, phone } = await context.paired();
+    run: async (run) => {
+      const { mac, phone } = await run.paired();
       const command = makeEnvelope(mac, phone, "command", { action: "ping" });
       mac.send({ frame: "envelope", envelope: command });
       assert.deepEqual(await phone.next("envelope"), { frame: "envelope", envelope: command });
@@ -170,10 +211,10 @@ export const liveScenarios: Scenario[] = [
   {
     name: "Command to an offline device fails at once",
     spec: "SPEC-08 \"Command to an offline device fails at once\"",
-    run: async (context) => {
-      const { mac, phone } = await context.paired();
+    run: async (run) => {
+      const { mac, phone } = await run.paired();
       await phone.close();
-      await context.settle();
+      await run.settle();
       const command = makeEnvelope(mac, phone, "command", { action: "set_alarm" });
       mac.send({ frame: "envelope", envelope: command });
       assert.deepEqual(await mac.next("targetOffline", "ack"), { frame: "targetOffline", messageId: command.id, to: phone.keys.deviceId });
@@ -182,28 +223,44 @@ export const liveScenarios: Scenario[] = [
   {
     name: "Result survives a short reconnect",
     spec: "SPEC-08 \"Result survives a short reconnect\"",
-    run: async (context) => {
-      const { mac, phone } = await context.paired();
+    run: async (run) => {
+      const { mac, phone } = await run.paired();
       await mac.close();
-      await context.settle();
+      await run.settle();
       const result = makeEnvelope(phone, mac, "result", { replyTo: "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8" });
       phone.send({ frame: "envelope", envelope: result });
       assert.deepEqual(await phone.next("ack"), { frame: "ack", messageId: result.id });
-      const back = await context.ready(mac.keys);
+      const back = await run.ready(mac.keys);
       assert.deepEqual(await back.next("envelope"), { frame: "envelope", envelope: result });
       back.send({ frame: "ack", messageId: result.id });
-      await context.settle();
+      await run.settle();
       await back.close();
-      const again = await context.ready(mac.keys);
+      const again = await run.ready(mac.keys);
       await expectNothing(again, "envelope");
+    },
+  },
+  {
+    name: "A message sent twice is delivered once",
+    spec: "SPEC-08 \"Duplicate delivery runs once\" (the relay's part: an acknowledged message is not delivered again)",
+    run: async (run) => {
+      const { mac, phone } = await run.paired();
+      const event = makeEnvelope(phone, mac, "event", { progress: 1 });
+      phone.send({ frame: "envelope", envelope: event });
+      assert.deepEqual(await mac.next("envelope"), { frame: "envelope", envelope: event });
+      assert.deepEqual(await phone.next("ack"), { frame: "ack", messageId: event.id });
+      mac.send({ frame: "ack", messageId: event.id });
+      await run.settle();
+      phone.send({ frame: "envelope", envelope: event });
+      assert.deepEqual(await phone.next("ack"), { frame: "ack", messageId: event.id }, "a resent message was not acknowledged again");
+      await expectNothing(mac, "envelope");
     },
   },
   {
     name: "Expired command is not delivered",
     spec: "SPEC-08 \"Expired command is not run\" (the relay's part: an expired message is never delivered)",
-    run: async (context) => {
-      const { mac, phone } = await context.paired();
-      const late = makeEnvelope(mac, phone, "command", { action: "set_alarm" }, new Date(Date.now() - 60_000).toISOString());
+    run: async (run) => {
+      const { mac, phone } = await run.paired();
+      const late = makeEnvelope(mac, phone, "command", { action: "set_alarm" }, new Date(Date.now() - LONG_AGO_MS).toISOString());
       mac.send({ frame: "envelope", envelope: late });
       assert.deepEqual(await mac.next("expired", "ack"), { frame: "expired", messageId: late.id, to: phone.keys.deviceId });
       await expectNothing(phone, "envelope");
@@ -212,29 +269,26 @@ export const liveScenarios: Scenario[] = [
   {
     name: "Message from an unknown device is dropped",
     spec: "SPEC-08 \"Message from an unknown device is dropped\" (the relay refuses to route it)",
-    run: async (context) => {
-      const { mac } = await context.paired();
-      const stranger = await context.ready();
+    run: async (run) => {
+      const { mac } = await run.paired();
+      const stranger = await run.ready();
       await expectNotPaired(stranger, mac);
       await expectNothing(mac, "envelope");
     },
   },
   {
-    name: "Unpair a device",
-    spec: "SPEC-08 \"Unpair a device\"",
-    run: async (context) => {
-      const mac = await context.ready();
-      const phone = await context.ready();
-      await pair(mac, phone);
+    name: "Unpair from the phone",
+    spec: `SPEC-08 "Unpair a device", with the Mac offline and a retry (sent ${UNPAIR_AFTER_MS / 1000} s after pairing; OBJ-48)`,
+    run: async (run) => {
+      const { mac, phone } = await run.paired();
       await mac.close();
-      // As a person would, unpair a few seconds after pairing. The relay compares the unpair's time, from the
-      // device's clock, with its own, so an unpair sent sooner can be dropped when the clocks differ (OBJ-48).
       await sleep(UNPAIR_AFTER_MS);
       const unpair = makeUnpair(phone, mac, new Date().toISOString());
       phone.send(unpair);
       assert.deepEqual(await phone.next("ack"), { frame: "ack", messageId: unpair.id });
+      run.unpaired(mac, phone);
       await expectNotPaired(phone, mac);
-      const back = await context.ready(mac.keys);
+      const back = await run.ready(mac.keys);
       assert.deepEqual(await back.next("unpair"), unpair);
       back.send({ frame: "ack", messageId: unpair.id });
       phone.send(unpair);
@@ -242,11 +296,29 @@ export const liveScenarios: Scenario[] = [
     },
   },
   {
+    name: "Unpair from the Mac, then pair again",
+    spec: `SPEC-08 "Unpair a device" from the other side; pairing.md "Unpairing" step 7 (sent ${UNPAIR_AFTER_MS / 1000} s after pairing; OBJ-48)`,
+    run: async (run) => {
+      const { mac, phone } = await run.paired();
+      await sleep(UNPAIR_AFTER_MS);
+      const unpair = makeUnpair(mac, phone, new Date().toISOString());
+      mac.send(unpair);
+      assert.deepEqual(await mac.next("ack"), { frame: "ack", messageId: unpair.id });
+      run.unpaired(mac, phone);
+      assert.deepEqual(await phone.next("unpair"), unpair);
+      phone.send({ frame: "ack", messageId: unpair.id });
+      await expectNotPaired(mac, phone);
+      run.unpairAtEnd(mac, phone);
+      await pair(mac, phone);
+      await expectRouted(mac, phone);
+    },
+  },
+  {
     name: "Phone cancels pairing",
     spec: "pairing.md \"The answer window\", Cancelled",
-    run: async (context) => {
-      const mac = await context.ready();
-      const phone = await context.ready();
+    run: async (run) => {
+      const mac = await run.ready();
+      const phone = await run.ready();
       phone.send(makePairRequest(phone, mac));
       await mac.next("pairRequest");
       phone.send({ frame: "pairCancel", from: phone.keys.deviceId, to: mac.keys.deviceId });
@@ -261,12 +333,12 @@ export const liveScenarios: Scenario[] = [
     name: "Mac does not answer pairing, then answers too late",
     spec: "SPEC-08 \"Mac does not answer pairing\", \"Mac answers pairing too late\"",
     slow: true,
-    run: async (context) => {
-      const mac = await context.ready();
-      const phone = await context.ready();
+    run: async (run) => {
+      const mac = await run.ready();
+      const phone = await run.ready();
       phone.send(makePairRequest(phone, mac));
       await mac.next("pairRequest");
-      await context.clock.advance(31_000);
+      await run.clock.advance(31_000);
       assert.deepEqual(await phone.next("pairExpired", "pairAccept"), { frame: "pairExpired", device: mac.keys.deviceId });
       assert.deepEqual(await mac.next("pairExpired", "paired"), { frame: "pairExpired", device: phone.keys.deviceId });
       mac.send(makePairAccept(mac, phone));
@@ -278,45 +350,47 @@ export const liveScenarios: Scenario[] = [
   {
     name: "A device that needs an update keeps its pairing",
     spec: "SPEC-08 \"Device needs an update\", \"Command to a device that needs an update\", \"Devices reconnect after an update\"",
-    run: async (context) => {
-      const { mac, phone } = await context.paired();
+    run: async (run) => {
+      const { mac, phone } = await run.paired();
       await phone.close();
-      await context.settle();
-      const old = await context.connect(phone.keys, PROTOCOL_VERSION - 1);
+      await run.settle();
+      const old = await run.connect(phone.keys, PROTOCOL_VERSION - 1);
       assert.deepEqual(old.handshake, { frame: "refused", reason: "unsupportedVersion", protocolVersion: PROTOCOL_VERSION });
-      await context.settle();
+      await run.settle();
       const blocked = makeEnvelope(mac, phone, "command", { action: "set_alarm" });
       mac.send({ frame: "envelope", envelope: blocked });
       assert.deepEqual(await mac.next("targetNeedsUpdate", "targetOffline", "ack"), { frame: "targetNeedsUpdate", messageId: blocked.id, to: phone.keys.deviceId });
-      const updated = await context.ready(phone.keys);
-      const command = makeEnvelope(mac, updated, "command", { action: "set_alarm" });
-      mac.send({ frame: "envelope", envelope: command });
-      assert.deepEqual(await updated.next("envelope"), { frame: "envelope", envelope: command });
-      assert.deepEqual(await mac.next("ack", "targetOffline", "targetNeedsUpdate"), { frame: "ack", messageId: command.id });
+      const updated = await run.ready(phone.keys);
+      await expectRouted(mac, updated);
     },
   },
 ];
 
+/** Which scenarios run, and which are left out because they are slow. */
+export function chooseScenarios(options: LiveCheckOptions = {}): { chosen: Scenario[]; skipped: Scenario[] } {
+  const named = (options.scenarios ?? liveScenarios).filter((s) => (options.only ? options.only.includes(s.name) : true));
+  const skipped = named.filter((s) => options.skipSlow && s.slow);
+  return { chosen: named.filter((s) => !skipped.includes(s)), skipped };
+}
+
 /** Runs the scenarios in order, each with fresh devices. A failure is reported, never thrown. */
-export async function runLiveCheck(url: string, clock: Clock, only?: string[], options: { skipSlow?: boolean } = {}): Promise<ScenarioResult[]> {
-  const chosen = liveScenarios.filter((s) => (only ? only.includes(s.name) : true) && !(options.skipSlow && s.slow));
+export async function runLiveCheck(url: string, clock: Clock, options: LiveCheckOptions = {}): Promise<ScenarioResult[]> {
   const results: ScenarioResult[] = [];
-  for (const scenario of chosen) {
+  for (const scenario of chooseScenarios(options).chosen) {
     const started = Date.now();
-    const context = new Context(url, clock);
-    let detail = "";
+    const run = new ScenarioRun(url, clock);
+    const problems: string[] = [];
     try {
-      await scenario.run(context);
+      await scenario.run(run);
     } catch (error) {
-      detail = error instanceof Error ? error.message : String(error);
-    } finally {
-      try {
-        await context.close();
-      } catch (error) {
-        const cleanupError = error instanceof Error ? error.message : String(error);
-        detail = detail ? `${detail}; ${cleanupError}` : cleanupError;
-      }
+      problems.push(messageOf(error));
     }
+    try {
+      await run.close();
+    } catch (error) {
+      problems.push(messageOf(error));
+    }
+    const detail = problems.join("; ");
     results.push({ name: scenario.name, spec: scenario.spec, ok: detail === "", detail, ms: Date.now() - started });
   }
   return results;
