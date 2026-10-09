@@ -180,23 +180,24 @@ Some of their tasks wait on the open questions below.
 
 Raised 2026-10-09 while writing these objectives.
 Each needs a decision in the spec (spec-lifecycle skill), not in code.
+Open items name their owner; resolved items stay listed so the history is easy to follow.
 
 - **G1 Take-over vs approvals (SPEC-06 r2 and r5, SPEC-07 r11):** Resolved 2026-10-09 by Patrick: clicks on Yumi's own windows (cards, panels) never count as take-over, and there is no take-over pause while Yumi waits for the user and no UI lane is acting. Recorded in SPEC-06 r2 and Decisions.
 - **G2 Take-over vs password fields (SPEC-05 r7, SPEC-06 r2):** Resolved 2026-10-09 by Patrick, by the G1 rule: a password field Yumi hands to the user never pauses the task. Recorded in SPEC-05 r7 and SPEC-06 r2.
-- **G3 Voice on a delete card (SPEC-11 r9 vs SPEC-07 r11):** SPEC-11 says every button works by saying its label; SPEC-07 says a delete is approved only by a tap. OBJ-29 follows SPEC-07. Proposal: add an exception to SPEC-11 r9.
+- **G3 Voice on a delete card (SPEC-11 r9 vs SPEC-07 r11):** SPEC-11 says every button works by saying its label; SPEC-07 says a delete is approved only by a tap. OBJ-29 follows SPEC-07. Proposal: add an exception to SPEC-11 r9. Owner: Jepoy.
 - **G4 "Cannot classify" (SPEC-07 r6):** Resolved 2026-10-09 by Patrick: "Quit", "Force Quit", Command-Q, and Command-Option-Escape are blocked; "cannot classify asks" applies only to key presses and to clicks in the risky apps (Mail, Messages, WhatsApp, Finder, System Settings); other clicks are allowed. Recorded in SPEC-07 r6 and Decisions. Follow-up for Patrick in SPEC-07 Open questions: unlisted clicks in Mail would ask during demo task 2.
-- **G5 Missing copy (SPEC-05 r7, SPEC-07, SPEC-11):** SPEC-11 has no row for the SPEC-07 r5 blocked-action message, so the SPEC-11 copy test does not cover it. The SPEC-07 copy (password, declined send, one-file and several-folder delete cards, Messages send, several recipients) is drafted in SPEC-07 and waits for Patrick's review.
-- **G6 Missing contracts (OBJ-01):** The scope of `pause` (every lane or UI lanes only), the reply to the blocked-action card ("Keep going" or "Stop"), and the `ask` question and answer between the harness and the Mac app.
+- **G5 Missing copy (SPEC-05 r7, SPEC-07, SPEC-11):** SPEC-11 has no row for the SPEC-07 r5 blocked-action message, so the SPEC-11 copy test does not cover it. The SPEC-07 copy (password, declined send, one-file and several-folder delete cards, Messages send, several recipients) is drafted in SPEC-07 and waits for Patrick's review. Owner: Jepoy for the SPEC-11 row.
+- **G6 Missing contracts (OBJ-01):** The scope of `pause` (every lane or UI lanes only), the reply to the blocked-action card ("Keep going" or "Stop"), and the `ask` question and answer between the harness and the Mac app. Owner: Jepoy.
 - **G7 Paused by take-over:** Resolved 2026-10-09 by Patrick: "Paused. Say continue when you're ready, or cancel to stop for good." is spoken only for the stop shortcut and the menu bar "Stop"; a take-over pauses silently and shows the paused panel. Recorded in SPEC-06 r1, r2, and Decisions.
 - **G8 Resume by voice:** Resolved 2026-10-09 by Patrick: the button stays "Resume", and both "continue" and "resume" work by voice. Recorded in SPEC-06 r6 and Decisions.
-- **G9 GUI-created files (SPEC-05 r4):** The harness builds `files` from the step log, but a PDF exported through Keynote's menus is not in any tool call. OBJ-31.8 proposes watching the home folder during an attempt.
+- **G9 GUI-created files (SPEC-05 r4):** The harness builds `files` from the step log, but a PDF exported through Keynote's menus is not in any tool call. OBJ-31.8 proposes watching the home folder during an attempt. Owner: Brent.
 - **G10 Editing Yumi's own files (SPEC-07 r1):** Resolved 2026-10-09 by Patrick: dropped from the allowed list for p0. Recorded in SPEC-07 r1 and Decisions.
-- **G11 Two invalid outputs in a row on `main`:** Still open in [docs/task-record-schema.md](../docs/task-record-schema.md). OBJ-31 ends the attempt with `stuck` until decided.
-- **G12 Approval timeout on the Mac:** The 5-minute timeout comes from SPEC-09 r10 (approvals on the other device). Does it also apply when the approval is on the same Mac?
-- **G13 "Show what I did" (SPEC-11):** The button is p0 and opens the action log, but opening the log from the menu bar is p1 (SPEC-07 r19).
-- **G14 Orchestrator tools (SPEC-05 r9):** The limit is 8, but the spec does not name them. OBJ-31.2 proposes a list.
-- **G15 Screenshot retention (SPEC-07 r20 vs SPEC-02 r10):** SPEC-07 (p1) deletes screenshots after 7 days; SPEC-02 keeps them forever.
-- **G16 Stale pointers:** OBJ-01 (Jepoy), OBJ-03, OBJ-06, OBJ-07, and OBJ-09 (Brent), and OBJ-14 and OBJ-18 (Patrick) still say SPEC-05, SPEC-06, or SPEC-07 is "not finalized" or "not written yet" in Out of scope. Point them at OBJ-28 to OBJ-33.
+- **G11 Two invalid outputs in a row on `main`:** Still open in [docs/task-record-schema.md](../docs/task-record-schema.md). OBJ-31 ends the attempt with `stuck` until decided. Owner: Brent.
+- **G12 Approval timeout on the Mac:** The 5-minute timeout comes from SPEC-09 r10 (approvals on the other device). Does it also apply when the approval is on the same Mac? Owner: Brent.
+- **G13 "Show what I did" (SPEC-11):** The button is p0 and opens the action log, but opening the log from the menu bar is p1 (SPEC-07 r19). Owner: Jepoy.
+- **G14 Orchestrator tools (SPEC-05 r9):** The limit is 8, but the spec does not name them. OBJ-31.2 proposes a list. Owner: Brent.
+- **G15 Screenshot retention (SPEC-07 r20 vs SPEC-02 r10):** SPEC-07 (p1) deletes screenshots after 7 days; SPEC-02 keeps them forever. Owner: Brent.
+- **G16 Stale pointers:** OBJ-01 (Jepoy), OBJ-03, OBJ-06, OBJ-07, and OBJ-09 (Brent), and OBJ-14 and OBJ-18 (Patrick) still say SPEC-05, SPEC-06, or SPEC-07 is "not finalized" or "not written yet" in Out of scope. Point them at OBJ-28 to OBJ-33. Owner: each objective's owner.
 
 ### Resolved conflicts between specs
 
