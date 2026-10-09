@@ -12,12 +12,15 @@ enum TakeOverRule {
         var overYumiWindow: Bool
         /// Typing goes to one of Yumi's windows.
         var yumiHasKeyboard: Bool
+        /// A key press of Yumi's own shortcuts: push-to-talk or the stop shortcut. The user is
+        /// talking to Yumi, not taking over.
+        var isYumiShortcut = false
     }
 
     /// `uiLaneActing` is false while Yumi waits for the user (a card, a password it handed over)
     /// or is already paused: then no input pauses anything.
     static func isTakeOver(_ input: Input, uiLaneActing: Bool) -> Bool {
-        guard uiLaneActing, !input.tagged else { return false }
+        guard uiLaneActing, !input.tagged, !input.isYumiShortcut else { return false }
         if input.isKeyboard { return !input.yumiHasKeyboard }
         return !input.overYumiWindow
     }
@@ -28,13 +31,16 @@ enum TakeOverRule {
 @MainActor
 final class TakeOverWatcher {
     private let uiLaneActing: () -> Bool
+    /// Push-to-talk (as set now) and the stop shortcut.
+    private let yumiShortcuts: () -> [KeyShortcut]
     private let onTakeOver: () -> Void
     private var tap: CFMachPort?
     private var secureInput = false
     private let log = Logger(subsystem: "ph.appbuilders.yumi", category: "control")
 
-    init(uiLaneActing: @escaping () -> Bool, onTakeOver: @escaping () -> Void) {
+    init(uiLaneActing: @escaping () -> Bool, yumiShortcuts: @escaping () -> [KeyShortcut], onTakeOver: @escaping () -> Void) {
         self.uiLaneActing = uiLaneActing
+        self.yumiShortcuts = yumiShortcuts
         self.onTakeOver = onTakeOver
     }
 
@@ -77,11 +83,25 @@ final class TakeOverWatcher {
             tagged: event.getIntegerValueField(.eventSourceUserData) == KeystrokeSender.eventTag,
             isKeyboard: type == .keyDown,
             overYumiWindow: NSApp.windows.contains { $0.isVisible && !$0.ignoresMouseEvents && $0.frame.contains(point) },
-            yumiHasKeyboard: NSApp.isActive || NSApp.keyWindow != nil
+            yumiHasKeyboard: NSApp.isActive || NSApp.keyWindow != nil,
+            isYumiShortcut: type == .keyDown && Self.matches(
+                keyCode: UInt16(event.getIntegerValueField(.keyboardEventKeycode)), flags: event.flags, any: yumiShortcuts()
+            )
         )
         if TakeOverRule.isTakeOver(input, uiLaneActing: uiLaneActing()) {
             onTakeOver()
         }
+    }
+
+    /// Whether a key press is one of the shortcuts, with exactly its modifiers. Holding the
+    /// push-to-talk key repeats this key press, and every repeat matches too.
+    static func matches(keyCode: UInt16, flags: CGEventFlags, any shortcuts: [KeyShortcut]) -> Bool {
+        var modifiers: KeyShortcut.Modifiers = []
+        if flags.contains(.maskControl) { modifiers.insert(.control) }
+        if flags.contains(.maskAlternate) { modifiers.insert(.option) }
+        if flags.contains(.maskShift) { modifiers.insert(.shift) }
+        if flags.contains(.maskCommand) { modifiers.insert(.command) }
+        return shortcuts.contains { $0.keyCode == keyCode && $0.modifiers == modifiers }
     }
 
     /// While Secure Input is on, key presses never reach the tap; mouse movement still does

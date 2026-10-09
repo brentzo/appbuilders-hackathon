@@ -5,6 +5,8 @@ import OSLog
 /// no permission. The handler passes on every other hot key, so push-to-talk's still works.
 @MainActor
 final class StopShortcut {
+    /// Control-Option-Escape, as a shortcut the take-over watcher recognizes.
+    static let shortcut = KeyShortcut(keyCode: UInt16(kVK_Escape), modifiers: [.control, .option], keyLabel: "Esc")
     /// "YSTP".
     private static let signature: OSType = 0x5953_5450
     private let action: () -> Void

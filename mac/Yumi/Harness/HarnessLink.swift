@@ -86,6 +86,7 @@ final class HarnessLink {
         stopShortcut = shortcut
         let watcher = TakeOverWatcher(
             uiLaneActing: { [weak self] in self?.uiLaneActing ?? false },
+            yumiShortcuts: { [model] in [model.settings.pushToTalkShortcut, StopShortcut.shortcut] },
             onTakeOver: { [weak self] in self?.pause.stop(.takeOver) }
         )
         watcher.start()

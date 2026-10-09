@@ -1,3 +1,4 @@
+import Carbon.HIToolbox
 import CoreGraphics
 import Foundation
 import Testing
@@ -90,6 +91,21 @@ struct PauseControllerTests {
         #expect(!TakeOverRule.isTakeOver(input(overYumi: true), uiLaneActing: true), "clicking Yumi's own card")
         #expect(!TakeOverRule.isTakeOver(input(keyboard: true, yumiKeyboard: true), uiLaneActing: true))
         #expect(!TakeOverRule.isTakeOver(input(keyboard: true), uiLaneActing: false), "typing a password Yumi asked for")
+    }
+
+    @Test func pushToTalkAndTheStopShortcutAreNotTakingOver() {
+        let yumi = [KeyShortcut.defaultPushToTalk, StopShortcut.shortcut]
+        let space = UInt16(kVK_Space)
+        #expect(TakeOverWatcher.matches(keyCode: space, flags: .maskAlternate, any: yumi), "Option-Space")
+        #expect(TakeOverWatcher.matches(keyCode: UInt16(kVK_Escape), flags: [.maskControl, .maskAlternate], any: yumi))
+        #expect(!TakeOverWatcher.matches(keyCode: space, flags: [], any: yumi), "a plain space is typing")
+        #expect(!TakeOverWatcher.matches(keyCode: space, flags: [.maskAlternate, .maskShift], any: yumi))
+        // A push-to-talk key the user chose in settings.
+        let custom = KeyShortcut(keyCode: UInt16(kVK_ANSI_Y), modifiers: [.command, .shift], keyLabel: "Y")
+        #expect(TakeOverWatcher.matches(keyCode: UInt16(kVK_ANSI_Y), flags: [.maskCommand, .maskShift], any: [custom]))
+
+        let pushToTalk = TakeOverRule.Input(tagged: false, isKeyboard: true, overYumiWindow: false, yumiHasKeyboard: false, isYumiShortcut: true)
+        #expect(!TakeOverRule.isTakeOver(pushToTalk, uiLaneActing: true))
     }
 
     @Test func stopShortcutStopsLocallyAtOnceThenTellsTheHarness() async throws {
