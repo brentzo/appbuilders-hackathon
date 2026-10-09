@@ -78,7 +78,7 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-18](OBJ-18-cursor-overlay-and-motion.md) | Cursor overlay and motion | mac | Patrick | 04 | 14 | - | todo |
 | [OBJ-19](OBJ-19-rive-cat-cursor.md) | Rive cat cursor | mac | Patrick | 04 | 10, 18 | - | todo |
 | [OBJ-20](OBJ-20-window-tiling.md) | Window tiling with consent | mac | Patrick | 03 | 18, 27 | 08 | todo |
-| [OBJ-21](OBJ-21-mac-bridge-client-and-pairing.md) | Mac bridge client and pairing | harness | Jepoy | 08 | 02, 13 | 03, 27 | todo |
+| [OBJ-21](OBJ-21-mac-bridge-client-and-pairing.md) | Mac bridge client and pairing | harness | Jepoy | 08 | 02 | 03, 13, 27 | in-progress |
 | [OBJ-22](OBJ-22-android-app-shell.md) | Android app shell and foreground service | android | Brent | 10, 08, 01 | - | 10 | in-progress |
 | [OBJ-23](OBJ-23-android-bridge-client.md) | Android bridge client and pairing | android | Brent | 08 | 02, 13, 22 | - | todo |
 | [OBJ-24](OBJ-24-android-voice-intake.md) | Android voice intake and wake word | android | Brent | 01, 10 | 22 | 12 | todo |
@@ -87,6 +87,7 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-27](OBJ-27-mac-native-services.md) | Mac native services for the harness | mac | Patrick | 03, 08 | 14 | 07, 08, 21 | todo |
 | [OBJ-28](OBJ-28-android-whisper-bake-off.md) | Android Whisper bake-off | models | Jepoy | 01, 10 | - | 11, 24 | todo |
 | [OBJ-29](OBJ-29-protocol-mac-fixes.md) | Protocol v3, fit the contracts to real macOS | protocol | Brent | 05, 07 | 01 | 03, 26 | done |
+| [OBJ-30](OBJ-30-live-cross-device-bridge-acceptance.md) | Live cross-device bridge acceptance | bridge | Jepoy | 08 | 13, 21, 23, 27 | - | todo |
 <!-- generated:objectives-index:end -->
 
 ## Priority and blocking
@@ -102,21 +103,23 @@ Ranked by how many objectives each one holds up through hard dependencies:
 <!-- generated:objectives-priority:start -->
 | Rank | Objective | Assignee | Holds up (hard) | Holds up another person |
 |---|---|---|---|---|
-| 1 | OBJ-01 Task record schemas and cross-team contracts | Jepoy | 17 | Brent, Patrick |
-| 2 | OBJ-03 Harness skeleton and local model client | Brent | 7 | Patrick |
-| 3 | OBJ-14 Mac app shell, permissions, and harness link | Patrick | 7 | No |
+| 1 | OBJ-01 Task record schemas and cross-team contracts | Jepoy | 18 | Brent, Patrick |
+| 2 | OBJ-14 Mac app shell, permissions, and harness link | Patrick | 8 | Jepoy |
+| 3 | OBJ-03 Harness skeleton and local model client | Brent | 7 | Patrick |
 | 4 | OBJ-04 Task store and history | Brent | 6 | Patrick |
-| 5 | OBJ-02 Bridge envelope and end-to-end crypto | Jepoy | 4 | Brent |
+| 5 | OBJ-02 Bridge envelope and end-to-end crypto | Jepoy | 5 | Brent |
 | 6 | OBJ-18 Cursor overlay and motion | Patrick | 3 | No |
-| 7 | OBJ-05 Planner, scheduler, and task summary | Brent | 2 | No |
-| 8 | OBJ-07 Lane router core | Brent | 2 | No |
-| 9 | OBJ-13 Bridge relay server | Jepoy | 2 | Brent |
-| 10 | OBJ-15 Mac voice intake | Patrick | 2 | No |
-| 11 | OBJ-22 Android app shell and foreground service | Brent | 2 | No |
-| 12 | OBJ-06 Resume and limits | Brent | 1 | No |
-| 13 | OBJ-08 Window locks, busy windows, and cursor cap | Brent | 1 | No |
-| 14 | OBJ-10 Yumi cat v0 in Rive | Patrick | 1 | No |
-| 15 | OBJ-27 Mac native services for the harness | Patrick | 1 | No |
+| 7 | OBJ-22 Android app shell and foreground service | Brent | 3 | Jepoy |
+| 8 | OBJ-05 Planner, scheduler, and task summary | Brent | 2 | No |
+| 9 | OBJ-07 Lane router core | Brent | 2 | No |
+| 10 | OBJ-13 Bridge relay server | Jepoy | 2 | Brent |
+| 11 | OBJ-15 Mac voice intake | Patrick | 2 | No |
+| 12 | OBJ-27 Mac native services for the harness | Patrick | 2 | Jepoy |
+| 13 | OBJ-06 Resume and limits | Brent | 1 | No |
+| 14 | OBJ-08 Window locks, busy windows, and cursor cap | Brent | 1 | No |
+| 15 | OBJ-10 Yumi cat v0 in Rive | Patrick | 1 | No |
+| 16 | OBJ-21 Mac bridge client and pairing | Jepoy | 1 | No |
+| 17 | OBJ-23 Android bridge client and pairing | Brent | 1 | Jepoy |
 <!-- generated:objectives-priority:end -->
 Hard dependencies that cross between people (everything else is within one person's queue):
 
@@ -129,6 +132,8 @@ Hard dependencies that cross between people (everything else is within one perso
 - OBJ-02 (Jepoy) before OBJ-23 (Brent)
 - OBJ-13 (Jepoy) before OBJ-23 (Brent)
 - OBJ-01 (Jepoy) before OBJ-29 (Brent)
+- OBJ-23 (Brent) before OBJ-30 (Jepoy)
+- OBJ-27 (Patrick) before OBJ-30 (Jepoy)
 <!-- generated:objectives-cross:end -->
 Workload:
 
@@ -136,7 +141,7 @@ Workload:
 | Person | Objectives | Count |
 |---|---|---|
 | Brent | 03, 04, 05, 06, 07, 08, 09, 22, 23, 24, 26, 29 | 12 |
-| Jepoy | 01, 02, 11, 12, 13, 21, 25, 28 | 8 |
+| Jepoy | 01, 02, 11, 12, 13, 21, 25, 28, 30 | 9 |
 | Patrick | 10, 14, 15, 16, 17, 18, 19, 20, 27 | 9 |
 <!-- generated:objectives-workload:end -->
 ## Suggested order
@@ -147,9 +152,9 @@ Waves come from hard dependencies only. Each person works their column top to bo
 | Wave | Brent | Jepoy | Patrick |
 |---|---|---|---|
 | 1 | OBJ-22, OBJ-26 | OBJ-01, OBJ-02, OBJ-11, OBJ-12, OBJ-28 | OBJ-10 |
-| 2 | OBJ-03, OBJ-24, OBJ-29 | OBJ-13, OBJ-25 | OBJ-14 |
-| 3 | OBJ-04, OBJ-23 | OBJ-21 | OBJ-15, OBJ-18, OBJ-27 |
-| 4 | OBJ-05, OBJ-07 | - | OBJ-16, OBJ-17, OBJ-19, OBJ-20 |
+| 2 | OBJ-03, OBJ-24, OBJ-29 | OBJ-13, OBJ-21, OBJ-25 | OBJ-14 |
+| 3 | OBJ-04, OBJ-23 | - | OBJ-15, OBJ-18, OBJ-27 |
+| 4 | OBJ-05, OBJ-07 | OBJ-30 | OBJ-16, OBJ-17, OBJ-19, OBJ-20 |
 | 5 | OBJ-06, OBJ-08 | - | - |
 | 6 | OBJ-09 | - | - |
 <!-- generated:objectives-waves:end -->

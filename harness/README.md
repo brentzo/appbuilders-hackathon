@@ -181,5 +181,5 @@ mlx-vlm 0.7.6 compiles schemas with llguidance 1.9.1, which rejects `uniqueItems
 | [OBJ-07](../objectives/OBJ-07-lane-router-core.md) | Lane router core | Brent | todo |
 | [OBJ-08](../objectives/OBJ-08-locks-busy-windows-cap.md) | Window locks, busy windows, and cursor cap | Brent | todo |
 | [OBJ-09](../objectives/OBJ-09-ghost-handoff.md) | Ghost handoff | Brent | todo |
-| [OBJ-21](../objectives/OBJ-21-mac-bridge-client-and-pairing.md) | Mac bridge client and pairing | Jepoy | todo |
+| [OBJ-21](../objectives/OBJ-21-mac-bridge-client-and-pairing.md) | Mac bridge client and pairing | Jepoy | in-progress |
 <!-- generated:product-objectives:end -->
