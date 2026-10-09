@@ -57,6 +57,7 @@ After this objective, the phone and Mac can exchange messages in both directions
   On `refused` with `unsupportedVersion`, follow `pairing.md` "Another protocol version" ([OBJ-34](OBJ-34-protocol-version-upgrade-recovery.md)): show offline with the error for the side that needs an update (the [OBJ-42](OBJ-42-version-mismatch-copy.md) copy once it lands), keep every key and pairing, and try again every `UnsupportedVersionRetrySeconds` and when the app starts.
 - [ ] **OBJ-23.9** Unpair from settings. Sign a stable UUID with the unpair fields, retry the same frame until the relay acknowledges durable receipt, and have the phone atomically record and ACK that UUID on receipt. Duplicate deliveries are idempotent; re-pairing clears receipt state.
 - [ ] **OBJ-23.10** End-to-end test with the Mac from [OBJ-21](OBJ-21-mac-bridge-client-and-pairing.md) (or a test client until it is ready): a test `ping` command each way, with the phone app in the background.
+- [ ] **OBJ-23.11** Debug-only bridge test hooks for [OBJ-30](OBJ-30-live-cross-device-bridge-acceptance.md), the phone's side of the Mac's in [OBJ-49](OBJ-49-mac-bridge-test-support.md) task 3: send the last command again with the same id, hold the next incoming command before anything checks it, send one envelope signed by a throwaway key, and authenticate with another protocol version until the next restart.
 
 ## Expectations
 

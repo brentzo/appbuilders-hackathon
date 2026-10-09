@@ -44,14 +44,19 @@ This objective gives the person running OBJ-30 a way to trigger each from the Ma
 
 - [ ] **OBJ-49.1** Pass the bridge client an `onMessage` that answers `ping` with `pingResult`, and answers any kind the Mac does not handle yet with a structured failure, never silence.
 - [ ] **OBJ-49.2** A way to send a `ping` to the paired phone from the Mac and print the round trip, for example `npm run bridge:ping` in `harness/` or a Debug menu item in the Mac app.
-- [ ] **OBJ-49.3** Debug-only hooks, off in normal runs: send the last command again with the same id (duplicate delivery), hold the next incoming command for N seconds before handling it (expired on arrival), and send one envelope signed by a throwaway key (unknown device).
+- [ ] **OBJ-49.3** Debug-only hooks, off in normal runs:
+  - Send the last command again with the same id (duplicate delivery).
+  - Hold the next incoming command for N seconds before anything checks it, including its expiry, so it is handled as if it arrived late (expired on arrival), and the Mac can drop off while it holds one (result after a short reconnect).
+  - Send one envelope signed by a throwaway key (unknown device).
+  - Hold the next `pairRequest` for N seconds before answering it, so the Mac can answer after the 30-second window (SPEC-08 "Mac answers pairing too late").
+  - Authenticate with another protocol version until the next restart (SPEC-08 "Protocol versions").
 - [ ] **OBJ-49.4** Document the hooks in `harness/README.md` and in the runbook.
 - [ ] **OBJ-49.5** Tests through the relay stand-in for each hook.
 
 ## Expectations
 
 - [ ] A `ping` from the phone gets a `pingResult` from the real Mac within 2 seconds.
-- [ ] With the hooks, the person running OBJ-30 can produce "Duplicate delivery runs once", "Expired command is not run", and "Message from an unknown device is dropped" on the real Mac.
+- [ ] With the hooks, the person running OBJ-30 can produce "Duplicate delivery runs once", "Expired command is not run", "Message from an unknown device is dropped", "Mac answers pairing too late", and "Device needs an update" on the real Mac.
 - [ ] No hook is reachable in a normal run.
 
 ## Expected outcomes

@@ -162,7 +162,9 @@ Feature: Protocol versions
 
 ## Open questions
 
-None.
+- **Unpair and device clocks:** an unpair is refused unless its time, from the sending device's clock, is later than the pairing time on the relay's clock and on the other device's clock, so a device whose clock runs behind cannot unpair until the clocks catch up, which breaks requirement 9 (found by the OBJ-30 live check).
+  Options: bind an unpair to the pairing itself, for example a hash of the Mac's `pairAccept` signature, which needs a protocol version bump; or accept a tolerance of a few minutes, which keeps the version but lets an old unpair end a pairing made within that tolerance.
+  Recommendation: bind it to the pairing. Owner: Jepoy, with Brent to decide; tracked in [OBJ-48](../objectives/OBJ-48-unpair-without-device-clocks.md).
 
 ## Later (p1)
 

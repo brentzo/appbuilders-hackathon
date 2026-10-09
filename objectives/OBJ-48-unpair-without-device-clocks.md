@@ -44,7 +44,7 @@ The `at` check exists only so an old unpair cannot end a newer pairing of the sa
 
 ## Tasks
 
-- [ ] **OBJ-48.1** Decide, with Brent, what an unpair is bound to. Proposal: a `pairingId`, the SHA-256 of the Mac's `pairAccept` signature, which the Mac, the phone, and the relay all already see. An unpair signs it, and anyone ignores an unpair whose `pairingId` is not their current pairing's. Record the decision in SPEC-08.
+- [ ] **OBJ-48.1** Settle the SPEC-08 open question "Unpair and device clocks" with Brent: what an unpair is bound to. Proposal: a `pairingId`, the SHA-256 of the Mac's `pairAccept` signature, which the Mac, the phone, and the relay all already see. An unpair signs it, and anyone ignores an unpair whose `pairingId` is not their current pairing's. Record the decision in SPEC-08.
 - [ ] **OBJ-48.2** Change `UnpairFrame` and the signed unpair fields, bump the protocol version, regenerate, and update the crypto vectors, examples, and `pairing.md`.
 - [ ] **OBJ-48.3** Change the relay to compare the `pairingId` instead of the times, and keep `at` only for the logs. Redeploy the relay, as the git-workflow skill requires for a version bump.
 - [ ] **OBJ-48.4** Add the clock-skew case to the relay tests and to `npm run live-check`: an unpair whose `at` is a minute behind the relay is still acknowledged, and an unpair from an earlier pairing is still ignored.
