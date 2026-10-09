@@ -179,6 +179,32 @@ describe("mock Mac app approvals and the Trash", () => {
   });
 });
 
+describe("mock Mac app windows", () => {
+  const ids = (list: unknown) => (list as { windows: { windowId: number }[] }).windows.map((w) => w.windowId);
+
+  it("lists the windows of the app asked, or of every app", async () => {
+    const harness = await harnessWithMockMacApp();
+    expect(ids(await harness.request("listWindows", { bundleId: "com.google.Chrome" }))).toEqual([977]);
+    expect(ids(await harness.request("listWindows", { bundleId: "com.apple.Keynote" }))).toEqual([4182]);
+    expect(ids(await harness.request("listWindows", { bundleId: "com.github.wez.wezterm" }))).toEqual([]);
+    expect(ids(await harness.request("listWindows", {}))).toEqual([4182, 977]);
+  });
+
+  it("opens a new Chrome window with an id of its own each time, and lists it", async () => {
+    const harness = await harnessWithMockMacApp();
+    expect(await harness.request("openNewWindow", { bundleId: "com.google.Chrome" })).toEqual({ supported: true, windowId: 978 });
+    expect(await harness.request("openNewWindow", { bundleId: "com.google.Chrome" })).toEqual({ supported: true, windowId: 979 });
+    expect(ids(await harness.request("listWindows", { bundleId: "com.google.Chrome" }))).toEqual([977, 978, 979]);
+  });
+
+  it("cannot open a second window of apps the real Mac app has no strategy for, like Keynote", async () => {
+    const harness = await harnessWithMockMacApp();
+    expect(await harness.request("openNewWindow", { bundleId: "com.apple.Keynote" })).toEqual({ supported: false });
+    expect(await harness.request("openNewWindow", { bundleId: "com.github.wez.wezterm" })).toEqual({ supported: false });
+    expect(ids(await harness.request("listWindows", { bundleId: "com.apple.Keynote" }))).toEqual([4182]);
+  });
+});
+
 describe("event scripts", () => {
   it.each(readdirSync(SCRIPT_DIR).filter((f) => f.endsWith(".json")))("%s only sends valid events", (file) => {
     expect(() => loadScript(file.replace(/\.json$/, ""))).not.toThrow();

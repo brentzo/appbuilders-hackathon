@@ -8,11 +8,16 @@ import {
   type AppCapability,
   type AppVersionResult,
   type GetAppVersionParams,
+  type ListWindowsParams,
   type MoveToTrashParams,
   type MoveToTrashResult,
+  type OpenNewWindowParams,
+  type OpenNewWindowResult,
   type ProbeAppCapabilityParams,
   type ResolveAppParams,
   type ResolveAppResult,
+  type WindowInfo,
+  type WindowList,
 } from "../generated/ts/index.ts";
 import { loadRpcContract, RpcFailure, RpcPeer, type Handler } from "../src/index.ts";
 import { exampleOf, examplesOf } from "./examples.ts";
@@ -54,6 +59,39 @@ const APP_NAMES = new Map([
   ["wezterm", "com.github.wez.wezterm"],
 ]);
 
+/**
+ * The apps that can open a second window, with the real Mac app's strategies (`NewWindowOpener.strategies` in
+ * mac/Yumi/Native/NewWindowOpener.swift): File > New Window, New Finder Window, New Message. Any other app answers
+ * `supported: false`, as Keynote and WezTerm do on the real Mac.
+ */
+const NEW_WINDOW_APPS = new Set(["com.google.Chrome", "com.apple.finder", "com.apple.mail"]);
+
+/**
+ * The open windows of one mock Mac: the WindowList example at first, plus the windows `openNewWindow` opens. Like the
+ * real Mac app, `listWindows` answers for the app asked, and a new window gets an id no other window has.
+ */
+function windowAnswers(): Record<string, Handler> {
+  const windows = structuredClone((exampleOf("WindowList") as WindowList).windows);
+  return {
+    listWindows: (params): WindowList => {
+      const { bundleId } = params as ListWindowsParams;
+      return { windows: windows.filter((window) => bundleId === undefined || window.bundleId === bundleId) };
+    },
+    openNewWindow: (params): OpenNewWindowResult => {
+      const { bundleId } = params as OpenNewWindowParams;
+      const own = windows.filter((window) => window.bundleId === bundleId);
+      // The new window copies one of the app's, so the mock opens windows only for apps with one open.
+      if (!NEW_WINDOW_APPS.has(bundleId) || !INSTALLED_APPS.has(bundleId) || own.length === 0) return { supported: false };
+      const taken = new Set(windows.map((window) => window.windowId));
+      let windowId = Math.max(...own.map((window) => window.windowId)) + 1;
+      while (taken.has(windowId)) windowId++;
+      const opened: WindowInfo = { ...structuredClone(own[0]!), windowId, title: "New Tab" };
+      windows.push(opened);
+      return { supported: true, windowId };
+    },
+  };
+}
+
 /** Methods whose answer depends on the params. Every other method answers with its example result. */
 const ANSWERS: Record<string, Handler> = {
   probeAppCapability: (params) => {
@@ -80,6 +118,7 @@ export async function connectMockMacApp(options: MockMacAppOptions = {}): Promis
   const contract = loadRpcContract();
   const log = (line: string) => options.quiet || console.log(`[mock Mac app] ${line}`);
 
+  const windows = windowAnswers();
   const handlers: Record<string, Handler> = {};
   for (const [name, method] of Object.entries(contract.methods)) {
     if (method.direction !== "harnessToApp") continue;
@@ -87,7 +126,8 @@ export async function connectMockMacApp(options: MockMacAppOptions = {}): Promis
       log(`${name} ${JSON.stringify(params)}`);
       const failure = options.fail?.[name];
       if (failure) throw new RpcFailure({ kind: failure }, `Mock failure for ${name}`);
-      const answer = options.answers?.[name] ?? ANSWERS[name];
+      // A scripted answer overrides the per-app window answers and the ANSWERS table.
+      const answer = options.answers?.[name] ?? windows[name] ?? ANSWERS[name];
       return answer ? answer(params) : exampleOf(method.result);
     };
   }

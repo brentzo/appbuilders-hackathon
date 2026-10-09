@@ -179,6 +179,7 @@ npm run mock:mac
 ```
 
 It connects to the harness, says `hello`, logs every event, and answers every method the harness can call.
+Like the real Mac app, it answers for the app asked: it probes and versions the apps of the `AppCapability` examples, lists the windows of the `WindowList` example for the app asked, and opens a new window with a fresh id only for the apps the real app can (Chrome, Finder, and Mail), answering `supported: false` for the others.
 `moveToTrash` answers for the exact paths it was given and moves nothing.
 Tests can pass `answers` to `connectMockMacApp` to script a method, for example a "Don't delete" tap or To and Cc fields that change; scripted answers are still checked against the contract.
 
