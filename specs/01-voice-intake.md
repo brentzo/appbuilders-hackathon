@@ -34,7 +34,7 @@ Yumi transcribes it on the device, repeats it back in its own words, and waits f
     - **On:** Whisper transcribes every goal, with the native on-device recognizer as the fallback.
     - **Off:** the native on-device recognizer goes first, with Whisper as the fallback once it is loaded.
     - A fallback is used only when the first recognizer fails, never when it heard silence.
-14. On the Mac, an "Auto mode" setting, off by default, skips the repeat-back: the goal starts right away, Yumi shows what it heard on screen and says a short acknowledgement such as "On it." Approvals for sends and deletes ([SPEC-07](07-safety.md)) still always ask.
+14. On the Mac, an "Auto mode" setting, off by default, skips the repeat-back: the goal starts right away, Yumi shows what it heard on screen and says a short acknowledgement such as "On it." Approvals for sends and deletes ([SPEC-07](07-safety.md)) still always ask. Closing a window Yumi did not open for the task does not ask in Auto mode (SPEC-07 requirement 6).
 
 ## Scenarios
 
@@ -209,6 +209,7 @@ Work this needs:
 - **The Mac picks its recognizer with an "I speak Taglish" setting** (requirement 13). Whisper handles Tagalog and English mixed, and the native recognizer is faster for English commands, so the user who speaks Taglish says so once instead of Yumi guessing per goal. Decided 2026-10-09.
 - **Confirming a goal is a setting.** Confirmation stays on by default; "Auto mode" (requirement 14) skips the repeat-back for users who find it slows them down. Safety approvals are unaffected. Decided 2026-10-10 by Brent.
 - **"Hey Yumi" on the Mac uses the on-device speech recognizer for the demo,** because there is no time to train the openWakeWord model before submission. Sound-alikes such as "hey you me" or "hey yummy" are accepted on purpose. The phone also wakes on "Hey Yumi", never "Hey Jarvis": Jepoy's trained openWakeWord model ([OBJ-12](../objectives/OBJ-12-hey-yumi-wake-word.md)) replaces the stand-in when it is ready, and until then the phone spots "Hey Yumi" with Vosk, an offline recognizer limited to that phrase ([OBJ-59](../objectives/OBJ-59-android-hey-yumi-vosk.md)). Decided 2026-10-10 by Brent.
+- In Auto mode, closing a window Yumi did not open for the task does not ask (requirement 14), while it asks otherwise ([SPEC-07](07-safety.md) requirement 6). Decided 2026-10-10 by Brent.
 
 ## Open questions
 

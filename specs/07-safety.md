@@ -25,7 +25,7 @@ Deleting is allowed only with a strict confirmation, screen content can never gi
    | Level | Actions |
    |---|---|
    | Allowed | Read files in the home folder (except dotfiles and `~/Library`), list folders, open apps, files, and URLs, click and type in apps, create new files and folders, copy and move files without replacing anything |
-   | Ask every time | Send an email or message, delete files |
+   | Ask every time | Send an email or message, delete files, close a window Yumi did not open for the task |
    | Blocked | Shell commands, `sudo`, installing software, changing system settings, payments and purchases, emptying the Trash, quitting or force-quitting apps, changing file permissions, running downloaded scripts, reading or writing dotfiles or anything in `~/Library`, opening or acting in apps that run commands or install software (requirement 3), replacing a file Yumi did not create, reading secret locations |
 
 2. Secret locations are `~/.ssh`, `~/.gnupg`, `~/.aws`, `~/Library/Keychains`, and browser profile folders.
@@ -38,6 +38,7 @@ Deleting is allowed only with a strict confirmation, screen content can never gi
    - For key presses, from a per-app list. Return in Messages, Command-Return and Command-Shift-D in Mail ask. Command-Delete in Finder asks. Command-Shift-Delete in Finder is blocked. Command-Q and Command-Option-Escape are blocked in every app.
    - Anything the harness cannot classify asks, but only in apps on the risky-app list: Mail, Messages, WhatsApp, and Finder. This covers clicks and key presses alike. In other apps, unlisted clicks and key presses are allowed. Each risky app has a short list of safe click labels (see Decisions).
    - Every action in System Settings is blocked, because the table blocks changing system settings.
+   - Closing a window asks, unless Yumi opened that window for the task (a new window it opened in the app, or the app it opened because it had no window) or the task runs in Auto mode ([SPEC-01](01-voice-intake.md) requirement 14). Closing is clicking a window's close button or a "Close", "Close Window", or "Close All" menu item, or pressing Command-W, Command-Option-W, or Command-Shift-W.
 
 ### Strict delete
 
@@ -151,6 +152,16 @@ Feature: Strict delete
   Scenario: Quitting an app is blocked
     When the next action is pressing Command-Q in Keynote
     Then it does not run
+
+  Scenario: Closing the user's window needs approval
+    Given the user had the deck "Q3 Report" open in Keynote before the task
+    When the next action is clicking that window's close button
+    Then it does not run until the user approves
+
+  Scenario: Yumi closes a window it opened
+    Given Yumi opened a new Keynote window for the task
+    When the next action is pressing Command-W in that window
+    Then it runs without asking
 ```
 
 ```gherkin
@@ -250,6 +261,7 @@ Until it is reviewed, objectives may build against it but must not treat it as f
 - The shell and installer apps in requirement 3 are written into the spec, since they are how "no shell" is enforced. Decided 2026-10-09.
 - Risky apps get a short per-app list of safe click labels, which are allowed. Other unlisted clicks in a risky app still ask. Mail starts with "New Message" and "Attach", so demo task 2 in [SPEC-05](05-mac-gui-control.md) asks only before Send. The list lives with the permission table in code, and a label is added only with a change to this spec. Brent chose this over allowing every unlisted click in risky apps. Decided 2026-10-09.
 - The blocked-action message names what it skipped ("I can't click File in Keynote.") instead of "I can't do that.", so the user knows which step Yumi left out before choosing "Keep going" or "Stop". The harness sends the plain-language action as the optional `skippedAction` of the `blockedAction` user error, without a protocol version change; without it the message says "I can't do that." Decided 2026-10-10 by Brent.
+- Closing a window Yumi did not open for the task asks first, like a send or a delete, and is allowed without asking in Auto mode. Windows Yumi opened for the task may be closed freely. In a live Keynote run, a ghost cursor closed the user's deck while looking for an exported file. Until the general approval card ([OBJ-56](../objectives/OBJ-56-unclassified-action-approval-contract.md)) exists, the harness blocks it instead of asking, and the blocked-action message says "I can't close a window in Keynote." Decided 2026-10-10 by Brent.
 - Debug mode keeps full local logs and shows each worker's reasoning (requirements 22 and 23), so failures can be diagnosed on the device without guessing. Everything runs locally, so the logs stay local too. Decided 2026-10-10 by Brent.
 
 ## Open questions
