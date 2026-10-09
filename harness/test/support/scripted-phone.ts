@@ -11,12 +11,15 @@ import {
   toBase64,
   type DeviceKeys,
 } from "@yumi/protocol/crypto";
+import { validateMessagePayload } from "@yumi/protocol/messages";
 import { PROTOCOL_VERSION, type BridgeFrame, type EnvelopeType, type PairingOffer, type Payload } from "@yumi/protocol/types";
 import { WebSocket } from "ws";
 import { until } from "./mock-mac.ts";
 
 /** A message the phone received from the Mac, opened. */
 export interface PhoneInbox {
+  /** The envelope id, which a result to it names as `replyTo`. */
+  id: string;
   type: EnvelopeType;
   replyTo?: string;
   payload: Payload;
@@ -80,15 +83,36 @@ export class ScriptedPhone {
 
   /** Sends an encrypted command to the Mac and returns its message id, which the result names as `replyTo`. */
   command(payload: Payload): string {
+    return this.envelope("command", payload);
+  }
+
+  /** Sends an event, or a result answering one of the Mac's commands, as the Android app does. */
+  envelope(type: EnvelopeType, payload: Payload, replyTo?: string): string {
+    // Checked as the real phone's own validation would, so a test cannot pass on a message the Mac would reject.
+    const check = validateMessagePayload(payload, type);
+    if (!check.valid) throw new Error(`The scripted phone sent an invalid payload: ${check.errors.join("; ")}`);
     const envelope = sealEnvelope({
       sender: this.keys,
       recipient: this.mac!,
-      type: "command",
-      expiresAt: expiresAt("command"),
+      type,
+      expiresAt: expiresAt(type),
       payload,
+      ...(replyTo ? { replyTo } : {}),
     });
     this.send({ frame: "envelope", envelope });
     return envelope.id;
+  }
+
+  /** Waits for a message of this kind that arrived after the first `from` messages, and returns it. */
+  async next(kind: Payload["kind"], from = 0, match: (message: PhoneInbox) => boolean = () => true): Promise<PhoneInbox> {
+    const found = () => this.inbox.slice(from).find((m) => m.payload.kind === kind && match(m));
+    await until(() => found() !== undefined);
+    return found()!;
+  }
+
+  /** Goes offline, as a phone with no signal does. */
+  disconnect(): void {
+    this.socket?.terminate();
   }
 
   /** The result the Mac sent for a command. */
@@ -109,7 +133,10 @@ export class ScriptedPhone {
     if (frame.frame !== "envelope" || !this.mac) return;
     const opened = openEnvelope(frame.envelope, this.keys, this.mac);
     if (!opened.ok) return;
+    const check = validateMessagePayload(opened.payload, frame.envelope.type);
+    if (!check.valid) throw new Error(`The Mac sent an invalid payload: ${check.errors.join("; ")}`);
     this.inbox.push({
+      id: frame.envelope.id,
       type: frame.envelope.type,
       ...(opened.replyTo ? { replyTo: opened.replyTo } : {}),
       payload: opened.payload as Payload,

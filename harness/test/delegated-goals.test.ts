@@ -206,7 +206,7 @@ describe("goals from the phone (OBJ-68)", () => {
 
     const resumeId = phone.command({ kind: "resume", goalId });
     await until(() => phone.resultFor(resumeId) !== undefined);
-    expect(phone.resultFor(resumeId)).toEqual({ kind: "goalAccepted", goalId, status: "started" });
+    expect(phone.resultFor(resumeId)).toEqual({ kind: "resumeConfirmed", goalId });
     await until(() => harness.store.getTask(goalId)!.status === "done");
 
     const cancelId = phone.command({ kind: "cancel", goalId });
@@ -266,6 +266,7 @@ describe("progress heartbeat (SPEC-09 r9)", () => {
       app: { emit: () => 1 },
       bridge: {
         isPaired: (id) => id === "phone-1",
+        listPairedDevices: () => ({ devices: [] }),
         sendMessage: async (_to, _type, payload) => {
           sent.push(payload);
           return randomUUID();

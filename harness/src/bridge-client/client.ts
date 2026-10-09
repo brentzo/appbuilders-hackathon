@@ -26,6 +26,7 @@ import {
   type PairingOffer,
   type PairedDevice,
   type UnpairFrame,
+  type Uuid,
 } from "@yumi/protocol/types";
 import { WebSocket } from "ws";
 
@@ -42,12 +43,22 @@ export interface BridgeClientOptions {
   databasePath: string;
   /** Allows plain ws only for an explicitly loopback test endpoint. */
   allowLoopbackWs?: boolean;
-  /** A message from a paired device, opened. A command's return value is its encrypted result. */
-  onMessage?: (message: unknown, peer: PairedDevice, type: EnvelopeType) => unknown | Promise<unknown>;
+  /**
+   * A message from a paired device, opened. A command's return value is its encrypted result; a result names the
+   * command it answers in `replyTo`.
+   */
+  onMessage?: (message: unknown, peer: PairedDevice, type: EnvelopeType, replyTo?: Uuid) => unknown | Promise<unknown>;
+  /** The relay connected and authenticated this Mac, so paired devices can be reached again (SPEC-09 r1). */
+  onConnected?: () => void;
+  /** The relay sent back a message this Mac sent, for example because the phone is offline (SPEC-09 r16). */
+  onUndelivered?: (messageId: Uuid, reason: UndeliveredReason) => void;
   onLog?: (event: string) => void;
   /** First reconnect delay; it doubles up to 30 seconds. Tests shorten it. */
   reconnectBaseMs?: number;
 }
+
+/** Why the relay sent a message back undelivered. */
+export type UndeliveredReason = "targetOffline" | "targetNeedsUpdate" | "expired" | "notPaired";
 
 export interface BridgeRpc {
   request(method: string, params: unknown): Promise<unknown>;
@@ -200,7 +211,8 @@ export class BridgeClient {
       sender: this.keys,
       recipient: { deviceId, signingPublicKey: fromBase64(peer.signing_key), kxPublicKey: fromBase64(peer.kx_key) },
       type,
-      expiresAt: expiresAt(type),
+      // An approval request lives exactly as long as the approval: 5 minutes, the time in its payload.
+      expiresAt: isApprovalRequest(payload) ? payload.expiresAt : expiresAt(type),
       payload,
       ...(replyTo ? { replyTo } : {}),
     });
@@ -262,6 +274,7 @@ export class BridgeClient {
       this.notifyState("connected");
       this.resendOutbox();
       this.resendPendingUnpairs();
+      this.options.onConnected?.();
     } else if (frame.frame === "refused") {
       this.options.onLog?.("relay-refused");
       this.reportBridgeDown();
@@ -290,6 +303,7 @@ export class BridgeClient {
       const task = this.db.prepare("SELECT task_id FROM message_tasks WHERE message_id = ?").get(frame.messageId) as
         { task_id: string } | undefined;
       this.db.prepare("DELETE FROM message_tasks WHERE message_id = ?").run(frame.messageId);
+      this.options.onUndelivered?.(frame.messageId, frame.frame);
       this.options.rpc.notify("userError", {
         // targetNeedsUpdate reads as offline until OBJ-42 adds its own kind (protocol/docs/pairing.md).
         kind:
@@ -471,6 +485,7 @@ export class BridgeClient {
           opened.payload,
           { deviceId: peer.deviceId, name: peer.name, pairedAt: peer.pairedAt },
           envelope.type,
+          opened.replyTo,
         );
       } catch {
         this.options.onLog?.("message-handler-failed");
@@ -478,20 +493,9 @@ export class BridgeClient {
       this.send({ frame: "ack", messageId: envelope.id });
       return;
     }
-    const fallback = {
-      frame: "envelope",
-      envelope: sealEnvelope({
-        sender: this.keys,
-        recipient: sender,
-        type: "result",
-        expiresAt: expiresAt("result"),
-        payload: { ok: false },
-        replyTo: envelope.id,
-      }),
-    } satisfies BridgeFrame;
-    this.db
-      .prepare("INSERT INTO processed VALUES (?, ?, ?)")
-      .run(envelope.id, JSON.stringify(fallback), new Date().toISOString());
+    // Recorded before the handler runs, so a repeat after a crash is never run twice. Until there is a result, a
+    // repeat gets only an ack: the protocol has no result for "not answered", and the sender's own timeout covers it.
+    this.db.prepare("INSERT INTO processed VALUES (?, ?, ?)").run(envelope.id, "", new Date().toISOString());
     let output: unknown;
     try {
       output = await this.options.onMessage?.(
@@ -500,8 +504,14 @@ export class BridgeClient {
         envelope.type,
       );
     } catch {
-      output = { ok: false };
+      output = undefined;
       this.options.onLog?.("message-handler-failed");
+    }
+    if (output === undefined) {
+      // A command the handler refused, such as control of a goal the sender does not own: no result to send.
+      this.options.onLog?.("command-unanswered");
+      this.send({ frame: "ack", messageId: envelope.id });
+      return;
     }
     const resultFrame: BridgeFrame = {
       frame: "envelope",
@@ -510,7 +520,7 @@ export class BridgeClient {
         recipient: sender,
         type: "result",
         expiresAt: expiresAt("result"),
-        payload: output ?? { ok: true },
+        payload: output,
         replyTo: envelope.id,
       }),
     };
@@ -604,6 +614,10 @@ export class BridgeClient {
         waiter.resolve();
       }
   }
+}
+
+function isApprovalRequest(payload: unknown): payload is { kind: "approvalRequest"; expiresAt: string } {
+  return (payload as { kind?: unknown } | null)?.kind === "approvalRequest";
 }
 
 function secureUrl(url: string): boolean {

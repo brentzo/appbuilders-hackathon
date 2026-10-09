@@ -1,4 +1,4 @@
-import type { Observation, Path, Subtask, ToolCall, ToolName } from "@yumi/protocol/types";
+import type { DeviceId, Observation, Path, Subtask, ToolCall, ToolName, Uuid } from "@yumi/protocol/types";
 import type { Logger } from "../log.ts";
 import type { LaneRouter, RouteDecision } from "../router/index.ts";
 import { FILE_TOOL_NAMES, registerFileTools, type FileToolDetails } from "../tools/file-tools.ts";
@@ -28,12 +28,19 @@ export interface ToolRunResult {
   output: string;
   /** The real path the tool read, listed, or created; for copy and move, the new path. */
   path?: Path;
+  /** The device that did it, when not this Mac: a phone tool runs on the phone (SPEC-09 r2). */
+  deviceId?: DeviceId;
+}
+
+/** What a tool call is part of. */
+export interface ToolRunContext {
+  taskId: Uuid;
 }
 
 /** A lane's typed tools: the names and descriptions offered to the model, and running a call. */
 export interface LaneTools {
   readonly tools: readonly { name: ToolName; description: string }[];
-  run(call: ToolCall, signal?: AbortSignal): Promise<ToolRunResult>;
+  run(call: ToolCall, signal?: AbortSignal, context?: ToolRunContext): Promise<ToolRunResult>;
 }
 
 /** What a lane gives a worker for each step: a fresh observation and its tools. */
@@ -91,10 +98,10 @@ export const TRASH_TOOL_DESCRIPTION =
 export function withTrash(tools: LaneTools): LaneTools {
   return {
     tools: [...tools.tools, { name: "move_to_trash", description: TRASH_TOOL_DESCRIPTION }],
-    run: (call, signal) =>
+    run: (call, signal, context) =>
       call.tool === "move_to_trash"
         ? Promise.resolve({ outcome: "error", output: "Moving to the Trash needs the user's approval first." })
-        : tools.run(call, signal),
+        : tools.run(call, signal, context),
   };
 }
 

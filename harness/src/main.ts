@@ -4,7 +4,7 @@ import { homedir, hostname } from "node:os";
 import { join } from "node:path";
 import { loadConfig } from "./config.ts";
 import { BridgeClient } from "./bridge-client/client.ts";
-import { LEGACY_MAC_DEVICE_ID } from "./device.ts";
+import { LEGACY_MAC_DEVICE_ID, wakeAddresses } from "./device.ts";
 import { DebugLog } from "./debug/debug-log.ts";
 import { describeError, FileLogger } from "./log.ts";
 import { startHarness } from "./harness.ts";
@@ -32,8 +32,15 @@ try {
     deviceName: hostname(),
     databasePath: join(config.supportDir, "bridge.sqlite"),
     onLog: (event) => logger.warn(`bridge.${event}`),
-    // Goals, pause, resume, and cancel from the paired phone (OBJ-68).
-    onMessage: (message, peer, type) => harness.delegated?.handle(message, peer, type),
+    // Goals, pause, resume, and cancel, tool lists and results, and approval answers from the paired phone (SPEC-09).
+    onMessage: (message, peer, type, replyTo) => harness.delegated?.handle(message, peer, type, replyTo),
+    // Each paired device gets this Mac's tool list, with its wake addresses, on every connection (SPEC-09 r1, r19).
+    onConnected: () => harness.phoneTools?.connected(),
+    // A phone call or approval request the relay could not deliver fails at once (SPEC-09 r16).
+    onUndelivered: (messageId, reason) => {
+      harness.phoneTools?.undelivered(messageId, reason);
+      harness.phoneApprovals?.undelivered(messageId, reason);
+    },
     rpc: {
       request: (method, params) => harness.server.request(method, params),
       notify: (event, payload) => {
@@ -46,6 +53,7 @@ try {
     handlers: bridge.handlers,
     phone: bridge,
     deviceId: () => bridge.deviceId,
+    wakeAddresses: () => wakeAddresses(),
     work: {
       client: new ModelClient(config.model, logger, fetch, debug, (failure) => model.noteFailure(failure)),
       logger,

@@ -199,12 +199,34 @@ It keeps checking after `failed`, so a server started late still ends in `ready`
 
 `src/bridge-client/delegated-goals.ts` runs goals the paired phone sends ([SPEC-09](../specs/09-cross-device-routing.md) r4 to r9, [OBJ-68](../objectives/OBJ-68-harness-delegated-goals.md)).
 
-- `delegateGoal` creates the task with the goal id as its id and the phone as its origin, straight in `planning` with no repeat-back, spawns the main cursor, and answers `goalAccepted` (`started`). The same goal sent again is answered again, not run twice.
+- `delegateGoal` creates the task with the goal id as its id and the phone as its origin, straight in `planning` with no repeat-back, spawns the main cursor, and answers `goalAccepted` (`started`).
+  The same goal sent again, even at the same moment, is answered again, not run twice.
+- While another task works, the goal waits as `queued`, answered `goalAccepted` (`queued`) with that task's current title, and starts when it ends ([OBJ-77](../objectives/OBJ-77-harness-cross-device-edge-cases.md), r14).
+- While the screen is locked, as the Mac app reads it with `getScreenLock`, the goal is held and answered `waitingForUnlock`; it starts by itself once the user unlocks the Mac, and a `cancel` before then drops it ([OBJ-80](../objectives/OBJ-80-harness-wake-and-lock.md), r20).
+  The harness never reads, stores, or types a password.
 - `progress` goes to the phone on every task and subtask status change, after `goalAccepted`, and every 25 seconds until the task ends. Its title is the subtask in progress, or "Making a plan" while planning.
-- `goalFinished` carries the summary, the failure in SPEC-11 words without the Mac's buttons, or "Okay, I stopped. Nothing else will happen." None of it is spoken or shown on the Mac. Anything said while the task still runs (a blocked action, a question) stays on the Mac.
-- `pause`, `resume`, and `cancel` act only on the sending phone's own goals. `pauseConfirmed` and `cancelConfirmed` are sent once the pause or cancel is in effect. The protocol has no resume confirmation, so `resume` is answered with `goalAccepted` (`started`). `ping` is answered with `pingResult`.
-- Not built yet: queueing behind a busy Mac (r14; every goal starts at once) and approvals on the phone (r10, [OBJ-70](../objectives/OBJ-70-harness-phone-approvals-and-stop.md)). Approvals for a phone goal show on the Mac for now.
-- Tests: `test/delegated-goals.test.ts`, with a scripted phone (`test/support/scripted-phone.ts`) on the fake relay.
+- `goalFinished` carries the summary, the failure in SPEC-11 words without the Mac's buttons with its `error` kind, or "Okay, I stopped. Nothing else will happen."
+  None of it is spoken or shown on the Mac.
+  Anything said while the task still runs (a blocked action, a question) stays on the Mac.
+- `pause`, `resume`, and `cancel` act only on the sending phone's own goals.
+  `pauseConfirmed`, `resumeConfirmed`, and `cancelConfirmed` are sent once the change is in effect, and `ping` is answered with `pingResult`.
+  A command the harness refuses, such as control of a goal the phone did not send, gets no result, only the ack: the protocol has no result for it, and the phone's own timeout covers it.
+- Approvals for a phone goal are asked on the phone (`src/bridge-client/phone-approvals.ts`, [OBJ-70](../objectives/OBJ-70-harness-phone-approvals-and-stop.md), r10): an `approvalRequest` command, answered by the phone's `approvalResponse` result.
+  The Mac app gets `approvalWaitingElsewhere` and shows only a banner, then `approvalAnsweredElsewhere`.
+  A delete answered by voice is asked again.
+  With no answer by `expiresAt`, 5 minutes after asking, the approval closes, `approvalCancelled` goes to the phone and the app, and the task pauses, for a goal from the Mac too ([OBJ-77](../objectives/OBJ-77-harness-cross-device-edge-cases.md)).
+- Tests: `test/delegated-goals.test.ts` and `test/cross-device.test.ts`, with a scripted phone (`test/support/scripted-phone.ts`) on the fake relay; `test/support/phone-run.ts` wires a whole harness to it as `src/main.ts` does.
+
+### The phone's tools
+
+`src/bridge-client/phone-tools.ts` gives the planner the paired phone's tools ([OBJ-65](../objectives/OBJ-65-harness-phone-tool-lane.md), SPEC-09 r1, r2, r16).
+
+- The harness keeps each paired phone's latest `toolList` and answers it with this Mac's own, which carries its `wakeAddresses` ([OBJ-80](../objectives/OBJ-80-harness-wake-and-lock.md), r19); each paired device also gets it on every relay connection.
+  The phone never answers the Mac's list, so the two never loop.
+- While a phone list is known, the helper lane offers the phone's tools as one `phone` tool, described from that list.
+- A call goes through the permission gate, waits at most 2 minutes, and is never queued.
+  When the relay answers `targetOffline` it fails at once: the app shows the "Other device offline" error, and the worker reads that it should not call the phone again ([OBJ-77](../objectives/OBJ-77-harness-cross-device-edge-cases.md)).
+- The action log names the phone as the device, for example "Set an alarm for 6:30 am on your phone".
 
 ## Local RPC
 
@@ -445,7 +467,7 @@ The planner is offered at most 8 tools (SPEC-05 r9, `src/gui/orchestrator-tools.
 `gui_act`, `read_file`, `list_dir`, `write_new_file`, `copy`, `move`, `move_to_trash`, `phone`.
 
 `open_app`, `open_file`, `open_url`, and `reveal_in_finder` live inside `gui_act`, as the direct tools its worker is offered first.
-Today the planner sees 7 of them; `phone` joins when its lane exists.
+`phone` is offered only while a paired phone's tool list is known.
 `gui_act` takes the subtask: its instruction and target come from the task record.
 
 ### One attempt

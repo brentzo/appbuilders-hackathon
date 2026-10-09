@@ -41,9 +41,43 @@ export function describeToolRun(call: ToolCall, ok: boolean, path?: string): str
       return ok ? `Opened ${host(call.url)}` : `Tried to open ${host(call.url)}`;
     case "reveal_in_finder":
       return ok ? `Showed ${name(call.path)} in Finder` : `Tried to show ${name(call.path)} in Finder`;
-    default:
-      return ok ? `Used ${call.tool}` : `Tried to use ${call.tool}`;
+    case "phone":
+      return describePhoneCall(call.call, ok);
+    default: {
+      const unknown = call as ToolCall;
+      return ok ? `Used ${unknown.tool}` : `Tried to use ${unknown.tool}`;
+    }
   }
+}
+
+/** A phone tool call (SPEC-09 r2): "Set an alarm for 6:30 am on your phone". Times use am and pm. */
+function describePhoneCall(call: Extract<ToolCall, { tool: "phone" }>["call"], ok: boolean): string {
+  switch (call.tool) {
+    case "set_alarm":
+      return ok
+        ? `Set an alarm for ${clock(call.time)} on your phone`
+        : `Tried to set an alarm for ${clock(call.time)} on your phone`;
+    case "set_timer":
+      return ok
+        ? `Started a timer for ${duration(call.seconds)} on your phone`
+        : `Tried to start a timer for ${duration(call.seconds)} on your phone`;
+    case "open_app":
+      return ok ? `Opened ${call.app} on your phone` : `Tried to open ${call.app} on your phone`;
+  }
+}
+
+/** "06:30" as "6:30 am", "18:05" as "6:05 pm", "00:15" as "12:15 am". */
+function clock(time: string): string {
+  const [hours, minutes] = time.split(":").map(Number) as [number, number];
+  const hour = hours % 12 === 0 ? 12 : hours % 12;
+  return `${hour}:${String(minutes).padStart(2, "0")} ${hours < 12 ? "am" : "pm"}`;
+}
+
+/** A timer's length in its largest whole unit: "10 minutes", "90 seconds", "1 hour". */
+function duration(seconds: number): string {
+  const [count, unit] =
+    seconds % 3600 === 0 ? [seconds / 3600, "hour"] : seconds % 60 === 0 ? [seconds / 60, "minute"] : [seconds, "second"];
+  return `${count} ${unit}${count === 1 ? "" : "s"}`;
 }
 
 /** A link's site, never its path or query, which can hold personal data: "Opened example.com". */

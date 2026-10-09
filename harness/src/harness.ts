@@ -4,6 +4,9 @@ import type { AnswerQuestionParams, DeviceId, Empty, ModelState, WorkerThought }
 import { ActionLogFile } from "./action-log/text-log.ts";
 import { ApprovalFlow } from "./approvals/approval-flow.ts";
 import { DelegatedGoals, type PhoneBridge } from "./bridge-client/delegated-goals.ts";
+import { PhoneApprovals } from "./bridge-client/phone-approvals.ts";
+import { PhoneTools, withPhone } from "./bridge-client/phone-tools.ts";
+import { appScreenLock, type ScreenLock } from "./device.ts";
 import { DEFAULT_LIMITS, type HarnessConfig } from "./config.ts";
 import { abandonUnconfirmed, GoalConfirmation } from "./confirm/confirmation.ts";
 import { DEBUG_LOG_FOLDER, DebugLog } from "./debug/debug-log.ts";
@@ -45,6 +48,10 @@ export interface Harness {
   debug: DebugLog;
   /** Goals from the paired phone (OBJ-68). Absent without a bridge. */
   delegated?: DelegatedGoals;
+  /** The phone's tools (OBJ-65). Absent without a bridge. */
+  phoneTools?: PhoneTools;
+  /** Approvals asked on the phone (OBJ-70). Absent without a bridge. */
+  phoneApprovals?: PhoneApprovals;
   close(): Promise<void>;
 }
 
@@ -86,6 +93,14 @@ export interface HarnessOptions {
    * change goes to every connected app as `modelStateChanged`.
    */
   model?: { readonly state: ModelState; onChange(listener: (state: ModelState) => void): () => void };
+  /** This Mac's hardware addresses, sent to the phone so it can wake the Mac (SPEC-09 r19, OBJ-80). */
+  wakeAddresses?: () => string[];
+  /** Whether the screen is locked (SPEC-09 r20). Defaults to asking the Mac app with `getScreenLock`. */
+  screen?: ScreenLock;
+  /** How often a phone goal's progress repeats. Tests shorten it. */
+  heartbeatMs?: number;
+  /** The approval flow's clock. Tests move it to reach an approval's 5-minute expiry without waiting. */
+  approvalClock?: () => Date;
 }
 
 /**
@@ -180,9 +195,29 @@ export async function startHarness(
     const thoughts = (thought: WorkerThought) => {
       if (debug.enabled) server.emit("workerThought", thought);
     };
+    const phone = options.phone;
+    const phoneTools =
+      phone &&
+      new PhoneTools({
+        bridge: phone,
+        ownDeviceId: () => options.deviceId?.(),
+        logger,
+        ...(options.wakeAddresses ? { wakeAddresses: options.wakeAddresses } : {}),
+      });
+    const phoneApprovals = phone && new PhoneApprovals({ bridge: phone, app: server, logger });
     const delegated =
-      options.phone &&
-      new DelegatedGoals({ store, logger, tasks: (): TaskControl => tasks!, app: server, bridge: options.phone });
+      phone &&
+      new DelegatedGoals({
+        store,
+        logger,
+        tasks: (): TaskControl => tasks!,
+        app: server,
+        bridge: phone,
+        screen: options.screen ?? appScreenLock(server),
+        ...(phoneTools ? { phoneTools } : {}),
+        ...(phoneApprovals ? { approvals: phoneApprovals } : {}),
+        ...(options.heartbeatMs ? { heartbeatMs: options.heartbeatMs } : {}),
+      });
     const macVoice = work && (work.voice ?? localVoice(server));
     // A phone task's summary and final failure go back to the phone (OBJ-68).
     const voice = macVoice && (delegated ? delegated.voice(macVoice) : macVoice);
@@ -196,6 +231,14 @@ export async function startHarness(
         emit: (event, payload) => server.emit(event, payload),
         userError: (originDeviceId, error) => voice.userError(originDeviceId, error),
         home: work.home,
+        ...(phoneApprovals ? { elsewhere: phoneApprovals } : {}),
+        ...(options.approvalClock ? { now: options.approvalClock } : {}),
+        // No answer in 5 minutes pauses the task (SPEC-09 r10).
+        onExpired: (taskId: string) => {
+          tasks
+            ?.pause(taskId)
+            .catch((error: unknown) => logger.error("approval.expiryPauseFailed", { taskId, ...describeError(error) }));
+        },
       });
     tasks = new TaskControl(
       store,
@@ -203,6 +246,11 @@ export async function startHarness(
       work &&
         voice && {
           ...work,
+          // The helper lane offers the phone's tools as one `phone` tool while a phone tool list is known (OBJ-65).
+          lanes:
+            phoneTools && work.lanes.helper
+              ? { ...work.lanes, helper: { ...work.lanes.helper, tools: withPhone(work.lanes.helper.tools, phoneTools) } }
+              : work.lanes,
           // Read when each subtask starts, so lines say this Mac's bridge device id once it is known.
           get deviceId() {
             return options.deviceId?.() ?? work.deviceId;
@@ -244,6 +292,8 @@ export async function startHarness(
       confirmation: confirming,
       questions,
       ...(delegated ? { delegated } : {}),
+      ...(phoneTools ? { phoneTools } : {}),
+      ...(phoneApprovals ? { phoneApprovals } : {}),
       recovery,
       debug,
       close: async () => {

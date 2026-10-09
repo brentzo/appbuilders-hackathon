@@ -13,31 +13,38 @@ import type {
   Uuid,
 } from "@yumi/protocol/types";
 import { MAIN_CURSOR_ID } from "../confirm/confirmation.ts";
+import type { ScreenLock } from "../device.ts";
 import { describeError, type Logger } from "../log.ts";
 import type { TaskVoice } from "../scheduler/run-task.ts";
 import { TaskControlError, type TaskControl } from "../scheduler/task-control.ts";
 import type { TaskStore } from "../store/task-store.ts";
+import type { PhoneApprovals } from "./phone-approvals.ts";
+import type { PhoneTools } from "./phone-tools.ts";
 
 /**
  * Goals sent from the paired phone (SPEC-09 r4 to r9, OBJ-68). The phone confirmed the goal with the user, so it
  * goes straight to planning with no repeat-back (r5). The task's id is the goal id and its origin is the phone, so
  * the result and progress go back there (r7, r9) while the cursor works on the Mac as for any task (r8).
  *
- * - `delegateGoal`: the task starts and the answer is `goalAccepted`. The same goal sent again is accepted again,
- *   not run twice.
+ * - `delegateGoal`: the task starts and the answer is `goalAccepted` `started`. While another task works, it waits
+ *   as `queued` and starts when that one ends (r14, OBJ-77). While the screen is locked it is held, answered
+ *   `waitingForUnlock`, and starts by itself once the user unlocks the Mac (r20, OBJ-80). The same goal sent again
+ *   is accepted again, not run twice.
  * - `progress` goes to the phone on every task and subtask status change, and at least every 30 seconds until the
  *   task ends, with the title of the subtask in progress.
- * - `goalFinished` carries what the Mac would have said: the summary, the failure in SPEC-11 words, or the cancel
- *   line. None of it is spoken on the Mac.
- * - `pause`, `resume`, and `cancel` from the phone control its own goals. `pauseConfirmed` and `cancelConfirmed`
- *   are sent only once the pause or cancel is in effect (r12).
- *
- * Not built yet: queueing behind a busy Mac (r14, every goal answers `started`) and approvals on the phone (r10).
+ * - `goalFinished` carries what the Mac would have said: the summary, the failure in SPEC-11 words with its error
+ *   kind, or the cancel line. None of it is spoken on the Mac.
+ * - `pause`, `resume`, and `cancel` from the phone control its own goals. `pauseConfirmed`, `resumeConfirmed`, and
+ *   `cancelConfirmed` are sent only once the change is in effect (r12).
+ * - Everything else from the phone goes to its own module: tool lists and results to `PhoneTools` (OBJ-65), and
+ *   answers to approvals to `PhoneApprovals` (OBJ-70).
  */
 
 export interface PhoneBridge {
   /** True when the device is a paired phone, so a task from it is answered over the bridge. */
   isPaired(deviceId: DeviceId): boolean;
+  /** The paired devices, which get this Mac's tool list on every connection (SPEC-09 r1). */
+  listPairedDevices(): { devices: PairedDevice[] };
   sendMessage(
     deviceId: DeviceId,
     type: "command" | "result" | "event",
@@ -56,10 +63,21 @@ export interface DelegatedGoalsDeps {
   bridge: PhoneBridge;
   /** How often progress repeats while nothing changes. SPEC-09 r9 asks for at least every 30 seconds. */
   heartbeatMs?: number;
+  /** Whether the screen is locked (SPEC-09 r20). Without it, the Mac counts as unlocked. */
+  screen?: ScreenLock;
+  /** How often a goal held for a locked screen checks again. */
+  unlockPollMs?: number;
+  /** The phone's tools (OBJ-65), for its tool lists and tool results. */
+  phoneTools?: PhoneTools;
+  /** Approvals asked on the phone (OBJ-70), for its answers. */
+  approvals?: PhoneApprovals;
 }
 
 const HEARTBEAT_MS = 25_000;
+const UNLOCK_POLL_MS = 2_000;
 const ENDED: readonly TaskStatus[] = ["done", "failed", "cancelled"];
+/** Statuses of a task at work; a goal from the phone waits behind one (SPEC-09 r14). */
+const WORKING: readonly TaskStatus[] = ["planning", "running", "waitingForUser"];
 const TITLE_MAX = 60;
 /** SPEC-06 "Cancel a task". */
 const CANCELLED_LINE = "Okay, I stopped. Nothing else will happen.";
@@ -71,6 +89,14 @@ export class DelegatedGoals {
   /** The error a phone task failed with, for its `goalFinished`. */
   private readonly failures = new Map<Uuid, UserError>();
   private readonly finished = new Set<Uuid>();
+  /** Goals waiting behind a working task, oldest first (SPEC-09 r14). */
+  private readonly queue: Uuid[] = [];
+  /** Goals held while the screen is locked, by goal id (SPEC-09 r20). */
+  private readonly held = new Map<Uuid, { confirmedGoal: string; peer: PairedDevice }>();
+  /** Acceptances in progress, so the same goal sent twice at once is accepted once (the lock check waits). */
+  private readonly admitting = new Map<Uuid, Promise<Payload>>();
+  private unlockTimer: NodeJS.Timeout | undefined;
+  private closed = false;
   private readonly unsubscribe: () => void;
 
   constructor(private readonly deps: DelegatedGoalsDeps) {
@@ -115,16 +141,33 @@ export class DelegatedGoals {
   }
 
   /** The bridge client's `onMessage`: what a paired device sent. A command's return value is its result. */
-  async handle(message: unknown, peer: PairedDevice, type: EnvelopeType): Promise<Payload | undefined> {
+  async handle(message: unknown, peer: PairedDevice, type: EnvelopeType, replyTo?: Uuid): Promise<Payload | undefined> {
     const valid = validateMessagePayload(message, type);
     if (!valid.valid) {
       this.deps.logger.warn("delegated.invalidMessage", { from: peer.deviceId, type, errors: valid.errors.slice(0, 3) });
       return undefined;
     }
     const payload = message as Payload;
+    if (this.deps.phoneTools?.handles(payload)) {
+      this.deps.phoneTools.handle(payload, peer, replyTo);
+      return undefined;
+    }
     switch (payload.kind) {
-      case "delegateGoal":
-        return this.accept(payload.goalId, payload.confirmedGoal, payload.originDeviceId, peer);
+      case "delegateGoal": {
+        const pending = this.admitting.get(payload.goalId);
+        if (pending) return pending;
+        const accepting = this.accept(payload.goalId, payload.confirmedGoal, payload.originDeviceId, peer).finally(() =>
+          this.admitting.delete(payload.goalId),
+        );
+        this.admitting.set(payload.goalId, accepting);
+        return accepting;
+      }
+      case "approvalResponse":
+        this.deps.approvals?.answered(payload, replyTo);
+        return undefined;
+      case "toolCall":
+        // In p0 the phone has no model, so it never calls the Mac's tools (SPEC-09 r4).
+        return { kind: "toolResult", success: false, error: "unsupportedRequest" };
       case "pause":
         return this.control(payload.goalId, peer, "pause");
       case "resume":
@@ -140,14 +183,15 @@ export class DelegatedGoals {
   }
 
   close(): void {
+    this.closed = true;
+    clearTimeout(this.unlockTimer);
     this.unsubscribe();
     for (const timer of this.heartbeats.values()) clearInterval(timer);
     this.heartbeats.clear();
   }
 
-  private accept(goalId: Uuid, confirmedGoal: string, claimedOrigin: DeviceId, peer: PairedDevice): Payload {
+  private async accept(goalId: Uuid, confirmedGoal: string, claimedOrigin: DeviceId, peer: PairedDevice): Promise<Payload> {
     const { store, logger } = this.deps;
-    const accepted: Payload = { kind: "goalAccepted", goalId, status: "started" };
     if (claimedOrigin !== peer.deviceId) {
       // The phone that sent it is the origin, whatever the message says: the result must go back to it.
       logger.warn("delegated.originMismatch", { goalId, from: peer.deviceId });
@@ -156,16 +200,51 @@ export class DelegatedGoals {
     if (existing) {
       // The phone sent the same goal again, for example after it missed the answer. It runs once.
       logger.info("delegated.repeated", { goalId, status: existing.status });
-      return accepted;
+      return existing.status === "queued" ? this.queuedAnswer(goalId) : { kind: "goalAccepted", goalId, status: "started" };
     }
+    if (this.held.has(goalId)) return { kind: "goalAccepted", goalId, status: "waitingForUnlock" };
+    if (await this.locked()) {
+      // The cursor cannot work on a locked screen. Yumi never types the password; the user unlocks it (SPEC-09 r20).
+      this.held.set(goalId, { confirmedGoal, peer });
+      logger.info("delegated.heldLocked", { goalId });
+      this.pollUnlock();
+      return { kind: "goalAccepted", goalId, status: "waitingForUnlock" };
+    }
+    return this.admit(goalId, confirmedGoal, peer);
+  }
+
+  /** Creates the task and starts it, or queues it behind the task at work (SPEC-09 r14). */
+  private admit(goalId: Uuid, confirmedGoal: string, peer: PairedDevice): Payload {
+    const { store, logger } = this.deps;
     const goal = confirmedGoal.trim();
+    const wait = this.workingTask(goalId) !== undefined || this.queue.length > 0;
     // Before the task exists, since creating it is already a status change.
     this.accepting.add(goalId);
-    store.createTask({ id: goalId, originDeviceId: peer.deviceId, goal: confirmedGoal, confirmedGoal: goal, status: "planning" });
-    logger.info("delegated.accepted", { taskId: goalId, from: peer.deviceId, goalChars: goal.length });
+    store.createTask({
+      id: goalId,
+      originDeviceId: peer.deviceId,
+      goal: confirmedGoal,
+      confirmedGoal: goal,
+      status: wait ? "queued" : "planning",
+    });
+    logger.info("delegated.accepted", { taskId: goalId, from: peer.deviceId, goalChars: goal.length, queued: wait });
+    if (wait) {
+      this.queue.push(goalId);
+      setImmediate(() => {
+        this.accepting.delete(goalId);
+        this.sendProgress(goalId);
+        this.keepAlive(goalId);
+      });
+      return this.queuedAnswer(goalId);
+    }
+    this.begin(goalId);
+    return { kind: "goalAccepted", goalId, status: "started" };
+  }
+
+  /** Spawns the cursor and starts the task, after the answer is on its way so the phone hears it before progress. */
+  private begin(goalId: Uuid): void {
     // The main cursor, as for a goal spoken on the Mac (SPEC-09 r8).
     this.deps.app.emit("cursorCommand", { command: "spawn", cursorId: MAIN_CURSOR_ID, cursorKind: "main" });
-    // After the answer is on its way, so the phone hears goalAccepted before any progress.
     setImmediate(() => {
       this.accepting.delete(goalId);
       this.sendProgress(goalId);
@@ -176,13 +255,67 @@ export class DelegatedGoals {
         if (!(error instanceof TaskControlError)) throw error;
         // The harness has no model or lanes to run it; logged by TaskControl.
         this.failures.set(goalId, { kind: "unexpected", taskId: goalId });
-        store.setTaskStatus(goalId, "failed");
+        this.deps.store.setTaskStatus(goalId, "failed");
       }
     });
-    return accepted;
+  }
+
+  /** `goalAccepted` for a queued goal, naming what the Mac is busy with: "Your Mac is busy with another task." */
+  private queuedAnswer(goalId: Uuid): Payload {
+    const busy = this.workingTask(goalId) ?? this.deps.store.getTask(this.queue[0] ?? goalId);
+    return { kind: "goalAccepted", goalId, status: "queued", activeTaskTitle: busy ? this.currentTitle(busy) : "Another task" };
+  }
+
+  private workingTask(except: Uuid): Task | undefined {
+    return this.deps.store.listTasks({ limit: 100 }).find((task) => task.id !== except && WORKING.includes(task.status));
+  }
+
+  /** Starts the next queued goal once nothing else works. */
+  private startNext(): void {
+    while (this.queue.length > 0 && !this.workingTask("")) {
+      const next = this.queue.shift()!;
+      if (this.deps.store.getTask(next)?.status !== "queued") continue;
+      this.accepting.add(next);
+      this.deps.store.setTaskStatus(next, "planning");
+      this.begin(next);
+      return;
+    }
+  }
+
+  private async locked(): Promise<boolean> {
+    try {
+      return (await this.deps.screen?.isLocked()) ?? false;
+    } catch (error) {
+      // Unknown: Yumi tries, and a locked screen then fails the first step, which the phone hears.
+      this.deps.logger.warn("delegated.lockUnreadable", describeError(error));
+      return false;
+    }
+  }
+
+  private pollUnlock(): void {
+    if (this.unlockTimer || this.closed) return;
+    this.unlockTimer = setTimeout(() => {
+      this.unlockTimer = undefined;
+      void (async () => {
+        if (this.held.size === 0 || this.closed) return;
+        if (await this.locked()) return this.pollUnlock();
+        for (const [goalId, held] of [...this.held]) {
+          this.held.delete(goalId);
+          this.deps.logger.info("delegated.unlocked", { goalId });
+          this.admit(goalId, held.confirmedGoal, held.peer);
+        }
+      })();
+    }, this.deps.unlockPollMs ?? UNLOCK_POLL_MS);
   }
 
   private async control(goalId: Uuid, peer: PairedDevice, action: "pause" | "resume" | "cancel"): Promise<Payload | undefined> {
+    const held = this.held.get(goalId);
+    if (held && held.peer.deviceId === peer.deviceId && action === "cancel") {
+      // Dropped before it ever started.
+      this.held.delete(goalId);
+      this.deps.logger.info("delegated.heldCancelled", { goalId });
+      return { kind: "cancelConfirmed", goalId };
+    }
     const task = this.deps.store.getTask(goalId);
     if (!task || task.originDeviceId !== peer.deviceId) {
       this.deps.logger.warn("delegated.unknownGoal", { goalId, from: peer.deviceId, action });
@@ -192,15 +325,20 @@ export class DelegatedGoals {
     try {
       switch (action) {
         case "pause":
-          await this.deps.tasks().pause(goalId);
+          if (task.status === "queued") {
+            // Out of the queue, so it does not start by itself; resume starts it.
+            this.dequeue(goalId);
+            this.deps.store.setTaskStatus(goalId, "planning");
+            this.deps.store.setTaskStatus(goalId, "paused");
+          } else await this.deps.tasks().pause(goalId);
           return { kind: "pauseConfirmed", goalId };
         case "cancel":
+          this.dequeue(goalId);
           await this.deps.tasks().cancel(goalId);
           return { kind: "cancelConfirmed", goalId };
         case "resume":
           this.deps.tasks().resume(goalId);
-          // The protocol has no resume confirmation; the phone learns it from progress, and the answer says started.
-          return { kind: "goalAccepted", goalId, status: "started" };
+          return { kind: "resumeConfirmed", goalId };
       }
     } catch (error) {
       this.deps.logger.warn("delegated.controlFailed", { taskId: goalId, action, ...describeError(error) });
@@ -208,7 +346,14 @@ export class DelegatedGoals {
     }
   }
 
+  private dequeue(goalId: Uuid): void {
+    const at = this.queue.indexOf(goalId);
+    if (at >= 0) this.queue.splice(at, 1);
+  }
+
   private statusChanged(event: TaskStatusChanged): void {
+    // Any task that ends, the Mac's own too, may free the Mac for a queued goal (SPEC-09 r14).
+    if (event.subtaskId === undefined && ENDED.includes(event.status)) setImmediate(() => this.startNext());
     const task = this.phoneTask(event.taskId);
     if (!task || this.accepting.has(task.id)) return;
     if (ENDED.includes(event.status)) {
@@ -262,15 +407,13 @@ export class DelegatedGoals {
     clearInterval(this.heartbeats.get(taskId));
     this.heartbeats.delete(taskId);
     const status = task.status as GoalFinishedPayload["status"];
+    const failure = status === "failed" ? (this.failures.get(taskId) ?? { kind: "unexpected" as const, taskId }) : undefined;
     const summary =
-      status === "done"
-        ? (task.summary ?? "Done.")
-        : status === "cancelled"
-          ? CANCELLED_LINE
-          : failureLine(this.failures.get(taskId) ?? { kind: "unexpected", taskId });
+      status === "done" ? (task.summary ?? "Done.") : status === "cancelled" ? CANCELLED_LINE : failureLine(failure!);
     this.failures.delete(taskId);
     this.deps.logger.info("delegated.finished", { taskId, status });
-    this.send(task, { kind: "goalFinished", goalId: taskId, status, summary });
+    // A failure also carries its kind, so the phone can show the SPEC-11 card with its buttons.
+    this.send(task, { kind: "goalFinished", goalId: taskId, status, summary, ...(failure ? { error: failure } : {}) });
   }
 
   /** What the phone shows under "Working on your Mac": the subtask in progress, else the task's stage. */

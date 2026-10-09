@@ -138,6 +138,22 @@ export interface ApprovalFlowDeps {
   /** The user's home folder, for listing the files again. Tests pass a temporary one. */
   home: string;
   now?: () => Date;
+  /** Asks on the other device for a task from it (SPEC-09 r10). Without it, every card shows on the Mac. */
+  elsewhere?: AskElsewhere;
+  /** An approval got no answer by its `expiresAt`: the task pauses (SPEC-09 r10). */
+  onExpired?: (taskId: Uuid) => void;
+}
+
+/** The device link's part in approvals: asking on the phone, and closing the phone's card. */
+export interface AskElsewhere {
+  isOtherDevice(deviceId: string): boolean;
+  askElsewhere(
+    originDeviceId: string,
+    approval: Approval,
+    taskId: Uuid,
+    abort: Promise<void>,
+  ): Promise<ApprovalDecision | "failed" | "aborted">;
+  approvalCancelled(originDeviceId: string, approvalId: Uuid): void;
 }
 
 type Subject =
@@ -420,26 +436,52 @@ export class ApprovalFlow implements ApprovalGate {
     }
   }
 
+  /**
+   * Shows the card on the device the user spoke to: the Mac app's card, or for a task from the phone, the phone's,
+   * while the Mac app shows only a banner (SPEC-09 r10). With no answer by `expiresAt`, the approval closes and the
+   * task pauses.
+   */
   private async showCard(approval: Approval, taskId: Uuid, signal: AbortSignal): Promise<CardAnswer> {
     let cancel!: () => void;
     const cancelled = new Promise<"cancelled">((resolve) => (cancel = () => resolve("cancelled")));
     this.cards.set(approval.id, { taskId, cancel });
     const onAbort = () => this.close(approval.id, "cancelled");
     signal.addEventListener("abort", onAbort, { once: true });
+    let expire!: () => void;
+    const expired = new Promise<"expired">((resolve) => (expire = () => resolve("expired")));
+    // Wall time: an approval lasts 5 minutes from when it was asked, whatever the flow's clock says.
+    const timer = setTimeout(expire, Math.max(0, Date.parse(approval.expiresAt) - Date.now()));
     try {
       if (signal.aborted || this.isClosed(approval.id)) {
         this.close(approval.id, "cancelled");
         return "cancelled";
       }
-      const shown = this.deps.mac.request("showApprovalCard", { approval }).then(
-        (decision) => decision as ApprovalDecision,
-        (error: unknown) => {
-          this.deps.logger.error("approval.cardFailed", { approvalId: approval.id, ...describeError(error) });
-          return "failed" as const;
-        },
-      );
-      return await Promise.race([shown, cancelled]);
+      const origin = this.deps.store.getTask(taskId)?.originDeviceId;
+      const elsewhere = origin !== undefined && this.deps.elsewhere?.isOtherDevice(origin) ? this.deps.elsewhere : undefined;
+      const shown: Promise<CardAnswer> = elsewhere
+        ? elsewhere
+            .askElsewhere(
+              origin!,
+              approval,
+              taskId,
+              Promise.race([cancelled, expired]).then(() => undefined),
+            )
+            .then((answer) => (answer === "aborted" ? "cancelled" : answer))
+        : this.deps.mac.request("showApprovalCard", { approval }).then(
+            (decision) => decision as ApprovalDecision,
+            (error: unknown) => {
+              this.deps.logger.error("approval.cardFailed", { approvalId: approval.id, ...describeError(error) });
+              return "failed" as const;
+            },
+          );
+      const answer = await Promise.race([shown, cancelled, expired]);
+      if (answer !== "expired") return answer;
+      this.deps.logger.info("approval.expired", { taskId, approvalId: approval.id });
+      this.close(approval.id, "cancelled");
+      this.deps.onExpired?.(taskId);
+      return "cancelled";
     } finally {
+      clearTimeout(timer);
       signal.removeEventListener("abort", onAbort);
       this.cards.delete(approval.id);
     }
@@ -455,7 +497,10 @@ export class ApprovalFlow implements ApprovalGate {
     this.deps.store.closeApproval(id, closed);
     if (!stored.approval.decision) {
       const payload: ApprovalCancelled = { approvalId: id };
+      // The Mac app closes its card or banner; a phone asked for it closes its card too.
       this.deps.emit("approvalCancelled", payload);
+      const origin = this.deps.store.getTask(stored.taskId)?.originDeviceId;
+      if (origin !== undefined && this.deps.elsewhere?.isOtherDevice(origin)) this.deps.elsewhere.approvalCancelled(origin, id);
       this.deps.logger.info("approval.cancelled", { taskId: stored.taskId, approvalId: id });
     }
     this.cards.get(id)?.cancel();

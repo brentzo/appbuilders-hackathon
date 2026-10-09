@@ -289,7 +289,7 @@ async function runTool(
 
   let run;
   try {
-    run = await runner.tools.run(call, signal);
+    run = await runner.tools.run(call, signal, { taskId: subtask.taskId });
   } catch (error) {
     // A tool that throws is a bug in the tool; the step still gets an outcome so it is never left open.
     logger.error("tool.threw", { taskId: subtask.taskId, tool: call.tool, ...describeError(error) });
@@ -301,7 +301,7 @@ async function runTool(
     // The one line says what happened; what the tool returned goes in its own bounded field (Brent, 2026-10-09).
     observation: run.outcome === "ok" ? fit(description) : fit(run.output),
     ...(run.outcome === "ok" && run.output !== "" ? { toolOutput: cut(run.output) } : {}),
-    log: { deviceId: deps.deviceId, description },
+    log: { deviceId: run.deviceId ?? deps.deviceId, description },
   });
   return { stopped: false, ...(run.outcome === "ok" && run.path ? { path: run.path } : {}) };
 }
