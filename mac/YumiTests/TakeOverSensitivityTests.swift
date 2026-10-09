@@ -169,3 +169,47 @@ struct ResumeTakeOverTests {
         #expect(!overlay.ownFrames.contains { $0.contains(away) })
     }
 }
+
+/// Brent's second live check, 2026-10-10 (task 110cedcd): every Resume paused again 0.25 to 0.9 s
+/// after the local stop lifted, with "The user took over: a pointer move of 81 to 128 points". His
+/// hand was just leaving the Resume button on the paused panel, which is Yumi's own.
+struct LeavingYumiTests {
+    @Test func theHandLeavingTheResumeButtonIsNotTakingOver() {
+        var reach = PointerReach()
+        let resume = CGPoint(x: 756, y: 900)
+        // The pointer is on the paused panel and presses Resume: Yumi's own window.
+        reach.reachedYumi(at: 0)
+        // The stop lifts a moment later and the hand moves away, 120 points in a quarter second.
+        var time: TimeInterval = 0.3
+        for step in 1...15 {
+            reach.moved(to: CGPoint(x: resume.x + CGFloat(step) * 6, y: resume.y - CGFloat(step) * 5), at: time)
+            time += 1.0 / 60
+        }
+        #expect(reach.settle(at: time + PointerReach.rest, overYumi: false) == nil)
+    }
+
+    @Test func aDeliberateMoveLaterStillCounts() {
+        var reach = PointerReach()
+        reach.reachedYumi(at: 0)
+        var time = PointerReach.leavingYumi + 0.5
+        for step in 0...15 {
+            reach.moved(to: CGPoint(x: 100 + CGFloat(step) * 20, y: 300), at: time)
+            time += 1.0 / 60
+        }
+        #expect((reach.settle(at: time + PointerReach.rest, overYumi: false) ?? 0) > PointerReach.distance)
+    }
+
+    @Test func aMoveThatKeepsGoingPastTheGraceCountsFromThere() {
+        var reach = PointerReach()
+        reach.reachedYumi(at: 0)
+        // Slow-ish but long: inside the grace nothing counts, after it 80 points in half a second do.
+        var time: TimeInterval = 0.2
+        var x: CGFloat = 0
+        while time < PointerReach.leavingYumi + 0.6 {
+            reach.moved(to: CGPoint(x: x, y: 0), at: time)
+            x += 4
+            time += 1.0 / 60
+        }
+        #expect(reach.pending != nil, "about 140 points in the half second after the grace")
+    }
+}

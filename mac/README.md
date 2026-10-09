@@ -255,7 +255,8 @@ The user can always stop Yumi ([OBJ-35](../objectives/OBJ-35-mac-stop-and-take-o
   A listen-only event tap watches for it; events tagged as Yumi's own, input on Yumi's own windows, cards, cats, bubbles, thoughts panels, and helper chips, and input while Yumi waits for the user (a card, a handed-over password) never count.
 - A pointer move is deliberate when it goes more than 80 points from where the pointer was within the last half second (`PointerReach`), so jiggles and trackpad bumps never count.
   It is judged once the pointer rests (0.15 seconds still, or at most 0.8 seconds), so a reach that ends on a bubble, chip, panel, or card is the user using Yumi. Clicks, scrolls, and key presses count at once.
-- Every take-over is logged with what triggered it, for example "The user took over: a pointer move of 312 points" (category `control`).
+  Moves in the 1.5 seconds after the pointer was on Yumi's own things are the hand leaving Yumi, such as after pressing Resume, and never count.
+- Every take-over is logged with what triggered it and where the pointer was, in screen points, for example "The user took over: a click at 812, 455".
 - The stop is local first: typing stops before its next chunk, and `executeAction` refuses everything, checked again right before acting.
   Then the harness gets `pause`, open approval cards close, and every cursor freezes in the paused state.
 - The paused panel has "Resume" and "Cancel".

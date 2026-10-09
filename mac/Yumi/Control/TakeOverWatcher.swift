@@ -46,15 +46,25 @@ struct PointerReach {
     static let rest: TimeInterval = 0.15
     /// A move that never rests (circling around) is judged after at most this long.
     static let longest: TimeInterval = 0.8
+    /// For this long after the pointer was on one of Yumi's own things, such as the Resume button,
+    /// its moves are the hand leaving Yumi, not taking over (Brent's live check, 2026-10-10).
+    static let leavingYumi: TimeInterval = 1.5
 
     private var samples: [(time: TimeInterval, point: CGPoint)] = []
     /// When the move became deliberate, and how far it had gone then. Nil while it is not.
     private(set) var pending: (since: TimeInterval, distance: CGFloat)?
     private var lastMove: TimeInterval = 0
+    /// When the pointer was last on Yumi's own window, card, cat, bubble, panel, or chip.
+    private var lastOnYumi = -TimeInterval.infinity
 
     /// The user's own pointer moved to `point` (in a spot that is not Yumi's).
     mutating func moved(to point: CGPoint, at time: TimeInterval) {
         lastMove = time
+        if time - lastOnYumi < Self.leavingYumi {
+            // Still leaving Yumi: nothing so far counts, so a move is measured from after it.
+            reset()
+            return
+        }
         samples.removeAll { time - $0.time > Self.window }
         samples.append((time, point))
         let farthest = samples.map { hypot($0.point.x - point.x, $0.point.y - point.y) }.max() ?? 0
@@ -62,9 +72,11 @@ struct PointerReach {
     }
 
     /// The pointer is on one of Yumi's own things: whatever it was doing, it was reaching for Yumi.
-    mutating func reachedYumi() {
+    /// With a time, the hand leaving it afterwards does not count either, for `leavingYumi`.
+    mutating func reachedYumi(at time: TimeInterval? = nil) {
         samples = []
         pending = nil
+        if let time { lastOnYumi = time }
     }
 
     /// Checked while a move is pending. Returns the deliberate move's distance once the pointer
@@ -94,6 +106,8 @@ final class TakeOverWatcher {
     private let yumiFrames: () -> [CGRect]
     private let onTakeOver: () -> Void
     private var reach = PointerReach()
+    /// Where the user's own pointer last moved, for the log.
+    private var lastPoint: CGPoint?
     private var reachCheck: Timer?
     private var tap: CFMachPort?
     private var secureInput = false
@@ -157,7 +171,10 @@ final class TakeOverWatcher {
         }
         let point = ScreenGeometry.appKitPoint(fromGlobalTopLeft: event.location)
         let overYumiWindow = isOverYumi(point)
-        if Self.presses.contains(type) { pressOverYumi = overYumiWindow }
+        if Self.presses.contains(type) {
+            pressOverYumi = overYumiWindow
+            if overYumiWindow { reach.reachedYumi(at: CACurrentMediaTime()) }
+        }
         let tagged = event.getIntegerValueField(.eventSourceUserData) == KeystrokeSender.eventTag
         let isPointerMove = type == .mouseMoved || Self.drags.contains(type)
         if isPointerMove, !tagged {
@@ -175,7 +192,7 @@ final class TakeOverWatcher {
             )
         )
         if TakeOverRule.isTakeOver(input, uiLaneActing: uiLaneActing()) {
-            takeOver(because: Self.describe(type))
+            takeOver(because: Self.describe(type), at: point)
         }
     }
 
@@ -187,14 +204,17 @@ final class TakeOverWatcher {
     /// The user's own pointer moved. Small moves never count; a deliberate one is judged when the
     /// pointer rests, so a reach that ends on Yumi's bubble or card does not pause anything.
     private func trackReach(to point: CGPoint, overYumi: Bool) {
+        let now = CACurrentMediaTime()
+        // Noted even while nothing is acting: the pointer on the paused panel's Resume button is
+        // why the hand leaving it right after does not pause the task again.
+        if overYumi { reach.reachedYumi(at: now) }
         guard uiLaneActing() else {
             reach.reset()
             return
         }
-        if overYumi {
-            reach.reachedYumi()
-        } else {
-            reach.moved(to: point, at: CACurrentMediaTime())
+        if !overYumi {
+            reach.moved(to: point, at: now)
+            lastPoint = point
         }
         guard reach.pending != nil, reachCheck == nil else { return }
         reachCheck = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
@@ -217,7 +237,7 @@ final class TakeOverWatcher {
             tagged: false, isKeyboard: false, overYumiWindow: false, yumiHasKeyboard: false, isPointerMove: true, deliberate: true
         )
         if TakeOverRule.isTakeOver(input, uiLaneActing: true) {
-            takeOver(because: "a pointer move of \(Int(distance)) points")
+            takeOver(because: "a pointer move of \(Int(distance)) points", at: lastPoint)
         }
     }
 
@@ -226,10 +246,13 @@ final class TakeOverWatcher {
         reachCheck = nil
     }
 
-    private func takeOver(because cause: String) {
+    /// `point`: where the pointer was, in AppKit coordinates, so a take-over can be traced to where
+    /// the user's hand was. Only coordinates, never what is on screen there.
+    private func takeOver(because cause: String, at point: CGPoint?) {
         reach.reset()
         stopReachCheck()
-        log.notice("The user took over: \(cause, privacy: .public)")
+        let place = point.map { "at \(Int($0.x)), \(Int($0.y))" } ?? "at an unknown spot"
+        log.notice("The user took over: \(cause, privacy: .public) \(place, privacy: .public)")
         onTakeOver()
     }
 
