@@ -26,6 +26,44 @@ class BenchmarkTests(unittest.TestCase):
         self.assertEqual(benchmark.word_error_rate("Hello, Yumi!", "hello Yumi"), (0, 2))
         self.assertEqual(benchmark.word_error_rate("open Spotify", "open Safari"), (1, 2))
 
+    def test_normalized_wer_ignores_written_forms_of_spoken_words(self):
+        cases = [
+            ("Mag-set ka ng alarm bukas ng six thirty ng umaga.", "Magset ka ng alarm bukas ng 6.30 ng umaga."),
+            ("Set an alarm for seven fifteen tomorrow morning.", "Set an alarm for 7:15 tomorrow morning."),
+            ("Okay na yung meeting sa Friday ng three PM.", "Okay na yung meeting sa Friday ng 3pm."),
+            ("Pumunta ka sa github dot com.", "Pumunta ka sa github.com"),
+            ("Folder na Hackathon twenty twenty six.", "Folder na Hackathon 2026."),
+            ("Late ako ng fifteen minutes, huwag mo munang i-send.", "Late ako ng 15 minutes, huwag mo munang isend."),
+        ]
+        for reference, transcript in cases:
+            with self.subTest(transcript=transcript):
+                self.assertEqual(benchmark.word_error_rate(reference, transcript, normalize=True)[0], 0)
+                self.assertGreater(benchmark.word_error_rate(reference, transcript)[0], 0)
+
+    def test_normalized_wer_still_counts_real_errors(self):
+        self.assertEqual(benchmark.word_error_rate("email ni Jepoy", "email ni Jepo", normalize=True), (1, 3))
+        self.assertEqual(benchmark.word_error_rate("ten minutes", "11 minutes", normalize=True), (1, 2))
+
+    def test_rescore_recomputes_wer_from_stored_transcripts(self):
+        report = {
+            "runtime": "whisper.cpp",
+            "model": "small",
+            "memory": {"peak_mib": 700},
+            "samples": [{
+                "id": "en-01",
+                "group": "english",
+                "reference": "Set a timer for ten minutes.",
+                "transcript": "Set a timer for 10 minutes.",
+                "latency_ms": 200.0,
+                "wer": 0.5,
+            }],
+        }
+        rescored = benchmark.rescore(report)
+        self.assertEqual(rescored["memory"], {"peak_mib": 700})
+        self.assertAlmostEqual(rescored["samples"][0]["wer"], 1 / 6)
+        self.assertEqual(rescored["summary"]["english"]["normalized_wer"], 0)
+        self.assertEqual(rescored["summary"]["taglish"]["samples"], 0)
+
     def test_cli_posts_audio_and_records_transcript_latency_and_wer(self):
         received = []
 
@@ -88,6 +126,8 @@ class BenchmarkTests(unittest.TestCase):
                 self.assertGreaterEqual(row["latency_ms"], 0)
                 self.assertEqual(row["word_errors"], 0)
                 self.assertEqual(saved["summary"]["taglish"]["wer"], 0)
+                self.assertEqual(saved["summary"]["taglish"]["normalized_wer"], 0)
+                self.assertEqual(saved["language"], "auto")
                 self.assertEqual(saved["summary"]["english"]["samples"], 0)
         finally:
             server.shutdown()

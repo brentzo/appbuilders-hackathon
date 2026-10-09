@@ -5,6 +5,7 @@ import argparse
 import ipaddress
 import json
 import mimetypes
+import re
 import statistics
 import time
 import unicodedata
@@ -25,7 +26,43 @@ def words(text):
     return "".join(normalized).split()
 
 
-def word_error_rate(reference, hypothesis):
+ONES = (
+    "zero one two three four five six seven eight nine ten eleven twelve thirteen "
+    "fourteen fifteen sixteen seventeen eighteen nineteen"
+).split()
+TENS = "_ _ twenty thirty forty fifty sixty seventy eighty ninety".split()
+
+
+def number_words(n):
+    """Say a number the way the references are written: 15 -> fifteen, 2026 -> twenty twenty six."""
+    if n < 20:
+        return ONES[n]
+    if n < 100:
+        return TENS[n // 10] + ("" if n % 10 == 0 else " " + ONES[n % 10])
+    if 1100 <= n < 10000 and n % 100 >= 10:
+        return number_words(n // 100) + " " + number_words(n % 100)
+    if n < 1000:
+        return ONES[n // 100] + " hundred" + ("" if n % 100 == 0 else " " + number_words(n % 100))
+    return number_words(n // 1000) + " thousand" + ("" if n % 1000 == 0 else " " + number_words(n % 1000))
+
+
+def spoken_form(text):
+    """Rewrite written forms Whisper prefers into the spoken forms the references use.
+
+    Digits, clock times, and am/pm become words, "github.com" becomes "github dot com",
+    and hyphens inside words are dropped, so "mag-set" and "magset" or "i-send" and "isend" match.
+    """
+    text = unicodedata.normalize("NFKC", text).casefold()
+    text = re.sub(r"\b(\d{1,2})[:.](\d\d)\b", lambda m: f"{number_words(int(m[1]))} {number_words(int(m[2]))}", text)
+    text = re.sub(r"\b(\d{1,2})\s*(am|pm)\b", lambda m: f"{number_words(int(m[1]))} {m[2]}", text)
+    text = re.sub(r"\b(\w+)\.(com|org|net|ph)\b", r"\1 dot \2", text)
+    text = re.sub(r"\d+", lambda m: number_words(int(m[0])), text)
+    return re.sub(r"(?<=\w)-(?=\w)", "", text)
+
+
+def word_error_rate(reference, hypothesis, normalize=False):
+    if normalize:
+        reference, hypothesis = spoken_form(reference), spoken_form(hypothesis)
     expected, actual = words(reference), words(hypothesis)
     previous = list(range(len(actual) + 1))
     for i, left in enumerate(expected, 1):
@@ -135,6 +172,21 @@ def transcribe(endpoint, runtime, model, language, audio_path, timeout):
     return payload["text"].strip(), round(elapsed_ms, 1)
 
 
+def score(sample):
+    """Add raw and spoken-form WER to a sample that has a reference and a transcript."""
+    errors, reference_words = word_error_rate(sample["reference"], sample["transcript"])
+    normalized_errors, normalized_words = word_error_rate(sample["reference"], sample["transcript"], normalize=True)
+    return {
+        **sample,
+        "word_errors": errors,
+        "reference_words": reference_words,
+        "wer": errors / reference_words if reference_words else 0,
+        "normalized_word_errors": normalized_errors,
+        "normalized_reference_words": normalized_words,
+        "normalized_wer": normalized_errors / normalized_words if normalized_words else 0,
+    }
+
+
 def summarize(samples):
     groups = defaultdict(list)
     for sample in samples:
@@ -148,17 +200,21 @@ def summarize(samples):
                 "word_errors": 0,
                 "reference_words": 0,
                 "wer": None,
+                "normalized_wer": None,
                 "mean_latency_ms": None,
                 "median_latency_ms": None,
             }
             continue
         errors = sum(row["word_errors"] for row in rows)
         reference_words = sum(row["reference_words"] for row in rows)
+        normalized_errors = sum(row["normalized_word_errors"] for row in rows)
+        normalized_words = sum(row["normalized_reference_words"] for row in rows)
         summary[name] = {
             "samples": len(rows),
             "word_errors": errors,
             "reference_words": reference_words,
             "wer": errors / reference_words if reference_words else 0,
+            "normalized_wer": normalized_errors / normalized_words if normalized_words else 0,
             "mean_latency_ms": round(statistics.mean(row["latency_ms"] for row in rows), 1),
             "median_latency_ms": round(statistics.median(row["latency_ms"] for row in rows), 1),
         }
@@ -167,16 +223,24 @@ def summarize(samples):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--runtime", choices=("whisperkit", "whisper.cpp"), required=True)
-    parser.add_argument("--model", required=True, help="Model label, recorded with the results")
-    parser.add_argument("--endpoint", required=True, help="Local transcription HTTP endpoint")
-    parser.add_argument("--manifest", required=True, help="JSONL rows: id, group, audio, reference")
-    parser.add_argument("--audio-dir", required=True, help="External folder containing the consented recordings")
+    parser.add_argument("--runtime", choices=("whisperkit", "whisper.cpp"))
+    parser.add_argument("--model", help="Model label, recorded with the results")
+    parser.add_argument("--endpoint", help="Local transcription HTTP endpoint")
+    parser.add_argument("--manifest", help="JSONL rows: id, group, audio, reference")
+    parser.add_argument("--audio-dir", help="External folder containing the consented recordings")
     parser.add_argument("--output", required=True, help="Output JSON report path")
     parser.add_argument("--language", default="auto", help="Whisper language hint (default: auto)")
     parser.add_argument("--timeout", type=float, default=1800, help="Per-clip timeout in seconds")
+    parser.add_argument("--rescore", metavar="REPORT", help="Recompute WER for an existing report without a server")
     args = parser.parse_args()
 
+    if args.rescore:
+        report = rescore(json.loads(Path(args.rescore).read_text(encoding="utf-8")))
+        write_report(report, args.output)
+        return
+    missing = [name for name in ("runtime", "model", "endpoint", "manifest", "audio_dir") if not getattr(args, name)]
+    if missing:
+        parser.error("the following arguments are required: " + ", ".join("--" + name.replace("_", "-") for name in missing))
     if args.timeout <= 0:
         parser.error("--timeout must be greater than zero")
     validate_endpoint(args.endpoint)
@@ -188,8 +252,7 @@ def main():
         transcript, latency_ms = transcribe(
             args.endpoint, args.runtime, args.model, args.language, item["audio_path"], args.timeout
         )
-        errors, reference_words = word_error_rate(item["reference"], transcript)
-        samples.append({
+        samples.append(score({
             "id": item["id"],
             "group": item["group"],
             "runtime": args.runtime,
@@ -197,14 +260,27 @@ def main():
             "reference": item["reference"],
             "transcript": transcript,
             "latency_ms": latency_ms,
-            "word_errors": errors,
-            "reference_words": reference_words,
-            "wer": errors / reference_words if reference_words else 0,
-        })
+        }))
         print(f"{item['id']}: WER={samples[-1]['wer']:.3f}, latency={latency_ms:.1f} ms")
 
-    report = {"runtime": args.runtime, "model": args.model, "samples": samples, "summary": summarize(samples)}
-    output = Path(args.output)
+    report = {
+        "runtime": args.runtime,
+        "model": args.model,
+        "language": args.language,
+        "samples": samples,
+        "summary": summarize(samples),
+    }
+    write_report(report, args.output)
+
+
+def rescore(report):
+    """Score an existing report again, for example after the scoring rules change. Other fields are kept."""
+    samples = [score(sample) for sample in report["samples"]]
+    return {**report, "samples": samples, "summary": summarize(samples)}
+
+
+def write_report(report, path):
+    output = Path(path)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"Wrote {output}")
