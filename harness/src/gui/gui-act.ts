@@ -154,7 +154,9 @@ export type EndReason =
   /** The gate blocked the next action, or the Mac app refused it (SPEC-07 r5), and the user did not keep going. */
   | "blocked"
   /** The Mac app could not read the window or run the action. */
-  | "macFailure";
+  | "macFailure"
+  /** The file the instruction asked for appeared, so the attempt is done without asking the model again. */
+  | "saved";
 
 /** How many of the last steps had no effect, and how many replies in a row were invalid, for OBJ-09's handoff. */
 export interface Streaks {
@@ -534,6 +536,13 @@ class Attempt {
     }
     this.finishStep(step, outcome, line, describeGuiAction(decision.recorded, app, outcome === "ok"));
     if (outcome === "ok") this.worked++;
+    // The file the instruction asked for exists now: the job is done. The model, asked again, kept checking where
+    // the file went instead of finishing (live Keynote runs, 2026-10-10), so the harness ends it here.
+    const saved = files.find((file) => file.created && isAskedFile(file.path, this.subtask.instruction));
+    if (saved) {
+      this.deps.logger.info("gui.saved", { taskId: this.taskId, subtaskId: this.subtask.id });
+      return { end: this.end("saved", "done", undefined, `Saved ${fileAndFolder(saved.path)}.`) };
+    }
     this.streaks.noEffect = outcome === "noEffect" ? this.streaks.noEffect + 1 : 0;
     this.streaks.invalidOutput = outcome === "invalidOutput" ? this.streaks.invalidOutput + 1 : 0;
     if (this.streaks.noEffect >= NO_EFFECT_LIMIT) {
@@ -674,8 +683,8 @@ class Attempt {
   }
 
   /** Ends the attempt with a result built from the step log, never from model text or screen text. */
-  private end(reason: EndReason, status: ResultStatus, userError?: UserError): GuiActRun {
-    const result = this.result(status, noteFor(reason, status, this.steps, this.streaks, this.last, this.limits));
+  private end(reason: EndReason, status: ResultStatus, userError?: UserError, note?: string): GuiActRun {
+    const result = this.result(status, note ?? noteFor(reason, status, this.steps, this.streaks, this.last, this.limits));
     this.cursorState(status === "done" ? "done" : "stuck");
     if (this.lane === "ghost") this.deps.mac.cursor({ command: "fade", cursorId: this.cursorId });
     // Logged by `guiAct` once the files the attempt made are known.
@@ -871,6 +880,7 @@ function noteFor(
   const front = kind && kind !== "window" ? `, with a ${kind} in front` : "";
   switch (reason) {
     case "finished":
+    case "saved":
       return status === "done" ? `Done in ${count}.` : `Could not finish after ${count}${front}.`;
     case "stepLimit": {
       const stalled =
@@ -912,4 +922,41 @@ function fileAndFolder(path: Path): string {
   const name = parts.at(-1)!;
   const folder = parts.length > 2 ? parts.at(-2)! : "your home folder";
   return `${name}, in ${folder}`;
+}
+
+/** Text the instruction puts in quotes, such as a file name: "Q3 Report run 61". Straight or curly quotes. */
+const QUOTED = /["\u201c]([^"\u201d]+)["\u201d]/g;
+
+/** File types an instruction may ask for by name, and their extensions. */
+const ASKED_TYPES: readonly (readonly [RegExp, readonly string[]])[] = [
+  [/\bpdfs?\b/i, [".pdf"]],
+  [/\bpowerpoint\b/i, [".pptx", ".ppt"]],
+  [/\bpng\b/i, [".png"]],
+  [/\bjpe?g\b/i, [".jpg", ".jpeg"]],
+  [/\bgif\b/i, [".gif"]],
+  [/\b(?:movie|video)\b/i, [".mov", ".m4v", ".mp4"]],
+  [/\bword\b/i, [".docx", ".doc"]],
+  [/\bexcel\b/i, [".xlsx", ".xls"]],
+  [/\bcsv\b/i, [".csv"]],
+];
+
+/** Folders an instruction may ask for by name. */
+const ASKED_FOLDERS = ["Desktop", "Documents", "Downloads"] as const;
+
+/**
+ * Whether a new file is the one the instruction asked for. When the instruction quotes names, the file's name,
+ * with or without its extension, must be one of them. When it quotes nothing, the file must be of a type it names
+ * ("as a PDF") and, if it names Desktop, Documents, or Downloads, in that folder. Compared without case.
+ */
+export function isAskedFile(path: Path, instruction: string): boolean {
+  const name = path.split("/").at(-1)!.toLowerCase();
+  const dot = name.lastIndexOf(".");
+  const stem = dot > 0 ? name.slice(0, dot) : name;
+  const quoted = [...instruction.matchAll(QUOTED)].map((match) => match[1]!.trim().toLowerCase());
+  if (quoted.length > 0) return quoted.some((text) => text === name || text === stem);
+  const extension = dot > 0 ? name.slice(dot) : "";
+  if (!ASKED_TYPES.some(([word, extensions]) => word.test(instruction) && extensions.includes(extension))) return false;
+  const folder = (path.split("/").at(-2) ?? "").toLowerCase();
+  const named = ASKED_FOLDERS.filter((asked) => new RegExp(`\\b${asked}\\b`, "i").test(instruction));
+  return named.length === 0 || named.some((asked) => asked.toLowerCase() === folder);
 }

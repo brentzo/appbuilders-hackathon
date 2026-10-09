@@ -41,6 +41,11 @@ vi.setConfig({ testTimeout: 20_000 });
 
 const GOAL = "Export my deck as a PDF.";
 const INSTRUCTION = 'In Keynote, export the open deck as a PDF named "Q3 Report", in Downloads. Keep the default options.';
+/**
+ * An instruction that names no file and no file type, so no new file ends the attempt by itself ("saved"): the
+ * model keeps the turn after the export, for tests of what it sees then.
+ */
+const OPEN_INSTRUCTION = "In Keynote, export the open deck with the default options.";
 /** Much shorter than the real 500 ms between looks, which only the real Mac app needs. */
 const FAST_SETTLE = { intervalMs: 20, timeoutMs: 500 };
 
@@ -358,7 +363,11 @@ describe("SPEC-05 Mac GUI control", () => {
     expect(run.steps).toBe(6);
     expect(keynote.exported).toEqual([join(home, "Downloads", "Q3 Report.pdf")]);
     // Then the orchestrator receives status "done", files ["~/Downloads/Q3 Report.pdf"], and a short note
-    expect(run.result).toEqual({ status: "done", files: ["~/Downloads/Q3 Report.pdf"], note: "Done in 6 steps." });
+    expect(run.result).toEqual({
+      status: "done",
+      files: ["~/Downloads/Q3 Report.pdf"],
+      note: "Saved Q3 Report.pdf, in Downloads.",
+    });
     expect(validate("SubtaskResult", run.result).errors).toEqual([]);
     // And it does not receive the screenshots, step history, or screen text
     expect(Object.keys(run.result).sort()).toEqual(["files", "note", "status"]);
@@ -881,7 +890,7 @@ describe("OBJ-26 round 3 lessons (OBJ-36.10)", () => {
     const keynote = new FakeKeynote({ home, closingLooks: 100 });
     await connect(keynote);
     const calls = scriptModel(keynoteWorker());
-    const { subtask } = guiSubtask();
+    const { subtask } = guiSubtask({ instruction: OPEN_INSTRUCTION });
     await act(subtask, { settle: { intervalMs: 1, timeoutMs: 0 } });
     expect(calls.some((call) => call.text.includes("In front: a sheet, cancel button [1]"))).toBe(true);
   });
@@ -894,7 +903,7 @@ describe("OBJ-26 round 3 lessons (OBJ-36.10)", () => {
       if (/In front: a sheet, cancel button \[1\]/.test(text)) return reply({ kind: "click", element: 1 });
       return keynoteWorker()(text.replace(/New file:/g, "new-file:"));
     });
-    const { subtask } = guiSubtask();
+    const { subtask } = guiSubtask({ instruction: OPEN_INSTRUCTION });
     await act(subtask, { settle: { intervalMs: 1, timeoutMs: 0 } });
 
     const steps = harness.store.listSteps(subtask.id);
@@ -907,7 +916,7 @@ describe("OBJ-26 round 3 lessons (OBJ-36.10)", () => {
   it('tells the model when a file appears, and in which folder ("New file: Q3 Report.pdf, in Downloads"), so it can finish', async () => {
     await connect(new FakeKeynote({ home }));
     const calls = scriptModel(keynoteWorker());
-    const { subtask } = guiSubtask();
+    const { subtask } = guiSubtask({ instruction: OPEN_INSTRUCTION });
     await act(subtask);
     const exportStep = harness.store.listSteps(subtask.id).at(-1)!;
     expect(exportStep.observation).toBe(
@@ -920,6 +929,25 @@ describe("OBJ-26 round 3 lessons (OBJ-36.10)", () => {
     );
     // The attempt's log line counts the files it found, which are only known once the attempt is over.
     expect(logger.entries.find((e) => e.event === "gui.attemptEnded")).toMatchObject({ reason: "finished", files: 1 });
+  });
+
+  it("ends done as soon as the asked file is saved, before the model can go looking for it (live Keynote run 61)", async () => {
+    await connect(new FakeKeynote({ home }));
+    // Run 61's model: after "New file", it revealed the PDF in Finder "to confirm its location" instead of finishing.
+    const calls = scriptModel((text) =>
+      text.includes("New file:")
+        ? reply({ kind: "tool", call: { tool: "reveal_in_finder", path: "~/Downloads/Q3 Report.pdf" } })
+        : keynoteWorker()(text),
+    );
+    const { subtask } = guiSubtask();
+    const run = ended(await act(subtask));
+    expect(run).toMatchObject({
+      reason: "saved",
+      result: { status: "done", files: ["~/Downloads/Q3 Report.pdf"], note: "Saved Q3 Report.pdf, in Downloads." },
+    });
+    expect(calls.some((c) => c.text.includes("New file:"))).toBe(false);
+    expect(mac!.executed.some((c) => c.params.action.action.kind === "tool")).toBe(false);
+    expect(logger.entries.some((e) => e.event === "gui.saved")).toBe(true);
   });
 
   it("says to use setValue when a click on a text field changed nothing", async () => {
@@ -981,7 +1009,11 @@ describe("the orchestrator never sees the screen (SPEC-05 r4, r8)", () => {
     expect(calls.some((c) => c.system !== PLANNER_SYSTEM_PROMPT && c.text.includes(UNIQUE))).toBe(true);
     // The orchestrator did not: not in the subtask result, the planner's or summary's requests, or the task record.
     const [subtask] = harness.store.listSubtasks(task.id);
-    expect(subtask!.result).toEqual({ status: "done", files: ["~/Downloads/Q3 Report.pdf"], note: "Done in 6 steps." });
+    expect(subtask!.result).toEqual({
+      status: "done",
+      files: ["~/Downloads/Q3 Report.pdf"],
+      note: "Saved Q3 Report.pdf, in Downloads.",
+    });
     expect(fake.executed).toHaveLength(6);
     const orchestrator = model.requests.filter((body) => {
       const system = (body as unknown as ChatRequest).messages[0]!.content as string;
@@ -993,7 +1025,7 @@ describe("the orchestrator never sees the screen (SPEC-05 r4, r8)", () => {
     expect(planner).toContain("- gui_act: Works in an app's window");
     expect(planner).not.toContain("reveal_in_finder");
     const summaryRequest = JSON.stringify(orchestrator[1]);
-    expect(summaryRequest).toContain("Done in 6 steps.");
+    expect(summaryRequest).toContain("Saved Q3 Report.pdf, in Downloads.");
     expect(summaryRequest).not.toContain(UNIQUE);
     expect(JSON.stringify(subtask!.result)).not.toContain(`Exported ${UNIQUE}`);
   });
@@ -1190,7 +1222,7 @@ describe("gui_act in Debug mode (OBJ-52)", () => {
   it("writes each step and sends a ghost's thoughts under its own cursor id", async () => {
     await connect(new FakeKeynote({ home }));
     const calls = scriptModel(withReason(keynoteWorker()));
-    const { subtask } = guiSubtask();
+    const { subtask } = guiSubtask({ instruction: OPEN_INSTRUCTION });
     const { overrides, thoughts, entries } = debugDeps();
 
     const run = ended(await act(subtask, overrides));

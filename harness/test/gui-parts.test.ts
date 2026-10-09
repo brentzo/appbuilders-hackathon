@@ -8,7 +8,7 @@ import { RpcPeer, RpcRemoteError, loadRpcContract } from "@yumi/protocol";
 import { PROTOCOL_VERSION, type ToolCall } from "@yumi/protocol/types";
 import { PASSWORD_QUESTION } from "../src/gui/copy.ts";
 import { watchHome } from "../src/gui/file-watch.ts";
-import { guiAct } from "../src/gui/gui-act.ts";
+import { guiAct, isAskedFile } from "../src/gui/gui-act.ts";
 import { macAppGui } from "../src/gui/mac.ts";
 import {
   GUI_ACT_TOOL,
@@ -283,5 +283,25 @@ describe("gui_act against the harness's RPC server", () => {
     await expect(answer).rejects.toBeInstanceOf(RpcRemoteError);
     await expect(answer).rejects.toMatchObject({ error: { data: { kind: "unexpected", taskId: subtask.taskId } } });
     peer.close();
+  });
+});
+
+describe("the file the instruction asked for (live Keynote runs, 2026-10-10)", () => {
+  it("matches a quoted name, with or without its extension, and nothing else when names are quoted", () => {
+    const instruction =
+      'In Keynote, export the open deck as a PDF named "Q3 Report run 61", saved in the "Yumi smoke test" folder.';
+    expect(isAskedFile("~/Yumi smoke test/Q3 Report run 61.pdf", instruction)).toBe(true);
+    expect(isAskedFile("~/Documents/q3 report run 61.pdf", instruction)).toBe(true);
+    expect(isAskedFile("~/Yumi smoke test/Q3 Report run 62.pdf", instruction)).toBe(false);
+    expect(isAskedFile("~/Yumi smoke test/Other.pdf", instruction)).toBe(false);
+    expect(isAskedFile("~/Desktop/Notes.txt", "Save the note as \u201cNotes.txt\u201d on the Desktop.")).toBe(true);
+  });
+
+  it("without a quoted name, matches a file of the asked type in the asked folder", () => {
+    expect(isAskedFile("~/Downloads/Deck.pdf", "Export the deck as a PDF to Downloads.")).toBe(true);
+    expect(isAskedFile("~/Documents/Deck.pdf", "Export the deck as a PDF to Downloads.")).toBe(false);
+    expect(isAskedFile("~/Documents/Deck.pdf", "Export the deck as a PDF.")).toBe(true);
+    expect(isAskedFile("~/Documents/Deck.key", "Export the deck as a PDF.")).toBe(false);
+    expect(isAskedFile("~/Documents/Deck.pdf", "Export the deck with the default options.")).toBe(false);
   });
 });

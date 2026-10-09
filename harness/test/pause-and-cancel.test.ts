@@ -311,9 +311,14 @@ describe("SPEC-06 r2 take-over: UI lanes pause, helpers keep running", () => {
 
   /**
    * The model for these tests: the UI subtask reads 6 times, then finishes; the helper writes four notes, waiting
-   * while `helper.open` is false, so it is still working while the user has the mouse.
+   * while `helper.open` is false, so it is still working while the user has the mouse. With `keynote.holdAfter`, the
+   * UI subtask's replies wait after that many reads while `keynote.held` is true, so a busy machine cannot let it
+   * finish before the test pauses it.
    */
-  function respond(keynote: { runs: number[] }, helper: { open: boolean; steps: number; delay: number }) {
+  function respond(
+    keynote: { runs: number[]; holdAfter?: number; held?: boolean },
+    helper: { open: boolean; steps: number; delay: number },
+  ) {
     model.respond(async (body) => {
       const request = body as unknown as ChatRequest;
       const system = request.messages[0]!.content as string;
@@ -321,6 +326,7 @@ describe("SPEC-06 r2 take-over: UI lanes pause, helpers keep running", () => {
       if (system === PLANNER_SYSTEM_PROMPT) return { kind: "content", content: plan(UI, NOTES) };
       if (system === SUMMARY_SYSTEM_PROMPT) return content({ summary: "Done." });
       if (text.includes(UI.instruction)) {
+        while (keynote.held && keynote.runs.length >= (keynote.holdAfter ?? Infinity)) await settle(10);
         return keynote.runs.length >= 6 ? finish("Read every slide.") : tool({ tool: "read_file", path: "~/Documents/deck.txt" });
       }
       helper.steps++;
@@ -373,7 +379,7 @@ describe("SPEC-06 r2 take-over: UI lanes pause, helpers keep running", () => {
   });
 
   it("Scenario: Stop shortcut: every lane stops, helpers included, and nothing is sent after the pause", async () => {
-    const keynote = keynoteLane();
+    const keynote = { ...keynoteLane(), holdAfter: 2, held: true };
     const helper = { open: true, steps: 0, delay: 30 };
     respond(keynote, helper);
     run = await startWithMac({
@@ -388,7 +394,10 @@ describe("SPEC-06 r2 take-over: UI lanes pause, helpers keep running", () => {
     const task = run.startTask("read my deck and write notes");
     await until(() => keynote.runs.length >= 2 && helper.steps >= 1);
 
-    expect(await run.mac.call("pause", { taskId: task.id, scope: "everyLane" })).toEqual({});
+    const pausing = run.mac.call("pause", { taskId: task.id, scope: "everyLane" });
+    // The UI subtask's next reply arrives only after the pause was sent, and must not run.
+    keynote.held = false;
+    expect(await pausing).toEqual({});
     expect(status(task.id)).toBe("paused");
     const ran = { keynote: keynote.runs.length, notes: readdirSync(join(home, "Documents")).length };
     await settle(300);
