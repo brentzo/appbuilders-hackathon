@@ -19,6 +19,7 @@ The harness owns planning state, device and lane routing, locks, handoffs, check
 
 ## Notes
 
+- [Architecture](architecture.md) - how the pieces fit, with diagrams, and how the idea came about
 - [Lane Router](lane-router.md) - how each subtask is assigned to a helper, a ghost cursor, or the main cursor
 - [Task Record Schema](task-record-schema.md) - the on-disk record that makes tasks resumable and lets any worker pick up the next step
 - [Device Bridge](device-bridge.md) - Mac and phone as tool providers, routing between them, and the encrypted VPS bridge

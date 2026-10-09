@@ -64,7 +64,7 @@ On a Mac with Apple silicon, Xcode 26, Node.js 24, and Python 3.10 or later, the
 
 | Path | What it is |
 |---|---|
-| [docs/](docs/yumi.md) | Design background: overview, lane router, task record schema, device bridge |
+| [docs/](docs/yumi.md) | Design background: [the architecture with diagrams and how the idea came about](docs/architecture.md), overview, lane router, task record schema, device bridge |
 | [specs/](specs/README.md) | Requirement specs with Gherkin scenarios (what to build) |
 | [objectives/](objectives/README.md) | Implementation objectives with tasks, expectations, and status (how we build it) |
 | [wiki/](wiki/README.md) | Reports and guides: the setup guide for judges, demo readiness, and what was measured |
@@ -96,6 +96,7 @@ On a Mac with Apple silicon, Xcode 26, Node.js 24, and Python 3.10 or later, the
                               relay, offline notices, no plaintext 
 ```
 
+[docs/architecture.md](docs/architecture.md) has the full picture, with a diagram for each part.
 `protocol` defines every message that crosses these lines.
 `character` provides the cat animation file both apps play.
 `models` decides and produces the model files the apps load.
