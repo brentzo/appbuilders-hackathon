@@ -213,6 +213,6 @@ Our generator accepts only the schema subset that maps faithfully to all three l
 | ID | Objective | Assignee | Status |
 |---|---|---|---|
 | [OBJ-01](../objectives/OBJ-01-task-record-schemas.md) | Task record schemas and cross-team contracts | Jepoy | done |
-| [OBJ-02](../objectives/OBJ-02-bridge-envelope-and-crypto.md) | Bridge envelope and end-to-end crypto | Jepoy | todo |
+| [OBJ-02](../objectives/OBJ-02-bridge-envelope-and-crypto.md) | Bridge envelope and end-to-end crypto | Jepoy | in-progress |
 | [OBJ-25](../objectives/OBJ-25-cross-device-messages.md) | Cross-device message kinds | Jepoy | todo |
 <!-- generated:product-objectives:end -->

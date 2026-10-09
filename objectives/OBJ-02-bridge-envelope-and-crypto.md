@@ -5,7 +5,7 @@ product: protocol
 assignee: Jepoy
 touches: []
 specs: [SPEC-08]
-status: todo
+status: in-progress
 priority: p0
 depends-on: []
 integrates-with: []
@@ -47,6 +47,7 @@ This objective defines the message envelope, the pairing flow, and the crypto ru
 - [ ] **OBJ-02.6** Write the reference TypeScript implementation with libsodium-wrappers: generate device keys, seal and open a payload, sign and verify an envelope.
 - [ ] **OBJ-02.7** Write cross-language test vectors (fixed keys, fixed nonce, plaintext, expected ciphertext and signature) so the Swift and Kotlin clients can prove they match. The nonce must be fixed in the vectors, or the expected ciphertext can never match.
 - [ ] **OBJ-02.8** Write tests: wrong key cannot open, tampered routing field fails verification, expired envelope is detectable.
+- [ ] **OBJ-02.9** Write the schemas for the WebSocket frames between a device and the relay, and describe them in the pairing doc: the signed challenge that authenticates a device, envelope delivery, the acknowledgement that lets the relay delete a held message ([OBJ-13](OBJ-13-bridge-relay-server.md) task 5), the relay notices from OBJ-02.2, the pairing exchange, and unpairing. Without them, OBJ-13, OBJ-21, and OBJ-23 would each have to invent the same frames.
 
 ## Expectations
 
