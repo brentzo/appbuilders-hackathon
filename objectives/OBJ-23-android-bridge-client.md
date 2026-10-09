@@ -52,14 +52,15 @@ After this objective, the phone and Mac can exchange messages in both directions
 - [ ] **OBJ-23.4** Run the WebSocket connection (OkHttp) inside the foreground service: authenticate, reconnect with backoff, and survive network changes (Wi-Fi to mobile data).
 - [ ] **OBJ-23.5** Verify signatures and drop messages from unpaired or revoked devices, recording them in the local log.
 - [ ] **OBJ-23.6** At-most-once execution: remember processed message ids and their results; on a duplicate, resend the stored result.
-- [ ] **OBJ-23.7** Never run an expired command. Treat a `targetOffline` event as a structured error for the command that caused it.
+- [ ] **OBJ-23.7** Never run an expired command. Treat a `targetOffline` or `targetNeedsUpdate` event as a structured error for the command that caused it.
 - [ ] **OBJ-23.8** Show connection state (connected, reconnecting, offline) on the home screen and in the notification. Use the SPEC-11 "Bridge down" and "Unpaired device" copy.
+  On `refused` with `unsupportedVersion`, follow `pairing.md` "Another protocol version" ([OBJ-34](OBJ-34-protocol-version-upgrade-recovery.md)): show offline with the error for the side that needs an update (the [OBJ-42](OBJ-42-version-mismatch-copy.md) copy once it lands), keep every key and pairing, and try again every `UnsupportedVersionRetrySeconds` and when the app starts.
 - [ ] **OBJ-23.9** Unpair from settings. Sign a stable UUID with the unpair fields, retry the same frame until the relay acknowledges durable receipt, and have the phone atomically record and ACK that UUID on receipt. Duplicate deliveries are idempotent; re-pairing clears receipt state.
 - [ ] **OBJ-23.10** End-to-end test with the Mac from [OBJ-21](OBJ-21-mac-bridge-client-and-pairing.md) (or a test client until it is ready): a test `ping` command each way, with the phone app in the background.
 
 ## Expectations
 
-- [ ] SPEC-08 scenarios pass from the phone side: "Pair the phone with the Mac", "Unpair a device", "Pairing code expired", "Mac does not answer pairing", "Mac answers pairing too late", "Message from an unknown device is dropped", "Result survives a short reconnect", "Expired command is not run", "Duplicate delivery runs once".
+- [ ] SPEC-08 scenarios pass from the phone side: "Pair the phone with the Mac", "Unpair a device", "Pairing code expired", "Mac does not answer pairing", "Mac answers pairing too late", "Message from an unknown device is dropped", "Result survives a short reconnect", "Expired command is not run", "Duplicate delivery runs once", "Device needs an update", "Command to a device that needs an update", "Devices reconnect after an update".
 - [ ] A command from the Mac reaches the backgrounded phone within 2 seconds on a normal connection.
 - [ ] Keys never appear in files or logs.
 

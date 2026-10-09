@@ -49,15 +49,6 @@ Feature: Pairing
     And the relay retains the unpair until the receiving device acknowledges that id
     And duplicate delivery does not repeat unpair side effects and receives the same acknowledgement
 
-## Decisions
-
-- Unpair delivery uses a UUID signed by the sender.
-  The relay acknowledges durable receipt to the sender, and the recipient acknowledges delivery using the same id.
-  Retries reuse the original signed frame.
-  A new pairing clears the old unpair receipt, and stale acknowledgements cannot remove a different unpair.
-  See [protocol/docs/pairing.md](../protocol/docs/pairing.md).
-- The required id and signed-byte change are a breaking protocol change, so the shared protocol version is 4.
-
   Scenario: Pairing code expired
     Given the Mac showed a pairing QR code more than 5 minutes ago
     When the user scans it with the Yumi app on the phone
@@ -115,6 +106,30 @@ Feature: Message delivery
     And the original result is sent back again
 ```
 
+```gherkin
+@p1 @bridge @mac @android
+Feature: Protocol versions
+
+  Scenario: Device needs an update
+    Given the Mac and phone are paired
+    And Yumi on the phone speaks an older protocol version than the VPS
+    When the phone connects to the VPS
+    Then the phone says Yumi on the phone needs an update, not that the connection is down
+    And the phone stays paired with the Mac
+
+  Scenario: Command to a device that needs an update
+    Given Yumi on the phone speaks an older protocol version than the VPS
+    When the Mac sends the command "set_alarm" to the phone
+    Then the VPS does not queue it
+    And the Mac is told at once that Yumi on the phone needs an update, not that the phone is offline
+
+  Scenario: Devices reconnect after an update
+    Given Yumi on the phone needed an update
+    When the phone is updated and connects to the VPS
+    Then the phone shows connected
+    And the Mac and phone are still paired, without scanning a new code
+```
+
 ## Decisions
 
 - **`replyTo` is encrypted.** It moves inside the encrypted payload, so the VPS cannot link a result to its command. The VPS never needs it, and changing it costs nothing before any client is built. Requirement 3 stays as written. The protocol matches it (`bridge.json` and the signed routing fields in `crypto.md`). Decided 2026-10-09.
@@ -124,6 +139,21 @@ Feature: Message delivery
   With one clock deciding, a pairing never completes after the phone showed the error.
   A phone that cannot reach the VPS gives up after 60 seconds, shows the same copy, and undoes any pairing it missed with an unpair on its next connection.
   Details are in `protocol/docs/pairing.md` "The answer window" ([OBJ-33](../objectives/OBJ-33-pairing-response-timeout-contract.md)).
+  Decided 2026-10-09.
+- **Unpair delivery** uses a UUID signed by the sender.
+  The relay acknowledges durable receipt to the sender, and the recipient acknowledges delivery using the same id.
+  Retries reuse the original signed frame.
+  A new pairing clears the old unpair receipt, and stale acknowledgements cannot remove a different unpair.
+  See [protocol/docs/pairing.md](../protocol/docs/pairing.md).
+  The required id and signed-byte change are a breaking protocol change, so the shared protocol version is 4.
+  Decided 2026-10-09.
+- **Another protocol version:** the VPS speaks one protocol version and refuses a device on any other, naming its own version.
+  So the device knows whether Yumi on it needs an update or the VPS does, and says so instead of "Bridge down".
+  The device shows offline, keeps its keys and pairings, and tries again every 5 minutes and when Yumi starts, so after an update it connects with the same pairing.
+  A command for a device that is behind fails at once with "needs an update" instead of "offline", once that device has tried to connect.
+  There is no version negotiation: the VPS and both apps are updated together, and this covers the gap between those updates.
+  The SPEC-11 copy is added by [OBJ-42](../objectives/OBJ-42-version-mismatch-copy.md); until then the devices show "Bridge down" and "Other device offline".
+  Details are in `protocol/docs/pairing.md` "Another protocol version" ([OBJ-34](../objectives/OBJ-34-protocol-version-upgrade-recovery.md)).
   Decided 2026-10-09.
 - **Transport:** the plain VPS bridge is the only path between devices for the hackathon. Security comes from end-to-end encryption, device signatures, and pairing, not from a private network. Decided 2026-10-09.
 - **NetBird is not used by Yumi.** It cannot replace the bridge, because offline notices, short-reconnect delivery, and phone wake-ups still need the VPS. Running it on the phone would take Android's only VPN slot and make Yumi depend on another app staying connected. NetBird stays on the VPS for the team's private access to the server, logs, and dev machines. Decided 2026-10-09.

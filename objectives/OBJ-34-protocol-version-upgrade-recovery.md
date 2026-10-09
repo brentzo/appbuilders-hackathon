@@ -33,14 +33,18 @@ Protocol v4 makes that behavior user-visible for devices upgraded at different t
 
 ## Tasks
 
-- [ ] Define the structured client state and user-facing recovery guidance when the relay refuses an older or newer protocol version.
-- [ ] Align SPEC-08, SPEC-11, and the Mac and Android bridge objectives.
-- [ ] Add stand-in coverage for version mismatch and successful recovery after both devices use a compatible version.
+- [x] **OBJ-34.1** Define the structured client state and user-facing recovery guidance when the relay refuses an older or newer protocol version.
+  The relay names its own version in `refused` and sends `targetNeedsUpdate` for a device that is behind; `protocol/docs/pairing.md` "Another protocol version" says what each device does.
+  The copy itself is proposed in [OBJ-42](OBJ-42-version-mismatch-copy.md).
+- [x] **OBJ-34.2** Align SPEC-08 and the Mac and Android bridge objectives.
+  The SPEC-11 rows move to [OBJ-42](OBJ-42-version-mismatch-copy.md), because they have to land together with the Android and Mac copy.
+- [x] **OBJ-34.3** Add stand-in coverage for version mismatch and successful recovery after both devices use a compatible version.
+  The relay is tested with stand-in devices here; the Mac's relay stand-in follows in [OBJ-43](OBJ-43-mac-bridge-client-version-refusal.md).
 
 ## Expectations
 
-- A version mismatch is distinguishable from a network outage.
-- The user can understand what needs updating and the existing pairing is preserved unless the protocol explicitly requires otherwise.
+- [ ] A version mismatch is distinguishable from a network outage.
+- [ ] The user can understand what needs updating and the existing pairing is preserved unless the protocol explicitly requires otherwise.
 
 ## Expected outcomes
 

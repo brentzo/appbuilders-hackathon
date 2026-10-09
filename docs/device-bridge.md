@@ -102,7 +102,7 @@ Message kinds inside the payload:
 | `commandExpired` | result | receiving device back to the command sender | 2 minutes |
 | `ping` | command | either way, for connection tests | 2 minutes |
 | `pingResult` | result | back to the ping sender | 2 minutes |
-| Target offline, expired, not paired | relay frame, not an envelope ([pairing](../protocol/docs/pairing.md)) | relay to the sender | held 2 minutes |
+| Target offline, target needs an update, expired, not paired | relay frame, not an envelope ([pairing](../protocol/docs/pairing.md)) | relay to the sender | held 2 minutes |
 | Pairing request | relay frame, sealed with the QR code's secret | phone to Mac | open 30 seconds at the relay |
 | Paired, pairing expired | relay frame, not an envelope ([pairing](../protocol/docs/pairing.md)) | relay to the phone or Mac | held 2 minutes |
 

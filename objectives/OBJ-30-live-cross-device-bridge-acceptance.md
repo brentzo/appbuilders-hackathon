@@ -44,11 +44,12 @@ This follow-up runs the real Mac and Android clients against the deployed relay 
   Also scan an expired code, and scan a fresh code with the Mac app quit until the 30-second answer window passes, then verify neither side is paired.
 - [ ] **OBJ-30.3** Exchange encrypted commands, results, and events in both directions, and confirm the relay logs and storage contain no plaintext payload.
 - [ ] **OBJ-30.4** Exercise unknown-device rejection, command expiry, duplicate delivery, short reconnect delivery, offline command rejection, and unpair from either device.
+  Also connect the phone on a build with an older protocol version, send it a command from the Mac, then update it, and verify the SPEC-08 "Protocol versions" scenarios, with the pairing kept.
 - [ ] **OBJ-30.5** Record device models, OS versions, relay version, protocol version, exact steps, and results for every scenario in the bridge integration report.
 
 ## Expectations
 
-- [ ] SPEC-08 scenarios pass on the real Mac, Android phone, and deployed relay: "Pair the phone with the Mac", "Unpair a device", "Pairing code expired", "Mac does not answer pairing", "VPS cannot read messages", "Message from an unknown device is dropped", "Command to an offline device fails at once", "Result survives a short reconnect", "Expired command is not run", and "Duplicate delivery runs once".
+- [ ] SPEC-08 scenarios pass on the real Mac, Android phone, and deployed relay: "Pair the phone with the Mac", "Unpair a device", "Pairing code expired", "Mac does not answer pairing", "Mac answers pairing too late", "VPS cannot read messages", "Message from an unknown device is dropped", "Command to an offline device fails at once", "Result survives a short reconnect", "Expired command is not run", "Duplicate delivery runs once", "Device needs an update", "Command to a device that needs an update", and "Devices reconnect after an update".
 - [ ] No secret or plaintext payload appears in relay logs, relay storage, Mac files, or Android files.
 - [ ] The report identifies any scenario not run and the exact blocker.
 
