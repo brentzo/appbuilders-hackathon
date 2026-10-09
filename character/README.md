@@ -34,8 +34,8 @@ First draft from [SPEC-04](../specs/04-cursor-presence.md), to be replaced by th
 - Vector animation in Rive, not ASCII or video. Rive's state machine matches the cursor states, and Rive blends transitions.
 - We design with AI help through Rive's MCP server, which runs from the Rive desktop editor (Early Access). It is a design-time tool only. The apps play the exported `.riv` file offline.
 - Remotion is only for the demo or pitch video.
-- The cat is black and white. Decided 2026-10-09 by Patrick, recorded in [SPEC-04](../specs/04-cursor-presence.md) Decisions.
-- How the ghost littermates' own colors combine with black and white is still open in [SPEC-04](../specs/04-cursor-presence.md) Open questions.
+- The cat is a round ginger cat with cream stripes, a cream patch, cocoa outlines, and coral cheeks, replacing the earlier black-and-white decision. Decided 2026-10-09 by Patrick, recorded in [SPEC-04](../specs/04-cursor-presence.md) Decisions.
+- Ghost littermates are the same cat recolored in the ghost's own color, such as mint or sky. Decided 2026-10-09 by Patrick, recorded in [SPEC-04](../specs/04-cursor-presence.md) Decisions.
 
 ## Assets
 

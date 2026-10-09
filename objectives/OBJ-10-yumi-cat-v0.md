@@ -30,7 +30,7 @@ tags: [objective, p0, character, ux]
 
 Yumi's personality is a playful cat, and the cat is how users understand what Yumi is doing.
 The apps need a working `.riv` file and a stable state machine contract early, even with rough art, so the Mac cursor and Android app can be built in parallel with the real design.
-The cat is black and white (SPEC-04 Decisions); final art and timing come later and must not change the contract.
+The cat is a round ginger cat (SPEC-04 Decisions), and its layered master art is `character/art/yumi-cat.svg`; final timing comes later and must not change the contract.
 
 ## Read first
 
@@ -41,9 +41,9 @@ The cat is black and white (SPEC-04 Decisions); final art and timing come later 
 ## Tasks
 
 - [ ] **OBJ-10.1** Set up the Rive desktop editor (Early Access) with MCP enabled, and connect Claude Code or Cursor following Rive's current docs. Note the working setup in `character/README.md`.
-- [ ] **OBJ-10.2** Create the `yumi-cat` artboard with simple placeholder vector art: a small black-and-white cat with a clearly visible paw.
+- [ ] **OBJ-10.2** Create the `yumi-cat` artboard from the master art `character/art/yumi-cat.svg`, keeping its named parts (ears, tail, eyes, stripes, patch) as separate shapes so they can move.
 - [ ] **OBJ-10.3** Build one state machine with a state for each behavior in "Cat behaviors": idle, listening, thinking, moving, waiting, paused, done, stuck, plus a pounce for clicks.
-- [ ] **OBJ-10.4** Define the inputs: a number or enum input for the current state, a trigger for pounce, a color input for ghost littermates (data-bound color or a numeric hue, whichever both the Apple and Android Rive runtimes support). Where the color goes on a black-and-white cat is still open in SPEC-04, so keep the input but leave its placement easy to change, and a boolean `reduceMotion` that swaps leaps and pounces for simple glides.
+- [ ] **OBJ-10.4** Define the inputs: a number or enum input for the current state, a trigger for pounce, a color input for ghost littermates (data-bound color or a numeric hue, whichever both the Apple and Android Rive runtimes support). The color recolors the fur, markings, and lines (SPEC-04 Decisions), and a boolean `reduceMotion` that swaps leaps and pounces for simple glides.
 - [ ] **OBJ-10.5** Fix the click point: the paw tip's exact coordinate in the artboard, so the apps align it with the click.
 - [ ] **OBJ-10.6** Keep the pounce within about 300 ms so it never slows a task.
 - [ ] **OBJ-10.7** Export `character/yumi-cat.riv`.
