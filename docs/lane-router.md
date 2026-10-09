@@ -35,7 +35,7 @@ flowchart TD
     B -- yes --> C{App supports<br/>background control?}
     C -- no --> M[main queue]
     C -- yes --> D{Window free?<br/>lock available}
-    D -- no --> W[wait for lock<br/>or main queue]
+    D -- no --> W[open a second window<br/>or wait for the lock]
     D -- yes --> E{Capacity left?<br/>contexts and cursors}
     E -- no --> Q[queue until a slot frees]
     E -- yes --> G[ghost]
@@ -59,7 +59,7 @@ Any failure moves the subtask to the next more expensive lane, or queues it.
 ## Lane-specific rules
 
 - **Keyboard focus is single.** Only `main` may send keystrokes. `ghost` sets text through `AXValue` or the DevTools protocol.
-- **Ghosts need a visible window.** Covered windows are fine (ScreenCaptureKit captures them). Minimized windows are not. The harness may unminimize or tile windows before spawning.
+- **Ghosts need a visible window.** Covered windows are fine (ScreenCaptureKit captures them). Minimized windows are not. The harness may unminimize a window before spawning, and tiles windows only after the user agrees (SPEC-03).
 - **Helpers never touch the UI.** If a helper discovers it needs UI, it returns a new subtask instead of acting.
 
 ## Handoff (promotion)
@@ -109,5 +109,8 @@ protocol LaneRouter {
 ## Open questions
 
 - Should the planner see the capability cache when proposing lanes, to propose better first guesses?
-- How long should a ghost wait for a window lock before falling back to `main`?
-- Do we tile windows automatically for the demo, or ask first?
+
+## Resolved questions
+
+- Resolved in SPEC-03: a busy window gets a second window when the app allows it, otherwise the subtask waits.
+- Resolved in SPEC-03: Yumi asks before tiling, restores the layout afterward, and has a demo mode that tiles without asking.

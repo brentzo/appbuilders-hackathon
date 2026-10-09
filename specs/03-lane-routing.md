@@ -28,6 +28,12 @@ Design: [lane-router](../docs/lane-router.md).
 8. A ghost is handed off to `main` after 2 consecutive invalid outputs or 3 consecutive no-effect steps.
 9. Handoff keeps the step log. `main` resumes from the last good step.
 10. Every routing decision records a reason that is shown on the dashboard.
+11. When a subtask needs a window another cursor is using, Yumi opens a second window of the same app if the app supports it (for example a new Chrome window, Finder window, or email draft), and the subtask works there.
+12. If the app cannot open a second window, the subtask waits for the window to be free.
+13. If a subtask has waited more than 2 minutes, Yumi tells the user what it is waiting for.
+14. Before tiling windows, Yumi asks the user. It never rearranges windows without a yes.
+15. When the task ends or is cancelled, every window Yumi moved or resized goes back to where it was.
+16. A "demo mode" setting tiles windows without asking. It is off by default.
 
 ## Scenarios
 
@@ -61,11 +67,21 @@ Feature: Lane routing
     When the router checks the app capability
     Then its lane is "main"
 
-  Scenario: Window is already locked
-    Given a ghost cursor holds the lock on a Mail window
-    When another subtask targets the same window
-    Then the second subtask is queued
+  Scenario: Busy window, app supports a second window
+    Given a ghost cursor holds the lock on a Chrome window
+    When another subtask needs Chrome
+    Then Yumi opens a new Chrome window
+    And the second subtask works in the new window at the same time
+
+  Scenario: Busy window, app cannot open a second window
+    Given a cursor holds the lock on the only window of an app
+    When another subtask needs that app
+    Then the second subtask waits
     And it starts after the lock is released
+
+  Scenario: Long wait is explained
+    Given a subtask has waited 2 minutes for a busy window
+    Then Yumi says "I'm waiting for Keynote to be free before I add the chart. It should be quick."
 
   Scenario: Cursor cap is reached
     Given 3 cursors are visible
@@ -99,7 +115,39 @@ Feature: Ghost handoff
     Then Yumi asks the user for help with the error from SPEC-11 for "stuck on screen"
 ```
 
-## Open questions
+```gherkin
+@p0 @ux @mac
+Feature: Window tiling
 
-- How long should a subtask wait for a window lock before going to `main`?
-- Should the harness tile windows automatically so every ghost is visible?
+  Scenario: Yumi asks before tiling
+    Given a task will use 3 windows at once
+    When the cursors are about to start
+    Then Yumi says "Want me to arrange your windows so you can watch all of us work?"
+    And shows "Arrange windows" and "Leave them" buttons
+
+  Scenario: User says yes
+    Given Yumi asked to arrange windows
+    When the user taps "Arrange windows"
+    Then the task's windows are placed side by side so each is fully visible
+
+  Scenario: User says no
+    Given Yumi asked to arrange windows
+    When the user taps "Leave them"
+    Then no window is moved
+    And the ghost cursors still work in covered windows
+
+  Scenario: Layout is restored
+    Given Yumi tiled the windows for a task
+    When the task ends
+    Then every window goes back to its original position and size
+
+  Scenario: Demo mode tiles without asking
+    Given demo mode is on
+    When a task will use more than one window
+    Then Yumi tiles the windows without asking
+```
+
+## Decisions
+
+- Busy window: open a second window when the app allows it, otherwise wait, and tell the user after 2 minutes. Decided 2026-10-09.
+- Tiling: ask first, restore the layout afterward, and offer a demo mode that tiles without asking. Decided 2026-10-09.
