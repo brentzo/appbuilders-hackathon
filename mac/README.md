@@ -243,7 +243,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 - `-YumiPermissions mixed|granted` pretends permissions are in that state, without asking macOS.
 - `-YumiStatus startingUp|ready|listening|working|paused` sets the menu's status line.
 - `-YumiOverlayDemo <dir>` shows sample cursors and a helper chip, writes each display's overlay over white and over black as PNG files, then quits.
-- `-YumiCursorDemo YES` plays a 15-second cursor demo on screen: the main cat drops out of the island and goes through its states, three ghosts follow it out and leap around, the ghosts leap back into the island, and the main cat fades (Debug builds).
+- `-YumiCursorDemo YES` plays a 15-second cursor demo on screen: the main cat drops out of the island and goes through its states, three ghosts follow it out and leap around, the ghosts finish and leap back into the island with a meow, and the main cat does the same last (Debug builds).
 - `-YumiSnapshotDir <dir>` makes the opened window the key, active window, writes it as PNG files at 1x and 2x, then quits.
   If the window never becomes key, it writes nothing and says so on standard error.
   It needs no Screen Recording permission.

@@ -70,8 +70,8 @@ struct CursorDebugActions {
 
     /// `-YumiCursorDemo YES` (Debug builds): the main cat drops out of the island (the camera notch,
     /// or a pill under the menu bar) and goes through its states, three ghosts follow it out (one
-    /// gets a move mid-spawn), everyone leaps around, the ghosts leap back into the island, and
-    /// the main cat fades. For screen recordings.
+    /// gets a move mid-spawn), everyone leaps around, the ghosts finish and leap back into the
+    /// island with a meow, and then the main cat does the same. For screen recordings.
     func playDemo() {
         guard let screen = NSScreen.main else { return }
         let frame = screen.visibleFrame
@@ -103,8 +103,10 @@ struct CursorDebugActions {
             (9.8, { setState(.stuck) }),
             (10.6, { setState(.done) }),
             (11.6, { for (id, _, _) in ghosts { overlay.apply(.fade(FadeCursor(cursorId: id))) } }),
-            (12.8, { setState(.paused) }),
-            (13.8, { fadeAll() }),
+            (12.6, { setState(.paused) }),
+            // The main cat finishes last: a meow, and it leaps back into the island too.
+            (13.6, { setState(.done) }),
+            (14.4, { fadeAll() }),
         ]
         for (delay, step) in steps {
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) { MainActor.assumeIsolated { step() } }
