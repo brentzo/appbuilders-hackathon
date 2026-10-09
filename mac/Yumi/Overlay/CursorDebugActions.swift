@@ -79,13 +79,14 @@ struct CursorDebugActions {
             let global = ScreenGeometry.globalTopLeftPoint(fromAppKit: CGPoint(x: frame.minX + frame.width * fx, y: frame.minY + frame.height * fy))
             return .point(ScreenPoint(x: global.x, y: global.y))
         }
-        let ghosts = [("ghost-1", "Fill expense form", point(0.3, 0.7)), ("ghost-2", "Rename invoices", point(0.72, 0.68)), ("ghost-3", "Export the deck", point(0.62, 0.3))]
+        let ghosts = [("ghost-1", "Fill expense form", point(0.3, 0.7)), ("ghost-2", "Rename the invoices in Downloads by client and month, then file them", point(0.72, 0.68)), ("ghost-3", "Export the deck", point(0.62, 0.3))]
         func spawnGhost(_ index: Int) {
             let (id, label, spot) = ghosts[index]
             overlay.apply(.spawn(SpawnCursor(cursorId: id, cursorKind: .ghost, label: label, at: spot)))
         }
         let steps: [(Double, () -> Void)] = [
             (1.5, { overlay.apply(.spawn(SpawnCursor(cursorId: "main", cursorKind: .main, at: point(0.5, 0.5)))) }),
+            (2.3, { overlay.apply(.setLabel(SetCursorLabel(cursorId: "main", label: "Export the deck"))) }),
             (2.7, { setState(.listening) }),
             (3.5, { setState(.thinking) }),
             (4.3, { spawnGhost(0) }),
@@ -94,8 +95,10 @@ struct CursorDebugActions {
             // Mid-spawn: this ghost changes course from wherever it is.
             (5.2, { overlay.apply(.move(MoveCursor(cursorId: "ghost-3", to: point(0.4, 0.25)))) }),
             (6.4, { setState(.moving); moveTo([point(0.2, 0.35), point(0.8, 0.45), point(0.45, 0.2), point(0.6, 0.8)]) }),
-            (7.3, { setState(.acting) }),
-            (8.1, { setState(.moving); moveTo([point(0.65, 0.55), point(0.35, 0.45), point(0.8, 0.25), point(0.25, 0.75)]) }),
+            (7.3, { setState(.acting); overlay.update("ghost-1") { $0.step = "typing the amount" } }),
+            // Close under the top of the screen: the bubble flips below the paws.
+            (7.8, { overlay.apply(.move(MoveCursor(cursorId: "ghost-3", to: point(0.5, 0.98)))) }),
+            (8.1, { setState(.moving); moveTo([point(0.65, 0.55), point(0.35, 0.45), point(0.8, 0.25), point(0.5, 0.98)]) }),
             (9.0, { setState(.waitingForUser) }),
             (9.8, { setState(.stuck) }),
             (10.6, { setState(.done) }),
