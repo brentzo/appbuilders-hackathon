@@ -37,6 +37,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -187,7 +188,9 @@ private fun PermissionRequestHost(
     alreadyAsked: Set<String>,
     onAsked: (String) -> Unit,
 ) {
-    val request by coordinator.request.collectAsStateWithLifecycle()
+    // Collect only while resumed. Android delivers the notification's intent before onResume but after onStart,
+    // so this way the in-app card never flashes behind the Android dialog when the user came from the notification.
+    val request by coordinator.request.collectAsStateWithLifecycle(minActiveState = Lifecycle.State.RESUMED)
     val current = request ?: return
     val permission = current.permission.manifestPermission
     key(current.permission) {

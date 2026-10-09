@@ -4,13 +4,13 @@
 
     <!-- Notification channels -->
     <string name="channel_running_name">Yumi running in the background</string>
-    <string name="channel_running_description">Shows while Yumi stays connected to your Mac and listens for "Hey Yumi".</string>
+    <string name="channel_running_description">Shows while Yumi stays connected to your Mac and listens for \"Hey Yumi\".</string>
     <string name="channel_requests_name">Requests from Yumi</string>
     <string name="channel_requests_description">When Yumi needs your OK to do something.</string>
 
     <!-- Service notification -->
     <string name="notification_title_running">Yumi is running</string>
-    <string name="notification_title_listening">Listening for "Hey Yumi"</string>
+    <string name="notification_title_listening">Listening for \"Hey Yumi\"</string>
     <string name="notification_action_stop">Stop</string>
     <string name="notification_permission_title">Yumi needs your OK</string>
 
@@ -44,7 +44,7 @@
     <string name="onboarding_allow">Allow</string>
     <string name="onboarding_not_now">Not now</string>
     <string name="onboarding_mic_title">Let Yumi hear you</string>
-    <string name="onboarding_mic_body">Yumi needs the microphone to hear "Hey Yumi" and what you ask for.</string>
+    <string name="onboarding_mic_body">Yumi needs the microphone to hear \"Hey Yumi\" and what you ask for.</string>
     <string name="onboarding_notifications_title">Know when Yumi is on</string>
     <string name="onboarding_notifications_body">Yumi shows a small notification while it runs, so you can always see it and stop it.</string>
     <string name="onboarding_battery_title">Stay connected when locked</string>
@@ -59,15 +59,15 @@
     <string name="settings_back">Back</string>
     <string name="settings_section_voice">Voice</string>
     <string name="settings_wake_word">Wake word</string>
-    <string name="settings_wake_word_body">Say "Hey Yumi" to start talking, even when the screen is off.</string>
-    <string name="settings_wake_word_needs_mic">Yumi needs the microphone to hear "Hey Yumi".</string>
+    <string name="settings_wake_word_body">Say \"Hey Yumi\" to start talking, even when the screen is off.</string>
+    <string name="settings_wake_word_needs_mic">Yumi needs the microphone to hear \"Hey Yumi\".</string>
     <string name="settings_section_mac">Your Mac</string>
     <string name="settings_pairing">Pairing</string>
     <string name="settings_pairing_body">Not paired with your Mac yet. Pairing comes in a later version of this app.</string>
     <string name="settings_pair_now">Pair now</string>
     <string name="settings_section_background">Running in the background</string>
     <string name="settings_run_in_background">Keep Yumi running</string>
-    <string name="settings_run_in_background_body">Lets your Mac reach this phone and Yumi hear "Hey Yumi" while you use other apps.</string>
+    <string name="settings_run_in_background_body">Lets your Mac reach this phone and Yumi hear \"Hey Yumi\" while you use other apps.</string>
     <string name="settings_battery">Battery</string>
     <string name="settings_battery_unrestricted">Unrestricted, so Yumi stays connected when your phone is locked.</string>
     <string name="settings_battery_limited">Limited, so Yumi may disconnect when your phone is locked.</string>

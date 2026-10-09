@@ -13,6 +13,9 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -90,31 +93,19 @@ fun HomeScreen(
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Column(
-                Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                notices.forEach { NoticeCard(it) }
-                Spacer(Modifier.height(if (notices.isEmpty()) 32.dp else 12.dp))
-                LocalCatRenderer.current.Cat(
-                    if (listening) CatState.Listening else CatState.Idle,
-                    Modifier.size(220.dp),
-                )
-                Text(
-                    stringResource(if (listening) R.string.home_hint_listening else R.string.home_hint_idle),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                )
-                if (lastGoal != null) GoalCard(lastGoal)
-                AnimatedVisibility(visible = error != null) {
-                    if (error != null) ErrorCard(error, onErrorButton, Modifier.padding(top = 4.dp))
+            BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+                // Centered in the space above the connection line, and scrollable when cards make it taller.
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .heightIn(min = maxHeight)
+                        .padding(vertical = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+                ) {
+                    HomeContent(listening, notices, lastGoal, error, onErrorButton)
                 }
-                Spacer(Modifier.height(12.dp))
             }
             ConnectionLine(connection)
             Spacer(Modifier.height(20.dp))
@@ -122,6 +113,32 @@ fun HomeScreen(
             Spacer(Modifier.height(32.dp))
         }
     }
+}
+
+@Composable
+private fun ColumnScope.HomeContent(
+    listening: Boolean,
+    notices: List<HomeNotice>,
+    lastGoal: String?,
+    error: PresentedError?,
+    onErrorButton: (PresentedButton) -> Unit,
+) {
+        notices.forEach { NoticeCard(it) }
+        if (notices.isNotEmpty()) Spacer(Modifier.height(12.dp))
+        LocalCatRenderer.current.Cat(
+            if (listening) CatState.Listening else CatState.Idle,
+            Modifier.size(220.dp),
+        )
+        Text(
+            stringResource(if (listening) R.string.home_hint_listening else R.string.home_hint_idle),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+        )
+        if (lastGoal != null) GoalCard(lastGoal)
+        AnimatedVisibility(visible = error != null) {
+            if (error != null) ErrorCard(error, onErrorButton, Modifier.padding(top = 4.dp))
+        }
 }
 
 @Composable

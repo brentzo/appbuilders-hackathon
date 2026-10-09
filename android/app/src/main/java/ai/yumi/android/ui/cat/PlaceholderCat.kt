@@ -83,8 +83,8 @@ object PlaceholderCatRenderer : CatRenderer {
             // Ears: tips rise and turn outward while listening.
             val tipY = lerp(10f, 3f, listening)
             val tipOut = lerp(0f, 3f, listening)
-            ear(p(17f, 46f), p(24f - tipOut, tipY), p(44f, 26f), unit)
-            ear(p(83f, 46f), p(76f + tipOut, tipY), p(56f, 26f), unit)
+            ear(p(20f, 38f), p(24f - tipOut, tipY), p(44f, 25f), unit)
+            ear(p(80f, 38f), p(76f + tipOut, tipY), p(56f, 25f), unit)
 
             // Head.
             drawOval(Fur, topLeft = p(14f, 20f), size = Size(72f * unit, 66f * unit))
