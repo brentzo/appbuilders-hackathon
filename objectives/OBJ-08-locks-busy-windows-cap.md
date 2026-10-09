@@ -71,17 +71,17 @@ At most 3 cursors are visible at once.
   - `harness/src/router/windows.ts`: `WindowCoordinator`, which claims a cursor and a window for every ghost and main subtask: the cursor cap, the window choice, the lock, `openNewWindow` for a busy window or a `windowLocked` queue, the `waitingForWindow` notice after `WAIT_NOTICE_MS` (2 minutes), `tilingSuggested`, and lock renewal. `macAppWindows` calls the Mac app's `listWindows` and `openNewWindow`.
   - `harness/src/router/router.ts`: check 4, the claim, after the capability check. `RouteDecision` gains `target`, `queued` (with `wait`), and `release`; the window is stored on the subtask as `target.windowId`. `LaneRouter.close()`.
   - `harness/src/router/index.ts`: `createLaneRouter` builds the coordinator over the Mac app, with `cursorCap`.
-  - `harness/src/store/`: migration 6 (`window_locks.expires_ms` and an index by subtask), and `acquireWindowLock` (one transaction, refuses a live lock another subtask holds), `renewWindowLock`, `listLiveWindowLocks`, `releaseWindowLocksOf`, and `releaseExpiredWindowLocks`. `setSubtaskStatus` releases a subtask's locks in the same transaction when it leaves `running` or `needsApproval` (`HOLDS_WINDOW`).
+  - `harness/src/store/`: migration 7 (`window_locks.expires_ms` and an index by subtask; 6 is OBJ-38's approvals), and `acquireWindowLock` (one transaction, refuses a live lock another subtask holds), `renewWindowLock`, `listLiveWindowLocks`, `releaseWindowLocksOf`, and `releaseExpiredWindowLocks`. `setSubtaskStatus` releases a subtask's locks in the same transaction when it leaves `running` or `needsApproval` (`HOLDS_WINDOW`).
   - `harness/src/scheduler/scheduler.ts`: a queued subtask goes to `queued`, gives its model slot back while it waits, routes again when woken, and takes a slot again before it runs. Its cursor is released when its run ends. A pause puts a waiting subtask back to `ready`; another subtask's failure fails it ("Stopped before it started.").
   - `harness/src/scheduler/recovery.ts`: startup releases every lock left in the store.
   - `harness/src/config.ts`: `cursorCap` from `YUMI_CURSOR_CAP`, default 3. `harness/src/harness.ts` passes it to the router and closes the router on shutdown.
   - `protocol/mocks/mock-mac-app.ts`: `listWindows` answers for the app asked, and `openNewWindow` opens a window with a fresh id only for Chrome, Finder, and Mail (the real app's `NewWindowOpener.strategies`), `supported: false` for the others. Tests in `protocol/test/mocks.test.ts`, and a line in `protocol/README.md`. No schema change; the protocol stays at version 4.
   - Tests: `harness/test/window-locks.test.ts` and the crash fixture `harness/test/fixtures/crash-holding-lock.ts`. `harness/README.md` documents it under "Window locks, busy windows, and the cursor cap" and `YUMI_CURSOR_CAP`.
 - **Commits:**
-  - `2001322 docs(objectives): start OBJ-08`
-  - `75f8100 feat(protocol): answer listWindows and openNewWindow per app in the mock Mac app`
-  - `c740e86 feat(harness): lock windows, open a second window or queue, and cap visible cursors`
-  - `dfa0323 test(harness): give tests room on a loaded machine`
+  - `8b68d5c docs(objectives): start OBJ-08`
+  - `b60af40 feat(protocol): answer listWindows and openNewWindow per app in the mock Mac app`
+  - `ff9825b feat(harness): lock windows, open a second window or queue, and cap visible cursors`
+  - `8bf4ec2 test(harness): give tests room on a loaded machine`
   - `docs(objectives): finish OBJ-08` (this Outcome)
 - **Expectations:**
   - The four SPEC-03 scenarios, end to end in `test/window-locks.test.ts` ("SPEC-03 busy windows and the cursor cap, with the mock Mac app"): the real planner, scheduler, and router of a running harness, `npm run mock:mac` on its socket, a mocked model server, and stand-in ghost and main lanes. Each of the four fails when the coordinator is taken out of `createLaneRouter`.
@@ -106,6 +106,7 @@ At most 3 cursors are visible at once.
   - `waitingForWindow` is sent once per wait, only for a busy window, not for the cursor cap. A pause ends the wait, and a later wait starts a new 2 minutes. `appName` is the window's app name from `listWindows`, else the planner's app name, else the bundle id.
   - `tilingSuggested` is sent when a task holds more windows at once than before, and at least 2, including the main cursor's window. The Mac tiler ignores a repeat for a task it already asked about.
   - Found along the way: at a load average of about 25, three unrelated harness tests (bridge client end to end, bridge client non-functional, model client) failed on Vitest's 5-second default, and the new tests' mock Mac app start on the 10-second hook default. `harness/vitest.config.ts` now gives every test 20 seconds and every hook 30; files that set more keep theirs.
+  - Rebased onto OBJ-38: a UI subtask held for a take-over gives its cursor and window back like any run that ends, and a waiting subtask whose wait a pause ended goes back to `ready` only if the pause flow has not moved it already. The mock Mac app keeps OBJ-38's `ANSWERS` and scripted `answers`; a scripted answer overrides the per-app window answers.
   - The mock Mac app change is in `protocol/`, because a mock that always opens a window hides the "cannot open" path (contracts-and-stand-ins: mocks must be honest). No schema change and no version bump.
 - **For the next objectives:**
   - OBJ-36 (gui_act): a ghost or main lane works in `subtask.target.windowId` (the subtask passed to `observe` and the step loop has it). The lane does not take or release locks; the scheduler releases the claim when the run ends, and any status change out of `running` or `needsApproval` releases the lock in the store. If the lane cannot find the window, fail the step; do not pick another window.
