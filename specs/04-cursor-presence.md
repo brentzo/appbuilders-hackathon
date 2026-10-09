@@ -144,7 +144,9 @@ First draft, to be replaced by the real design.
   - We design with AI help through Rive's MCP server, which lets Claude Code or Cursor build artboards, shapes, state machines, and keyframes inside the Rive Editor.
   - The MCP server is only a design-time tool. It runs from the Rive desktop editor, which must be open. At runtime, Yumi plays the exported `.riv` file with Rive's native runtimes, fully offline.
   - Rive's MCP integration is in Early Access, so expect rough edges. Check current setup docs before connecting.
+- The cat is black and white, answering the open question about its colors. Decided 2026-10-09 by Patrick.
 
 ## Open questions
 
-- Final cat design, colors, and animation timing. To be designed later.
+- Final cat design and animation timing. To be designed later.
+- Ghost cursors are "the same cat in their own color" (requirement 15 and scenario "Ghost cursors are littermates"), but the cat is black and white. How do the two combine? Options: (a) each ghost keeps the black-and-white cat and adds its color as an accent, such as a collar or outline; (b) each ghost's black patches take its color; (c) ghosts get other natural cat coats (ginger, grey, calico). Recommendation: (a), because it keeps the cat recognizable and the colors still tell ghosts apart. For Patrick to decide.
