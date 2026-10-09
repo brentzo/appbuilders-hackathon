@@ -6,7 +6,8 @@ If two products exchange data, the shape of that data is defined here, once.
 Owner: Jepoy.
 
 Status: task record, action, tool, observation, approval, action log, error, and local RPC schemas are built ([OBJ-01](../objectives/OBJ-01-task-record-schemas.md)).
-Bridge envelope, crypto, and cross-device messages are next (OBJ-02, OBJ-25).
+The bridge envelope, relay frames, pairing, and crypto are built ([OBJ-02](../objectives/OBJ-02-bridge-envelope-and-crypto.md)).
+Cross-device message kinds are next ([OBJ-25](../objectives/OBJ-25-cross-device-messages.md)).
 
 ## Responsibilities
 
@@ -30,7 +31,9 @@ Bridge envelope, crypto, and cross-device messages are next (OBJ-02, OBJ-25).
 |---|---|
 | `schemas/*.json` | JSON Schema (draft 2020-12), the source of truth. Related types are grouped under `$defs`, and type names are unique across files. |
 | `examples/<Type>.<label>.json` | Example values. Every object and union type has one, every union variant appears in one, and every one must validate. |
-| `src/` | `validate(typeName, value)` and the local RPC peer (`src/rpc.ts`) for TypeScript products. |
+| `src/` | `validate(typeName, value)`, the local RPC peer (`src/rpc.ts`), and the reference bridge crypto (`src/crypto.ts`) for TypeScript products. |
+| `docs/` | [crypto.md](docs/crypto.md) (keys, envelope sealing, expiry, test vectors) and [pairing.md](docs/pairing.md) (relay connection, pairing, delivery, unpairing). |
+| `vectors/` | Cross-language crypto test vectors that the Swift and Kotlin clients must reproduce. |
 | `mocks/` | The mock harness and the mock Mac app, with scripted event sequences in `mocks/scripts/`. |
 | `generator/` | Reads the schemas and writes the generated types. |
 | `generated/ts/index.ts` | TypeScript types, for the harness and the bridge. |
@@ -51,6 +54,7 @@ Bridge envelope, crypto, and cross-device messages are next (OBJ-02, OBJ-25).
 | `action-log.json` | ActionLogEntry |
 | `errors.json` | ErrorKind, UserError |
 | `rpc.json` | Every local RPC method and event (listed under `x-rpc`), with their params, results, and error data |
+| `bridge.json` | Envelope, EnvelopeType, Signature, SealedPayload, Key32, DeviceName, DevicePlatform, PairingOffer, PairRequest, PairAccept, BridgeFrame and one frame type per variant, RefusedReason, and the expiry constants |
 
 ## Commands
 
@@ -60,6 +64,7 @@ Run from `protocol/` after `npm install`.
 |---|---|
 | `npm run generate` | Regenerates every file under `generated/` from the schemas. Commit the result with the schema change. |
 | `npm run check:generated` | Fails if `generated/` is out of date. The test suite checks this too. |
+| `npm run vectors` | Rewrites `vectors/bridge-crypto-v1.json` from the reference crypto. The test suite fails if the file and the code disagree. |
 | `npm run typecheck` | Type-checks the package, including `test/types-check.ts`, which proves unions stay strict. |
 | `npm test` | Runs every test. |
 | `npm run verify` | Typecheck and tests. Run it before every commit that touches `protocol/`. |
@@ -78,6 +83,7 @@ CI runs all of the above except the mocks ([.github/workflows/protocol.yml](../.
 
 - Import types from `@yumi/protocol/types` and validation from `@yumi/protocol`.
 - Validate every value that crosses a process or device boundary, including every model output (`WorkerOutput`).
+- Import the bridge crypto from `@yumi/protocol/crypto`: `generateDeviceKeys`, `sealEnvelope`, `openEnvelope`, `expiresAt`, and the byte builders for relay authentication and pairing.
 
 **Swift (Mac app)**
 
@@ -181,18 +187,19 @@ Our generator accepts only the schema subset that maps faithfully to all three l
 
 - `ProtocolVersion` in `common.json` is the version of these schemas, generated as `PROTOCOL_VERSION` in every language.
 - The Mac app sends it in `hello`, and the harness refuses a different version.
-- Bridge messages carry it in the envelope (OBJ-02).
+- Bridge messages carry it in the envelope, and devices send it when they authenticate with the relay.
 - **Breaking changes bump the version:** removing or renaming a type, property, enum value, RPC method, or event; making an optional property required; tightening a rule so that values that used to validate no longer do.
 - **Not breaking:** adding an optional property, a new type, a new RPC method or event, or loosening a rule.
   These still need a regenerate and a commit.
 - An objective that adds or changes an RPC method or event updates `schemas/rpc.json` in the same commit.
 - Products never hand-write a protocol type.
 
-## Crypto plan
+## Bridge crypto
 
-- libsodium everywhere: X25519 key exchange, XChaCha20-Poly1305 encryption, and Ed25519 signatures.
+- libsodium everywhere: X25519 key exchange (`crypto_kx`), XChaCha20-Poly1305 encryption, and Ed25519 signatures.
 - Libraries: libsodium-wrappers (TypeScript), swift-sodium (Swift), and lazysodium (Kotlin).
-- Built in [OBJ-02](../objectives/OBJ-02-bridge-envelope-and-crypto.md).
+- The details, the library function for each step, and the test vectors are in [docs/crypto.md](docs/crypto.md).
+- The relay connection and pairing are in [docs/pairing.md](docs/pairing.md).
 
 ## Used by
 

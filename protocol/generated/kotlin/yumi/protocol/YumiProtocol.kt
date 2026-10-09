@@ -8,6 +8,13 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonClassDiscriminator
 
+/** Either way: "I have this message now." The relay acks what it accepted from a sender; a device acks what it received, and the relay then deletes it. */
+@Serializable
+@SerialName("ack")
+data class AckFrame(
+    val messageId: String,
+) : BridgeFrame
+
 /** One line of the action log. Text typed into password fields is never logged. */
 @Serializable
 data class ActionLogEntry(
@@ -85,12 +92,26 @@ enum class ApprovalMethod {
     @SerialName("voice") Voice;
 }
 
+/** An approval request waits 5 minutes; then the task pauses (SPEC-09 r10). */
+const val APPROVAL_REQUEST_EXPIRY_SECONDS: Long = 300L
+
 /** Ask the user a question. The task waits for the answer. */
 @Serializable
 @SerialName("ask")
 data class AskAction(
     val question: String,
 ) : ModelAction
+
+/** Device to relay, the answer to the challenge. The relay registers a new device id on first use, and accepts it only if the id is derived from this key. */
+@Serializable
+@SerialName("authenticate")
+data class AuthenticateFrame(
+    val deviceId: String,
+    val signingPublicKey: String,
+    val protocolVersion: Long,
+    /** Ed25519 over the challenge nonce and the device id. */
+    val signature: String,
+) : BridgeFrame
 
 /** Press an element through the accessibility API. */
 @Serializable
@@ -110,6 +131,11 @@ enum class AXRole {
     @SerialName("checkbox") Checkbox,
     @SerialName("popUpButton") PopUpButton;
 }
+
+/** One WebSocket text frame between a device and the relay. Each frame says who sends it. See protocol/docs/pairing.md. */
+@Serializable
+@JsonClassDiscriminator("frame")
+sealed interface BridgeFrame
 
 /** The connection state both apps show (SPEC-08 r10). */
 @Serializable
@@ -132,6 +158,14 @@ data class ButtonReply(
     val choice: ConfirmationChoice,
 ) : ConfirmationReply
 
+/** Relay to device, first frame on every connection. */
+@Serializable
+@SerialName("challenge")
+data class ChallengeFrame(
+    /** 32 random bytes, new for every connection. */
+    val nonce: String,
+) : BridgeFrame
+
 /** p1 vision fallback only: click at coordinates in the screenshot the model saw (SPEC-05 r12). */
 @Serializable
 @SerialName("click")
@@ -139,6 +173,9 @@ data class ClickAction(
     val x: Long,
     val y: Long,
 ) : ModelAction
+
+/** Every command expires 2 minutes after it is sent (SPEC-08 r6, SPEC-09 r16), except an approval request. */
+const val COMMAND_EXPIRY_SECONDS: Long = 120L
 
 /** The "Go ahead", "Change it", and "Cancel" buttons. */
 @Serializable
@@ -189,6 +226,13 @@ enum class CursorState {
 @JsonClassDiscriminator("kind")
 sealed interface CursorTarget
 
+@Serializable
+enum class DevicePlatform {
+    @SerialName("mac") Mac,
+    @SerialName("android") Android,
+    @SerialName("iphone") Iphone;
+}
+
 /** An element the Mac app finds on screen itself. */
 @Serializable
 @SerialName("element")
@@ -200,6 +244,38 @@ data class ElementTarget(
 /** No params or no result. */
 @Serializable
 data object Empty
+
+/** One message between two paired devices. The relay reads only id, from, to, type, expiresAt, and protocolVersion (SPEC-08 r3). Everything that says what the message means is inside the encrypted payload. */
+@Serializable
+data class Envelope(
+    /** Unique message id. The receiver runs each id at most once (SPEC-08 r8). */
+    val id: String,
+    val from: String,
+    val to: String,
+    val type: EnvelopeType,
+    /** The id of the command this result answers. Required on a result. */
+    val replyTo: String? = null,
+    /** After this time the message is never delivered or run (SPEC-08 r6). */
+    val expiresAt: String,
+    val protocolVersion: Long,
+    val signature: String,
+    val payload: String,
+)
+
+/** Either way: a message for another device. The relay reads only the routing fields. */
+@Serializable
+@SerialName("envelope")
+data class EnvelopeFrame(
+    val envelope: Envelope,
+) : BridgeFrame
+
+/** The relay never holds a command for an offline device, and holds results and events through a short reconnect (SPEC-08 r7). */
+@Serializable
+enum class EnvelopeType {
+    @SerialName("command") Command,
+    @SerialName("result") Result,
+    @SerialName("event") Event;
+}
 
 /** One kind per row of the SPEC-11 error table, plus blockedAction from SPEC-07 r5. x-specRows maps each kind to its SPEC-11 row and is checked by a test. */
 @Serializable
@@ -228,6 +304,9 @@ enum class ErrorKind {
     @SerialName("blockedAction") BlockedAction;
 }
 
+/** An event is held for a device that dropped off for 2 minutes (SPEC-08 r7). */
+const val EVENT_EXPIRY_SECONDS: Long = 120L
+
 /** Run one checked action. With a cursor id, the Mac app first animates that cursor to the element, then acts after it arrives (SPEC-04, SPEC-05 r3). */
 @Serializable
 data class ExecuteActionParams(
@@ -243,6 +322,14 @@ data class ExecuteActionResult(
     /** One line: what changed. */
     val observation: String,
 )
+
+/** Relay to sender: a message expired before it could be delivered, and was dropped (SPEC-08 r6). */
+@Serializable
+@SerialName("expired")
+data class ExpiredFrame(
+    val messageId: String,
+    val to: String,
+) : BridgeFrame
 
 @Serializable
 @SerialName("fade")
@@ -380,6 +467,14 @@ data class MoveToTrashResult(
     val trashed: List<String>,
 )
 
+/** Relay to sender: the sender and the target are not paired, so the message was dropped. */
+@Serializable
+@SerialName("notPaired")
+data class NotPairedFrame(
+    val messageId: String,
+    val to: String,
+) : BridgeFrame
+
 /** One look at the target window. */
 @Serializable
 data class Observation(
@@ -428,6 +523,22 @@ data class OpenUrlCall(
     val url: String,
 ) : ToolCall
 
+/** The Mac's answer to a pairing request. */
+@Serializable
+data class PairAccept(
+    /** Ed25519 by the Mac's key from the QR code, over the phone's keys. */
+    val signature: String,
+)
+
+/** Mac to relay to phone. When the relay forwards it after a matching pairRequest, it records the two devices as paired. */
+@Serializable
+@SerialName("pairAccept")
+data class PairAcceptFrame(
+    val from: String,
+    val to: String,
+    val accept: PairAccept,
+) : BridgeFrame
+
 @Serializable
 data class PairedDevice(
     val deviceId: String,
@@ -439,6 +550,44 @@ data class PairedDevice(
 data class PairedDeviceList(
     val devices: List<PairedDevice>,
 )
+
+/** What the Mac's pairing QR code holds, as JSON text (SPEC-08 r1). The secret is used once and never sent to the relay. See protocol/docs/pairing.md. */
+@Serializable
+data class PairingOffer(
+    val protocolVersion: Long,
+    val deviceId: String,
+    val deviceName: String,
+    val platform: DevicePlatform,
+    /** Ed25519 public key. */
+    val signingPublicKey: String,
+    /** X25519 public key for crypto_kx. */
+    val kxPublicKey: String,
+    /** 32 random bytes, used once, that key the pairing request's tag. */
+    val pairingSecret: String,
+    val bridgeUrl: String,
+    /** 5 minutes after the code is shown. */
+    val expiresAt: String,
+)
+
+/** The phone's keys, sent to the Mac after scanning the QR code. */
+@Serializable
+data class PairRequest(
+    val deviceName: String,
+    val platform: DevicePlatform,
+    val signingPublicKey: String,
+    val kxPublicKey: String,
+    /** Keyed BLAKE2b-256 with the pairing secret, so the relay cannot swap in its own keys. */
+    val tag: String,
+)
+
+/** Phone to relay to Mac, after scanning the QR code. The relay checks that from is the authenticated sender and forwards the frame unchanged. */
+@Serializable
+@SerialName("pairRequest")
+data class PairRequestFrame(
+    val from: String,
+    val to: String,
+    val request: PairRequest,
+) : BridgeFrame
 
 /** Pause one task, or every task when taskId is absent (SPEC-06 r1). */
 @Serializable
@@ -509,6 +658,11 @@ data class ReadFileCall(
     val path: String,
 ) : ToolCall
 
+/** Relay to device: authenticated. Held results, events, and notices follow, oldest first. */
+@Serializable
+@SerialName("ready")
+data object ReadyFrame : BridgeFrame
+
 /** A model action after the harness resolved its element and decided its permission level. */
 @Serializable
 data class RecordedAction(
@@ -527,6 +681,21 @@ data class Rect(
     val height: Double,
 )
 
+/** Relay to device: the connection is refused and will close. */
+@Serializable
+@SerialName("refused")
+data class RefusedFrame(
+    val reason: RefusedReason,
+) : BridgeFrame
+
+@Serializable
+enum class RefusedReason {
+    @SerialName("badSignature") BadSignature,
+    @SerialName("deviceIdMismatch") DeviceIdMismatch,
+    @SerialName("unsupportedVersion") UnsupportedVersion,
+    @SerialName("invalidFrame") InvalidFrame;
+}
+
 /** The user's answer to the repeat-back (SPEC-01, OBJ-17). */
 @Serializable
 data class ReplyToConfirmationParams(
@@ -543,6 +712,9 @@ data class ResolvedElement(
     /** Used by the risk check (SPEC-07 r6). */
     val label: String,
 )
+
+/** A result is held for a device that dropped off for 2 minutes (SPEC-08 r7). */
+const val RESULT_EXPIRY_SECONDS: Long = 120L
 
 /** Outcome of a subtask attempt (SPEC-05 r4). */
 @Serializable
@@ -815,6 +987,14 @@ data class AppTarget(
     val windowId: Long? = null,
 )
 
+/** Relay to sender: a command's target is offline, so it was dropped, never queued (SPEC-08 r7). */
+@Serializable
+@SerialName("targetOffline")
+data class TargetOfflineFrame(
+    val messageId: String,
+    val to: String,
+) : BridgeFrame
+
 /** One per confirmed goal. */
 @Serializable
 data class Task(
@@ -925,6 +1105,14 @@ data class TreeElement(
 data class TypeTextAction(
     val text: String,
 ) : ModelAction
+
+/** Either device to relay to the other (SPEC-08 r9). The relay removes the pairing at once, then forwards the frame. */
+@Serializable
+@SerialName("unpair")
+data class UnpairFrame(
+    val from: String,
+    val to: String,
+) : BridgeFrame
 
 @Serializable
 data class UnpairParams(

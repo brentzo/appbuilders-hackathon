@@ -2,6 +2,15 @@
 
 import Foundation
 
+/// Either way: "I have this message now." The relay acks what it accepted from a sender; a device acks what it received, and the relay then deletes it.
+public struct AckFrame: Codable, Equatable, Sendable {
+    public var messageId: String
+
+    public init(messageId: String) {
+        self.messageId = messageId
+    }
+}
+
 /// One line of the action log. Text typed into password fields is never logged.
 public struct ActionLogEntry: Codable, Equatable, Sendable {
     /// Shown to users as am/pm.
@@ -117,12 +126,31 @@ public enum ApprovalMethod: String, Codable, Equatable, Sendable, CaseIterable {
     case voice
 }
 
+/// An approval request waits 5 minutes; then the task pauses (SPEC-09 r10).
+public let APPROVAL_REQUEST_EXPIRY_SECONDS: Int = 300
+
 /// Ask the user a question. The task waits for the answer.
 public struct AskAction: Codable, Equatable, Sendable {
     public var question: String
 
     public init(question: String) {
         self.question = question
+    }
+}
+
+/// Device to relay, the answer to the challenge. The relay registers a new device id on first use, and accepts it only if the id is derived from this key.
+public struct AuthenticateFrame: Codable, Equatable, Sendable {
+    public var deviceId: String
+    public var signingPublicKey: String
+    public var protocolVersion: Int
+    /// Ed25519 over the challenge nonce and the device id.
+    public var signature: String
+
+    public init(deviceId: String, signingPublicKey: String, protocolVersion: Int, signature: String) {
+        self.deviceId = deviceId
+        self.signingPublicKey = signingPublicKey
+        self.protocolVersion = protocolVersion
+        self.signature = signature
     }
 }
 
@@ -144,6 +172,89 @@ public enum AXRole: String, Codable, Equatable, Sendable, CaseIterable {
     case link
     case checkbox
     case popUpButton
+}
+
+/// One WebSocket text frame between a device and the relay. Each frame says who sends it. See protocol/docs/pairing.md.
+public enum BridgeFrame: Codable, Equatable, Sendable {
+    case challenge(ChallengeFrame)
+    case authenticate(AuthenticateFrame)
+    case ready(ReadyFrame)
+    case refused(RefusedFrame)
+    case envelope(EnvelopeFrame)
+    case ack(AckFrame)
+    case targetOffline(TargetOfflineFrame)
+    case expired(ExpiredFrame)
+    case notPaired(NotPairedFrame)
+    case pairRequest(PairRequestFrame)
+    case pairAccept(PairAcceptFrame)
+    case unpair(UnpairFrame)
+
+    private enum DiscriminatorKey: String, CodingKey {
+        case discriminator = "frame"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: DiscriminatorKey.self)
+        let value = try container.decode(String.self, forKey: .discriminator)
+        switch value {
+        case "challenge": self = .challenge(try ChallengeFrame(from: decoder))
+        case "authenticate": self = .authenticate(try AuthenticateFrame(from: decoder))
+        case "ready": self = .ready(try ReadyFrame(from: decoder))
+        case "refused": self = .refused(try RefusedFrame(from: decoder))
+        case "envelope": self = .envelope(try EnvelopeFrame(from: decoder))
+        case "ack": self = .ack(try AckFrame(from: decoder))
+        case "targetOffline": self = .targetOffline(try TargetOfflineFrame(from: decoder))
+        case "expired": self = .expired(try ExpiredFrame(from: decoder))
+        case "notPaired": self = .notPaired(try NotPairedFrame(from: decoder))
+        case "pairRequest": self = .pairRequest(try PairRequestFrame(from: decoder))
+        case "pairAccept": self = .pairAccept(try PairAcceptFrame(from: decoder))
+        case "unpair": self = .unpair(try UnpairFrame(from: decoder))
+        default:
+            throw DecodingError.dataCorruptedError(forKey: .discriminator, in: container, debugDescription: "Unknown BridgeFrame frame: \(value)")
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: DiscriminatorKey.self)
+        switch self {
+        case .challenge(let value):
+            try container.encode("challenge", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .authenticate(let value):
+            try container.encode("authenticate", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .ready(let value):
+            try container.encode("ready", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .refused(let value):
+            try container.encode("refused", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .envelope(let value):
+            try container.encode("envelope", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .ack(let value):
+            try container.encode("ack", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .targetOffline(let value):
+            try container.encode("targetOffline", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .expired(let value):
+            try container.encode("expired", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .notPaired(let value):
+            try container.encode("notPaired", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .pairRequest(let value):
+            try container.encode("pairRequest", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .pairAccept(let value):
+            try container.encode("pairAccept", forKey: .discriminator)
+            try value.encode(to: encoder)
+        case .unpair(let value):
+            try container.encode("unpair", forKey: .discriminator)
+            try value.encode(to: encoder)
+        }
+    }
 }
 
 /// The connection state both apps show (SPEC-08 r10).
@@ -172,6 +283,16 @@ public struct ButtonReply: Codable, Equatable, Sendable {
     }
 }
 
+/// Relay to device, first frame on every connection.
+public struct ChallengeFrame: Codable, Equatable, Sendable {
+    /// 32 random bytes, new for every connection.
+    public var nonce: String
+
+    public init(nonce: String) {
+        self.nonce = nonce
+    }
+}
+
 /// p1 vision fallback only: click at coordinates in the screenshot the model saw (SPEC-05 r12).
 public struct ClickAction: Codable, Equatable, Sendable {
     public var x: Int
@@ -182,6 +303,9 @@ public struct ClickAction: Codable, Equatable, Sendable {
         self.y = y
     }
 }
+
+/// Every command expires 2 minutes after it is sent (SPEC-08 r6, SPEC-09 r16), except an approval request.
+public let COMMAND_EXPIRY_SECONDS: Int = 120
 
 /// The "Go ahead", "Change it", and "Cancel" buttons.
 public enum ConfirmationChoice: String, Codable, Equatable, Sendable, CaseIterable {
@@ -331,6 +455,12 @@ public enum CursorTarget: Codable, Equatable, Sendable {
     }
 }
 
+public enum DevicePlatform: String, Codable, Equatable, Sendable, CaseIterable {
+    case mac
+    case android
+    case iphone
+}
+
 /// An element the Mac app finds on screen itself.
 public struct ElementTarget: Codable, Equatable, Sendable {
     public var target: Target
@@ -347,6 +477,50 @@ public struct Empty: Codable, Equatable, Sendable {
 
     public init() {
     }
+}
+
+/// One message between two paired devices. The relay reads only id, from, to, type, expiresAt, and protocolVersion (SPEC-08 r3). Everything that says what the message means is inside the encrypted payload.
+public struct Envelope: Codable, Equatable, Sendable {
+    /// Unique message id. The receiver runs each id at most once (SPEC-08 r8).
+    public var id: String
+    public var from: String
+    public var to: String
+    public var `type`: EnvelopeType
+    /// The id of the command this result answers. Required on a result.
+    public var replyTo: String?
+    /// After this time the message is never delivered or run (SPEC-08 r6).
+    public var expiresAt: String
+    public var protocolVersion: Int
+    public var signature: String
+    public var payload: String
+
+    public init(id: String, from: String, to: String, `type`: EnvelopeType, replyTo: String? = nil, expiresAt: String, protocolVersion: Int, signature: String, payload: String) {
+        self.id = id
+        self.from = from
+        self.to = to
+        self.type = `type`
+        self.replyTo = replyTo
+        self.expiresAt = expiresAt
+        self.protocolVersion = protocolVersion
+        self.signature = signature
+        self.payload = payload
+    }
+}
+
+/// Either way: a message for another device. The relay reads only the routing fields.
+public struct EnvelopeFrame: Codable, Equatable, Sendable {
+    public var envelope: Envelope
+
+    public init(envelope: Envelope) {
+        self.envelope = envelope
+    }
+}
+
+/// The relay never holds a command for an offline device, and holds results and events through a short reconnect (SPEC-08 r7).
+public enum EnvelopeType: String, Codable, Equatable, Sendable, CaseIterable {
+    case command
+    case result
+    case event
 }
 
 /// One kind per row of the SPEC-11 error table, plus blockedAction from SPEC-07 r5. x-specRows maps each kind to its SPEC-11 row and is checked by a test.
@@ -375,6 +549,9 @@ public enum ErrorKind: String, Codable, Equatable, Sendable, CaseIterable {
     case blockedAction
 }
 
+/// An event is held for a device that dropped off for 2 minutes (SPEC-08 r7).
+public let EVENT_EXPIRY_SECONDS: Int = 120
+
 /// Run one checked action. With a cursor id, the Mac app first animates that cursor to the element, then acts after it arrives (SPEC-04, SPEC-05 r3).
 public struct ExecuteActionParams: Codable, Equatable, Sendable {
     public var stepId: String
@@ -398,6 +575,17 @@ public struct ExecuteActionResult: Codable, Equatable, Sendable {
     public init(outcome: StepOutcome, observation: String) {
         self.outcome = outcome
         self.observation = observation
+    }
+}
+
+/// Relay to sender: a message expired before it could be delivered, and was dropped (SPEC-08 r6).
+public struct ExpiredFrame: Codable, Equatable, Sendable {
+    public var messageId: String
+    public var to: String
+
+    public init(messageId: String, to: String) {
+        self.messageId = messageId
+        self.to = to
     }
 }
 
@@ -651,6 +839,17 @@ public struct MoveToTrashResult: Codable, Equatable, Sendable {
     }
 }
 
+/// Relay to sender: the sender and the target are not paired, so the message was dropped.
+public struct NotPairedFrame: Codable, Equatable, Sendable {
+    public var messageId: String
+    public var to: String
+
+    public init(messageId: String, to: String) {
+        self.messageId = messageId
+        self.to = to
+    }
+}
+
 /// One look at the target window.
 public struct Observation: Codable, Equatable, Sendable {
     public var windowTitle: String
@@ -720,6 +919,29 @@ public struct OpenUrlCall: Codable, Equatable, Sendable {
     }
 }
 
+/// The Mac's answer to a pairing request.
+public struct PairAccept: Codable, Equatable, Sendable {
+    /// Ed25519 by the Mac's key from the QR code, over the phone's keys.
+    public var signature: String
+
+    public init(signature: String) {
+        self.signature = signature
+    }
+}
+
+/// Mac to relay to phone. When the relay forwards it after a matching pairRequest, it records the two devices as paired.
+public struct PairAcceptFrame: Codable, Equatable, Sendable {
+    public var from: String
+    public var to: String
+    public var accept: PairAccept
+
+    public init(from: String, to: String, accept: PairAccept) {
+        self.from = from
+        self.to = to
+        self.accept = accept
+    }
+}
+
 public struct PairedDevice: Codable, Equatable, Sendable {
     public var deviceId: String
     public var name: String
@@ -737,6 +959,66 @@ public struct PairedDeviceList: Codable, Equatable, Sendable {
 
     public init(devices: [PairedDevice]) {
         self.devices = devices
+    }
+}
+
+/// What the Mac's pairing QR code holds, as JSON text (SPEC-08 r1). The secret is used once and never sent to the relay. See protocol/docs/pairing.md.
+public struct PairingOffer: Codable, Equatable, Sendable {
+    public var protocolVersion: Int
+    public var deviceId: String
+    public var deviceName: String
+    public var platform: DevicePlatform
+    /// Ed25519 public key.
+    public var signingPublicKey: String
+    /// X25519 public key for crypto_kx.
+    public var kxPublicKey: String
+    /// 32 random bytes, used once, that key the pairing request's tag.
+    public var pairingSecret: String
+    public var bridgeUrl: String
+    /// 5 minutes after the code is shown.
+    public var expiresAt: String
+
+    public init(protocolVersion: Int, deviceId: String, deviceName: String, platform: DevicePlatform, signingPublicKey: String, kxPublicKey: String, pairingSecret: String, bridgeUrl: String, expiresAt: String) {
+        self.protocolVersion = protocolVersion
+        self.deviceId = deviceId
+        self.deviceName = deviceName
+        self.platform = platform
+        self.signingPublicKey = signingPublicKey
+        self.kxPublicKey = kxPublicKey
+        self.pairingSecret = pairingSecret
+        self.bridgeUrl = bridgeUrl
+        self.expiresAt = expiresAt
+    }
+}
+
+/// The phone's keys, sent to the Mac after scanning the QR code.
+public struct PairRequest: Codable, Equatable, Sendable {
+    public var deviceName: String
+    public var platform: DevicePlatform
+    public var signingPublicKey: String
+    public var kxPublicKey: String
+    /// Keyed BLAKE2b-256 with the pairing secret, so the relay cannot swap in its own keys.
+    public var tag: String
+
+    public init(deviceName: String, platform: DevicePlatform, signingPublicKey: String, kxPublicKey: String, tag: String) {
+        self.deviceName = deviceName
+        self.platform = platform
+        self.signingPublicKey = signingPublicKey
+        self.kxPublicKey = kxPublicKey
+        self.tag = tag
+    }
+}
+
+/// Phone to relay to Mac, after scanning the QR code. The relay checks that from is the authenticated sender and forwards the frame unchanged.
+public struct PairRequestFrame: Codable, Equatable, Sendable {
+    public var from: String
+    public var to: String
+    public var request: PairRequest
+
+    public init(from: String, to: String, request: PairRequest) {
+        self.from = from
+        self.to = to
+        self.request = request
     }
 }
 
@@ -865,6 +1147,13 @@ public struct ReadFileCall: Codable, Equatable, Sendable {
     }
 }
 
+/// Relay to device: authenticated. Held results, events, and notices follow, oldest first.
+public struct ReadyFrame: Codable, Equatable, Sendable {
+
+    public init() {
+    }
+}
+
 /// A model action after the harness resolved its element and decided its permission level.
 public struct RecordedAction: Codable, Equatable, Sendable {
     public var action: ModelAction
@@ -894,6 +1183,22 @@ public struct Rect: Codable, Equatable, Sendable {
     }
 }
 
+/// Relay to device: the connection is refused and will close.
+public struct RefusedFrame: Codable, Equatable, Sendable {
+    public var reason: RefusedReason
+
+    public init(reason: RefusedReason) {
+        self.reason = reason
+    }
+}
+
+public enum RefusedReason: String, Codable, Equatable, Sendable, CaseIterable {
+    case badSignature
+    case deviceIdMismatch
+    case unsupportedVersion
+    case invalidFrame
+}
+
 /// The user's answer to the repeat-back (SPEC-01, OBJ-17).
 public struct ReplyToConfirmationParams: Codable, Equatable, Sendable {
     public var taskId: String
@@ -919,6 +1224,9 @@ public struct ResolvedElement: Codable, Equatable, Sendable {
         self.label = label
     }
 }
+
+/// A result is held for a device that dropped off for 2 minutes (SPEC-08 r7).
+public let RESULT_EXPIRY_SECONDS: Int = 120
 
 /// Outcome of a subtask attempt (SPEC-05 r4).
 public enum ResultStatus: String, Codable, Equatable, Sendable, CaseIterable {
@@ -1298,6 +1606,17 @@ public struct Target: Codable, Equatable, Sendable {
     }
 }
 
+/// Relay to sender: a command's target is offline, so it was dropped, never queued (SPEC-08 r7).
+public struct TargetOfflineFrame: Codable, Equatable, Sendable {
+    public var messageId: String
+    public var to: String
+
+    public init(messageId: String, to: String) {
+        self.messageId = messageId
+        self.to = to
+    }
+}
+
 /// One per confirmed goal.
 public struct TaskRecord: Codable, Equatable, Sendable {
     public var id: String
@@ -1520,6 +1839,17 @@ public struct TypeTextAction: Codable, Equatable, Sendable {
 
     public init(text: String) {
         self.text = text
+    }
+}
+
+/// Either device to relay to the other (SPEC-08 r9). The relay removes the pairing at once, then forwards the frame.
+public struct UnpairFrame: Codable, Equatable, Sendable {
+    public var from: String
+    public var to: String
+
+    public init(from: String, to: String) {
+        self.from = from
+        self.to = to
     }
 }
 

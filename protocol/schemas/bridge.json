@@ -1,0 +1,275 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yumi.local/protocol/bridge.json",
+  "title": "Bridge",
+  "description": "The envelope every message between devices travels in, and the expiry rules (SPEC-08, docs/device-bridge.md). The crypto is described in protocol/docs/crypto.md.",
+  "$defs": {
+    "Envelope": {
+      "description": "One message between two paired devices. The relay reads only id, from, to, type, expiresAt, and protocolVersion (SPEC-08 r3). Everything that says what the message means is inside the encrypted payload.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "from", "to", "type", "expiresAt", "protocolVersion", "signature", "payload"],
+      "properties": {
+        "id": { "description": "Unique message id. The receiver runs each id at most once (SPEC-08 r8).", "$ref": "common.json#/$defs/Uuid" },
+        "from": { "$ref": "common.json#/$defs/DeviceId" },
+        "to": { "$ref": "common.json#/$defs/DeviceId" },
+        "type": { "$ref": "#/$defs/EnvelopeType" },
+        "replyTo": { "description": "The id of the command this result answers. Required on a result.", "$ref": "common.json#/$defs/Uuid" },
+        "expiresAt": { "description": "After this time the message is never delivered or run (SPEC-08 r6).", "$ref": "common.json#/$defs/Timestamp" },
+        "protocolVersion": { "$ref": "common.json#/$defs/ProtocolVersion" },
+        "signature": { "$ref": "#/$defs/Signature" },
+        "payload": { "$ref": "#/$defs/SealedPayload" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "result" } } },
+          "then": { "required": ["replyTo"] }
+        }
+      ]
+    },
+    "EnvelopeType": {
+      "description": "The relay never holds a command for an offline device, and holds results and events through a short reconnect (SPEC-08 r7).",
+      "type": "string",
+      "enum": ["command", "result", "event"]
+    },
+    "Signature": {
+      "description": "An Ed25519 signature (64 bytes) in standard base64 with padding.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9+/]{86}==$"
+    },
+    "SealedPayload": {
+      "description": "The 24-byte nonce followed by the XChaCha20-Poly1305 ciphertext and tag, in standard base64 with padding. At most 1 MiB of base64 text.",
+      "type": "string",
+      "minLength": 56,
+      "maxLength": 1048576,
+      "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"
+    },
+    "Key32": {
+      "description": "32 bytes in standard base64 with padding: a public key, a pairing secret, a challenge nonce, or a pairing tag.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9+/]{43}=$"
+    },
+    "DeviceName": {
+      "description": "The name the other device shows, for example \"Paired with Jepoy's MacBook Pro\".",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "DevicePlatform": {
+      "type": "string",
+      "enum": ["mac", "android", "iphone"]
+    },
+    "PairingOffer": {
+      "description": "What the Mac's pairing QR code holds, as JSON text (SPEC-08 r1). The secret is used once and never sent to the relay. See protocol/docs/pairing.md.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocolVersion", "deviceId", "deviceName", "platform", "signingPublicKey", "kxPublicKey", "pairingSecret", "bridgeUrl", "expiresAt"],
+      "properties": {
+        "protocolVersion": { "$ref": "common.json#/$defs/ProtocolVersion" },
+        "deviceId": { "$ref": "common.json#/$defs/DeviceId" },
+        "deviceName": { "$ref": "#/$defs/DeviceName" },
+        "platform": { "$ref": "#/$defs/DevicePlatform" },
+        "signingPublicKey": { "description": "Ed25519 public key.", "$ref": "#/$defs/Key32" },
+        "kxPublicKey": { "description": "X25519 public key for crypto_kx.", "$ref": "#/$defs/Key32" },
+        "pairingSecret": { "description": "32 random bytes, used once, that key the pairing request's tag.", "$ref": "#/$defs/Key32" },
+        "bridgeUrl": { "type": "string", "format": "uri", "pattern": "^wss://" },
+        "expiresAt": { "description": "5 minutes after the code is shown.", "$ref": "common.json#/$defs/Timestamp" }
+      }
+    },
+    "PairRequest": {
+      "description": "The phone's keys, sent to the Mac after scanning the QR code.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["deviceName", "platform", "signingPublicKey", "kxPublicKey", "tag"],
+      "properties": {
+        "deviceName": { "$ref": "#/$defs/DeviceName" },
+        "platform": { "$ref": "#/$defs/DevicePlatform" },
+        "signingPublicKey": { "$ref": "#/$defs/Key32" },
+        "kxPublicKey": { "$ref": "#/$defs/Key32" },
+        "tag": { "description": "Keyed BLAKE2b-256 with the pairing secret, so the relay cannot swap in its own keys.", "$ref": "#/$defs/Key32" }
+      }
+    },
+    "PairAccept": {
+      "description": "The Mac's answer to a pairing request.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["signature"],
+      "properties": {
+        "signature": { "description": "Ed25519 by the Mac's key from the QR code, over the phone's keys.", "$ref": "#/$defs/Signature" }
+      }
+    },
+    "BridgeFrame": {
+      "description": "One WebSocket text frame between a device and the relay. Each frame says who sends it. See protocol/docs/pairing.md.",
+      "type": "object",
+      "discriminator": { "propertyName": "frame" },
+      "oneOf": [
+        { "$ref": "#/$defs/ChallengeFrame" },
+        { "$ref": "#/$defs/AuthenticateFrame" },
+        { "$ref": "#/$defs/ReadyFrame" },
+        { "$ref": "#/$defs/RefusedFrame" },
+        { "$ref": "#/$defs/EnvelopeFrame" },
+        { "$ref": "#/$defs/AckFrame" },
+        { "$ref": "#/$defs/TargetOfflineFrame" },
+        { "$ref": "#/$defs/ExpiredFrame" },
+        { "$ref": "#/$defs/NotPairedFrame" },
+        { "$ref": "#/$defs/PairRequestFrame" },
+        { "$ref": "#/$defs/PairAcceptFrame" },
+        { "$ref": "#/$defs/UnpairFrame" }
+      ]
+    },
+    "ChallengeFrame": {
+      "description": "Relay to device, first frame on every connection.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frame", "nonce"],
+      "properties": {
+        "frame": { "const": "challenge" },
+        "nonce": { "description": "32 random bytes, new for every connection.", "$ref": "#/$defs/Key32" }
+      }
+    },
+    "AuthenticateFrame": {
+      "description": "Device to relay, the answer to the challenge. The relay registers a new device id on first use, and accepts it only if the id is derived from this key.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frame", "deviceId", "signingPublicKey", "protocolVersion", "signature"],
+      "properties": {
+        "frame": { "const": "authenticate" },
+        "deviceId": { "$ref": "common.json#/$defs/DeviceId" },
+        "signingPublicKey": { "$ref": "#/$defs/Key32" },
+        "protocolVersion": { "$ref": "common.json#/$defs/ProtocolVersion" },
+        "signature": { "description": "Ed25519 over the challenge nonce and the device id.", "$ref": "#/$defs/Signature" }
+      }
+    },
+    "ReadyFrame": {
+      "description": "Relay to device: authenticated. Held results, events, and notices follow, oldest first.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frame"],
+      "properties": {
+        "frame": { "const": "ready" }
+      }
+    },
+    "RefusedFrame": {
+      "description": "Relay to device: the connection is refused and will close.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frame", "reason"],
+      "properties": {
+        "frame": { "const": "refused" },
+        "reason": { "$ref": "#/$defs/RefusedReason" }
+      }
+    },
+    "RefusedReason": {
+      "type": "string",
+      "enum": ["badSignature", "deviceIdMismatch", "unsupportedVersion", "invalidFrame"]
+    },
+    "EnvelopeFrame": {
+      "description": "Either way: a message for another device. The relay reads only the routing fields.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frame", "envelope"],
+      "properties": {
+        "frame": { "const": "envelope" },
+        "envelope": { "$ref": "#/$defs/Envelope" }
+      }
+    },
+    "AckFrame": {
+      "description": "Either way: \"I have this message now.\" The relay acks what it accepted from a sender; a device acks what it received, and the relay then deletes it.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frame", "messageId"],
+      "properties": {
+        "frame": { "const": "ack" },
+        "messageId": { "$ref": "common.json#/$defs/Uuid" }
+      }
+    },
+    "TargetOfflineFrame": {
+      "description": "Relay to sender: a command's target is offline, so it was dropped, never queued (SPEC-08 r7).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frame", "messageId", "to"],
+      "properties": {
+        "frame": { "const": "targetOffline" },
+        "messageId": { "$ref": "common.json#/$defs/Uuid" },
+        "to": { "$ref": "common.json#/$defs/DeviceId" }
+      }
+    },
+    "ExpiredFrame": {
+      "description": "Relay to sender: a message expired before it could be delivered, and was dropped (SPEC-08 r6).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frame", "messageId", "to"],
+      "properties": {
+        "frame": { "const": "expired" },
+        "messageId": { "$ref": "common.json#/$defs/Uuid" },
+        "to": { "$ref": "common.json#/$defs/DeviceId" }
+      }
+    },
+    "NotPairedFrame": {
+      "description": "Relay to sender: the sender and the target are not paired, so the message was dropped.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frame", "messageId", "to"],
+      "properties": {
+        "frame": { "const": "notPaired" },
+        "messageId": { "$ref": "common.json#/$defs/Uuid" },
+        "to": { "$ref": "common.json#/$defs/DeviceId" }
+      }
+    },
+    "PairRequestFrame": {
+      "description": "Phone to relay to Mac, after scanning the QR code. The relay checks that from is the authenticated sender and forwards the frame unchanged.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frame", "from", "to", "request"],
+      "properties": {
+        "frame": { "const": "pairRequest" },
+        "from": { "$ref": "common.json#/$defs/DeviceId" },
+        "to": { "$ref": "common.json#/$defs/DeviceId" },
+        "request": { "$ref": "#/$defs/PairRequest" }
+      }
+    },
+    "PairAcceptFrame": {
+      "description": "Mac to relay to phone. When the relay forwards it after a matching pairRequest, it records the two devices as paired.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frame", "from", "to", "accept"],
+      "properties": {
+        "frame": { "const": "pairAccept" },
+        "from": { "$ref": "common.json#/$defs/DeviceId" },
+        "to": { "$ref": "common.json#/$defs/DeviceId" },
+        "accept": { "$ref": "#/$defs/PairAccept" }
+      }
+    },
+    "UnpairFrame": {
+      "description": "Either device to relay to the other (SPEC-08 r9). The relay removes the pairing at once, then forwards the frame.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frame", "from", "to"],
+      "properties": {
+        "frame": { "const": "unpair" },
+        "from": { "$ref": "common.json#/$defs/DeviceId" },
+        "to": { "$ref": "common.json#/$defs/DeviceId" }
+      }
+    },
+    "CommandExpirySeconds": {
+      "description": "Every command expires 2 minutes after it is sent (SPEC-08 r6, SPEC-09 r16), except an approval request.",
+      "type": "integer",
+      "const": 120
+    },
+    "ApprovalRequestExpirySeconds": {
+      "description": "An approval request waits 5 minutes; then the task pauses (SPEC-09 r10).",
+      "type": "integer",
+      "const": 300
+    },
+    "ResultExpirySeconds": {
+      "description": "A result is held for a device that dropped off for 2 minutes (SPEC-08 r7).",
+      "type": "integer",
+      "const": 120
+    },
+    "EventExpirySeconds": {
+      "description": "An event is held for a device that dropped off for 2 minutes (SPEC-08 r7).",
+      "type": "integer",
+      "const": 120
+    }
+  }
+}

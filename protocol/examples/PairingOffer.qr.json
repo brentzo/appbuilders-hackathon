@@ -1,0 +1,11 @@
+{
+  "protocolVersion": 1,
+  "deviceId": "40bca4eaf9d2b097ff8dbaa4d61767ed",
+  "deviceName": "Jepoy's MacBook Pro",
+  "platform": "mac",
+  "signingPublicKey": "A6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=",
+  "kxPublicKey": "mfRnTsyHwLjnEvGSuPSedEKpN2tIdZZ6urooRxAZqT4=",
+  "pairingSecret": "4OHi4+Tl5ufo6err7O3u7/Dx8vP09fb3+Pn6+/z9/v8=",
+  "bridgeUrl": "wss://bridge.yumi.example/v1",
+  "expiresAt": "2026-10-09T15:47:00+08:00"
+}
