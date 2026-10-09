@@ -9,7 +9,8 @@ It is built in two parts ([SPEC-10](../specs/10-android-companion.md)):
 Owner: Brent.
 
 Status: app shell built ([OBJ-22](../objectives/OBJ-22-android-app-shell.md)): home screen with a placeholder cat, permission onboarding, settings, the foreground service, and the error presenter.
-The bridge, voice, and the Rive cat are stand-ins until their objectives land.
+Voice intake and the wake word work ([OBJ-24](../objectives/OBJ-24-android-voice-intake.md)), with "Hey Jarvis" standing in for "Hey Yumi" until OBJ-12's model exists.
+The bridge and the Rive cat are stand-ins until their objectives land.
 
 ## Devices
 
@@ -108,7 +109,7 @@ If Yumi stops when the phone is locked, open Yumi's app settings from Yumi's Set
 
 - Settings shows a "Testing" section in debug builds, with a background permission test and a list of the stand-ins in the build.
 - The same test tool can run from a computer: `adb shell am broadcast -a ai.yumi.android.debug.RUN_TEST_TOOL -p ai.yumi.android`.
-- Logs: `adb logcat -s YumiService YumiError YumiTestTool YumiNotifications Yumi`.
+- Logs: `adb logcat -s YumiService YumiError YumiTestTool YumiNotifications Yumi YumiVoice YumiWakeWord`. Transcripts are never logged, only their word count.
 
 ### Code map
 
@@ -120,12 +121,29 @@ If Yumi stops when the phone is locked, open Yumi's app settings from Yumi's Set
 | `permissions/` | `PermissionCoordinator`: tools ask for permissions from anywhere, including the background |
 | `notifications/` | Notification channels, the service notification, and permission request notifications |
 | `ui/` | Compose screens: onboarding, home, settings, the cat renderer, and the theme |
-| `voice/` | The `VoiceInput` and `GoalSink` seams for OBJ-24 |
+| `voice/` | Voice intake: `OnDeviceVoiceInput` (push-to-talk and after the wake word), `SpeechEngine` (the on-device recognizer only), `MicrophoneOwner`, the listening chime, and the `GoalSink.onGoal` entry point |
+| `voice/wakeword/` | The wake word: `OpenWakeWordDetector` (in the foreground service), `AudioFeatures` (the Kotlin port of openWakeWord's feature step), `WakeWordEngine`, the ONNX models, and `WakeWordConfig` |
+
+### Wake word models
+
+The files in `app/src/main/assets/wakeword/` come from openWakeWord's v0.5.1 release (`https://github.com/dscripka/openWakeWord/releases/download/v0.5.1/<file>`), the release its current code downloads from:
+
+| File | SHA-256 | License |
+|---|---|---|
+| `melspectrogram.onnx` | `ba2b0e0f8b7b875369a2c89cb13360ff53bac436f2895cced9f479fa65eb176f` | Apache 2.0 |
+| `embedding_model.onnx` | `70d164290c1d095d1d4ee149bc5e00543250a7316b59f31d056cff7bd3075c1f` | Apache 2.0 (Google's speech_embedding, re-implemented by openWakeWord) |
+| `hey_jarvis_v0.1.onnx` | `94a13cfe60075b132f6a472e7e462e8123ee70861bc3fb58434a73712ee0d2cb` | CC BY-NC-SA 4.0, non-commercial. Stand-in only |
+
+To switch to "Hey Yumi": put `hey_yumi.onnx` in that folder and change `WakeWordConfig.Current` to it and the phrase to `"Hey\u00A0Yumi"`.
+The UI reads the phrase from there.
+`AudioFeaturesParityTest` checks the Kotlin port against openWakeWord's Python pipeline, using `src/test/resources/wakeword/reference.py` and its recorded scores.
 | `protocol/TemporaryTypes.kt` | Temporary local types until the generated protocol types land (OBJ-01) |
 
 ## Decisions
 
 - **Part B model:** Qwen3.5-4B, fixed (SPEC-10 requirement 9). 9B (~6 GB plus context) was too tight on 12 GB of real RAM, and 4B scores about the same on phone tasks (AndroidWorld 58.6 vs 57.8). Decided 2026-10-09.
+- **ONNX Runtime:** pinned to 1.28.0, the newest release without telemetry. 1.29.0 and later add the INTERNET permission and a content provider that starts an HTTP telemetry client when the app opens. The manifest also removes that provider, so a version bump cannot turn it on. Chosen in OBJ-24 on 2026-10-09.
+- **ABIs:** arm64 only. Both phones are arm64, and ONNX Runtime adds 34 to 41 MB per ABI. Chosen in OBJ-24 on 2026-10-09.
 - **Android SDK:** stay on compile and target SDK 36 with AGP 8.13. Newer AndroidX releases need SDK 37 and AGP 9, which adds disk use and upgrade risk for no feature we need. Decided 2026-10-09.
 
 ## Specs
