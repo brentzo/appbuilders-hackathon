@@ -74,4 +74,21 @@ struct CursorOverlayTests {
         #expect(CursorOverlay.fadeOutDuration < 1)
         #expect(CursorOverlay.moveDuration == 0.3)
     }
+
+    @Test func movesArcLikeALeapAndEndOnTheTarget() {
+        // SPEC-04 r2: never a jump; the path is a curve that lands exactly on the target.
+        let start = CGPoint(x: 100, y: 100), end = CGPoint(x: 500, y: 100)
+        var points: [CGPoint] = []
+        CursorOverlay.leapPath(from: start, to: end).applyWithBlock { element in
+            let count = element.pointee.type == .addCurveToPoint ? 3 : 1
+            points += (0..<count).map { element.pointee.points[$0] }
+        }
+        #expect(points.first == start)
+        #expect(points.last == end)
+        #expect(points.count == 4, "one cubic Bezier")
+        #expect(points[1].y > start.y && points[2].y > start.y, "arcs upward a little")
+        #expect(CursorOverlay.leapPath(from: start, to: end, arcs: false).boundingBox.height == 0, "Reduce Motion glides straight")
+        // The click point is the paw spot, inside the cat's image.
+        #expect((0...1).contains(CursorLayer.hotspot.x) && (0...1).contains(CursorLayer.hotspot.y))
+    }
 }

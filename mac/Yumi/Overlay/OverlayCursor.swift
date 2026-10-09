@@ -8,13 +8,16 @@ struct OverlayCursor: Equatable {
     let kind: CursorKind
     var state: CursorState
     var label: String?
-    /// Ghosts get an accent color; the main cursor is plain black and white.
-    var accent: NSColor?
+    /// The main cat is ginger; ghosts are littermates in their own coat (SPEC-04 r15).
+    var palette: CatPalette = .ginger
     var position: CGPoint
+
+    /// A ghost's color, for its label; nil for the main cursor.
+    var accent: NSColor? { palette == .ginger ? nil : palette.fur }
 }
 
 extension CursorState {
-    /// The SF Symbol shown in the state badge. Placeholder until the Rive cat's poses (OBJ-19).
+    /// The SF Symbol shown in the state badge, next to the cat's pose for the state.
     var badgeSymbol: String? {
         switch self {
         case .idle, .moving: nil
@@ -30,8 +33,42 @@ extension CursorState {
     }
 }
 
-enum GhostColors {
-    /// Accents that read on light and dark backgrounds and on each other. None is red, so a ghost
-    /// never looks like an error.
-    static let palette: [NSColor] = [.systemTeal, .systemOrange, .systemPurple, .systemGreen, .systemBlue, .systemPink]
+/// The cat's coats, from the design tokens (character/design/tokens.json). Copied here until the
+/// shared `Yumi.swift` design file lands in the app.
+enum CatPalette: String, CaseIterable {
+    case ginger, mint, sky, slate
+
+    /// The littermates, in the order ghosts take them.
+    static let ghosts: [CatPalette] = [.mint, .sky, .slate]
+
+    var fur: NSColor {
+        switch self {
+        case .ginger: Self.rgb(0xF0A76A)
+        case .mint: Self.rgb(0x86D6BE)
+        case .sky: Self.rgb(0x93BCF0)
+        case .slate: Self.rgb(0xAEB4BE)
+        }
+    }
+
+    /// Text on the fur: the ghosts' label colors, and the ginger cat's cocoa line.
+    var labelText: NSColor {
+        switch self {
+        case .ginger: Self.rgb(0x6E413E)
+        case .mint: Self.rgb(0x1F3D35)
+        case .sky: Self.rgb(0x22324F)
+        case .slate: Self.rgb(0x2A2E35)
+        }
+    }
+
+    /// The cat's pose for a state, rendered by mac/scripts/render-cursor-cat.py.
+    func image(for state: CursorState) -> NSImage? {
+        NSImage(named: "cat-\(rawValue)-\(state.rawValue)")
+    }
+
+    private static func rgb(_ hex: UInt32) -> NSColor {
+        NSColor(
+            srgbRed: CGFloat(hex >> 16 & 0xFF) / 255, green: CGFloat(hex >> 8 & 0xFF) / 255,
+            blue: CGFloat(hex & 0xFF) / 255, alpha: 1
+        )
+    }
 }

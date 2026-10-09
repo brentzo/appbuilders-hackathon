@@ -73,14 +73,16 @@ final class CursorOverlay {
 
     func spawn(id: String, kind: CursorKind, label: String?, at point: CGPoint) {
         if cursors[id] != nil { fade(id: id, immediately: true) }
-        var accent: NSColor?
+        var palette = CatPalette.ginger
         if kind == .ghost {
-            accent = GhostColors.palette[nextGhostColor % GhostColors.palette.count]
+            palette = CatPalette.ghosts[nextGhostColor % CatPalette.ghosts.count]
             nextGhostColor += 1
         }
-        let cursor = OverlayCursor(id: id, kind: kind, state: .idle, label: label, accent: accent, position: point)
+        // Ghosts split out of the main cat when it is on screen (SPEC-04 "littermates").
+        let parent = kind == .ghost ? cursors.values.first { $0.kind == .main }?.position : nil
+        let cursor = OverlayCursor(id: id, kind: kind, state: .idle, label: label, palette: palette, position: point)
         cursors[id] = cursor
-        for panel in panels { addLayer(for: cursor, to: panel, fadeIn: true) }
+        for panel in panels { addLayer(for: cursor, to: panel, fadeIn: true, splitFrom: parent) }
         log.info("Spawned \(id, privacy: .public)")
     }
 
@@ -91,18 +93,50 @@ final class CursorOverlay {
         cursors[id] = cursor
         for panel in panels {
             guard let layer = layers[id]?[ObjectIdentifier(panel)] else { continue }
-            let animation = CABasicAnimation(keyPath: "position")
             // Starts from where the cursor is on screen now, so a new move mid-flight never jumps.
-            animation.fromValue = NSValue(point: layer.root.presentation()?.position ?? panel.local(from))
-            animation.toValue = NSValue(point: panel.local(point))
-            animation.duration = Self.moveDuration
-            animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            let start = layer.root.presentation()?.position ?? panel.local(from)
             CATransaction.begin()
             CATransaction.setDisableActions(true)
             layer.root.position = panel.local(point)
             CATransaction.commit()
-            layer.root.add(animation, forKey: "move")
+            layer.root.add(Self.leap(from: start, to: panel.local(point)), forKey: "move")
         }
+    }
+
+    /// A move from A to B (SPEC-04 r2): a short arc like a cat's leap, on the design's easing curve,
+    /// in `moveDuration`. Never a jump. With Reduce Motion on, a straight glide (r17).
+    static func leap(from start: CGPoint, to end: CGPoint) -> CAAnimation {
+        let animation = CAKeyframeAnimation(keyPath: "position")
+        animation.path = leapPath(from: start, to: end, arcs: !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
+        animation.calculationMode = .paced
+        animation.duration = moveDuration
+        animation.timingFunction = easing
+        return animation
+    }
+
+    /// The design token `motion.easing`, cubic-bezier(0.25, 0.85, 0.3, 1).
+    static let easing = CAMediaTimingFunction(controlPoints: 0.25, 0.85, 0.3, 1)
+
+    /// A cubic Bezier from `start` to `end`. Its control points sit a third and two thirds of the
+    /// way along, pushed sideways (upward on screen where it can) by a fifth of the distance, at
+    /// most 90 points, so the path arcs a little.
+    static func leapPath(from start: CGPoint, to end: CGPoint, arcs: Bool = true) -> CGPath {
+        let path = CGMutablePath()
+        path.move(to: start)
+        let dx = end.x - start.x, dy = end.y - start.y
+        let distance = hypot(dx, dy)
+        guard arcs, distance > 1 else {
+            path.addLine(to: end)
+            return path
+        }
+        // The unit normal, turned to point up (AppKit y grows upward).
+        var nx = -dy / distance, ny = dx / distance
+        if ny < 0 || (ny == 0 && nx < 0) { nx = -nx; ny = -ny }
+        let lift = min(distance * 0.2, 90)
+        let c1 = CGPoint(x: start.x + dx / 3 + nx * lift, y: start.y + dy / 3 + ny * lift)
+        let c2 = CGPoint(x: start.x + dx * 2 / 3 + nx * lift, y: start.y + dy * 2 / 3 + ny * lift)
+        path.addCurve(to: end, control1: c1, control2: c2)
+        return path
     }
 
     func update(_ id: String, _ change: (inout OverlayCursor) -> Void) {
@@ -214,19 +248,32 @@ final class CursorOverlay {
         log.info("Overlay on \(self.panels.count) display(s)")
     }
 
-    private func addLayer(for cursor: OverlayCursor, to panel: OverlayPanel, fadeIn: Bool) {
+    private func addLayer(for cursor: OverlayCursor, to panel: OverlayPanel, fadeIn: Bool, splitFrom parent: CGPoint? = nil) {
         let layer = CursorLayer()
         layer.setScale(panel.backingScaleFactor)
         layer.root.position = panel.local(cursor.position)
         layer.apply(cursor, scale: panel.backingScaleFactor)
         panel.rootLayer.addSublayer(layer.root)
         layers[cursor.id, default: [:]][ObjectIdentifier(panel)] = layer
-        if fadeIn {
-            let animation = CABasicAnimation(keyPath: "opacity")
-            animation.fromValue = 0
-            animation.toValue = 1
-            animation.duration = Self.fadeInDuration
-            layer.root.add(animation, forKey: "fadeIn")
+        guard fadeIn else { return }
+        let appear = CABasicAnimation(keyPath: "opacity")
+        appear.fromValue = 0
+        appear.toValue = 1
+        appear.duration = Self.fadeInDuration
+        // Grows out of the main cat (or out of its own spot) as it fades in.
+        let grow = CABasicAnimation(keyPath: "transform.scale")
+        grow.fromValue = 0.3
+        grow.toValue = 1
+        grow.duration = Self.moveDuration
+        grow.timingFunction = Self.easing
+        var animations: [CAAnimation] = [appear]
+        if !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion { animations.append(grow) }
+        if let parent {
+            animations.append(Self.leap(from: panel.local(parent), to: panel.local(cursor.position)))
         }
+        let group = CAAnimationGroup()
+        group.animations = animations
+        group.duration = Self.moveDuration
+        layer.root.add(group, forKey: "spawn")
     }
 }
