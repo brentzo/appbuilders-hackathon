@@ -124,7 +124,7 @@ describe("Yumi bridge vectors", () => {
 
   it("signs an unpair", () => {
     const t = v.unpair;
-    const bytes = unpairSigningBytes({ from: phone.deviceId, to: mac.deviceId, at: t.frame.at });
+    const bytes = unpairSigningBytes({ id: t.frame.id, from: phone.deviceId, to: mac.deviceId, at: t.frame.at });
     expect(toHex(bytes)).toBe(t.signingBytes);
     expect(t.frame.signature).toBe(toBase64(sign(bytes, phone.signing.secretKey)));
     expect(validate("BridgeFrame", t.frame).errors).toEqual([]);

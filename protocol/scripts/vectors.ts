@@ -130,7 +130,7 @@ export function buildVectors(): CryptoVectors {
     kxPublicKey: toBase64(phone.kx.publicKey),
   };
   const acceptBytes = pairAcceptSigningBytes({ from: mac.deviceId, to: phone.deviceId, signingPublicKey: phone.signing.publicKey, kxPublicKey: phone.kx.publicKey });
-  const unpair = { from: phone.deviceId, to: mac.deviceId, at: "2026-10-09T07:50:00.000Z" };
+  const unpair = { id: "e7a1bc02-6214-4a14-9297-3dc4ca1f50c2", from: phone.deviceId, to: mac.deviceId, at: "2026-10-09T07:50:00.000Z" };
   const unpairBytes = unpairSigningBytes(unpair);
 
   return {

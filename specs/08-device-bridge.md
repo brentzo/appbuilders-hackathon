@@ -45,6 +45,18 @@ Feature: Pairing
     When the user taps "Unpair" on the phone
     Then the Mac rejects any further message from the phone
     And both devices show "Not paired"
+    And the sender retries the same signed unpair id until the relay acknowledges durable storage
+    And the relay retains the unpair until the receiving device acknowledges that id
+    And duplicate delivery does not repeat unpair side effects and receives the same acknowledgement
+
+## Decisions
+
+- Unpair delivery uses a UUID signed by the sender.
+  The relay acknowledges durable receipt to the sender, and the recipient acknowledges delivery using the same id.
+  Retries reuse the original signed frame.
+  A new pairing clears the old unpair receipt, and stale acknowledgements cannot remove a different unpair.
+  See [protocol/docs/pairing.md](../protocol/docs/pairing.md).
+- The required id and signed-byte change are a breaking protocol change, so the shared protocol version is 4.
 
   Scenario: Pairing code expired
     Given the Mac showed a pairing QR code more than 5 minutes ago

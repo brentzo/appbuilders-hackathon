@@ -7,7 +7,7 @@ const envelope = {
   to: "a1b2c3d4e5f60718293a4b5c6d7e8f90",
   type: "command",
   expiresAt: "2026-10-09T15:44:00+08:00",
-  protocolVersion: 3,
+  protocolVersion: 4,
   signature: `${"A".repeat(86)}==`,
   payload: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
 };
@@ -46,17 +46,17 @@ describe("BridgeFrame", () => {
 
   it("authenticates a device by its signing key and a signed challenge", () => {
     expect(validate("BridgeFrame", { frame: "challenge", nonce: key }).valid).toBe(true);
-    const auth = { frame: "authenticate", deviceId: envelope.from, signingPublicKey: key, protocolVersion: 3, signature: envelope.signature };
+    const auth = { frame: "authenticate", deviceId: envelope.from, signingPublicKey: key, protocolVersion: 4, signature: envelope.signature };
     expect(validate("BridgeFrame", auth).errors).toEqual([]);
     expect(validate("BridgeFrame", { ...auth, signature: undefined }).valid).toBe(false);
   });
 
   it("lets a device on another version through the schema, so the relay can answer unsupportedVersion", () => {
-    const auth = { frame: "authenticate", deviceId: envelope.from, signingPublicKey: key, protocolVersion: 3, signature: envelope.signature };
+    const auth = { frame: "authenticate", deviceId: envelope.from, signingPublicKey: key, protocolVersion: 4, signature: envelope.signature };
     expect(validate("BridgeFrame", { ...auth, protocolVersion: 2 }).errors).toEqual([]);
     expect(validate("BridgeFrame", { ...auth, protocolVersion: 4 }).errors).toEqual([]);
     expect(validate("BridgeFrame", { ...auth, protocolVersion: 0 }).valid).toBe(false);
-    expect(validate("BridgeFrame", { ...auth, protocolVersion: "3" }).valid).toBe(false);
+    expect(validate("BridgeFrame", { ...auth, protocolVersion: "4" }).valid).toBe(false);
     expect(validate("BridgeFrame", { frame: "refused", reason: "unsupportedVersion" }).valid).toBe(true);
   });
 
@@ -84,7 +84,7 @@ describe("BridgeFrame", () => {
 
 describe("Pairing", () => {
   const offer = {
-    protocolVersion: 3,
+    protocolVersion: 4,
     deviceId: envelope.from,
     deviceName: "Jepoy's MacBook Pro",
     platform: "mac",
@@ -126,8 +126,9 @@ describe("Pairing", () => {
   });
 
   it("signs an unpair with the device's own key, so the relay cannot unpair two devices on its own", () => {
-    const unpair = { frame: "unpair", from: envelope.to, to: envelope.from, at: "2026-10-09T15:50:00+08:00", signature: envelope.signature };
+    const unpair = { frame: "unpair", id: envelope.id, from: envelope.to, to: envelope.from, at: "2026-10-09T15:50:00+08:00", signature: envelope.signature };
     expect(validate("BridgeFrame", unpair).errors).toEqual([]);
+    expect(validate("BridgeFrame", { ...unpair, id: undefined }).valid).toBe(false);
     expect(validate("BridgeFrame", { ...unpair, signature: undefined }).valid).toBe(false);
   });
 });

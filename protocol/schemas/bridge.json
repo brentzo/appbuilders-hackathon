@@ -166,7 +166,7 @@
       }
     },
     "AckFrame": {
-      "description": "Either way: \"I have this message now.\" The relay acks what it accepted from a sender; a device acks what it received, and the relay then deletes it.",
+      "description": "Either way: \"I have this message now.\" For envelopes, the relay acknowledges sender receipt and deletes queued delivery after recipient acknowledgement. For unpair frames, the relay acknowledges durable receipt to the sender and retains the frame until the recipient acknowledges it.",
       "type": "object",
       "additionalProperties": false,
       "required": ["frame", "messageId"],
@@ -233,12 +233,13 @@
       }
     },
     "UnpairFrame": {
-      "description": "Either device to relay to the other (SPEC-08 r9). The relay removes the pairing at once, then forwards the frame and holds it until the other device acks it.",
+      "description": "Either device to relay to the other (SPEC-08 r9). The UUID is stable across retries and is included in the sender's signature. The relay removes the pairing at once, acknowledges durable receipt to the sender, then holds the frame until the other device acknowledges the same id.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["frame", "from", "to", "at", "signature"],
+      "required": ["frame", "id", "from", "to", "at", "signature"],
       "properties": {
         "frame": { "const": "unpair" },
+        "id": { "description": "Stable acknowledgement id. Retries reuse this id and the exact signed frame.", "$ref": "common.json#/$defs/Uuid" },
         "from": { "$ref": "common.json#/$defs/DeviceId" },
         "to": { "$ref": "common.json#/$defs/DeviceId" },
         "at": { "description": "When the user unpaired. The other device ignores an unpair older than its pairing, so an old frame cannot be replayed.", "$ref": "common.json#/$defs/Timestamp" },

@@ -208,8 +208,8 @@ export function pairAcceptSigningBytes(a: { from: string; to: string; signingPub
 }
 
 /** The bytes a device signs to unpair another. `at` is the exact timestamp text sent. */
-export function unpairSigningBytes(u: { from: string; to: string; at: string }): Uint8Array {
-  return canonicalBytes([UNPAIR_DOMAIN, u.from, u.to, u.at]);
+export function unpairSigningBytes(u: { id: string; from: string; to: string; at: string }): Uint8Array {
+  return canonicalBytes([UNPAIR_DOMAIN, u.id, u.from, u.to, u.at]);
 }
 
 /** XChaCha20-Poly1305 (IETF). Returns the ciphertext with its 16-byte tag appended. */

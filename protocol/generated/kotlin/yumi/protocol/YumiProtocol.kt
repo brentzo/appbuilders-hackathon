@@ -8,7 +8,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonClassDiscriminator
 
-/** Either way: "I have this message now." The relay acks what it accepted from a sender; a device acks what it received, and the relay then deletes it. */
+/** Either way: "I have this message now." For envelopes, the relay acknowledges sender receipt and deletes queued delivery after recipient acknowledgement. For unpair frames, the relay acknowledges durable receipt to the sender and retains the frame until the recipient acknowledges it. */
 @Serializable
 @SerialName("ack")
 data class AckFrame(
@@ -676,7 +676,7 @@ data class ProbeAppCapabilityParams(
 )
 
 /** Version of these schemas. Bump it on every breaking change; see protocol/README.md. */
-const val PROTOCOL_VERSION: Long = 3L
+const val PROTOCOL_VERSION: Long = 4L
 
 /** The model asked the user something (a ModelAction ask). The task waits for answerQuestion. */
 @Serializable
@@ -1155,10 +1155,12 @@ data class TypeTextAction(
     val text: String,
 ) : ModelAction
 
-/** Either device to relay to the other (SPEC-08 r9). The relay removes the pairing at once, then forwards the frame and holds it until the other device acks it. */
+/** Either device to relay to the other (SPEC-08 r9). The UUID is stable across retries and is included in the sender's signature. The relay removes the pairing at once, acknowledges durable receipt to the sender, then holds the frame until the other device acknowledges the same id. */
 @Serializable
 @SerialName("unpair")
 data class UnpairFrame(
+    /** Stable acknowledgement id. Retries reuse this id and the exact signed frame. */
+    val id: String,
     val from: String,
     val to: String,
     /** When the user unpaired. The other device ignores an unpair older than its pairing, so an old frame cannot be replayed. */

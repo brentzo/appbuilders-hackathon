@@ -114,15 +114,20 @@ The device never deletes keys because of it, since the relay is not trusted to u
 
 Either device can unpair the other (SPEC-08 r9).
 
-1. The device deletes the other's keys and sends `unpair` with the current time and an Ed25519 signature over the canonical fields `yumi-unpair-v1`, `from`, `to`, and that time.
-2. The relay checks that `from` is the authenticated sender, removes the pairing at once, and deletes every message it holds between the two.
-3. The relay forwards the frame, and holds it until the other device acks it, however long that takes.
-4. The other device verifies the signature with the sender's key and checks that the time is later than when the two paired, so an old unpair cannot be replayed after pairing again.
-5. The other device deletes the sender's keys and acks the frame.
-6. Both show "Not paired" (SPEC-08 scenario "Unpair a device").
+1. The device deletes the other's keys and creates `unpair` with a UUID `id`, the current time, and an Ed25519 signature over the canonical fields `yumi-unpair-v1`, `id`, `from`, `to`, and that time.
+2. The sender retries the exact same signed frame until the relay acknowledges its `id`.
+3. The relay checks that `from` is the authenticated sender, removes the pairing at once, deletes every message it holds between the two, durably records the frame, and acknowledges the `id` to the sender.
+4. The relay forwards the frame and holds it until the other device acknowledges the same `id`, however long that takes.
+5. The other device verifies the signature with the sender's key and checks that the time is later than when the two paired, so an old frame cannot be replayed after pairing again.
+6. The other device atomically records the `id`, deletes the sender's keys, and acknowledges it.
+7. A duplicate unpair with the same id has no additional effect and is acknowledged again. The relay retains the receipt until the devices pair again, then clears it; an ACK from a different device or for another id cannot clear the queued frame.
+8. Both show "Not paired" (SPEC-08 scenario "Unpair a device").
 
 From then on, the relay answers any envelope between the two with `notPaired`, and each device drops envelopes from a device it has no keys for (SPEC-08 r5).
 Pairing again needs a new QR code.
+
+Protocol version 4 adds the required unpair id and includes it in the signed bytes.
+Devices that speak another protocol version are refused during relay authentication.
 
 ## Lost device or key
 

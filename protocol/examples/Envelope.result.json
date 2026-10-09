@@ -4,7 +4,7 @@
   "to": "40bca4eaf9d2b097ff8dbaa4d61767ed",
   "type": "result",
   "expiresAt": "2026-10-09T07:44:01.000Z",
-  "protocolVersion": 3,
+  "protocolVersion": 4,
   "signature": "qZnpc71gFcji51slZsMO+imcTSMnCdKTlzuXmiJYnziuAOiQmvE9CvbjVCSgjHxKFWNRc7PBb2nPTw1w2sWSCA==",
   "payload": "oKGio6SlpqeoqaqrrK2ur7CxsrO0tba3dxsect5pmg7rpyyDHfy1cseSX+mP70Ws5DLW"
 }
