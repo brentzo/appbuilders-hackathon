@@ -97,17 +97,43 @@ enum AppCapabilityProbe {
 enum AppLauncher {
     enum Failure: Error { case didNotStart }
 
+    /// What the wait needs from a running app, so it can be checked without launching one.
+    protocol Instance {
+        var isFinishedLaunching: Bool { get }
+        var isTerminated: Bool { get }
+    }
+
+    /// How long an app may take to finish launching, checked every `pollInterval`.
+    static let launchPolls = 150
+    static let pollInterval: Duration = .milliseconds(100)
+
     static func running(bundleId: String, url: URL) async throws -> NSRunningApplication {
-        if let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundleId).first {
+        if let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundleId).first(where: { !$0.isTerminated }) {
             return app
         }
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.activates = false
         let app = try await NSWorkspace.shared.openApplication(at: url, configuration: configuration)
-        for _ in 0..<50 where !app.isFinishedLaunching {
-            try? await Task.sleep(for: .milliseconds(100))
+        return try await waitUntilLaunched(app) {
+            NSRunningApplication.runningApplications(withBundleIdentifier: bundleId).first { !$0.isTerminated }
         }
-        guard app.isFinishedLaunching else { throw Failure.didNotStart }
-        return app
+    }
+
+    /// Waits until an instance of the app has finished launching. Some apps, Spotify among them,
+    /// exit right after they start and come back as a new process, so the instance that was
+    /// launched is not always the one to wait for: once it is gone, the live one counts.
+    static func waitUntilLaunched<App: Instance>(
+        _ launched: App,
+        current: () -> App?,
+        sleep: (Duration) async -> Void = { try? await Task.sleep(for: $0) }
+    ) async throws -> App {
+        for poll in 0..<launchPolls {
+            if poll > 0 { await sleep(pollInterval) }
+            let app = launched.isTerminated ? current() : launched
+            if let app, app.isFinishedLaunching { return app }
+        }
+        throw Failure.didNotStart
     }
 }
+
+extension NSRunningApplication: AppLauncher.Instance {}
