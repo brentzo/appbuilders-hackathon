@@ -111,7 +111,7 @@ struct TakeOverSensitivityTests {
         #expect(TakeOverWatcher.describe(.keyDown) == "a key press")
     }
 
-    @Test func bubblesAndChipsAreYumisOwnInAnyMode() {
+    @Test func catsBubblesAndChipsAreYumisOwnInAnyMode() {
         let overlay = CursorOverlay(locator: NoElements())
         overlay.avoider.watchesPointer = false
         overlay.thoughtsClicks.watchesPointer = false
@@ -123,7 +123,49 @@ struct TakeOverSensitivityTests {
         // Debug mode off: nothing is clickable, but the pointer on them is still the user using Yumi.
         #expect(!overlay.debugMode)
         #expect(overlay.thoughtsTargets().isEmpty)
-        #expect(overlay.ownFrames.count == 2)
+        #expect(overlay.ownFrames.count == 3, "the cat, its bubble, and the chip")
         #expect(overlay.ownFrames.allSatisfy { !$0.isEmpty })
+    }
+}
+
+/// The live check of 2026-10-10: Brent resumed a Keynote export, its ghost leapt out of the island
+/// again, he clicked that cat, and the task paused again, over and over ("The user took over: a
+/// click" right after each routeDecided). The cat itself is Yumi's own, like its bubble.
+@MainActor
+struct ResumeTakeOverTests {
+    struct NoElements: ElementLocating {
+        func locate(_ target: ElementTarget) -> CGPoint? { nil }
+    }
+
+    @Test func clickingTheCatThatAppearsOnResumeIsNotTakingOver() throws {
+        let overlay = CursorOverlay(locator: NoElements())
+        overlay.avoider.watchesPointer = false
+        overlay.thoughtsClicks.watchesPointer = false
+        overlay.start()
+        defer { overlay.fadeAll() }
+        let frame = NSScreen.screens[0].visibleFrame
+        let spot = CGPoint(x: frame.midX, y: frame.midY)
+        // Resume: the harness spawns the task's ghost again, labelled with its subtask.
+        overlay.spawn(id: "ghost-1", kind: .ghost, label: "Export the deck as a PDF", at: spot)
+        let drawn = try #require(overlay.drawings(of: "ghost-1").first)
+        // Where the cat lands, in global coordinates (its spawn leap is drawn there now).
+        let paws = CGPoint(x: drawn.layer.root.position.x + drawn.panel.screenFrame.minX, y: drawn.layer.root.position.y + drawn.panel.screenFrame.minY)
+        let body = PointerAvoidance.body(at: paws)
+        let onCat = CGPoint(x: body.midX, y: body.midY)
+
+        let overYumi = overlay.ownFrames.contains { $0.contains(onCat) }
+        #expect(overYumi, "the cat's own body is Yumi's")
+        let click = TakeOverRule.Input(tagged: false, isKeyboard: false, overYumiWindow: overYumi, yumiHasKeyboard: false)
+        #expect(!TakeOverRule.isTakeOver(click, uiLaneActing: true))
+
+        // A reach that comes to rest on the cat is the user using Yumi too.
+        var reach = PointerReach()
+        reach.moved(to: CGPoint(x: onCat.x - 300, y: onCat.y - 200), at: 0)
+        reach.moved(to: onCat, at: 0.2)
+        #expect(reach.settle(at: 0.2 + PointerReach.rest, overYumi: overYumi) == nil)
+
+        // Off the cat, a click is still the user's own (SPEC-06 r2).
+        let away = CGPoint(x: body.maxX + 120, y: body.midY)
+        #expect(!overlay.ownFrames.contains { $0.contains(away) })
     }
 }

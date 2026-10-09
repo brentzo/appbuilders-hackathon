@@ -251,7 +251,7 @@ The user can always stop Yumi ([OBJ-35](../objectives/OBJ-35-mac-stop-and-take-o
 - Control-Option-Escape (a Carbon hot key, no permission needed) and "Stop" in the menu pause every lane.
   Yumi says "Paused. Say continue when you're ready, or cancel to stop for good." and listens for the answer.
 - A click, a scroll, a key press, or a deliberate pointer move while a cursor works in a running task pauses silently (SPEC-06 r2).
-  A listen-only event tap watches for it; events tagged as Yumi's own, input on Yumi's own windows, cards, bubbles, thoughts panels, and helper chips, and input while Yumi waits for the user (a card, a handed-over password) never count.
+  A listen-only event tap watches for it; events tagged as Yumi's own, input on Yumi's own windows, cards, cats, bubbles, thoughts panels, and helper chips, and input while Yumi waits for the user (a card, a handed-over password) never count.
 - A pointer move is deliberate when it goes more than 80 points from where the pointer was within the last half second (`PointerReach`), so jiggles and trackpad bumps never count.
   It is judged once the pointer rests (0.15 seconds still, or at most 0.8 seconds), so a reach that ends on a bubble, chip, panel, or card is the user using Yumi. Clicks, scrolls, and key presses count at once.
 - Every take-over is logged with what triggered it, for example "The user took over: a pointer move of 312 points" (category `control`).

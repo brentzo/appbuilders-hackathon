@@ -86,9 +86,24 @@ extension CursorOverlay {
         thoughts.isEnabled ? drawnTargets() : []
     }
 
-    /// Where Yumi's own bubbles, open panels, and helper chips are drawn now, in global AppKit
-    /// coordinates, in any mode. Pointer moves and clicks there are never taking over (SPEC-06 r2).
-    var ownFrames: [CGRect] { drawnTargets().map(\.frame) }
+    /// Where Yumi's own cats, bubbles, open panels, and helper chips are drawn now, in global
+    /// AppKit coordinates, in any mode. Pointer moves and clicks there are never taking over
+    /// (SPEC-06 r2): a click on a cat, such as a ghost that just came back on Resume, is aimed at
+    /// Yumi (live check, 2026-10-10).
+    var ownFrames: [CGRect] { drawnTargets().map(\.frame) + catBodies }
+
+    /// Each cat's body where it is drawn now, mid-leap or faded included.
+    private var catBodies: [CGRect] {
+        cursors.compactMap { id, cursor in
+            let drawings = drawings(of: id)
+            guard let drawing = drawings.first(where: { $0.panel.screenFrame.contains(cursor.position) }) ?? drawings.first else {
+                return nil
+            }
+            let position = drawing.layer.root.presentation()?.position ?? drawing.layer.root.position
+            let origin = drawing.panel.screenFrame.origin
+            return PointerAvoidance.body(at: CGPoint(x: position.x + origin.x, y: position.y + origin.y))
+        }
+    }
 
     private func drawnTargets() -> [(target: ThoughtTarget, frame: CGRect)] {
         var targets: [(target: ThoughtTarget, frame: CGRect)] = []
