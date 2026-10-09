@@ -15,7 +15,8 @@ The harness link is not built yet.
 - **Goal confirmation:** repeat the goal back, and handle confirm, correct, and cancel.
 - **Cursor overlay:** transparent click-through overlay on every display, smooth motion, the Rive cat, ghost colors and labels, helper chips ([SPEC-04](../specs/04-cursor-presence.md)).
 - **Window tiling:** ask before arranging windows, restore them afterward, demo mode ([SPEC-03](../specs/03-lane-routing.md)).
-- **Native execution:** when the harness asks, capture a window, read its accessibility tree, and perform clicks, presses, and text input. This is defined by SPEC-05, which is not finalized yet.
+- **Native execution:** when the harness asks, read a window's trimmed accessibility tree, press elements, set text, type for the main cursor, and run the typed direct tools ([SPEC-05](../specs/05-mac-gui-control.md)).
+- **User control and safety UI:** the stop shortcut, pausing when the user takes the mouse, the paused state, and the approval cards ([SPEC-06](../specs/06-user-control.md), [SPEC-07](../specs/07-safety.md)).
 - **Pairing screen:** show the QR code that pairs the phone ([SPEC-08](../specs/08-device-bridge.md)).
 
 ## Not responsible for
@@ -136,7 +137,9 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 - [SPEC-03 Lane routing and handoff](../specs/03-lane-routing.md) (tiling)
 - [SPEC-04 Cursor presence](../specs/04-cursor-presence.md)
 - [SPEC-08 Device bridge](../specs/08-device-bridge.md) (pairing screen)
-- Not finalized yet: [SPEC-05 Mac GUI control](../specs/05-mac-gui-control.md), [SPEC-06 User control](../specs/06-user-control.md), [SPEC-07 Safety](../specs/07-safety.md).
+- [SPEC-05 Mac GUI control](../specs/05-mac-gui-control.md) (native execution)
+- [SPEC-06 User control](../specs/06-user-control.md) (stop shortcut, take-over, paused state)
+- [SPEC-07 Safety](../specs/07-safety.md) (approval cards, moving files to the Trash)
 - Always follows [SPEC-11 User-facing errors](../specs/11-user-facing-errors.md).
 
 ## Objectives
@@ -152,6 +155,9 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 | [OBJ-19](../objectives/OBJ-19-rive-cat-cursor.md) | Rive cat cursor | Patrick | todo |
 | [OBJ-20](../objectives/OBJ-20-window-tiling.md) | Window tiling with consent | Patrick | todo |
 | [OBJ-27](../objectives/OBJ-27-mac-native-services.md) | Mac native services for the harness | Patrick | todo |
+| [OBJ-28](../objectives/OBJ-28-mac-gui-execution.md) | Mac GUI execution | Patrick | todo |
+| [OBJ-30](../objectives/OBJ-30-mac-stop-and-take-over.md) | Stop and take over on the Mac | Patrick | todo |
 <!-- generated:product-objectives:end -->
 
 Related: [OBJ-21](../objectives/OBJ-21-mac-bridge-client-and-pairing.md) (Jepoy's bridge client; its pairing screen and connection state are built here in OBJ-27).
+Related: the harness side of GUI control, pausing, and safety is Brent's [OBJ-31](../objectives/OBJ-31-gui-act-sub-agent.md), [OBJ-32](../objectives/OBJ-32-permission-gate-and-file-tools.md), and [OBJ-33](../objectives/OBJ-33-approvals-pause-and-action-log.md).

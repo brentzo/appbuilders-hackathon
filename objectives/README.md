@@ -85,10 +85,12 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-25](OBJ-25-cross-device-messages.md) | Cross-device message kinds | protocol | Jepoy | 09, 06, 07, 08, 10 | 01, 02 | - | todo |
 | [OBJ-26](OBJ-26-gui-smoke-test.md) | Qwen3.5-9B smoke test on the demo tasks | models | Brent | 05 | - | - | in-progress |
 | [OBJ-27](OBJ-27-mac-native-services.md) | Mac native services for the harness | mac | Patrick | 03, 08 | 14 | 07, 08, 21 | todo |
-| [OBJ-28](OBJ-28-android-whisper-bake-off.md) | Android Whisper bake-off | models | Jepoy | 01, 10 | - | 11, 24 | todo |
+| [OBJ-28](OBJ-28-mac-gui-execution.md) | Mac GUI execution | mac | Patrick | 05, 11 | 14, 18 | 26, 31 | todo |
 | [OBJ-29](OBJ-29-protocol-mac-fixes.md) | Protocol v3, fit the contracts to real macOS | protocol | Brent | 05, 07 | 01 | 03, 26 | done |
-| [OBJ-30](OBJ-30-live-cross-device-bridge-acceptance.md) | Live cross-device bridge acceptance | bridge | Jepoy | 08 | 13, 21, 23, 27 | - | todo |
+| [OBJ-30](OBJ-30-mac-stop-and-take-over.md) | Stop and take over on the Mac | mac | Patrick | 06 | 17, 28 | 33 | todo |
 | [OBJ-31](OBJ-31-unpair-delivery-ack-contract.md) | Define unpair delivery acknowledgement | protocol | Jepoy | 08 | 02 | 13, 21, 23 | todo |
+| [OBJ-32](OBJ-32-permission-gate-and-file-tools.md) | Permission gate and typed file tools | harness | Brent | 07 | 03 | - | todo |
+| [OBJ-33](OBJ-33-approvals-pause-and-action-log.md) | Approvals, pause, and action log in the harness | harness | Brent | 07, 06 | 06, 32 | 28, 29, 30 | todo |
 <!-- generated:objectives-index:end -->
 
 ## Priority and blocking
@@ -104,23 +106,24 @@ Ranked by how many objectives each one holds up through hard dependencies:
 <!-- generated:objectives-priority:start -->
 | Rank | Objective | Assignee | Holds up (hard) | Holds up another person |
 |---|---|---|---|---|
-| 1 | OBJ-01 Task record schemas and cross-team contracts | Jepoy | 18 | Brent, Patrick |
-| 2 | OBJ-14 Mac app shell, permissions, and harness link | Patrick | 8 | Jepoy |
-| 3 | OBJ-03 Harness skeleton and local model client | Brent | 7 | Patrick |
-| 4 | OBJ-02 Bridge envelope and end-to-end crypto | Jepoy | 6 | Brent |
-| 5 | OBJ-04 Task store and history | Brent | 6 | Patrick |
-| 6 | OBJ-18 Cursor overlay and motion | Patrick | 3 | No |
-| 7 | OBJ-22 Android app shell and foreground service | Brent | 3 | Jepoy |
-| 8 | OBJ-05 Planner, scheduler, and task summary | Brent | 2 | No |
-| 9 | OBJ-07 Lane router core | Brent | 2 | No |
-| 10 | OBJ-13 Bridge relay server | Jepoy | 2 | Brent |
-| 11 | OBJ-15 Mac voice intake | Patrick | 2 | No |
-| 12 | OBJ-27 Mac native services for the harness | Patrick | 2 | Jepoy |
-| 13 | OBJ-06 Resume and limits | Brent | 1 | No |
-| 14 | OBJ-08 Window locks, busy windows, and cursor cap | Brent | 1 | No |
-| 15 | OBJ-10 Yumi cat v0 in Rive | Patrick | 1 | No |
-| 16 | OBJ-21 Mac bridge client and pairing | Jepoy | 1 | No |
-| 17 | OBJ-23 Android bridge client and pairing | Brent | 1 | Jepoy |
+| 1 | OBJ-01 Task record schemas and cross-team contracts | Jepoy | 21 | Brent, Patrick |
+| 2 | OBJ-03 Harness skeleton and local model client | Brent | 10 | Patrick |
+| 3 | OBJ-14 Mac app shell, permissions, and harness link | Patrick | 9 | No |
+| 4 | OBJ-04 Task store and history | Brent | 8 | Patrick |
+| 5 | OBJ-02 Bridge envelope and end-to-end crypto | Jepoy | 5 | Brent |
+| 6 | OBJ-18 Cursor overlay and motion | Patrick | 5 | No |
+| 7 | OBJ-05 Planner, scheduler, and task summary | Brent | 3 | No |
+| 8 | OBJ-15 Mac voice intake | Patrick | 3 | No |
+| 9 | OBJ-06 Resume and limits | Brent | 2 | No |
+| 10 | OBJ-07 Lane router core | Brent | 2 | No |
+| 11 | OBJ-22 Android app shell and foreground service | Brent | 2 | No |
+| 12 | OBJ-08 Window locks, busy windows, and cursor cap | Brent | 1 | No |
+| 13 | OBJ-10 Yumi cat v0 in Rive | Patrick | 1 | No |
+| 14 | OBJ-13 Bridge relay server | Jepoy | 1 | Brent |
+| 15 | OBJ-17 Goal confirmation loop | Patrick | 1 | No |
+| 16 | OBJ-27 Mac native services for the harness | Patrick | 1 | No |
+| 17 | OBJ-28 Mac GUI execution | Patrick | 1 | No |
+| 18 | OBJ-32 Permission gate and typed file tools | Brent | 1 | No |
 <!-- generated:objectives-priority:end -->
 Hard dependencies that cross between people (everything else is within one person's queue):
 
@@ -133,17 +136,15 @@ Hard dependencies that cross between people (everything else is within one perso
 - OBJ-02 (Jepoy) before OBJ-23 (Brent)
 - OBJ-13 (Jepoy) before OBJ-23 (Brent)
 - OBJ-01 (Jepoy) before OBJ-29 (Brent)
-- OBJ-23 (Brent) before OBJ-30 (Jepoy)
-- OBJ-27 (Patrick) before OBJ-30 (Jepoy)
 <!-- generated:objectives-cross:end -->
 Workload:
 
 <!-- generated:objectives-workload:start -->
 | Person | Objectives | Count |
 |---|---|---|
-| Brent | 03, 04, 05, 06, 07, 08, 09, 22, 23, 24, 26, 29 | 12 |
-| Jepoy | 01, 02, 11, 12, 13, 21, 25, 28, 30, 31 | 10 |
-| Patrick | 10, 14, 15, 16, 17, 18, 19, 20, 27 | 9 |
+| Brent | 03, 04, 05, 06, 07, 08, 09, 22, 23, 24, 26, 29, 32, 33 | 14 |
+| Jepoy | 01, 02, 11, 12, 13, 21, 25, 31 | 8 |
+| Patrick | 10, 14, 15, 16, 17, 18, 19, 20, 27, 28, 30 | 11 |
 <!-- generated:objectives-workload:end -->
 ## Suggested order
 
@@ -152,26 +153,49 @@ Waves come from hard dependencies only. Each person works their column top to bo
 <!-- generated:objectives-waves:start -->
 | Wave | Brent | Jepoy | Patrick |
 |---|---|---|---|
-| 1 | OBJ-22, OBJ-26 | OBJ-01, OBJ-02, OBJ-11, OBJ-12, OBJ-28 | OBJ-10 |
+| 1 | OBJ-22, OBJ-26 | OBJ-01, OBJ-02, OBJ-11, OBJ-12 | OBJ-10 |
 | 2 | OBJ-03, OBJ-24, OBJ-29 | OBJ-13, OBJ-21, OBJ-25, OBJ-31 | OBJ-14 |
-| 3 | OBJ-04, OBJ-23 | - | OBJ-15, OBJ-18, OBJ-27 |
-| 4 | OBJ-05, OBJ-07 | OBJ-30 | OBJ-16, OBJ-17, OBJ-19, OBJ-20 |
-| 5 | OBJ-06, OBJ-08 | - | - |
-| 6 | OBJ-09 | - | - |
+| 3 | OBJ-04, OBJ-23, OBJ-32 | - | OBJ-15, OBJ-18, OBJ-27 |
+| 4 | OBJ-05, OBJ-07 | - | OBJ-16, OBJ-17, OBJ-19, OBJ-20, OBJ-28 |
+| 5 | OBJ-06, OBJ-08 | - | OBJ-30 |
+| 6 | OBJ-09, OBJ-33 | - | - |
 <!-- generated:objectives-waves:end -->
 ## Not covered yet
 
-Objectives exist for specs whose decisions are final: SPEC-01, SPEC-02, SPEC-03, SPEC-04, and SPEC-08, plus the Android app shell and voice parts of SPEC-10 Part A.
+Objectives exist for specs whose decisions are final: SPEC-01 to SPEC-08, plus the Android app shell and voice parts of SPEC-10 Part A.
+SPEC-05 is covered by OBJ-28 (Mac) and OBJ-31 (harness), with schemas in OBJ-01 and the p0 model check in OBJ-26.
+SPEC-06 is covered by OBJ-30 (Mac) and OBJ-33 (harness).
+SPEC-07 is covered by OBJ-29 (Mac), OBJ-32, and OBJ-33 (harness).
+Their p1 requirements (vision fallback, the model bake-off, voice stop, phone control, the injection warning, and crash approvals) are listed under each objective's Out of scope, except the password-logging test, which is p1 task OBJ-33.8.
+Some of their tasks wait on the open questions below.
 
 | Spec | Why not yet |
 |---|---|
-| [SPEC-05 Mac GUI control](../specs/05-mac-gui-control.md) | The 3 demo tasks are decided. Its schemas are in OBJ-01 and the p0 model check is OBJ-26. The harness `gui_act` objective is not written yet, and the full model bake-off is p1 |
-| [SPEC-06 User control](../specs/06-user-control.md) | No open questions, but not reviewed yet |
-| [SPEC-07 Safety](../specs/07-safety.md) | Open question: "always allow" for risky actions |
 | [SPEC-09 Cross-device routing](../specs/09-cross-device-routing.md) | Defined by Jepoy (b824989). Not reviewed together yet. Its conflicts with SPEC-01, SPEC-08, and SPEC-10 are resolved (see below). Its message kinds are OBJ-25. Objectives for the p0 rule, phone tools, and delegation in the apps come after review |
 | [SPEC-10 Yumi on Android](../specs/10-android-companion.md) | Part A (p0): app shell and voice are covered by OBJ-22 and OBJ-24; phone-only goals and phone tools wait on SPEC-09. Part B (p1): the model is decided, Qwen3.5-4B fixed |
 | [SPEC-11 User-facing errors](../specs/11-user-facing-errors.md) | Expanded by Jepoy. Every objective follows it |
 | [SPEC-12 Yumi on iPhone](../specs/12-iphone-companion.md) | p2, after Android |
+
+### Open questions for OBJ-28 to OBJ-33
+
+Raised 2026-10-09 while writing these objectives.
+Each needs a decision in the spec (spec-lifecycle skill), not in code.
+
+- **Take-over vs approvals (SPEC-06 r2 and r5, SPEC-07 r11):** the user must click "Delete" or "Send" on the approval card with their own mouse, but any untagged mouse movement pauses Yumi, and pausing cancels every pending approval. Proposal: input does not pause a task while it is `waitingForUser` with no UI lane acting, and clicks on Yumi's own windows never count as take-over. Blocks OBJ-30.3.
+- **Take-over vs password fields (SPEC-05 r7, SPEC-06 r2):** Yumi asks the user to type a password, but clicking into the field pauses the task. Same proposal as above, while the task is waiting on an `ask`. Blocks OBJ-30.3 and OBJ-31.9.
+- **Voice on a delete card (SPEC-11 r9 vs SPEC-07 r11):** SPEC-11 says every button works by saying its label; SPEC-07 says a delete is approved only by a tap. OBJ-29 follows SPEC-07. Proposal: add an exception to SPEC-11 r9.
+- **"Cannot classify" (SPEC-07 r6):** if every press whose label is not in the lists counts as unclassified, every click asks. Proposal: element presses and plain typing are allowed unless their label or key is listed; unlisted key combos with a modifier ask. Quitting apps is blocked in the table, but no label ("Quit", "Force Quit") or key (Command-Q) is listed. Blocks OBJ-32.3.
+- **Missing copy:** SPEC-11 has no row for the SPEC-07 r5 blocked-action message, so the SPEC-11 copy test does not cover it; there is no copy for asking the user to type a password (SPEC-05 r7), for declining a send, for one file or files in several folders on the delete card, for sending a message in Messages, or for a send with several recipients.
+- **Missing contracts (OBJ-01):** the scope of `pause` (every lane or UI lanes only), the reply to the blocked-action card ("Keep going" or "Stop"), and the `ask` question and answer between the harness and the Mac app.
+- **Paused by take-over:** SPEC-06 only gives the spoken "Paused. Say continue when you're ready, or cancel to stop for good." for the stop shortcut. Should Yumi say it every time the user moves the mouse?
+- **Resume by voice:** the paused card's button is "Resume", but the spoken line and the scenario say "continue". Both should work; SPEC-11 r9 only covers the label.
+- **GUI-created files (SPEC-05 r4):** the harness builds `files` from the step log, but a PDF exported through Keynote's menus is not in any tool call. OBJ-31.8 proposes watching the home folder during an attempt.
+- **Editing Yumi's own files (SPEC-07 r1):** the table allows editing files Yumi created in this task, but no typed tool edits a file; `write_new_file` never replaces one.
+- **Two invalid outputs in a row on `main`:** still open in [docs/task-record-schema.md](../docs/task-record-schema.md). OBJ-31 ends the attempt with `stuck` until decided.
+- **Approval timeout on the Mac:** the 5-minute timeout comes from SPEC-09 r10 (approvals on the other device). Does it also apply when the approval is on the same Mac?
+- **"Show what I did" (SPEC-11):** the button is p0 and opens the action log, but opening the log from the menu bar is p1 (SPEC-07 r19).
+- **Orchestrator tools (SPEC-05 r9):** the limit is 8, but the spec does not name them. OBJ-31.2 proposes a list.
+- **Stale pointers:** OBJ-01, OBJ-03, OBJ-06, OBJ-07, OBJ-09, OBJ-14, and OBJ-18 still say SPEC-05, SPEC-06, or SPEC-07 is "not finalized" or "not written yet" in Out of scope. Their owners should point them at OBJ-28 to OBJ-33.
 
 ### Resolved conflicts between specs
 

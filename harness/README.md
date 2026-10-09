@@ -171,6 +171,9 @@ mlx-vlm 0.7.6 compiles schemas with llguidance 1.9.1, which rejects `uniqueItems
 
 - [SPEC-02 Task lifecycle and resume](../specs/02-task-lifecycle.md)
 - [SPEC-03 Lane routing and handoff](../specs/03-lane-routing.md)
+- [SPEC-05 Mac GUI control](../specs/05-mac-gui-control.md) (`gui_act`)
+- [SPEC-06 User control](../specs/06-user-control.md) (pause and cancel)
+- [SPEC-07 Safety](../specs/07-safety.md) (permission gate, file tools, approvals, action log)
 - [SPEC-08 Device bridge](../specs/08-device-bridge.md)
 - Also follows [SPEC-11 User-facing errors](../specs/11-user-facing-errors.md) for any message a user can see.
 
@@ -187,4 +190,6 @@ mlx-vlm 0.7.6 compiles schemas with llguidance 1.9.1, which rejects `uniqueItems
 | [OBJ-08](../objectives/OBJ-08-locks-busy-windows-cap.md) | Window locks, busy windows, and cursor cap | Brent | todo |
 | [OBJ-09](../objectives/OBJ-09-ghost-handoff.md) | Ghost handoff | Brent | todo |
 | [OBJ-21](../objectives/OBJ-21-mac-bridge-client-and-pairing.md) | Mac bridge client and pairing | Jepoy | done |
+| [OBJ-32](../objectives/OBJ-32-permission-gate-and-file-tools.md) | Permission gate and typed file tools | Brent | todo |
+| [OBJ-33](../objectives/OBJ-33-approvals-pause-and-action-log.md) | Approvals, pause, and action log in the harness | Brent | todo |
 <!-- generated:product-objectives:end -->

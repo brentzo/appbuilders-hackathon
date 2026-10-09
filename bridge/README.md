@@ -58,5 +58,4 @@ Status: empty scaffold, nothing built yet.
 | ID | Objective | Assignee | Status |
 |---|---|---|---|
 | [OBJ-13](../objectives/OBJ-13-bridge-relay-server.md) | Bridge relay server | Jepoy | todo |
-| [OBJ-30](../objectives/OBJ-30-live-cross-device-bridge-acceptance.md) | Live cross-device bridge acceptance | Jepoy | todo |
 <!-- generated:product-objectives:end -->
