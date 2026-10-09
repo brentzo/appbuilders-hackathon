@@ -52,6 +52,17 @@ def protocol():
     return ok, None
 
 
+def harness():
+    cwd = os.path.join(ROOT, "harness")
+    if not os.path.exists(os.path.join(cwd, "package.json")):
+        return True, None  # nothing built yet, only the README
+    if not shutil.which("npm"):
+        return None, "npm is not installed"
+    if not os.path.isdir(os.path.join(cwd, "node_modules")) and not run("harness install", ["npm", "ci"], cwd):
+        return False, None
+    return run("harness typecheck, lint, format, tests", ["npm", "run", "verify"], cwd), None
+
+
 def docker_running():
     return shutil.which("docker") is not None and subprocess.run(
         ["docker", "info"], capture_output=True, shell=WINDOWS).returncode == 0
@@ -88,6 +99,8 @@ CHECKS = [
     # (name, runs when any changed path starts with one of these, check, required)
     ("protocol", ("protocol/", "specs/"), protocol, True),
     ("protocol Swift and Kotlin", ("protocol/",), protocol_native, False),
+    # The harness depends on @yumi/protocol, so a protocol change runs its tests too.
+    ("harness", ("harness/", "protocol/", "specs/"), harness, True),
     ("android", ("android/", "specs/"), android, True),
     ("models/whisper", ("models/whisper/",), whisper, True),
 ]
