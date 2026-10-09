@@ -5,11 +5,12 @@ import YumiProtocol
 #if DEBUG
 /// The cursor demo's "don't pet me" part (OBJ-54.6): the four cats line up, idle, thinking, paused,
 /// and acting, and the real pointer visits each one from below. The first three hop out of its way
-/// with their ears back and drift back a second after it leaves; the acting cat fades in place.
-/// Then the user gets a turn.
+/// with their ears back in a quick, startled hop and drift back a second after it leaves; the acting
+/// cat fades in place. Then the pointer parks, the main cat lands right beside it and stays put,
+/// since the pointer is still, until the pointer moves at it. Then the user gets a turn.
 extension CursorDebugActions {
     /// How long this part takes, for the steps after it.
-    static let avoidDemoLength = 17.0
+    static let avoidDemoLength = 21.0
 
     /// The steps, starting `start` seconds into the demo, with the row across `frame`.
     func avoidDemoSteps(start: Double, frame: CGRect) -> [(Double, () -> Void)] {
@@ -37,6 +38,13 @@ extension CursorDebugActions {
                 tour.append(.init(to: CGPoint(x: paws.x, y: rowY - 90), duration: 0.3))
             }
         }
+        // A cat that lands beside a still pointer stays put; it hops once the pointer comes at it.
+        let park = CGPoint(x: frame.midX, y: rowY + 170)
+        let beside = CGPoint(x: park.x + 28, y: park.y - 28)
+        let besideBody = PointerAvoidance.body(at: beside)
+        tour.append(.init(to: park, duration: 0.6, hold: 2.6))
+        let parked = tour.dropLast().reduce(0) { $0 + $1.duration + $1.hold } + 0.6
+        tour.append(.init(to: CGPoint(x: besideBody.midX, y: besideBody.midY), duration: 0.35, hold: 0.8))
         tour.append(.init(to: CGPoint(x: frame.midX, y: frame.minY + frame.height * 0.15), duration: 0.6))
 
         return [
@@ -48,7 +56,12 @@ extension CursorDebugActions {
                 step("watch my pointer")
             }),
             (start + 1.6, { DemoPointer.shared.play(tour) }),
-            (start + 10.0, { step("your turn: try to pet me") }),
+            (start + 1.6 + parked + 0.2, {
+                overlay.apply(.setState(SetCursorState(cursorId: "main", state: .idle)))
+                overlay.apply(.move(MoveCursor(cursorId: "main", to: target(beside))))
+                step("a still pointer: I stay put")
+            }),
+            (start + 14.4, { step("your turn: try to pet me") }),
             (start + Self.avoidDemoLength - 0.3, { step(nil) }),
         ]
     }

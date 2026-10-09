@@ -64,4 +64,12 @@ It keeps the screen usable and adds personality.
 
 ## Outcome
 
-_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._
+- **Result:** In progress. The dodge is built and tuned to Brent's decisions below; OBJ-54.6's live check with a real task is not done yet.
+- **Delivered so far:** `mac/Yumi/Overlay/PointerAvoidance.swift` (the rules and `PointerAvoider`), the ears-back pose (`mac/scripts/render-ears-back-cat.py`), the tokens in `character/design/tokens.json`, and the "don't pet me" part of the cursor demo (`mac/Yumi/Overlay/CursorAvoidDemo.swift`).
+- **Decisions and deviations:** Brent decided how the dodge feels on 2026-10-10 (SPEC-04 requirement 21 and its Decisions):
+  - The hop is a quick, startled hop of about 200 ms (`avoidHopMs`); the drift back keeps the normal move curve and duration.
+  - Listening, moving, waiting-for-the-user, done, and stuck cats fade in place, like acting ones, as built.
+  - A cat reacts only when the user's pointer moves toward it and comes within about 24 points of its body, not its center (`avoidRadiusPt`, up from 8). A cat that appears next to a still pointer, as the main cat does after a goal is spoken, stays put; one already dodging keeps answering in the way its new state asks, so dodging and pausing still do not fight.
+  - Tested in `mac/YumiTests/PointerAvoidanceTests.swift`: `onlyAPointerComingAtACatStartlesIt`, `aCatThatAppearsNextToAStillPointerStaysPut`, `anActingCatBesideAStillPointerStaysSolid`, `theHopIsAStartledHopAndTheDriftBackIsAMove`, and the radius in `nearMeansOverTheCatOrWithinTheRadius`. The cursor demo now parks the pointer, lands the main cat beside it, where it stays put, then moves the pointer at it so it hops.
+- **Not verified:** the dodge on a real task (OBJ-54.6), and the demo's new part on screen: it needs the Yumi app running, which only one agent may do at a time. To check: `-YumiCursorDemo YES` from a Debug build, and watch the part after the four cats.
+

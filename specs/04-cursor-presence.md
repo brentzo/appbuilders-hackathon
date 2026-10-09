@@ -37,7 +37,7 @@ All of it is drawn by the harness on a transparent overlay; the model only choos
 18. The same cat appears in the Android app.
 19. Cursors spawn from the camera notch "island": a pill grows out of the notch, the cat drops out of it and leaps to its spot. When a task finishes, its ghosts leap back into the island within 1 second. A display without a notch uses a pill at the top center, just under the menu bar.
 20. Yumi speaks with a natural, warm, playful voice that fits the cat, made by a neural voice model running on the device. It is never the robotic system voice, and no speech is sent anywhere.
-21. Yumi's cats never cover what the user is pointing at. When the user's pointer comes near a cat that is idle, thinking, or paused, the cat scoots out of the way with an ears-back pose, like a cat that does not want to be petted, and drifts back after the pointer leaves. A cat that is in the middle of an action cannot move, so it fades until the user can see through it. With "Reduce motion" on, every cat fades instead of moving.
+21. Yumi's cats never cover what the user is pointing at. When the user's pointer moves toward a cat that is idle, thinking, or paused and comes within about 24 points of the cat's body, the cat scoots out of the way in a quick, startled hop of about 200 ms with an ears-back pose, like a cat that does not want to be petted, and drifts back on the normal move curve after the pointer leaves. A cat in any other state (listening, moving, acting, waiting for the user, done, or stuck) cannot move, so it fades in place until the user can see through it. A cat that appears next to a pointer that is not moving stays put. With "Reduce motion" on, every cat fades instead of moving.
 
 ## Scenarios
 
@@ -166,6 +166,7 @@ First draft, to be replaced by the real design.
 - Cursors spawn from the camera notch "island" (requirement 19): a pill grows from the notch, the cat drops out and leaps to its spot, and on finish ghosts leap back in within 1 second. Displays without a notch use a pill at the top center under the menu bar. Decided 2026-10-09 by Patrick.
 - Yumi's voice is a neural voice model on the device (Kokoro is the planned model, already named in the Mac README), not `AVSpeechSynthesizer`'s system voice, which sounded robotic in testing (requirement 20). Decided 2026-10-10 by Brent.
 - Cats avoid the user's pointer instead of covering content: idle, thinking, and paused cats scoot away, acting cats fade (requirement 21). Decided 2026-10-10 by Brent.
+- How the dodge feels (requirement 21, OBJ-54): the hop is a quick, startled hop of about 200 ms (design token `avoidHopMs`), while the drift back keeps the normal move curve and duration; listening, moving, waiting-for-the-user, done, and stuck cats fade in place like acting ones; and a cat reacts only when the pointer moves toward it, measured from the cat's body, not its center, at about 24 points (`avoidRadiusPt`). So a cat that appears next to a still pointer, as the main cat does near the pointer (requirement 1), stays put. Decided 2026-10-10 by Brent.
 
 ## Open questions
 

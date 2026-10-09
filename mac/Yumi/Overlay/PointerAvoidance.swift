@@ -40,12 +40,32 @@ enum PointerAvoidance {
         return image.insetBy(dx: margin, dy: margin)
     }
 
-    /// Whether the pointer is over a cat whose click point is `point`, or within `radius` of it.
-    static func isNear(_ pointer: CGPoint, catAt point: CGPoint, radius: CGFloat = YumiMotion.avoidRadius) -> Bool {
+    /// How far the pointer is from the body of a cat whose click point is `point`: 0 over it.
+    static func distance(_ pointer: CGPoint, toCatAt point: CGPoint) -> CGFloat {
         let body = body(at: point)
         let dx = max(body.minX - pointer.x, 0, pointer.x - body.maxX)
         let dy = max(body.minY - pointer.y, 0, pointer.y - body.maxY)
-        return hypot(dx, dy) <= radius
+        return hypot(dx, dy)
+    }
+
+    /// Whether the pointer is over a cat whose click point is `point`, or within `radius` of its body.
+    static func isNear(_ pointer: CGPoint, catAt point: CGPoint, radius: CGFloat = YumiMotion.avoidRadius) -> Bool {
+        distance(pointer, toCatAt: point) <= radius
+    }
+
+    /// Whether the pointer, moving from `previous` to `pointer`, comes at a cat whose click point
+    /// is `point` (Brent's decision, 2026-10-10): it ends near the cat's body and got closer to it,
+    /// or, already over the body, closer to its middle. A pointer that stands still, or moves away,
+    /// never startles a cat, so a cat that appears next to a still pointer stays put.
+    static func isApproaching(from previous: CGPoint?, to pointer: CGPoint, catAt point: CGPoint) -> Bool {
+        guard let previous, isNear(pointer, catAt: point) else { return false }
+        let before = distance(previous, toCatAt: point)
+        let after = distance(pointer, toCatAt: point)
+        if after < before { return true }
+        guard before == 0, after == 0 else { return false }
+        let body = body(at: point)
+        let middle = CGPoint(x: body.midX, y: body.midY)
+        return hypot(pointer.x - middle.x, pointer.y - middle.y) < hypot(previous.x - middle.x, previous.y - middle.y)
     }
 
     /// Where a cat drawn `offset` away from its click point `home` hops to, as a new offset: `hop`
@@ -104,6 +124,9 @@ final class PointerAvoider {
     /// Pending drift-backs, one per cat.
     private var returns: [String: DispatchWorkItem] = [:]
     private var monitors: [Any] = []
+    /// Where the pointer was at the last move, to tell a pointer coming at a cat from one that
+    /// stands still. Nil while no cat is on screen.
+    private var lastPointer: CGPoint?
 
     // Replaced in tests.
     var reduceMotion: () -> Bool = { CursorMotion.reduceMotion }
@@ -123,6 +146,7 @@ final class PointerAvoider {
     /// A cursor's state or label changed, or it appeared: answer the pointer where it is now.
     func cursorChanged(_ id: String) {
         updateWatching()
+        if lastPointer == nil { lastPointer = pointer() }
         evaluate(id)
     }
 
@@ -167,6 +191,7 @@ final class PointerAvoider {
         for id in Array(returns.keys) { cancelReturn(id) }
         dodges = [:]
         busyUntil = [:]
+        lastPointer = nil
         updateWatching()
     }
 
@@ -174,12 +199,15 @@ final class PointerAvoider {
 
     func pointerMoved() {
         guard let overlay else { return }
-        for id in overlay.cursors.keys { evaluate(id) }
+        let previous = lastPointer
+        lastPointer = pointer()
+        for id in overlay.cursors.keys { evaluate(id, pointerFrom: previous) }
     }
 
     /// Answers the pointer for one cat. Near means over the cat's drawing, where it is drawn now
-    /// or at its click point.
-    func evaluate(_ id: String) {
+    /// or at its click point. A cat starts dodging only when the pointer comes at it (moving from
+    /// `pointerFrom`); one already dodging keeps answering, in the way its state asks.
+    func evaluate(_ id: String, pointerFrom previous: CGPoint? = nil) {
         guard let cursor = overlay?.cursors[id] else { return }
         let point = pointer()
         // In Debug mode the user may be reaching for the cat's bubble to see its thoughts (OBJ-53):
@@ -195,10 +223,11 @@ final class PointerAvoider {
         let shown = CGPoint(x: home.x + dodge.offset.dx, y: home.y + dodge.offset.dy)
         let nearShown = PointerAvoidance.isNear(point, catAt: shown)
         let nearHome = PointerAvoidance.isNear(point, catAt: home)
+        let dodging = dodge.faded || dodge.offset != .zero
 
         if reaction.moves {
             if dodge.faded { setFaded(false, id) }
-            if nearShown {
+            if nearShown, dodging || PointerAvoidance.isApproaching(from: previous, to: point, catAt: shown) {
                 cancelReturn(id)
                 scoot(id, home: home, pointer: point)
             } else if nearHome {
@@ -212,10 +241,12 @@ final class PointerAvoider {
 
         // A cat that cannot move: its paws belong on its click point.
         if dodge.offset != .zero { goHome(id, duration: YumiMotion.avoidFade) }
-        if nearHome {
+        if nearHome, dodging || PointerAvoidance.isApproaching(from: previous, to: point, catAt: home) {
             cancelReturn(id)
             if !dodge.faded { setFaded(true, id) }
             if dodge.earsBack != reaction.earsBack { setEarsBack(reaction.earsBack, id) }
+        } else if nearHome {
+            // Next to a pointer that did not come at it: it stays as it is.
         } else {
             // For example a scooted cat that starts acting: its ears come forward at once.
             if dodge.earsBack, !reaction.earsBack { setEarsBack(false, id) }
@@ -255,7 +286,8 @@ final class PointerAvoider {
         dodges[id] = dodge
         if !dodge.earsBack { setEarsBack(true, id) }
         let target = CGPoint(x: home.x + dodge.offset.dx, y: home.y + dodge.offset.dy)
-        draw(id, to: target, arcs: true, duration: nil)
+        // A startled hop: quicker than a move. The drift back takes a normal move's time.
+        draw(id, to: target, arcs: true, duration: YumiMotion.avoidHopDuration)
     }
 
     /// Takes the drawing back to the click point. Returns how long that takes.
@@ -326,7 +358,9 @@ final class PointerAvoider {
 
     /// `leaving`: a cursor that is on its way out and does not count.
     private func updateWatching(leaving: String? = nil) {
-        let wanted = watchesPointer && overlay?.cursors.keys.contains { $0 != leaving } == true
+        let catsShown = overlay?.cursors.keys.contains { $0 != leaving } == true
+        if !catsShown { lastPointer = nil }
+        let wanted = watchesPointer && catsShown
         if wanted, monitors.isEmpty {
             let global = NSEvent.addGlobalMonitorForEvents(matching: Self.watched) { [weak self] _ in
                 MainActor.assumeIsolated { self?.pointerMoved() }

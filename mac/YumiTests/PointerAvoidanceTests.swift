@@ -76,10 +76,29 @@ struct PointerAvoidanceTests {
         #expect(PointerAvoidance.isNear(bodyCenter(paws), catAt: paws))
         #expect(PointerAvoidance.isNear(CGPoint(x: body.maxX + YumiMotion.avoidRadius - 1, y: body.midY), catAt: paws))
         #expect(!PointerAvoidance.isNear(CGPoint(x: body.maxX + YumiMotion.avoidRadius + 1, y: body.midY), catAt: paws))
-        // SPEC-04 r1 puts the main cat right next to the pointer (28 points right and down): it
-        // sits beside the pointer and does not run from it until the pointer comes closer.
-        let pointer = CGPoint(x: 300, y: 300)
-        #expect(!PointerAvoidance.isNear(pointer, catAt: CGPoint(x: pointer.x + 28, y: pointer.y - 28)))
+        // Measured from the body, not its middle: about 24 points (Brent's decision, 2026-10-10).
+        #expect(YumiMotion.avoidRadius == 24)
+        #expect(PointerAvoidance.distance(CGPoint(x: body.midX, y: body.maxY + 10), toCatAt: paws) == 10)
+    }
+
+    @Test func onlyAPointerComingAtACatStartlesIt() {
+        let paws = CGPoint(x: 500, y: 500)
+        let body = PointerAvoidance.body(at: paws)
+        let beside = CGPoint(x: body.maxX + 12, y: body.midY)
+        let closer = CGPoint(x: body.maxX + 4, y: body.midY)
+        let farther = CGPoint(x: body.maxX + 20, y: body.midY)
+        #expect(PointerAvoidance.isApproaching(from: beside, to: closer, catAt: paws))
+        #expect(!PointerAvoidance.isApproaching(from: beside, to: beside, catAt: paws), "a still pointer")
+        #expect(!PointerAvoidance.isApproaching(from: beside, to: farther, catAt: paws), "moving away")
+        #expect(!PointerAvoidance.isApproaching(from: nil, to: closer, catAt: paws), "no move yet")
+        #expect(!PointerAvoidance.isApproaching(
+            from: CGPoint(x: body.maxX + 60, y: body.midY), to: CGPoint(x: body.maxX + 30, y: body.midY), catAt: paws
+        ), "closer, but still out of reach")
+        // Over the body already: deeper toward its middle counts, sliding out does not.
+        let edge = CGPoint(x: body.maxX - 2, y: body.midY)
+        let deeper = CGPoint(x: body.midX + 2, y: body.midY)
+        #expect(PointerAvoidance.isApproaching(from: edge, to: deeper, catAt: paws))
+        #expect(!PointerAvoidance.isApproaching(from: deeper, to: edge, catAt: paws))
     }
 
     @Test func aScootHopsAwayFromThePointerAndStaysOnTheDisplay() {
@@ -134,6 +153,56 @@ struct PointerAvoidanceTests {
         overlay.avoider.settle("main")
         #expect(overlay.avoider.dodges["main"]?.offset == .zero)
         #expect(overlay.drawings(of: "main").first?.layer.root.position == panel?.local(middle))
+    }
+
+    @Test func aCatThatAppearsNextToAStillPointerStaysPut() {
+        // SPEC-04 r1 spawns the main cat right beside the pointer: it sits there until the pointer
+        // comes at it (Brent's decision, 2026-10-10).
+        let world = World()
+        let body = PointerAvoidance.body(at: middle)
+        world.pointer = CGPoint(x: body.maxX + 10, y: body.midY)
+        let overlay = overlay(world)
+        defer { overlay.fadeAll() }
+        cat("main", .idle, at: middle, on: overlay, world)
+        #expect(overlay.avoider.dodges["main"] == nil)
+        overlay.avoider.pointerMoved()
+        #expect(overlay.avoider.dodges["main"] == nil, "the pointer did not move")
+        world.pointer = CGPoint(x: body.maxX + 20, y: body.midY)
+        overlay.avoider.pointerMoved()
+        #expect(overlay.avoider.dodges["main"] == nil, "the pointer moved away")
+        world.pointer = CGPoint(x: body.maxX + 5, y: body.midY)
+        overlay.avoider.pointerMoved()
+        #expect(overlay.avoider.dodges["main"]?.offset != .zero, "now it comes at the cat")
+    }
+
+    @Test func anActingCatBesideAStillPointerStaysSolid() {
+        let world = World()
+        let body = PointerAvoidance.body(at: middle)
+        world.pointer = CGPoint(x: body.midX, y: body.midY)
+        let overlay = overlay(world)
+        defer { overlay.fadeAll() }
+        cat("main", .acting, at: middle, on: overlay, world)
+        overlay.avoider.pointerMoved()
+        #expect(overlay.avoider.dodges["main"] == nil)
+        #expect(overlay.drawings(of: "main").first?.layer.root.opacity == 1)
+    }
+
+    @Test func theHopIsAStartledHopAndTheDriftBackIsAMove() {
+        let world = World()
+        let overlay = overlay(world)
+        defer { overlay.fadeAll() }
+        cat("main", .idle, at: middle, on: overlay, world)
+        world.pointer = bodyCenter(middle)
+        overlay.avoider.pointerMoved()
+        let root = overlay.drawings(of: "main").first?.layer.root
+        #expect(YumiMotion.avoidHopDuration == 0.2)
+        #expect(root?.animation(forKey: "move")?.duration == YumiMotion.avoidHopDuration)
+
+        world.pointer = CGPoint(x: middle.x - 400, y: middle.y - 300)
+        overlay.avoider.pointerMoved()
+        overlay.avoider.settle("main")
+        let drift = root?.animation(forKey: "move")?.duration ?? 0
+        #expect(drift >= YumiMotion.moveMin, "the normal move curve and time")
     }
 
     @Test func aPausedCatScootsToo() {
