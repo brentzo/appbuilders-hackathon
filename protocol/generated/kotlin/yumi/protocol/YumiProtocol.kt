@@ -732,6 +732,8 @@ data class PlannedSubtask(
     /** Ids of the subtasks in this plan that must be done before this one starts. */
     val dependsOn: List<String>,
     val proposedLane: Lane,
+    /** True when the subtask types or uses keyboard shortcuts, for example to paste. The router then sends it to main, the only lane that sends keystrokes (SPEC-03 r7 and r17). Absent means false. */
+    val needsKeyboard: Boolean? = null,
 )
 
 @Serializable

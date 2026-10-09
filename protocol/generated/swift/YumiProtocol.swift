@@ -1242,13 +1242,16 @@ public struct PlannedSubtask: Codable, Equatable, Sendable {
     /// Ids of the subtasks in this plan that must be done before this one starts.
     public var dependsOn: [String]
     public var proposedLane: Lane
+    /// True when the subtask types or uses keyboard shortcuts, for example to paste. The router then sends it to main, the only lane that sends keystrokes (SPEC-03 r7 and r17). Absent means false.
+    public var needsKeyboard: Bool?
 
-    public init(id: String, title: String, instruction: String, dependsOn: [String], proposedLane: Lane) {
+    public init(id: String, title: String, instruction: String, dependsOn: [String], proposedLane: Lane, needsKeyboard: Bool? = nil) {
         self.id = id
         self.title = title
         self.instruction = instruction
         self.dependsOn = dependsOn
         self.proposedLane = proposedLane
+        self.needsKeyboard = needsKeyboard
     }
 }
 

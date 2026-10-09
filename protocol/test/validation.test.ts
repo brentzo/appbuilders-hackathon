@@ -178,6 +178,11 @@ describe("Plan", () => {
     expect(validate("Plan", { subtasks: [subtask("read-1"), subtask("note", ["read-1"])] }).valid).toBe(true);
   });
 
+  it("marks a subtask that needs the keyboard, and only with a boolean (SPEC-03 r17)", () => {
+    expect(validate("Plan", { subtasks: [{ ...subtask("paste"), proposedLane: "main", needsKeyboard: true }] }).valid).toBe(true);
+    expect(validate("Plan", { subtasks: [{ ...subtask("paste"), needsKeyboard: "yes" }] }).valid).toBe(false);
+  });
+
   it("rejects an empty plan", () => {
     expect(validate("Plan", { subtasks: [] }).valid).toBe(false);
   });

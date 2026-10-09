@@ -18,8 +18,21 @@
       "id": "write-note",
       "title": "Write the PDF Summary note",
       "instruction": "Read the two files in ~/Documents/PDF Summary parts and write them into one new note at ~/Documents/PDF Summary.md.",
-      "dependsOn": ["read-1", "read-2"],
+      "dependsOn": [
+        "read-1",
+        "read-2"
+      ],
       "proposedLane": "helper"
+    },
+    {
+      "id": "paste-into-notes",
+      "title": "Paste the summary into Notes",
+      "instruction": "Open ~/Documents/PDF Summary.md, copy its text, and paste it into a new note in Notes called PDF Summary.",
+      "dependsOn": [
+        "write-note"
+      ],
+      "proposedLane": "main",
+      "needsKeyboard": true
     }
   ]
 }

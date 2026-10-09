@@ -608,6 +608,8 @@ export interface PlannedSubtask {
   /** Ids of the subtasks in this plan that must be done before this one starts. */
   dependsOn: PlannedSubtaskId[];
   proposedLane: Lane;
+  /** True when the subtask types or uses keyboard shortcuts, for example to paste. The router then sends it to main, the only lane that sends keystrokes (SPEC-03 r7 and r17). Absent means false. */
+  needsKeyboard?: boolean;
 }
 
 /** A short id the planner picks, unique within the plan, used only for dependsOn. It is not stored: the harness gives each subtask a Uuid. */
