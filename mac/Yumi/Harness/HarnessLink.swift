@@ -14,6 +14,9 @@ final class HarnessLink {
     /// The last status the harness reported for each task.
     private var taskStatuses: [String: TaskStatus] = [:]
     private var eventsTask: Task<Void, Never>?
+    /// This Mac's bridge device id, from `hello` or `bridgeStateChanged` (OBJ-64, OBJ-72.1). Until
+    /// the harness reports it, goals are submitted as `mac-local`.
+    private var bridgeDeviceId: String?
     /// Called with every error the user should see. `AppDelegate` shows it with the presenter.
     var onUserError: ((UserError) -> Void)?
     private let log = Logger(subsystem: "ph.appbuilders.yumi", category: "harness")
@@ -126,6 +129,7 @@ final class HarnessLink {
             }
             log.notice("Status line: \(self.model.status.menuTitle, privacy: .public)")
         }
+        client.onDeviceId = { [weak self] deviceId in self?.bridgeDeviceId = deviceId }
         eventsTask = Task { [weak self, client] in
             for await event in client.events {
                 self?.handle(event)
@@ -189,6 +193,7 @@ final class HarnessLink {
         case .tilingSuggested(let suggestion):
             tiler.suggest(suggestion)
         case .bridgeStateChanged(let change):
+            if let deviceId = change.deviceId { bridgeDeviceId = deviceId }
             PhoneLink.shared.update(connection: PhoneLink.Connection(change.state))
         case .questionAsked(let question):
             Task { await questions.asked(question) }
@@ -274,9 +279,10 @@ final class HarnessLink {
         summary.goalSubmitted()
         confirmation.goalSubmitted()
         let autoMode = model.settings.autoMode
+        let origin = bridgeDeviceId
         Task {
             do {
-                let result = try await client.submitGoal(Self.submitGoalParams(transcript, autoMode: autoMode))
+                let result = try await client.submitGoal(Self.submitGoalParams(transcript, autoMode: autoMode, deviceId: origin))
                 log.notice("Goal submitted, task \(result.taskId, privacy: .public), auto mode \(autoMode, privacy: .public)")
                 if autoMode { await self.autoMode.goalStarted(taskId: result.taskId, heard: transcript) }
             } catch {
@@ -286,9 +292,10 @@ final class HarnessLink {
         }
     }
 
-    /// Every goal says whether Auto mode is on (SPEC-01 r14), so the harness never guesses.
-    static func submitGoalParams(_ transcript: String, autoMode: Bool) -> SubmitGoalParams {
-        SubmitGoalParams(transcript: transcript, originDeviceId: "mac-local", autoMode: autoMode)
+    /// Every goal says whether Auto mode is on (SPEC-01 r14), so the harness never guesses. The origin
+    /// is this Mac's bridge device id once the harness reports it, else `mac-local` until then (OBJ-72.1).
+    static func submitGoalParams(_ transcript: String, autoMode: Bool, deviceId: String? = nil) -> SubmitGoalParams {
+        SubmitGoalParams(transcript: transcript, originDeviceId: deviceId ?? "mac-local", autoMode: autoMode)
     }
 
     /// Debug aid for the mock: submits a fixed goal so scripts that play on `submitGoal`

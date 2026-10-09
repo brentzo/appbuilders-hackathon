@@ -77,6 +77,20 @@ struct HarnessClientTests {
         #expect(!result.taskId.isEmpty)
     }
 
+    /// This Mac's bridge device id reaches the app in `hello` (OBJ-64, OBJ-72.1), so its goals carry it.
+    @Test func helloReportsThisMacsBridgeDeviceId() async throws {
+        let harness = try FakeHarness(answerVersion: PROTOCOL_VERSION, deviceId: "mac-9f3c1a")
+        defer { harness.stop() }
+        let client = HarnessClient(socketPath: harness.path, timing: Self.patient)
+        var reported: String?
+        client.onDeviceId = { reported = $0 }
+        client.start()
+        defer { client.stop() }
+
+        try await wait(for: client, toBe: .connected)
+        #expect(reported == "mac-9f3c1a")
+    }
+
     /// The mock checks params against the protocol, so this is a valid `setDebugMode` (OBJ-53).
     @Test func sendsDebugMode() async throws {
         let mock = try await MockHarnessProcess.start()

@@ -53,10 +53,12 @@ nonisolated final class FakeHarness: @unchecked Sendable {
     private let lock = NSLock()
     private var versions: [Int] = []
     private var clients: [Int32] = []
+    private let answerDeviceId: String?
 
     var helloVersions: [Int] { lock.withLock { versions } }
 
-    init(answerVersion: Int) throws {
+    init(answerVersion: Int, deviceId: String? = nil) throws {
+        answerDeviceId = deviceId
         listener = socket(AF_UNIX, SOCK_STREAM, 0)
         var address = sockaddr_un()
         address.sun_family = sa_family_t(AF_UNIX)
@@ -97,6 +99,7 @@ nonisolated final class FakeHarness: @unchecked Sendable {
                     let params = message["params"] as? [String: Any]
                     lock.withLock { versions.append(params?["protocolVersion"] as? Int ?? -1) }
                     result = ["protocolVersion": answerVersion]
+                    if let answerDeviceId { result["deviceId"] = answerDeviceId }
                 }
                 let reply = try! JSONSerialization.data(withJSONObject: ["jsonrpc": "2.0", "id": id, "result": result]) + Data([0x0A])
                 _ = reply.withUnsafeBytes { write(client, $0.baseAddress, reply.count) }

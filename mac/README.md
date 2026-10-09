@@ -96,6 +96,7 @@ The status line says "Yumi is getting ready" until the harness answers `hello` a
 The harness's socket, pid file, task store, and log live in its folder, `~/Library/Application Support/Yumi` (`HarnessFolder`), which Yumi passes to the harness as `YUMI_SUPPORT_DIR`.
 When Yumi starts, it stops a harness left in that folder's pid file by an earlier Yumi.
 The unit test host starts no harness and uses a temporary folder, so running the tests never stops or replaces the harness of a Yumi that is running.
+With a paired phone, the harness reports this Mac's bridge device id in `hello` and `bridgeStateChanged`; the app sends it as `originDeviceId` in every `submitGoal`, falling back to `mac-local` until it is known ([SPEC-09](../specs/09-cross-device-routing.md), [OBJ-72](../objectives/OBJ-72-mac-cross-device-routing.md)).
 
 Launch arguments, in Debug and Release:
 

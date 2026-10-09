@@ -67,6 +67,16 @@ struct AutoModeTests {
         }
     }
 
+    @Test func everyGoalCarriesThisMacsBridgeDeviceIdOnceKnown() throws {
+        let known = HarnessLink.submitGoalParams("rename the invoices", autoMode: false, deviceId: "mac-9f3c1a")
+        let knownJSON = try JSONSerialization.jsonObject(with: JSONEncoder().encode(known)) as? [String: Any]
+        #expect(knownJSON?["originDeviceId"] as? String == "mac-9f3c1a")
+        // Until the harness reports one, the goal still says mac-local (OBJ-72.1).
+        let unknown = HarnessLink.submitGoalParams("rename the invoices", autoMode: false)
+        let unknownJSON = try JSONSerialization.jsonObject(with: JSONEncoder().encode(unknown)) as? [String: Any]
+        #expect(unknownJSON?["originDeviceId"] as? String == "mac-local")
+    }
+
     @Test func showsWhatItHeardAndSaysOnItThenCloses() async {
         let speech = FakeSpeech()
         let panel = FakeHeardPanel()
