@@ -72,14 +72,15 @@ struct CursorOverlayTests {
         #expect(overlay.cursors.isEmpty)
         #expect(overlay.helperChipCount == 0)
         #expect(CursorOverlay.fadeOutDuration < 1)
-        #expect(CursorOverlay.moveDuration == 0.3)
+        // Ghosts leap back into the island: their longest trip also ends within 1 second.
+        #expect(CursorMotion.longestMove < 1)
     }
 
     @Test func movesArcLikeALeapAndEndOnTheTarget() {
         // SPEC-04 r2: never a jump; the path is a curve that lands exactly on the target.
         let start = CGPoint(x: 100, y: 100), end = CGPoint(x: 500, y: 100)
         var points: [CGPoint] = []
-        CursorOverlay.leapPath(from: start, to: end).applyWithBlock { element in
+        CursorMotion.path(from: start, to: end).applyWithBlock { element in
             let count = element.pointee.type == .addCurveToPoint ? 3 : 1
             points += (0..<count).map { element.pointee.points[$0] }
         }
@@ -87,8 +88,26 @@ struct CursorOverlayTests {
         #expect(points.last == end)
         #expect(points.count == 4, "one cubic Bezier")
         #expect(points[1].y > start.y && points[2].y > start.y, "arcs upward a little")
-        #expect(CursorOverlay.leapPath(from: start, to: end, arcs: false).boundingBox.height == 0, "Reduce Motion glides straight")
+        #expect(CursorMotion.path(from: start, to: end, arcs: false).boundingBox.height == 0, "Reduce Motion glides straight")
         // The click point is the paw spot, inside the cat's image.
         #expect((0...1).contains(CursorLayer.hotspot.x) && (0...1).contains(CursorLayer.hotspot.y))
+    }
+
+    @Test func movesEaseInAndOutOverATimeThatGrowsWithDistance() {
+        #expect(CursorMotion.duration(for: 10) == 0.35)
+        #expect(CursorMotion.duration(for: 400) > 0.35 && CursorMotion.duration(for: 400) < 0.7)
+        #expect(CursorMotion.duration(for: 3000) == 0.7)
+        #expect(abs(CursorMotion.eased(0.5) - 0.5) < 1e-6, "symmetric")
+
+        // The frames themselves: small steps at both ends, large in the middle, on the arc and on
+        // the Reduce Motion line alike.
+        for arcs in [true, false] {
+            let points = CursorMotion.positions(from: CGPoint(x: 100, y: 100), to: CGPoint(x: 700, y: 300), arcs: arcs, duration: 0.6)
+            let steps = zip(points, points.dropFirst()).map { hypot($1.x - $0.x, $1.y - $0.y) }
+            let middle = steps[steps.count / 2]
+            #expect(points.last == CGPoint(x: 700, y: 300))
+            #expect(steps.first! < middle / 10, "slow start: \(steps.first!) vs \(middle)")
+            #expect(steps.last! < middle / 10, "soft landing: \(steps.last!) vs \(middle)")
+        }
     }
 }

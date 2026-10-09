@@ -269,8 +269,8 @@ final class GuiExecutor {
             log.notice("No cursor \(cursorId, privacy: .public) to move; acting without the animation")
             return
         }
-        overlay.move(id: cursorId, to: ScreenGeometry.appKitPoint(fromGlobalTopLeft: point))
-        try? await Task.sleep(for: .seconds(CursorOverlay.moveDuration + 0.05))
+        let duration = overlay.move(id: cursorId, to: ScreenGeometry.appKitPoint(fromGlobalTopLeft: point))
+        try? await Task.sleep(for: .seconds(duration + 0.05))
     }
 
     private func activate(_ target: Target) async throws {

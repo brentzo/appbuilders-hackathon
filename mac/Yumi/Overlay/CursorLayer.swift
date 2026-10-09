@@ -24,6 +24,10 @@ final class CursorLayer {
 
     private var shownState: CursorState?
     private var shownPalette: CatPalette?
+    /// A pose held for a while instead of the cursor's state, such as moving while it leaps out of
+    /// or back into the island.
+    private var heldPose: CursorState?
+    private var last: (cursor: OverlayCursor, scale: CGFloat)?
 
     init() {
         root.anchorPoint = .zero
@@ -85,20 +89,33 @@ final class CursorLayer {
     private var badgeImage: String?
     private var badgeColor = NSColor.black
 
+    /// Shows `pose` until `endPose`, keeping any state that arrives meanwhile for then.
+    func showPose(_ pose: CursorState) {
+        heldPose = pose
+        if let last { apply(last.cursor, scale: last.scale) }
+    }
+
+    func endPose(_ cursor: OverlayCursor, scale: CGFloat) {
+        heldPose = nil
+        apply(cursor, scale: scale)
+    }
+
     func apply(_ cursor: OverlayCursor, scale: CGFloat) {
-        let stateChanged = cursor.state != shownState
+        last = (cursor, scale)
+        let state = heldPose ?? cursor.state
+        let stateChanged = state != shownState
         CATransaction.begin()
         CATransaction.setDisableActions(true)
 
         if stateChanged || cursor.palette != shownPalette {
-            cat.contents = cursor.palette.image(for: cursor.state)?.layerContents(forContentsScale: scale)
-            shownState = cursor.state
+            cat.contents = cursor.palette.image(for: state)?.layerContents(forContentsScale: scale)
+            shownState = state
             shownPalette = cursor.palette
         }
 
         badgeColor = cursor.palette.labelText
         badge.borderColor = cursor.palette.fur.cgColor
-        badgeImage = cursor.state.badgeSymbol
+        badgeImage = state.badgeSymbol
         badge.isHidden = badgeImage == nil
         badgeIcon.contents = badgeImage.flatMap { image(for: $0, scale: scale) }
 
@@ -120,7 +137,7 @@ final class CursorLayer {
         }
         CATransaction.commit()
 
-        if stateChanged { animate(cursor.state) }
+        if stateChanged { animate(state) }
     }
 
     /// Small motion for the pose: breathing while it waits, a pounce on a click, a happy hop when
