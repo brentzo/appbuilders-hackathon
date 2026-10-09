@@ -1,0 +1,15 @@
+{
+  "app": "Spotify",
+  "windowTitle": "Spotify Premium",
+  "layer": { "kind": "window" },
+  "screenshotPath": "~/Library/Application Support/Yumi/vision/com.spotify.client-35815.png",
+  "windowFrame": { "x": 0, "y": 34, "width": 1470, "height": 810 },
+  "elements": [
+    { "n": 1, "role": "button", "label": "close", "enabled": true },
+    { "n": 2, "role": "button", "label": "minimize", "enabled": true },
+    { "n": 3, "role": "button", "label": "zoom", "enabled": true },
+    { "n": 4, "role": "menuBarItem", "label": "Apple", "enabled": true },
+    { "n": 5, "role": "menuBarItem", "label": "Spotify", "enabled": true },
+    { "n": 6, "role": "menuBarItem", "label": "File", "enabled": true }
+  ]
+}

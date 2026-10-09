@@ -359,6 +359,14 @@ export interface FinishAction {
 export type FinishStatus = "done" | "stuck";
 export const finishStatusValues: readonly FinishStatus[] = ["done", "stuck"];
 
+/** A rectangle in global screen points, the origin at the top-left of the main display and y growing down (the Quartz and Accessibility convention; negative x or y on a display left of or above the main one). */
+export interface Frame {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 /** Which app's installed version to read, so the harness re-probes an app only when its version changes (SPEC-03 r4). */
 export interface GetAppVersionParams {
   bundleId: string;
@@ -535,6 +543,8 @@ export interface Observation {
   elements: TreeElement[];
   /** p1 vision fallback only. */
   screenshotPath?: Path;
+  /** p1 vision fallback: the target window's frame when this observation was taken, so the harness can check it has not moved or resized before a vision click (SPEC-05 r13). */
+  windowFrame?: Frame;
 }
 
 export interface ObserveWindowParams {

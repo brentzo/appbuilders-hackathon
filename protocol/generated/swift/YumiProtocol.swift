@@ -794,6 +794,21 @@ public enum FinishStatus: String, Codable, Equatable, Sendable, CaseIterable {
     case stuck
 }
 
+/// A rectangle in global screen points, the origin at the top-left of the main display and y growing down (the Quartz and Accessibility convention; negative x or y on a display left of or above the main one).
+public struct Frame: Codable, Equatable, Sendable {
+    public var x: Double
+    public var y: Double
+    public var width: Double
+    public var height: Double
+
+    public init(x: Double, y: Double, width: Double, height: Double) {
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+    }
+}
+
 /// Which app's installed version to read, so the harness re-probes an app only when its version changes (SPEC-03 r4).
 public struct GetAppVersionParams: Codable, Equatable, Sendable {
     public var bundleId: String
@@ -1126,14 +1141,17 @@ public struct Observation: Codable, Equatable, Sendable {
     public var elements: [TreeElement]
     /// p1 vision fallback only.
     public var screenshotPath: String?
+    /// p1 vision fallback: the target window's frame when this observation was taken, so the harness can check it has not moved or resized before a vision click (SPEC-05 r13).
+    public var windowFrame: Frame?
 
-    public init(app: String? = nil, windowTitle: String, focused: Int? = nil, layer: Layer? = nil, elements: [TreeElement], screenshotPath: String? = nil) {
+    public init(app: String? = nil, windowTitle: String, focused: Int? = nil, layer: Layer? = nil, elements: [TreeElement], screenshotPath: String? = nil, windowFrame: Frame? = nil) {
         self.app = app
         self.windowTitle = windowTitle
         self.focused = focused
         self.layer = layer
         self.elements = elements
         self.screenshotPath = screenshotPath
+        self.windowFrame = windowFrame
     }
 }
 

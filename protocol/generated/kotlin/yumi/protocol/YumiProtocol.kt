@@ -476,6 +476,15 @@ enum class FinishStatus {
     @SerialName("stuck") Stuck;
 }
 
+/** A rectangle in global screen points, the origin at the top-left of the main display and y growing down (the Quartz and Accessibility convention; negative x or y on a display left of or above the main one). */
+@Serializable
+data class Frame(
+    val x: Double,
+    val y: Double,
+    val width: Double,
+    val height: Double,
+)
+
 /** Which app's installed version to read, so the harness re-probes an app only when its version changes (SPEC-03 r4). */
 @Serializable
 data class GetAppVersionParams(
@@ -683,6 +692,8 @@ data class Observation(
     val elements: List<TreeElement>,
     /** p1 vision fallback only. */
     val screenshotPath: String? = null,
+    /** p1 vision fallback: the target window's frame when this observation was taken, so the harness can check it has not moved or resized before a vision click (SPEC-05 r13). */
+    val windowFrame: Frame? = null,
 )
 
 @Serializable
