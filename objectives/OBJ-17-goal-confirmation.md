@@ -5,7 +5,7 @@ product: mac
 assignee: Brent
 touches: [harness]
 specs: [SPEC-01]
-status: done
+status: in-progress
 priority: p0
 depends-on: [OBJ-04, OBJ-15, OBJ-18]
 integrates-with: []
@@ -68,7 +68,8 @@ This is also the moment the cat cursor appears, so it is the start of every demo
 
 ## Outcome
 
-- **Result:** Done.
+- **Result:** In progress (Brent, 2026-10-10).
+  Built and tested, but three checks wait for the next live run on the real Mac: push-to-talk as the answer by voice, why a spoken "yes" was read as a correction (the OBJ-52 debug log will show the transcript), and a confirmed goal running end to end.
 - **Delivered:**
   - `harness/src/confirm/`: the confirmation loop (`confirmation.ts`, `GoalConfirmation` and `abandonUnconfirmed`), the repeat-back prompt, checks, and SPEC-01 sentences (`restate.ts`), and reading the answer (`classify.ts`: fixed answers without the model, else one short model call).
   - `harness/src/rpc/confirmation.ts`: the `submitGoal` and `replyToConfirmation` methods. `harness/src/harness.ts` wires them; `harness/src/main.ts` now gives the shipped harness the model, the file helper lane, and `mac-local` as this Mac's device id, so a confirmed goal runs.
