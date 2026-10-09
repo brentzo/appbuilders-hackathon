@@ -12,7 +12,8 @@
     "build": "tsx scripts/build.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "verify": "npm run typecheck && npm test"
+    "verify": "npm run typecheck && npm test",
+    "live-check": "tsx scripts/live-check/main.ts"
   },
   "dependencies": {
     "better-sqlite3": "13.0.3",
