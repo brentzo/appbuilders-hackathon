@@ -70,24 +70,16 @@ enum WindowReader {
     static func window(of app: LiveNode, windowId: Int?) -> LiveNode? {
         let windows = (app.elements(kAXWindowsAttribute) ?? []).map(LiveNode.init)
         if let windowId {
-            guard let bounds = cgWindowBounds(windowId) else { return nil }
-            return windows.first { node in
-                guard let frame = node.frame else { return false }
-                return abs(frame.minX - bounds.minX) < 2 && abs(frame.minY - bounds.minY) < 2
-                    && abs(frame.width - bounds.width) < 2 && abs(frame.height - bounds.height) < 2
-            }
+            return window(windowId, among: windows) { WindowService.windowId(of: $0.element) }
         }
         let focused = app.element(kAXFocusedWindowAttribute) ?? app.element(kAXMainWindowAttribute)
         return focused.map(LiveNode.init) ?? windows.first
     }
 
-    /// A window's bounds from the window server, in top-left global coordinates like the
-    /// accessibility frames. Window services are OBJ-27; this is a small local helper.
-    private static func cgWindowBounds(_ id: Int) -> CGRect? {
-        guard let info = (CGWindowListCopyWindowInfo([.optionIncludingWindow], CGWindowID(id)) as? [[String: Any]])?.first,
-              let bounds = info[kCGWindowBounds as String] as? NSDictionary
-        else { return nil }
-        return CGRect(dictionaryRepresentation: bounds)
+    /// Matched by the window server's id, the one the router claimed (`WindowService`), never by
+    /// frame: a window that was just opened or is moving has no settled frame to compare.
+    static func window<Node>(_ windowId: Int, among windows: [Node], idOf: (Node) -> CGWindowID?) -> Node? {
+        windows.first { idOf($0).map(Int.init) == windowId }
     }
 
     static func observe(_ target: Target, limit: Int = TreeTrimmer<LiveNode>.defaultLimit) throws -> WindowSnapshot {

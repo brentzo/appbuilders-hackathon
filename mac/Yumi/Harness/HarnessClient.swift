@@ -57,13 +57,20 @@ final class HarnessClient {
     private var failedAttempts = 0
     private let log = Logger(subsystem: "ph.appbuilders.yumi", category: "rpc")
 
-    static let callTimeout: Duration = .seconds(10)
-    static let pingInterval: Duration = .seconds(5)
-    static let pingTimeout: Duration = .seconds(3)
+    /// How long calls and pings may take. Tests against a mock on a busy machine pass longer ones,
+    /// so how fast the machine is cannot decide whether they pass.
+    struct Timing: Sendable {
+        var callTimeout: Duration = .seconds(10)
+        var pingInterval: Duration = .seconds(5)
+        var pingTimeout: Duration = .seconds(3)
+    }
+
+    let timing: Timing
     static let reconnectDelays: [Duration] = [.milliseconds(250), .milliseconds(500), .seconds(1), .seconds(2)]
 
-    init(socketPath: String = HarnessSocket.defaultPath) {
+    init(socketPath: String = HarnessSocket.defaultPath, timing: Timing = Timing()) {
         self.socketPath = socketPath
+        self.timing = timing
         (events, eventContinuation) = AsyncStream.makeStream(bufferingPolicy: .bufferingNewest(256))
     }
 
@@ -89,7 +96,7 @@ final class HarnessClient {
         try await call(.hello, HelloParams(protocolVersion: PROTOCOL_VERSION), returning: HelloResult.self)
     }
 
-    func ping(timeout: Duration = HarnessClient.callTimeout) async throws {
+    func ping(timeout: Duration? = nil) async throws {
         _ = try await call(.ping, Empty(), returning: Empty.self, timeout: timeout)
     }
 
@@ -106,8 +113,9 @@ final class HarnessClient {
         _ method: RpcMethod,
         _ params: Params,
         returning: Result.Type,
-        timeout: Duration = HarnessClient.callTimeout
+        timeout: Duration? = nil
     ) async throws -> Result {
+        let timeout = timeout ?? timing.callTimeout
         guard let socket else { throw HarnessCallError.notConnected }
         let id = nextId
         nextId += 1
@@ -159,8 +167,8 @@ final class HarnessClient {
             connected = try await Task.detached {
                 try LineSocket.connect(
                     path: path,
-                    onLine: { [weak self] socket, line in self?.receive(line, from: socket) },
-                    onClose: { [weak self] socket in self?.connectionClosed(socket) }
+                    onLine: { [weak self = self] socket, line in self?.receive(line, from: socket) },
+                    onClose: { [weak self = self] socket in self?.connectionClosed(socket) }
                 )
             }.value
         } catch {
@@ -200,10 +208,10 @@ final class HarnessClient {
         pingTask?.cancel()
         pingTask = Task {
             while !Task.isCancelled {
-                try? await Task.sleep(for: Self.pingInterval)
+                try? await Task.sleep(for: timing.pingInterval)
                 guard !Task.isCancelled, socket != nil else { return }
                 do {
-                    try await ping(timeout: Self.pingTimeout)
+                    try await ping(timeout: timing.pingTimeout)
                 } catch {
                     log.error("Harness stopped answering ping: \(String(describing: error), privacy: .public)")
                     socket?.close()

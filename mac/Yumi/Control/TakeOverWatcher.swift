@@ -10,6 +10,9 @@ enum TakeOverRule {
         var isKeyboard: Bool
         /// A click or move over one of Yumi's own cards or panels.
         var overYumiWindow: Bool
+        /// A drag whose press began on one of Yumi's windows: still the user using Yumi, even
+        /// once the pointer leaves it or the panel closes.
+        var pressBeganOverYumi = false
         /// Typing goes to one of Yumi's windows.
         var yumiHasKeyboard: Bool
         /// A key press of Yumi's own shortcuts: push-to-talk or the stop shortcut. The user is
@@ -22,7 +25,7 @@ enum TakeOverRule {
     static func isTakeOver(_ input: Input, uiLaneActing: Bool) -> Bool {
         guard uiLaneActing, !input.tagged, !input.isYumiShortcut else { return false }
         if input.isKeyboard { return !input.yumiHasKeyboard }
-        return !input.overYumiWindow
+        return !input.overYumiWindow && !input.pressBeganOverYumi
     }
 }
 
@@ -36,6 +39,8 @@ final class TakeOverWatcher {
     private let onTakeOver: () -> Void
     private var tap: CFMachPort?
     private var secureInput = false
+    /// Set while a mouse button that went down on one of Yumi's windows is held.
+    private var pressOverYumi = false
     private let log = Logger(subsystem: "ph.appbuilders.yumi", category: "control")
 
     init(uiLaneActing: @escaping () -> Bool, yumiShortcuts: @escaping () -> [KeyShortcut], onTakeOver: @escaping () -> Void) {
@@ -46,8 +51,13 @@ final class TakeOverWatcher {
 
     static let watched: [CGEventType] = [
         .mouseMoved, .leftMouseDown, .rightMouseDown, .otherMouseDown,
-        .leftMouseDragged, .rightMouseDragged, .scrollWheel, .keyDown,
+        .leftMouseDragged, .rightMouseDragged, .otherMouseDragged, .scrollWheel, .keyDown,
+        .leftMouseUp, .rightMouseUp, .otherMouseUp,
     ]
+
+    static let presses: Set<CGEventType> = [.leftMouseDown, .rightMouseDown, .otherMouseDown]
+    static let releases: Set<CGEventType> = [.leftMouseUp, .rightMouseUp, .otherMouseUp]
+    static let drags: Set<CGEventType> = [.leftMouseDragged, .rightMouseDragged, .otherMouseDragged]
 
     func start() {
         guard tap == nil else { return }
@@ -78,11 +88,19 @@ final class TakeOverWatcher {
             return
         }
         noteSecureInput()
+        // A release only ends a press; letting go of the button is not taking over.
+        if Self.releases.contains(type) {
+            pressOverYumi = false
+            return
+        }
         let point = ScreenGeometry.appKitPoint(fromGlobalTopLeft: event.location)
+        let overYumiWindow = NSApp.windows.contains { $0.isVisible && !$0.ignoresMouseEvents && $0.frame.contains(point) }
+        if Self.presses.contains(type) { pressOverYumi = overYumiWindow }
         let input = TakeOverRule.Input(
             tagged: event.getIntegerValueField(.eventSourceUserData) == KeystrokeSender.eventTag,
             isKeyboard: type == .keyDown,
-            overYumiWindow: NSApp.windows.contains { $0.isVisible && !$0.ignoresMouseEvents && $0.frame.contains(point) },
+            overYumiWindow: overYumiWindow,
+            pressBeganOverYumi: Self.drags.contains(type) && pressOverYumi,
             yumiHasKeyboard: NSApp.isActive || NSApp.keyWindow != nil,
             isYumiShortcut: type == .keyDown && Self.matches(
                 keyCode: UInt16(event.getIntegerValueField(.keyboardEventKeycode)), flags: event.flags, any: yumiShortcuts()

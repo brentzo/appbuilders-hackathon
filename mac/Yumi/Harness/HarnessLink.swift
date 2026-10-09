@@ -38,6 +38,9 @@ final class HarnessLink {
     private var takeOverWatcher: TakeOverWatcher?
     /// Helper subtasks shown as chips, by subtask id.
     private var helperSubtasks: Set<String> = []
+    /// True once the harness has looked at or acted on a window for a running task, until no task
+    /// runs. Planning, and the moments after the user answers Yumi, are not a UI lane acting.
+    private var uiLaneStarted = false
 
     init(model: AppModel, launcher: HarnessLauncher, socketPath: String, overlay: CursorOverlay = CursorOverlay()) {
         self.model = model
@@ -79,6 +82,7 @@ final class HarnessLink {
     func start() {
         overlay.start()
         gui.onUserError = { [weak self] error in self?.onUserError?(error) }
+        gui.onWindowWork = { [weak self] in self?.uiLaneStarted = true }
         approvals.isStopped = { [pause] in pause.isStopped }
         gui.actionsAllowed = { [weak self] in
             guard let self else { return true }
@@ -130,6 +134,7 @@ final class HarnessLink {
         switch event {
         case .taskStatusChanged(let change):
             taskStatuses[change.taskId] = change.status
+            if !taskStatuses.values.contains(.running) { uiLaneStarted = false }
             tiler.taskStatusChanged(change.taskId, change.status)
             confirmation.taskStatusChanged(change.taskId, change.status)
             autoMode.taskStatusChanged(change.taskId, change.status)
@@ -197,11 +202,22 @@ final class HarnessLink {
         return .ready
     }
 
-    /// A cursor is working in a running task and Yumi is not waiting for the user: only then does
-    /// the user's own input count as taking over (SPEC-06 r2). Helpers have no cursor.
     private var uiLaneActing: Bool {
-        !pause.isStopped && taskStatuses.values.contains(.running) && !overlay.cursors.isEmpty
-            && approvals.openApprovalIds.isEmpty
+        Self.uiLaneActing(
+            stopped: pause.isStopped, statuses: Array(taskStatuses.values), hasCursors: !overlay.cursors.isEmpty,
+            approvalOpen: !approvals.openApprovalIds.isEmpty, startedOnScreen: uiLaneStarted
+        )
+    }
+
+    /// A cursor is working in a running task and Yumi is not waiting for the user: only then does
+    /// the user's own input count as taking over (SPEC-06 r2). Helpers have no cursor. The main
+    /// cursor appears as soon as a goal is spoken, so a UI lane counts as acting only once the
+    /// harness has started on a window (`startedOnScreen`), not while it plans right after the user
+    /// answered Yumi.
+    static func uiLaneActing(
+        stopped: Bool, statuses: [TaskStatus], hasCursors: Bool, approvalOpen: Bool, startedOnScreen: Bool
+    ) -> Bool {
+        !stopped && statuses.contains(.running) && hasCursors && !approvalOpen && startedOnScreen
     }
 
     /// Before any goal is confirmed nothing may act (OBJ-17.7): a goal waiting for its answer, with

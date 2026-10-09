@@ -87,11 +87,15 @@ enum WindowService {
         var value: CFTypeRef?
         guard AXUIElementCopyAttributeValue(appElement, kAXWindowsAttribute as CFString, &value) == .success,
               let elements = value as? [AXUIElement] else { return [] }
-        return elements.compactMap { element in
-            var id: CGWindowID = 0
-            guard _AXUIElementGetWindow(element, &id) == .success, id != 0 else { return nil }
-            return (element, id)
-        }
+        return elements.compactMap { element in windowId(of: element).map { (element, $0) } }
+    }
+
+    /// The window server's id for an accessibility window: the id the router claims and the
+    /// harness sends back in every `Target`.
+    static func windowId(of element: AXUIElement) -> CGWindowID? {
+        var id: CGWindowID = 0
+        guard _AXUIElementGetWindow(element, &id) == .success, id != 0 else { return nil }
+        return id
     }
 
     private static func info(for element: AXUIElement, id: CGWindowID, app: NSRunningApplication) -> WindowInfo? {

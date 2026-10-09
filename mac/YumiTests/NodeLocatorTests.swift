@@ -49,25 +49,30 @@ struct NodeLocatorTests {
             try? FileManager.default.removeItem(atPath: shell)
             try? FileManager.default.removeItem(at: pidFile)
         }
-        // Long enough for a brand-new script to start and record its children on a busy machine,
-        // and still far below the children's 30 s, so only the timeout can stop them.
-        let outcome = await ShellCommand.run(shell, ["-l", "-c", "true"], timeout: .seconds(10))
+        // The time runs out only once the shell has started both children, however busy the
+        // machine is, so nothing here depends on how long anything takes.
+        let outcome = await ShellCommand.run(shell, ["-l", "-c", "true"]) {
+            while Self.pids(in: pidFile).count < 3 {
+                try? await Task.sleep(for: .milliseconds(20))
+            }
+        }
         guard case .timedOut = outcome else {
             Issue.record("Expected a timeout, got \(outcome)")
             return
         }
-        let pids = try String(contentsOf: pidFile, encoding: .utf8).split(separator: "\n").compactMap { Int32($0) }
+        let pids = Self.pids(in: pidFile)
         #expect(pids.count == 3)
-        // The children exit asynchronously after the kill; a busy machine can take a while.
-        // kill with signal 0 only checks whether the process exists.
+        // The children exit asynchronously after the kill. Wait until they are gone; the time limit
+        // above ends the test if one never goes. kill with signal 0 only checks whether it exists.
         func alive(_ pid: Int32) -> Bool { !(kill(pid, 0) == -1 && errno == ESRCH) }
-        let deadline = ContinuousClock.now + .seconds(10)
-        while pids.contains(where: alive), ContinuousClock.now < deadline {
-            try await Task.sleep(for: .milliseconds(100))
+        while pids.contains(where: alive) {
+            try await Task.sleep(for: .milliseconds(50))
         }
-        for pid in pids {
-            #expect(!alive(pid), "pid \(pid) survived the timeout")
-        }
+    }
+
+    /// The pids the fake shell has written so far.
+    nonisolated private static func pids(in file: URL) -> [Int32] {
+        ((try? String(contentsOf: file, encoding: .utf8)) ?? "").split(separator: "\n").compactMap { Int32($0) }
     }
 
     @Test func readsOnlyTheMarkedLine() async throws {

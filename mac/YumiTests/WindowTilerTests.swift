@@ -52,7 +52,7 @@ struct WindowTilerTests {
     }
 
     func tiler(_ windows: FakeWindows, demo: Bool = false, prompt: Prompt = Prompt()) -> WindowTiler {
-        WindowTiler(
+        let tiler = WindowTiler(
             frames: windows,
             store: TiledLayoutStore(defaults: defaults),
             demoMode: { demo },
@@ -61,6 +61,11 @@ struct WindowTilerTests {
             dismissQuestion: { prompt.dismissed.append($0) },
             say: { prompt.spoken.append($0) }
         )
+        // Carrying takes no real time, so a busy machine cannot change the outcome, and the
+        // Mac's own Reduce Motion setting does not decide which path runs.
+        tiler.sleepUntil = { _ in }
+        tiler.reduceMotion = { false }
+        return tiler
     }
 
     let suggestion = TilingSuggested(taskId: "task-1", windows: [

@@ -16,6 +16,10 @@ final class HarnessSupervisor {
     /// A test host never starts a harness, so tests cannot stop or replace the one a running Yumi
     /// uses (see `start`).
     private let isTestHost: Bool
+    /// Whether the Yumi with that pid still runs, for the leftover check.
+    private let appIsRunning: (Int32) -> Bool
+    /// Where the pid file is: the harness folder.
+    private let folder: URL
     private(set) var state: State = .stopped {
         didSet { if state != oldValue { onStateChange?(state) } }
     }
@@ -34,12 +38,19 @@ final class HarnessSupervisor {
     static let healthyRun: TimeInterval = 30
 
     private var pidFile: URL {
-        HarnessFolder.url.appendingPathComponent(launcher.isMock ? "mock-harness.pid" : "harness.pid")
+        folder.appendingPathComponent(launcher.isMock ? "mock-harness.pid" : "harness.pid")
     }
 
-    init(launcher: HarnessLauncher, isTestHost: Bool = TestHost.isActive) {
+    init(
+        launcher: HarnessLauncher,
+        isTestHost: Bool = TestHost.isActive,
+        appIsRunning: @escaping (Int32) -> Bool = SingleInstance.isRunningYumi,
+        folder: URL = HarnessFolder.url
+    ) {
         self.launcher = launcher
         self.isTestHost = isTestHost
+        self.appIsRunning = appIsRunning
+        self.folder = folder
     }
 
     func start() {
@@ -82,7 +93,7 @@ final class HarnessSupervisor {
                 let process = try await launcher.makeProcess()
                 guard !stopping else { return }
                 pipeOutput(of: process)
-                process.terminationHandler = { [weak self] finished in
+                process.terminationHandler = { [weak self = self] finished in
                     let status = finished.terminationStatus
                     let reason = finished.terminationReason
                     Task { @MainActor in self?.processExited(status: status, reason: reason) }
@@ -91,7 +102,8 @@ final class HarnessSupervisor {
                 self.process = process
                 startedAt = Date()
                 try? FileManager.default.createDirectory(at: pidFile.deletingLastPathComponent(), withIntermediateDirectories: true)
-                try? String(process.processIdentifier).write(to: pidFile, atomically: true, encoding: .utf8)
+                let record = HarnessPidRecord(harness: process.processIdentifier, app: ProcessInfo.processInfo.processIdentifier)
+                try? record.text.write(to: pidFile, atomically: true, encoding: .utf8)
                 log.notice("Started the \(self.launcher.displayName, privacy: .public), pid \(process.processIdentifier)")
                 state = .running(pid: process.processIdentifier)
             } catch {
@@ -145,11 +157,16 @@ final class HarnessSupervisor {
     }
 
     /// A harness left running by a Yumi that crashed would keep the socket busy. Stop it, but only
-    /// if that pid is still the same kind of harness.
+    /// if the Yumi that started it is gone and that pid is still the same kind of harness.
     private func stopLeftoverProcess() {
         guard let text = try? String(contentsOf: pidFile, encoding: .utf8),
-              let pid = Int32(text.trimmingCharacters(in: .whitespacesAndNewlines)) else { return }
+              let record = HarnessPidRecord(text: text) else { return }
+        guard record.isLeftover(appIsRunning: appIsRunning) else {
+            log.notice("The \(self.launcher.displayName, privacy: .public) in the pid file belongs to a Yumi that is still running; leaving it")
+            return
+        }
         try? FileManager.default.removeItem(at: pidFile)
+        let pid = record.harness
         let marker = launcher.isMock ? "mock-harness" : "harness"
         guard Self.commandLine(of: pid)?.contains(marker) == true else { return }
         log.notice("Stopping a leftover \(self.launcher.displayName, privacy: .public), pid \(pid)")

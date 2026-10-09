@@ -7,22 +7,26 @@ import YumiProtocol
 /// same messages and error shapes the app does. Needs node and `npm install` in protocol/: without
 /// them these tests fail with a message saying so, rather than being skipped quietly.
 @MainActor
-@Suite(.serialized, .timeLimit(.minutes(1)))
+@Suite(.serialized, .timeLimit(.minutes(2)))
 struct HarnessClientTests {
+    /// Generous enough that a busy machine (the model, other builds) never decides the outcome;
+    /// the suite's time limit is what catches a real hang.
+    static let patient = HarnessClient.Timing(callTimeout: .seconds(60), pingInterval: .seconds(5), pingTimeout: .seconds(60))
+
     @Test func helloPingAndEvents() async throws {
         let mock = try await MockHarnessProcess.start(script: "windows-and-bridge", speed: "0")
         defer { mock.stop() }
-        let client = HarnessClient(socketPath: mock.socketPath)
+        let client = HarnessClient(socketPath: mock.socketPath, timing: Self.patient)
         client.start()
         defer { client.stop() }
 
-        try await wait(for: client, toBe: .connected)
+        try await wait(for: client, toBe: .connected, answeredBy: mock)
         try await client.ping()
 
         // The script has 8 events. If fewer arrive, stopping the client ends the stream, so the
-        // test fails on the counts below instead of waiting forever.
+        // test fails on the counts below instead of waiting forever. The wait only guards a hang.
         let deadline = Task { @MainActor in
-            try await Task.sleep(for: .seconds(15))
+            try await Task.sleep(for: .seconds(90))
             client.stop()
         }
         defer { deadline.cancel() }
@@ -33,7 +37,7 @@ struct HarnessClientTests {
             if case .userError(let error) = event { errors.append(error.kind) }
             if names.count == 8 { break }
         }
-        #expect(names.count == 8, "Only \(names.count) of the script's 8 events arrived in 15 seconds")
+        #expect(names.count == 8, "Only \(names.count) of the script's 8 events arrived in 90 seconds")
         #expect(names.contains("bridgeStateChanged"))
         #expect(names.contains("interruptedTaskFound"))
         #expect(errors.count == 2)
@@ -42,10 +46,10 @@ struct HarnessClientTests {
     @Test func failedMethodCarriesAUserError() async throws {
         let mock = try await MockHarnessProcess.start(fail: "submitGoal=bridgeDown")
         defer { mock.stop() }
-        let client = HarnessClient(socketPath: mock.socketPath)
+        let client = HarnessClient(socketPath: mock.socketPath, timing: Self.patient)
         client.start()
         defer { client.stop() }
-        try await wait(for: client, toBe: .connected)
+        try await wait(for: client, toBe: .connected, answeredBy: mock)
 
         do {
             _ = try await client.submitGoal(SubmitGoalParams(transcript: "test", originDeviceId: "mac-local"))
@@ -64,10 +68,10 @@ struct HarnessClientTests {
     @Test func submitsAGoalWithAutoMode() async throws {
         let mock = try await MockHarnessProcess.start()
         defer { mock.stop() }
-        let client = HarnessClient(socketPath: mock.socketPath)
+        let client = HarnessClient(socketPath: mock.socketPath, timing: Self.patient)
         client.start()
         defer { client.stop() }
-        try await wait(for: client, toBe: .connected)
+        try await wait(for: client, toBe: .connected, answeredBy: mock)
 
         let result = try await client.submitGoal(HarnessLink.submitGoalParams("rename the invoices", autoMode: true))
         #expect(!result.taskId.isEmpty)
@@ -91,32 +95,33 @@ struct HarnessClientTests {
         // Reads `mock` when the test ends, so it stops whichever mock is running then, even if the
         // test fails before the restart.
         defer { mock.stop() }
-        let client = HarnessClient(socketPath: mock.socketPath)
+        let client = HarnessClient(socketPath: mock.socketPath, timing: Self.patient)
         client.start()
         defer { client.stop() }
-        try await wait(for: client, toBe: .connected)
+        try await wait(for: client, toBe: .connected, answeredBy: mock)
 
         mock.kill()
         try await wait(for: client, toBe: .connecting)
         mock = try await MockHarnessProcess.start(socketPath: mock.socketPath)
-        try await wait(for: client, toBe: .connected)
+        try await wait(for: client, toBe: .connected, answeredBy: mock)
         try await client.ping()
     }
 
+    /// Waits until the link is `expected`, with no deadline of its own: the suite's time limit
+    /// catches a hang. It fails at once when waiting cannot help: the versions differ, or the mock
+    /// that should answer has exited.
     private func wait(
         for client: HarnessClient,
         toBe expected: HarnessClient.LinkState,
-        timeout: Duration = .seconds(15)
+        answeredBy mock: MockHarnessProcess? = nil
     ) async throws {
-        let clock = ContinuousClock()
-        let deadline = clock.now + timeout
         while client.linkState != expected {
-            guard clock.now < deadline else {
-                Issue.record("""
-                    The link never became \(expected); it is \(client.linkState). If the rpc log shows \
-                    hello refused with "Protocol version ... does not match", the mock harness and \
-                    PROTOCOL_VERSION (\(PROTOCOL_VERSION)) disagree.
-                    """)
+            if client.linkState == .incompatible {
+                Issue.record("The mock harness and PROTOCOL_VERSION (\(PROTOCOL_VERSION)) disagree")
+                throw CancellationError()
+            }
+            if let mock, !mock.process.isRunning {
+                Issue.record("The mock harness exited before the link became \(expected)")
                 throw CancellationError()
             }
             try await Task.sleep(for: .milliseconds(50))
@@ -128,6 +133,9 @@ struct HarnessClientTests {
 nonisolated struct MockHarnessProcess {
     let process: Process
     let socketPath: String
+
+    /// Finds node like the app, but a slow login shell on a busy machine is waited for.
+    static let nodeLocator = NodeLocator(timeout: .seconds(60))
 
     static var protocolFolder: URL {
         URL(fileURLWithPath: #filePath)
@@ -158,7 +166,7 @@ nonisolated struct MockHarnessProcess {
         guard FileManager.default.fileExists(atPath: protocolFolder.appendingPathComponent("node_modules/tsx").path) else {
             throw SetupError.dependenciesMissing(protocolFolder.path)
         }
-        guard let node = await NodeLocator.shared.nodeURL() else {
+        guard let node = await nodeLocator.nodeURL() else {
             throw SetupError.nodeNotFound
         }
         let process = Process()

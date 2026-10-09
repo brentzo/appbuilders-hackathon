@@ -20,6 +20,9 @@ final class GuiExecutor {
     /// Checked when a request arrives and again right before acting, so a pause that lands while
     /// the cursor is still moving wins.
     var actionsAllowed: () -> Bool = { true }
+    /// Called when the harness looks at or acts on a window, so the app knows a UI lane has
+    /// started acting (take-over, SPEC-06 r2). Set by the app.
+    var onWindowWork: (() -> Void)?
 
     private let overlay: CursorOverlay?
     private let isTrusted: () -> Bool
@@ -41,7 +44,8 @@ final class GuiExecutor {
     // MARK: observeWindow (OBJ-39.2)
 
     func observeWindow(_ params: ObserveWindowParams) throws -> YumiProtocol.Observation {
-        try reporting {
+        onWindowWork?()
+        return try reporting {
             try requireAccessibility()
             let snapshot = try WindowReader.observe(params.target)
             snapshots[Self.key(params.target)] = snapshot
@@ -57,7 +61,8 @@ final class GuiExecutor {
     // MARK: executeAction (OBJ-39.3 to OBJ-39.6)
 
     func executeAction(_ params: ExecuteActionParams) async throws -> ExecuteActionResult {
-        try await reporting {
+        onWindowWork?()
+        return try await reporting {
             guard actionsAllowed() else { return Self.notAllowed }
             // A password field is never filled, whatever else is true (SPEC-05 r7).
             if params.action.element?.role == .secureTextField {

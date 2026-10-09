@@ -61,13 +61,15 @@ struct TestHostIsolationTests {
         running.arguments = ["-c", "sleep 30; :", "harness"]
         try running.run()
         defer { running.terminate() }
-        let pidFile = HarnessFolder.url.appendingPathComponent("harness.pid")
-        try FileManager.default.createDirectory(at: HarnessFolder.url, withIntermediateDirectories: true)
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("yumi-pid-\(UUID().uuidString.prefix(8))")
+        let pidFile = folder.appendingPathComponent("harness.pid")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         try String(running.processIdentifier).write(to: pidFile, atomically: true, encoding: .utf8)
-        defer { try? FileManager.default.removeItem(at: HarnessFolder.url) }
+        defer { try? FileManager.default.removeItem(at: folder) }
 
         let launcher = RecordingLauncher()
-        let supervisor = HarnessSupervisor(launcher: launcher)
+        // The default for the test host, as the app delegate would build it.
+        let supervisor = HarnessSupervisor(launcher: launcher, folder: folder)
         supervisor.start()
         try await Task.sleep(for: .milliseconds(300))
 

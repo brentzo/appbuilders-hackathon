@@ -176,10 +176,15 @@ final class WindowTiler {
     /// Position-only steps per carried window; the size changes once at the end.
     static let carrySteps = 10
 
+    /// Waits until an instant. Tests replace it so carrying takes no real time.
+    var sleepUntil: (ContinuousClock.Instant) async -> Void = { try? await Task.sleep(until: $0, clock: .continuous) }
+    /// Replaced in tests, so they do not depend on the Mac's Reduce Motion setting.
+    var reduceMotion: () -> Bool = { CursorMotion.reduceMotion }
+
     /// Moves windows to their frames. With a cat and without Reduce Motion, the cat carries them
     /// one by one; otherwise each window jumps, as before.
     private func carry(_ moves: [Move]) {
-        guard let carrier, !CursorMotion.reduceMotion else {
+        guard let carrier, !reduceMotion() else {
             for move in moves { jump(move) }
             return
         }
@@ -223,7 +228,7 @@ final class WindowTiler {
         let start = ContinuousClock.now
         for step in 1...Self.carrySteps {
             let time = Double(step) / Double(Self.carrySteps)
-            try? await Task.sleep(until: start + .milliseconds(Int(duration * time * 1000)))
+            await sleepUntil(start + .milliseconds(Int(duration * time * 1000)))
             let progress = CursorMotion.eased(time)
             let rect = Rect(x: from.x + dx * progress, y: from.y + dy * progress, width: from.width, height: from.height)
             do {
@@ -239,7 +244,7 @@ final class WindowTiler {
     }
 
     private func pause(_ seconds: TimeInterval) async {
-        try? await Task.sleep(for: .milliseconds(Int(seconds * 1000)))
+        await sleepUntil(.now + .milliseconds(Int(seconds * 1000)))
     }
 
     /// The middle of a window's title bar, where the cat grabs it.

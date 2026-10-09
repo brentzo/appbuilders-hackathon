@@ -39,6 +39,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         listenForGoal: { [weak self] in await self?.voice.listenForGoalAfterWakeWord() }
     )
     private var terminationSignal: DispatchSourceSignal?
+    /// False when this launch gave way to a Yumi that was already running, so quitting leaves its
+    /// harness alone.
+    private var started = false
     private let log = Logger(subsystem: "ph.appbuilders.yumi", category: "app")
 
     /// True when the app is only hosting unit tests, so it should not open windows or start the
@@ -48,6 +51,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         log.info("Yumi launched")
         guard !isHostingTests else { return }
+        if let first = SingleInstance.runningYumiToDeferTo() {
+            log.notice("Yumi is already running (pid \(first.processIdentifier)); quitting this launch")
+            first.activate()
+            NSApp.terminate(nil)
+            return
+        }
+        started = true
 
         model.permissions.observeActivation()
         quitCleanlyOnSIGTERM()
@@ -66,6 +76,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        guard started else { return }
         harness.stop()
     }
 

@@ -146,6 +146,12 @@ nonisolated enum ShellCommand {
     }
 
     static func run(_ executable: String, _ arguments: [String], timeout: Duration) async -> Outcome {
+        await run(executable, arguments, deadline: { try? await Task.sleep(for: timeout) })
+    }
+
+    /// Like `run(_:_:timeout:)`, but the command times out when `deadline` returns. Tests use it
+    /// to time out at a known moment instead of after a guessed duration.
+    static func run(_ executable: String, _ arguments: [String], deadline: @escaping @Sendable () async -> Void) async -> Outcome {
         var pipeEnds: [Int32] = [0, 0]
         guard pipe(&pipeEnds) == 0 else { return .failedToStart(String(cString: strerror(errno))) }
         let (readEnd, writeEnd) = (pipeEnds[0], pipeEnds[1])
@@ -192,7 +198,7 @@ nonisolated enum ShellCommand {
             exited.fire()
         }
 
-        let finished = await exited.wait(timeout: timeout)
+        let finished = await exited.wait(until: deadline)
         // Stop the whole group: after a timeout that is the shell and everything it started; after
         // a normal exit it is any background job the shell left behind.
         kill(-child, SIGTERM)
@@ -230,6 +236,11 @@ nonisolated enum ShellCommand {
         }
 
         func wait(timeout: Duration) async -> Bool {
+            await wait(until: { try? await Task.sleep(for: timeout) })
+        }
+
+        /// Returns true when the process exits, or false if `deadline` returns first.
+        func wait(until deadline: @escaping @Sendable () async -> Void) async -> Bool {
             await withCheckedContinuation { continuation in
                 let alreadyFired: Bool = lock.withLock {
                     if fired { return true }
@@ -241,7 +252,7 @@ nonisolated enum ShellCommand {
                     return
                 }
                 Task {
-                    try? await Task.sleep(for: timeout)
+                    await deadline()
                     let waiting: CheckedContinuation<Bool, Never>? = self.lock.withLock {
                         defer { self.waiter = nil }
                         return self.waiter
