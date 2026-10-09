@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Monochrome cat head, used for the notification icon. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M4,3L8.5,7.2Q12,6 15.5,7.2L20,3L20,13Q20,21 12,21Q4,21 4,13Z M9,12.5a1.25,1.25 0,1 0,0.01 0Z M15,12.5a1.25,1.25 0,1 0,0.01 0Z" />
+</vector>
