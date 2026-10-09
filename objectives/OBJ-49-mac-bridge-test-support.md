@@ -66,7 +66,7 @@ This objective gives the person running OBJ-30 a way to trigger each from the Ma
 ## Out of scope
 
 - The phone's side: [OBJ-23](OBJ-23-android-bridge-client.md) task 10.
-- Real cross-device goals and tools: SPEC-09 objectives, not written yet.
+- Real cross-device goals and tools: [OBJ-65](OBJ-65-harness-phone-tool-lane.md), [OBJ-68](OBJ-68-harness-delegated-goals.md), and [OBJ-70](OBJ-70-harness-phone-approvals-and-stop.md), which build on this handler.
 
 ## Outcome
 

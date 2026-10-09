@@ -74,7 +74,7 @@ Build against the mock Mac app from [OBJ-01](OBJ-01-task-record-schemas.md) unti
 
 - Deciding levels and the file tools: [OBJ-37](OBJ-37-permission-gate-and-file-tools.md).
 - The cards, `moveToTrash`, the stop shortcut, and the input watcher: [OBJ-40](OBJ-40-mac-approval-cards.md) and [OBJ-35](OBJ-35-mac-stop-and-take-over.md) (Patrick).
-- Approvals on the other device and the 5-minute approval timeout: SPEC-09, not reviewed yet.
+- Approvals on the other device: [OBJ-70](OBJ-70-harness-phone-approvals-and-stop.md). The 5-minute approval timeout: SPEC-09 r10, not planned yet.
 - Asking after a crash whether an approved step happened (SPEC-07 r21, p1).
 - Deleting screenshots after 7 days (SPEC-07 r20, p1). It conflicts with SPEC-02 r10 (kept forever), an open question in [docs/task-record-schema.md](../docs/task-record-schema.md), and p0 takes no screenshots for the model.
 

@@ -175,6 +175,10 @@ The UI reads the phrase from there.
 | [OBJ-24](../objectives/OBJ-24-android-voice-intake.md) | Android voice intake and wake word | Brent | done |
 | [OBJ-42](../objectives/OBJ-42-version-mismatch-copy.md) | Add the protocol version mismatch copy | Brent | todo |
 | [OBJ-59](../objectives/OBJ-59-android-hey-yumi-vosk.md) | "Hey Yumi" on Android with Vosk | Brent | in-progress |
+| [OBJ-66](../objectives/OBJ-66-android-phone-tool-host.md) | Phone runs the Mac's tool calls | Brent | todo |
+| [OBJ-67](../objectives/OBJ-67-android-goal-routing.md) | Phone repeats back a goal and runs it or sends it to the Mac | Brent | todo |
+| [OBJ-69](../objectives/OBJ-69-android-delegated-goal-screen.md) | Phone shows a goal working on the Mac, with Stop | Brent | todo |
+| [OBJ-71](../objectives/OBJ-71-android-approvals.md) | Approvals on the phone for goals running on the Mac | Brent | todo |
 <!-- generated:product-objectives:end -->
 
 Not written yet: Part A phone-only goals, phone tools, and delegated goals (SPEC-09 and SPEC-10 Part A), and everything in Part B.

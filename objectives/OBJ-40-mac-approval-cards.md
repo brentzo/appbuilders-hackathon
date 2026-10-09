@@ -72,7 +72,7 @@ Until OBJ-38 exists, drive the cards from the mock harness in [OBJ-01](OBJ-01-ta
 ## Out of scope
 
 - Deciding the permission level and building the approval text: [OBJ-37](OBJ-37-permission-gate-and-file-tools.md) and [OBJ-38](OBJ-38-approvals-pause-and-action-log.md) (Brent).
-- Approvals asked on the phone and the "Waiting for your OK on your phone" banner: SPEC-09, not reviewed yet.
+- Approvals asked on the phone and the "Waiting for your OK on your phone" banner: [OBJ-72](OBJ-72-mac-cross-device-routing.md), and the phone's cards in [OBJ-71](OBJ-71-android-approvals.md).
 - Opening the action log from the menu bar (SPEC-07 r19, p1).
 - The injection warning (SPEC-07 r17, p1).
 

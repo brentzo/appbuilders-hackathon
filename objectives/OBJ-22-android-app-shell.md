@@ -67,7 +67,7 @@ Android only lets a background app stay alive this way, with a visible notificat
 ## Out of scope
 
 - Bridge connection: [OBJ-23](OBJ-23-android-bridge-client.md). Voice: [OBJ-24](OBJ-24-android-voice-intake.md).
-- Phone-only goals, phone tools, and delegated goals: SPEC-09 and SPEC-10 Part A, objectives not written yet.
+- Phone-only goals, phone tools, and delegated goals: SPEC-09 and SPEC-10 Part A, [OBJ-66](OBJ-66-android-phone-tool-host.md), [OBJ-67](OBJ-67-android-goal-routing.md), and [OBJ-69](OBJ-69-android-delegated-goal-screen.md).
 - Everything in SPEC-10 Part B (p1).
 
 ## Outcome

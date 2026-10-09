@@ -68,7 +68,7 @@ The harness side of pausing and cancelling is [OBJ-38](OBJ-38-approvals-pause-an
 - The harness pause and cancel path, dropping queued work, and cancelling approvals: [OBJ-38](OBJ-38-approvals-pause-and-action-log.md) (Brent).
 - Saying "stop" by voice, including "teka", "tama na", and "hinto" (SPEC-06 r10, p1).
 - Touch on the phone, the Android notification stop, and pausing after 10 seconds without the other device (SPEC-06 r11-13, p1).
-- Stop from the other device: SPEC-09, not reviewed yet. Its message kinds are [OBJ-25](OBJ-25-cross-device-messages.md).
+- Stop from the other device: [OBJ-70](OBJ-70-harness-phone-approvals-and-stop.md) (harness) and [OBJ-69](OBJ-69-android-delegated-goal-screen.md) (phone). Its message kinds are [OBJ-25](OBJ-25-cross-device-messages.md).
 - Resume after a crash or reboot: [OBJ-06](OBJ-06-resume-and-limits.md).
 
 ## Outcome

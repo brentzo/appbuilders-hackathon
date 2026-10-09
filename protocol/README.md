@@ -332,4 +332,5 @@ A sheet usually has no `AXTitle`.
 | [OBJ-48](../objectives/OBJ-48-unpair-without-device-clocks.md) | Bind unpair to the pairing instead of device clocks | Jepoy | todo |
 | [OBJ-56](../objectives/OBJ-56-unclassified-action-approval-contract.md) | Approval contract for unclassified risky actions | Jepoy | todo |
 | [OBJ-60](../objectives/OBJ-60-goal-revision-contract.md) | Contract for changing the goal mid-task | Jepoy | in-progress |
+| [OBJ-64](../objectives/OBJ-64-cross-device-local-rpc-contract.md) | Local RPC for cross-device routing on the Mac | Jepoy | todo |
 <!-- generated:product-objectives:end -->

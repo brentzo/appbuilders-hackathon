@@ -67,7 +67,7 @@ The transcript goes to a single entry point that the Part A routing objective wi
 
 ## Out of scope
 
-- Repeating the goal back and confirming on the phone, and deciding phone or Mac: the Part A routing objective (SPEC-09, SPEC-10 Part A), not written yet.
+- Repeating the goal back and confirming on the phone, and deciding phone or Mac: [OBJ-67](OBJ-67-android-goal-routing.md) (SPEC-09, SPEC-10 Part A).
 - Whisper and Taglish on the phone: SPEC-10 Part B (p1).
 
 ## Outcome

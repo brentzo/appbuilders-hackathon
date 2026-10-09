@@ -65,6 +65,7 @@ This is also the moment the cat cursor appears, so it is the start of every demo
 - Confirmation on Android: needs the phone model (SPEC-10, not finalized).
 - Kokoro voice: later, behind the same `speak` interface.
 - Follow-up before phone routing (SPEC-09): the Mac app must send its bridge device id as `originDeviceId` instead of `mac-local`, and the harness must use the same id for its task records and action log (Brent's decision, 2026-10-10).
+  Now tracked in [OBJ-68](OBJ-68-harness-delegated-goals.md) (harness) and [OBJ-72](OBJ-72-mac-cross-device-routing.md) (Mac app), with the contract in [OBJ-64](OBJ-64-cross-device-local-rpc-contract.md).
 
 ## Outcome
 
