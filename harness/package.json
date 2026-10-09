@@ -1,0 +1,35 @@
+{
+  "name": "@yumi/harness",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Yumi harness: the brain-side runtime on the Mac. Agent loop, local model client, tool registry, output validation, and the local RPC server.",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "verify": "npm run typecheck && npm run lint && npm run format:check && npm test",
+    "model:check": "tsx scripts/model-check.ts"
+  },
+  "dependencies": {
+    "@yumi/protocol": "file:../protocol",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.19.1",
+    "eslint": "10.12.0",
+    "prettier": "3.9.9",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.71.1",
+    "vitest": "4.1.11"
+  }
+}
