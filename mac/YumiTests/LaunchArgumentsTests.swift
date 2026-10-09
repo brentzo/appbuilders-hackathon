@@ -10,11 +10,14 @@ struct LaunchArgumentsTests {
         #expect(LaunchArguments.bool("YumiMockFail", in: domain) == false)
     }
 
-    @Test func ignoresValuesSavedInPreferences() {
+    @Test func ignoresValuesSavedInPreferences() throws {
+        // A separate suite, so the test never writes to the app's real preferences.
+        let name = "yumi.tests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
         let key = "YumiMockFail"
-        UserDefaults.standard.set("submitGoal=bridgeDown", forKey: key)
-        defer { UserDefaults.standard.removeObject(forKey: key) }
-        #expect(UserDefaults.standard.string(forKey: key) == "submitGoal=bridgeDown")
-        #expect(LaunchArguments.string(key) == nil)
+        defaults.set("submitGoal=bridgeDown", forKey: key)
+        #expect(defaults.string(forKey: key) == "submitGoal=bridgeDown")
+        #expect(LaunchArguments.string(key, in: LaunchArguments.arguments(of: defaults)) == nil)
     }
 }

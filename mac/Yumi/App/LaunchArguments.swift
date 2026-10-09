@@ -16,7 +16,10 @@ enum LaunchArguments {
         return ["yes", "true", "1"].contains(value)
     }
 
-    static var current: [String: Any] {
-        UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)
+    static var current: [String: Any] { arguments(of: .standard) }
+
+    /// The launch-argument domain of `defaults`, without its saved preferences.
+    static func arguments(of defaults: UserDefaults) -> [String: Any] {
+        defaults.volatileDomain(forName: UserDefaults.argumentDomain)
     }
 }
