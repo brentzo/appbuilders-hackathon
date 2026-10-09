@@ -417,8 +417,21 @@ class Attempt {
     return { end: this.macFailure(error.userError) };
   }
 
-  /** Looks at the window until it settles, after an action. */
-  private async look(): Promise<Observation> {
+  /**
+   * Looks at the window until it settles, after an action. After an action that opens an app, a file, or a page, the
+   * window may not be readable yet, so it is looked for until the settle timeout first (Brent's Save to Notes run,
+   * 2026-10-10: Notes' window could not be read 187 ms after open_app, and the attempt ended there).
+   */
+  private async look(opened = false): Promise<Observation> {
+    if (opened) {
+      const { looks } = await readableObservation(
+        () => this.deps.mac.observe(this.target, this.options.signal),
+        isMissingWindow,
+        this.settle,
+        this.options.signal,
+      );
+      if (looks > 1) this.deps.logger.info("gui.windowAppeared", { taskId: this.taskId, subtaskId: this.subtask.id, looks });
+    }
     const { observation, settled, looks } = await settledObservation(
       () => this.deps.mac.observe(this.target, this.options.signal),
       this.settle,
@@ -566,7 +579,7 @@ class Attempt {
 
     let after: Observation;
     try {
-      after = await this.look();
+      after = await this.look(opensWindow(action));
     } catch (error) {
       if (!(error instanceof MacGuiFailure)) throw error;
       this.finishStep(
@@ -712,7 +725,10 @@ class Attempt {
     if (kind === "accessibilityPermissionMissing" || kind === "screenPermissionMissing") {
       return this.end("macFailure", "blocked", { kind, taskId: this.taskId });
     }
-    if (kind === "stuckOnScreen") return this.end("macFailure", "stuck", { kind, taskId: this.taskId });
+    // The window could not be read. That is one failed step, not "I tried a few times": the Stuck on screen copy is
+    // for steps that kept having no effect (Brent's Save to Notes run, 2026-10-10).
+    if (kind === "stuckOnScreen")
+      return this.end("macFailure", "stuck", { kind: "stepFailed", taskId: this.taskId, step: this.subtask.title });
     const lastAction = this.deps.store.listActionLog(this.taskId).at(-1)?.description;
     return this.end("macFailure", "stuck", {
       kind: "unexpected",
@@ -977,6 +993,11 @@ function fit(line: string): string {
 }
 
 /** The Mac app could not find the target window or app: "Stuck on screen". */
+/** Actions after which an app's window may still be appearing. */
+function opensWindow(action: ModelAction): boolean {
+  return action.kind === ACTION.tool && ["open_app", "open_file", "open_url"].includes(action.call.tool);
+}
+
 function isMissingWindow(error: unknown): boolean {
   return error instanceof MacGuiFailure && error.userError?.kind === "stuckOnScreen";
 }

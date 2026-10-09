@@ -1051,6 +1051,31 @@ describe("gui_act limits and endings (OBJ-36.5 to OBJ-36.8)", () => {
     expect(harness.store.listActionLog(subtask.taskId).map((l) => l.description)).toEqual(["Opened com.apple.Keynote"]);
   });
 
+  it("waits for the window of an app it just opened to become readable (Brent's Save to Notes run, 2026-10-10)", async () => {
+    // Task 44b6e3c6: Notes had no window, open_app launched it, and the look 187 ms later failed, so the attempt
+    // ended with "I'm stuck. I tried a few times" after one try.
+    const fake = await connect(new FakeKeynote({ home }));
+    fake.failObserve("stuckOnScreen", 3);
+    scriptModel(() => reply({ kind: "finish", status: "done", note: "Done." }));
+    const { subtask } = guiSubtask();
+    const run = ended(await act(subtask));
+    expect(run.reason).toBe("finished");
+    expect(run.result.status).toBe("done");
+    expect(fake.executed.map((c) => c.params.action.action)).toEqual([
+      { kind: "tool", call: { tool: "open_app", bundleId: KEYNOTE } },
+    ]);
+  });
+
+  it("says it could not finish the step, not that it tried a few times, when the opened app's window never becomes readable", async () => {
+    const fake = await connect(new FakeKeynote({ home }));
+    fake.failObserve("stuckOnScreen", 1000);
+    scriptModel(() => reply({ kind: "finish", status: "done", note: "" }));
+    const { subtask } = guiSubtask();
+    const run = ended(await act(subtask));
+    expect(run.reason).toBe("macFailure");
+    expect(run.userError).toEqual({ kind: "stepFailed", taskId: subtask.taskId, step: subtask.title });
+  });
+
   it("waits for a window the router just opened to become readable (Brent's run, 2026-10-10)", async () => {
     const fake = await connect(new FakeKeynote({ home }));
     // The router listed the new window before the Mac app could read it.
@@ -1077,7 +1102,7 @@ describe("gui_act limits and endings (OBJ-36.5 to OBJ-36.8)", () => {
     expect(run).toMatchObject({
       reason: "macFailure",
       result: { status: "stuck" },
-      userError: { kind: "stuckOnScreen", taskId: subtask.taskId },
+      userError: { kind: "stepFailed", taskId: subtask.taskId, step: subtask.title },
     });
   });
 
