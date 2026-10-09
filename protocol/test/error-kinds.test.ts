@@ -46,6 +46,11 @@ describe("ErrorKind", () => {
     expect(errorKindSchema()["x-specRows"]["languageNotSupported"]).toBe("Language not supported on this phone");
   });
 
+  it("has a Mac-only kind for a voice that did not load", () => {
+    expect(validate("UserError", { kind: "voiceFailedToLoad" }).valid).toBe(true);
+    expect(errorKindSchema()["x-specRows"]["voiceFailedToLoad"]).toBe("Voice didn't load (Mac)");
+  });
+
   it("carries the step that could not finish as plain, bounded text", () => {
     expect(validate("UserError", { kind: "stepFailed", step: "Export the deck as a PDF" }).valid).toBe(true);
     expect(validate("UserError", { kind: "stepFailed" }).valid).toBe(true);

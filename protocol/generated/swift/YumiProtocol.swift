@@ -690,6 +690,7 @@ public enum ErrorKind: String, Codable, Equatable, Sendable, CaseIterable {
     case speechRecognitionNotSetUp
     case didNotCatchSpeech
     case modelFailedToLoad
+    case voiceFailedToLoad
     case unpairedDevice
     case pairingCodeExpired
     case notAPairingCode

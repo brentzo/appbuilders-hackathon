@@ -29,6 +29,7 @@ enum class ErrorKind(val specName: String) {
     SpeechRecognitionNotSetUp("Speech recognition not set up on this phone"),
     DidntCatchSpeech("Didn't catch speech"),
     ModelFailedToLoad("Model failed to load"),
+    VoiceFailedToLoadMac("Voice didn't load (Mac)"),
     UnpairedDevice("Unpaired device"),
     PairingCodeExpired("Pairing code expired"),
     NotAPairingCode("Not a pairing code"),

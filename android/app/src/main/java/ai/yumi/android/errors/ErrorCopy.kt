@@ -122,6 +122,11 @@ object ErrorCopyTable {
             "I couldn't start my brain on this device. Closing other apps usually helps.",
             listOf(ErrorButton.TryAgain),
         ),
+        ErrorKind.VoiceFailedToLoadMac to ErrorCopy(
+            "I couldn't start my voice, so I'll stay quiet for now. Everything else still works. " +
+                "Closing other apps usually helps, then try again.",
+            listOf(ErrorButton.TryAgain, ErrorButton.NotNow),
+        ),
         ErrorKind.UnpairedDevice to ErrorCopy(
             "Your phone isn't paired with your Mac yet.",
             listOf(ErrorButton.PairNow),

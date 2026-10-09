@@ -64,6 +64,8 @@ struct UserErrorCopy: Equatable, Sendable {
             row("Didn't catch speech", "Sorry, I didn't catch that. Could you say it again?", ["Try again", "Type instead"])
         case .modelFailedToLoad:
             row("Model failed to load", "I couldn't start my brain on this device. Closing other apps usually helps.", ["Try again"])
+        case .voiceFailedToLoad:
+            row("Voice didn't load (Mac)", "I couldn't start my voice, so I'll stay quiet for now. Everything else still works. Closing other apps usually helps, then try again.", ["Try again", "Not now"])
         case .unpairedDevice:
             row("Unpaired device", "Your phone isn't paired with your Mac yet.", ["Pair now"])
         case .pairingCodeExpired:

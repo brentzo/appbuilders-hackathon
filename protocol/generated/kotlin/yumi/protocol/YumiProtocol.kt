@@ -399,6 +399,7 @@ enum class ErrorKind {
     @SerialName("speechRecognitionNotSetUp") SpeechRecognitionNotSetUp,
     @SerialName("didNotCatchSpeech") DidNotCatchSpeech,
     @SerialName("modelFailedToLoad") ModelFailedToLoad,
+    @SerialName("voiceFailedToLoad") VoiceFailedToLoad,
     @SerialName("unpairedDevice") UnpairedDevice,
     @SerialName("pairingCodeExpired") PairingCodeExpired,
     @SerialName("notAPairingCode") NotAPairingCode,

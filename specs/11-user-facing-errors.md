@@ -57,6 +57,7 @@ Where a next step exists, it is a button, not a sentence telling them to go find
 | Speech recognition not set up on this phone | "I can't understand speech on this phone yet because its offline English speech pack isn't installed. Download it in your phone's speech settings, then try again." | Open settings, Type instead |
 | Didn't catch speech | "Sorry, I didn't catch that. Could you say it again?" | Try again, Type instead |
 | Model failed to load | "I couldn't start my brain on this device. Closing other apps usually helps." | Try again |
+| Voice didn't load (Mac) | "I couldn't start my voice, so I'll stay quiet for now. Everything else still works. Closing other apps usually helps, then try again." | Try again, Not now |
 | Unpaired device | "Your phone isn't paired with your Mac yet." | Pair now |
 | Pairing code expired | "That pairing code expired. Codes only last a few minutes to keep your devices safe. Show a new code on your Mac and scan it again." | Scan again, Cancel |
 | Not a pairing code | "That doesn't look like a Yumi pairing code. On your Mac, open Yumi and show the pairing code, then scan it again." | Scan again, Cancel |
@@ -70,6 +71,7 @@ Notes:
 - "Show what I did" opens the action log ([SPEC-07](07-safety.md)) at that task.
 - "Unexpected" never claims nothing changed, because a step may have run halfway.
 - "Unexpected" before Yumi has done anything in the task drops the second sentence and "Show what I did": "Something went wrong and I stopped to be safe." with Try again, Stop.
+- "Voice didn't load (Mac)" is shown, never spoken, in a small panel that does not take focus, so the user can keep working. "Try again" loads the voice again.
 - "Open settings" on "Speech recognition not set up on this phone" opens the screen where the on-device language pack is installed if Android exposes one, otherwise the general speech settings.
 
 ## Scenarios
@@ -118,6 +120,14 @@ Feature: User-facing errors
     Then the user sees the "Screen permission missing (Mac)" copy
     And "Open settings" opens the Screen Recording pane
 
+  Scenario: Voice that did not load stays quiet
+    Given Yumi's voice could not start on the Mac
+    When Yumi has something to say
+    Then nothing is spoken, not even with the system voice
+    And a panel that does not take focus shows "I couldn't start my voice, so I'll stay quiet for now. Everything else still works. Closing other apps usually helps, then try again."
+    And the buttons are "Try again" and "Not now"
+    And the reason is written to the local log
+
   Scenario: Copy table matches the code
     When the error copy test runs
     Then every row in this table has the same text and buttons in code
@@ -133,3 +143,4 @@ Feature: User-facing errors
 - **Voice on a delete card:** "Delete" is the one button that cannot be said, because a delete is approved only by a tap (SPEC-07 requirement 11). Requirement 9 names the exception. Decided 2026-10-10, closing gap G3.
 - **The blocked-action message** stays in [SPEC-07](07-safety.md) requirement 5 instead of becoming a row here, so its copy lives in one place. The Mac's copy test reads it from there, the same way it reads this table, and the phone never shows it in p0, since it does not control apps. Decided 2026-10-10, closing gap G5's SPEC-11 part.
 - **"Show what I did"** opens the action log of the task in the error, read from `getTask`'s `actionLog`. That view is p0, because the button is; only opening the log from the menu bar is p1 (SPEC-07 requirement 19). Decided 2026-10-10, closing gap G13.
+- **Voice didn't load (Mac)** has its own row. Yumi stays quiet instead of falling back to the robotic system voice ([SPEC-04](04-cursor-presence.md) requirement 20), so the copy is shown in a panel that does not take focus rather than spoken, and "Try again" loads the voice again. Decided 2026-10-10 by Brent.

@@ -35,7 +35,8 @@ The Mac app already speaks through the `SpeechOutput` interface, so the voice ca
 ## Read first
 
 - SPEC-04 requirements 11 and 20, and its Decisions.
-- `mac/Yumi/Confirmation/Speech.swift`: the `SpeechOutput` interface and `SystemSpeech`.
+- SPEC-11's "Voice didn't load (Mac)" row and scenario "Voice that did not load stays quiet".
+- `mac/Yumi/Confirmation/Speech.swift`: the `SpeechOutput` interface.
 - [mac/README.md](../mac/README.md), "Speech output".
 - [models/README.md](../models/README.md) for how models are stored and pinned.
 - The [Kokoro-82M model card](https://huggingface.co/hexgrad/Kokoro-82M) for its licence, voices, and languages; verify facts there before relying on them.
@@ -45,9 +46,9 @@ The Mac app already speaks through the `SpeechOutput` interface, so the voice ca
 - [ ] **OBJ-51.1** Choose the runtime for Kokoro on the Mac (for example mlx-audio, or an on-device Core ML or ONNX build), checking licence, memory, first-word latency, and that it runs fully offline. Record the choice and the numbers.
 - [ ] **OBJ-51.2** Make 4 to 6 short samples of Yumi's lines (the repeat-back, "On it.", a meow-ish greeting, an error line) in several voices and speeds, and let Brent pick the voice that sounds cute and playful.
 - [ ] **OBJ-51.3** Implement a `SpeechOutput` that uses the chosen voice, with the model stored and loaded offline, never downloaded at first run.
-- [ ] **OBJ-51.4** Keep `SystemSpeech` as the fallback only when the neural voice fails to load, and log why.
+- [ ] **OBJ-51.4** When the neural voice fails to load, stay quiet (never the system voice), log why, and show SPEC-11's "Voice didn't load (Mac)" in a panel that does not take focus, with "Try again" (Brent's decision, 2026-10-10, replacing the system-voice fallback).
 - [ ] **OBJ-51.5** Measure first-word latency and memory next to Qwen3.5-9B on Brent's Mac, and keep the repeat-back from feeling slower than before.
-- [ ] **OBJ-51.6** Tests for the fallback and for speaking in order, and a live check on the real Mac app.
+- [ ] **OBJ-51.6** Tests for the failed load and for speaking in order, and a live check on the real Mac app.
 
 ## Expectations
 
