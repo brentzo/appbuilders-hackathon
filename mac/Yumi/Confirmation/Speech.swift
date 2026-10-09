@@ -8,8 +8,12 @@ protocol SpeechOutput: AnyObject {
     /// The line that opens a conversation: the first repeat-back of a goal. Yumi's voice meows
     /// first (OBJ-51). Other outputs just say it.
     func speakOpening(_ text: String) async
+    /// Ends Yumi's voice now, for a barge-in: the user started talking over her (SPEC-06 r14).
+    func stop()
 }
 
 extension SpeechOutput {
     func speakOpening(_ text: String) async { await speak(text) }
+    /// The default does nothing, for a speech output that cannot stop.
+    func stop() {}
 }

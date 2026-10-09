@@ -77,9 +77,17 @@ final class GoalConfirmation {
             Task { await self?.choose(choice, for: taskId) }
         }
         overlay.update(Self.mainCursorId) { $0.state = .listening }
-        // The first repeat-back of a goal opens the conversation; asking again after an unclear answer does not.
-        if previous == nil { await speech.speakOpening(restated.text) } else { await speech.speak(restated.text) }
-        await listenOnce(for: taskId)
+        // Speak and listen at the same time, so the user can answer over the repeat-back instead of
+        // waiting for the voice: the first word they say stops it (SPEC-06 r14, r20). The wake word
+        // and the push-to-talk shortcut also answer a waiting repeat-back.
+        async let spoken: Void = sayRepeatBack(restated.text, opening: previous == nil)
+        await listenOnce(for: taskId, bargeIn: true)
+        await spoken
+    }
+
+    /// Says the repeat-back. The first repeat-back of a goal opens the conversation and meows first.
+    private func sayRepeatBack(_ text: String, opening: Bool) async {
+        if opening { await speech.speakOpening(text) } else { await speech.speak(text) }
     }
 
     /// Speech from push-to-talk or the wake word while a repeat-back waits is the answer to it, not
@@ -122,10 +130,14 @@ final class GoalConfirmation {
         finish(taskId, cancelled: status == .cancelled)
     }
 
-    private func listenOnce(for taskId: String) async {
+    private func listenOnce(for taskId: String, bargeIn: Bool = false) async {
         guard let entry = waiting[taskId], entry.listensLeft > 0 else { return }
         waiting[taskId]?.listensLeft = entry.listensLeft - 1
-        guard let heard = await listener.listenForReply()?.trimmingCharacters(in: .whitespacesAndNewlines), !heard.isEmpty,
+        // With barge-in, the first word the user says stops Yumi's voice (SPEC-06 r14).
+        let heard = bargeIn
+            ? await listener.listenForReply(onSpeechStarted: { [weak self] in self?.speech.stop() })
+            : await listener.listenForReply()
+        guard let heard = heard?.trimmingCharacters(in: .whitespacesAndNewlines), !heard.isEmpty,
               waiting[taskId] != nil
         else {
             // Nothing heard: the panel stays with its buttons, and "Hey Yumi" or the shortcut

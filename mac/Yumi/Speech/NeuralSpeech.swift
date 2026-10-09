@@ -76,6 +76,9 @@ final class NeuralSpeech: SpeechOutput {
 
     func speakOpening(_ text: String) async { await enqueue(text, opening: true) }
 
+    /// Ends the current line now and completes whatever waited on it, for a barge-in.
+    func stop() { player.stop() }
+
     private func startLoading() {
         state = .loading
         let load = load

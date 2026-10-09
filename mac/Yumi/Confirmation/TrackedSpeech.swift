@@ -20,6 +20,11 @@ final class TrackedSpeech: SpeechOutput {
         await tracking { await inner.speakOpening(text) }
     }
 
+    /// Ends the voice now; the `speaking` flag clears when the line's `tracking` returns.
+    func stop() {
+        inner.stop()
+    }
+
     private func tracking(_ say: () async -> Void) async {
         sentences += 1
         model.isSpeaking = true

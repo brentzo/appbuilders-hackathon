@@ -8,6 +8,13 @@ protocol SpeechPlaying: AnyObject {
     func schedule(_ samples: [Float], sampleRate: Double, played: @escaping @MainActor () -> Void) throws
     /// Starts the meow and returns how long until it is quiet, or nil if there is no meow.
     func meow() -> TimeInterval?
+    /// Ends everything now, for a barge-in. The lines waiting to be heard complete.
+    func stop()
+}
+
+extension SpeechPlaying {
+    /// The default does nothing, for a player that cannot stop.
+    func stop() {}
 }
 
 /// One audio engine for the voice: the voice runs through `AVAudioUnitTimePitch` for the last part
@@ -27,7 +34,15 @@ final class SpeechPlayback: SpeechPlaying {
     private let meowBuffer: AVAudioPCMBuffer?
     private let meowLength: TimeInterval?
     private var voiceFormat: AVAudioFormat?
-    private var pending = 0
+    /// Voice lines queued or playing, so `stop` can end them at once (barge-in).
+    private final class Queued {
+        let played: @MainActor () -> Void
+        var fired = false
+        init(_ played: @escaping @MainActor () -> Void) { self.played = played }
+    }
+    private var queued: [Queued] = []
+    /// Whether the meow is playing, so the engine is not paused under it.
+    private var meowing = false
     private let log = Logger(subsystem: "ph.appbuilders.yumi", category: "speech")
 
     init(bundle: Bundle = .main) {
@@ -57,13 +72,10 @@ final class SpeechPlayback: SpeechPlaying {
         samples.withUnsafeBufferPointer { channel.update(from: $0.baseAddress!, count: samples.count) }
         (channel + samples.count).update(repeating: 0, count: tail)
         try startEngine()
-        pending += 1
+        let entry = Queued(played)
+        queued.append(entry)
         voice.scheduleBuffer(buffer, completionCallbackType: .dataPlayedBack) { _ in
-            Task { @MainActor in
-                self.pending -= 1
-                self.pauseIfIdle()
-                played()
-            }
+            Task { @MainActor in self.finished(entry) }
         }
         if !voice.isPlaying { voice.play() }
     }
@@ -76,15 +88,39 @@ final class SpeechPlayback: SpeechPlaying {
             log.error("The meow could not play: \(String(describing: error), privacy: .public)")
             return nil
         }
-        pending += 1
+        meowing = true
         meowNode.scheduleBuffer(meowBuffer, completionCallbackType: .dataPlayedBack) { _ in
             Task { @MainActor in
-                self.pending -= 1
+                self.meowing = false
                 self.pauseIfIdle()
             }
         }
         meowNode.play()
         return meowLength
+    }
+
+    /// Ends everything right now, for a barge-in: the user started talking over Yumi (SPEC-06 r14).
+    /// The lines waiting to be heard complete, so the `speak` that queued them returns.
+    func stop() {
+        let waiting = queued
+        queued = []
+        meowing = false
+        for entry in waiting where !entry.fired {
+            entry.fired = true
+            entry.played()
+        }
+        voice.stop()
+        meowNode.stop()
+        engine.pause()
+    }
+
+    /// A queued voice line was heard, or the stop ended it.
+    private func finished(_ entry: Queued) {
+        guard !entry.fired else { return }
+        entry.fired = true
+        queued.removeAll { $0 === entry }
+        entry.played()
+        pauseIfIdle()
     }
 
     enum PlaybackError: Error {
@@ -110,7 +146,7 @@ final class SpeechPlayback: SpeechPlaying {
     }
 
     private func pauseIfIdle() {
-        guard pending == 0 else { return }
+        guard queued.isEmpty, !meowing else { return }
         voice.stop()
         meowNode.stop()
         engine.pause()
