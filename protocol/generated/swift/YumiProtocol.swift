@@ -1198,16 +1198,22 @@ public struct Observation: Codable, Equatable, Sendable {
     public var elements: [TreeElement]
     /// p1 vision fallback only.
     public var screenshotPath: String?
+    /// p1 vision fallback: the screenshot's pixel width, so the model is told the image size and answers clickAt in that space.
+    public var screenshotWidth: Int?
+    /// p1 vision fallback: the screenshot's pixel height.
+    public var screenshotHeight: Int?
     /// p1 vision fallback: the target window's frame when this observation was taken, so the harness can check it has not moved or resized before a vision click (SPEC-05 r13).
     public var windowFrame: Frame?
 
-    public init(app: String? = nil, windowTitle: String, focused: Int? = nil, layer: Layer? = nil, elements: [TreeElement], screenshotPath: String? = nil, windowFrame: Frame? = nil) {
+    public init(app: String? = nil, windowTitle: String, focused: Int? = nil, layer: Layer? = nil, elements: [TreeElement], screenshotPath: String? = nil, screenshotWidth: Int? = nil, screenshotHeight: Int? = nil, windowFrame: Frame? = nil) {
         self.app = app
         self.windowTitle = windowTitle
         self.focused = focused
         self.layer = layer
         self.elements = elements
         self.screenshotPath = screenshotPath
+        self.screenshotWidth = screenshotWidth
+        self.screenshotHeight = screenshotHeight
         self.windowFrame = windowFrame
     }
 }

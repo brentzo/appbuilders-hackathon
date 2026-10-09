@@ -65,6 +65,8 @@ final class GuiExecutor {
                     throw GuiFailure.windowNotFound
                 }
                 snapshot.observation.screenshotPath = captured.path
+                snapshot.observation.screenshotWidth = captured.image.width
+                snapshot.observation.screenshotHeight = captured.image.height
                 snapshot.screenshot = ScreenshotGeometry(
                     imageWidth: captured.image.width,
                     imageHeight: captured.image.height,

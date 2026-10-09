@@ -731,6 +731,10 @@ data class Observation(
     val elements: List<TreeElement>,
     /** p1 vision fallback only. */
     val screenshotPath: String? = null,
+    /** p1 vision fallback: the screenshot's pixel width, so the model is told the image size and answers clickAt in that space. */
+    val screenshotWidth: Long? = null,
+    /** p1 vision fallback: the screenshot's pixel height. */
+    val screenshotHeight: Long? = null,
     /** p1 vision fallback: the target window's frame when this observation was taken, so the harness can check it has not moved or resized before a vision click (SPEC-05 r13). */
     val windowFrame: Frame? = null,
 )

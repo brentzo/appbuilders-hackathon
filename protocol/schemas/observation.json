@@ -30,6 +30,16 @@
           "description": "p1 vision fallback only.",
           "$ref": "common.json#/$defs/Path"
         },
+        "screenshotWidth": {
+          "description": "p1 vision fallback: the screenshot's pixel width, so the model is told the image size and answers clickAt in that space.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "screenshotHeight": {
+          "description": "p1 vision fallback: the screenshot's pixel height.",
+          "type": "integer",
+          "minimum": 1
+        },
         "windowFrame": {
           "description": "p1 vision fallback: the target window's frame when this observation was taken, so the harness can check it has not moved or resized before a vision click (SPEC-05 r13).",
           "$ref": "#/$defs/Frame"

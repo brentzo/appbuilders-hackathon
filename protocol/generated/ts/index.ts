@@ -581,6 +581,10 @@ export interface Observation {
   elements: TreeElement[];
   /** p1 vision fallback only. */
   screenshotPath?: Path;
+  /** p1 vision fallback: the screenshot's pixel width, so the model is told the image size and answers clickAt in that space. */
+  screenshotWidth?: number;
+  /** p1 vision fallback: the screenshot's pixel height. */
+  screenshotHeight?: number;
   /** p1 vision fallback: the target window's frame when this observation was taken, so the harness can check it has not moved or resized before a vision click (SPEC-05 r13). */
   windowFrame?: Frame;
 }

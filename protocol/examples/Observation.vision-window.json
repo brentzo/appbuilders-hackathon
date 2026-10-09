@@ -3,6 +3,8 @@
   "windowTitle": "Spotify Premium",
   "layer": { "kind": "window" },
   "screenshotPath": "~/Library/Application Support/Yumi/vision/com.spotify.client-35815.png",
+  "screenshotWidth": 1280,
+  "screenshotHeight": 705,
   "windowFrame": { "x": 0, "y": 34, "width": 1470, "height": 810 },
   "elements": [
     { "n": 1, "role": "button", "label": "close", "enabled": true },

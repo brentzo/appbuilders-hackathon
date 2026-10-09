@@ -148,6 +148,11 @@ function describeWindow(observation: Observation): string[] {
     lines.push(`In front: a ${layer.kind}${title}${buttons.length > 0 ? `, ${buttons.join(", ")}` : ""}`);
   }
   if (observation.focused !== undefined) lines.push(`Keyboard focus: [${observation.focused}]`);
+  if (observation.screenshotWidth !== undefined && observation.screenshotHeight !== undefined) {
+    lines.push(
+      `Screenshot: ${observation.screenshotWidth} by ${observation.screenshotHeight} pixels. ${ACTION.clickAt} coordinates are in these pixels.`,
+    );
+  }
   return lines;
 }
 
