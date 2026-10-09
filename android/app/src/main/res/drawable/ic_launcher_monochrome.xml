@@ -4,14 +4,14 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- The 24-unit cat head scaled into the 66-unit safe zone. -->
+    <!-- The 24-unit cat head scaled into the 66-unit safe zone. The launcher tints it for themed icons. -->
     <group
         android:scaleX="2"
         android:scaleY="2"
         android:translateX="30"
         android:translateY="30">
         <path
-            android:fillColor="@color/yumi_icon_foreground"
+            android:fillColor="#FF000000"
             android:fillType="evenOdd"
             android:pathData="M4,3L8.5,7.2Q12,6 15.5,7.2L20,3L20,13Q20,21 12,21Q4,21 4,13Z M9,12.5a1.25,1.25 0,1 0,0.01 0Z M15,12.5a1.25,1.25 0,1 0,0.01 0Z" />
     </group>

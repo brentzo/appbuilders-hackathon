@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The exported foreground sits left of centre and fills the mask almost to the edge.
+     The cat's head and body centre at about 45.5% across, so these insets move them to the middle,
+     drop the cat onto the background disc (centred 51.8% down), and shrink it to 86% so the ears clear the mask. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/ic_launcher_foreground_art"
+    android:insetLeft="11%"
+    android:insetTop="8%"
+    android:insetRight="3%"
+    android:insetBottom="6%" />
