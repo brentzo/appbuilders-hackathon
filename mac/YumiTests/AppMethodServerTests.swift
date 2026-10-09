@@ -83,6 +83,12 @@ struct AppMethodServerTests {
         #expect(found == ["yumi-pair:abc123"])
     }
 
+    @Test func pairNowOpensPairing() {
+        let presented = ErrorPresenter.present(UserError(kind: .unpairedDevice))
+        #expect(presented.message == "Your phone isn't paired with your Mac yet.")
+        #expect(presented.buttons == [ErrorButton(label: "Pair now", action: .pairPhone)])
+    }
+
     private func json(_ object: [String: Any]) -> Data {
         try! JSONSerialization.data(withJSONObject: object)
     }

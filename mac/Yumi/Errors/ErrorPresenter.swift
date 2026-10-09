@@ -21,6 +21,8 @@ enum ErrorButtonAction: Equatable, Sendable {
     /// Closes the error and changes nothing ("Not now", "Okay", "Wait").
     case dismiss
     case cancelTask(String)
+    /// Opens the pairing window ("Pair now").
+    case pairPhone
     /// The feature behind this button is built in a later objective. Shown disabled.
     case notAvailableYet
 }
@@ -78,6 +80,8 @@ enum ErrorPresenter {
             action = permission(for: error.kind).map(ErrorButtonAction.openSettings) ?? .notAvailableYet
         case "Not now", "Okay", "Wait":
             action = .dismiss
+        case "Pair now":
+            action = .pairPhone
         case "Cancel":
             action = error.taskId.map(ErrorButtonAction.cancelTask) ?? .dismiss
         default:
