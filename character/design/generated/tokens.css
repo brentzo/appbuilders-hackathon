@@ -1,0 +1,91 @@
+/* Generated from character/design/tokens.json by character/design/build.py. Do not edit by hand. */
+:root {
+  --yumi-paper: #F9F6E7;
+  --yumi-paper-deep: #F3EDDA;
+  --yumi-surface: #FFFDF6;
+  --yumi-surface-raised: #F4ECDA;
+  --yumi-line: #E7DCC4;
+  --yumi-ink: #3A2620;
+  --yumi-muted: #6F5A4F;
+  --yumi-faint: #9A887C;
+  --yumi-brand: #6E413E;
+  --yumi-accent: #F0A76A;
+  --yumi-on-accent: #3A2018;
+  --yumi-accent-text: #9A4F17;
+  --yumi-coral: #ED8770;
+  --yumi-halo: #F3E6CA;
+  --yumi-hush: #B7A8E8;
+  --yumi-on-hush: #2A2440;
+  --yumi-cat-ginger-fur: #F0A76A;
+  --yumi-cat-ginger-markings: #F6DBB5;
+  --yumi-cat-ginger-line: #6E413E;
+  --yumi-cat-ginger-cheeks: #ED8770;
+  --yumi-cat-mint-fur: #86D6BE;
+  --yumi-cat-mint-markings: #DDF3EA;
+  --yumi-cat-mint-line: #2F5A50;
+  --yumi-cat-mint-cheeks: #EE9A86;
+  --yumi-cat-sky-fur: #93BCF0;
+  --yumi-cat-sky-markings: #E0EBFB;
+  --yumi-cat-sky-line: #30466B;
+  --yumi-cat-sky-cheeks: #EE9A86;
+  --yumi-cat-slate-fur: #AEB4BE;
+  --yumi-cat-slate-markings: #EEF0F3;
+  --yumi-cat-slate-line: #3B4049;
+  --yumi-cat-slate-cheeks: #EE9A86;
+  --yumi-space-xxs: 2px;
+  --yumi-space-xs: 4px;
+  --yumi-space-s: 8px;
+  --yumi-space-m: 12px;
+  --yumi-space-l: 16px;
+  --yumi-space-xl: 24px;
+  --yumi-space-xxl: 32px;
+  --yumi-space-xxxl: 48px;
+  --yumi-radius-control: 7px;
+  --yumi-radius-field: 10px;
+  --yumi-radius-panel: 16px;
+  --yumi-radius-card: 24px;
+  --yumi-radius-pill: 999px;
+  --yumi-font-display: "Bricolage Grotesque", system-ui, sans-serif;
+  --yumi-font-text: "Instrument Sans", system-ui, sans-serif;
+  --yumi-font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --yumi-move: 300ms;
+  --yumi-ease: cubic-bezier(0.25, 0.85, 0.3, 1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --yumi-paper: #17120F;
+    --yumi-paper-deep: #1F1814;
+    --yumi-surface: #261E19;
+    --yumi-surface-raised: #2F2620;
+    --yumi-line: #3E322A;
+    --yumi-ink: #F7EEDF;
+    --yumi-muted: #C4B3A2;
+    --yumi-faint: #8E7D6F;
+    --yumi-brand: #F0A76A;
+    --yumi-accent: #F0A76A;
+    --yumi-on-accent: #3A2018;
+    --yumi-accent-text: #F0A76A;
+    --yumi-coral: #ED8770;
+    --yumi-halo: #2B221C;
+    --yumi-hush: #B7A8E8;
+    --yumi-on-hush: #2A2440;
+  }
+}
+:root[data-theme="dark"] {
+  --yumi-paper: #17120F;
+  --yumi-paper-deep: #1F1814;
+  --yumi-surface: #261E19;
+  --yumi-surface-raised: #2F2620;
+  --yumi-line: #3E322A;
+  --yumi-ink: #F7EEDF;
+  --yumi-muted: #C4B3A2;
+  --yumi-faint: #8E7D6F;
+  --yumi-brand: #F0A76A;
+  --yumi-accent: #F0A76A;
+  --yumi-on-accent: #3A2018;
+  --yumi-accent-text: #F0A76A;
+  --yumi-coral: #ED8770;
+  --yumi-halo: #2B221C;
+  --yumi-hush: #B7A8E8;
+  --yumi-on-hush: #2A2440;
+}

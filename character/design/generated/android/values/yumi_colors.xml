@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from character/design/tokens.json by character/design/build.py. Do not edit by hand. -->
+<resources>
+    <color name="yumi_paper">#F9F6E7</color>
+    <color name="yumi_paperDeep">#F3EDDA</color>
+    <color name="yumi_surface">#FFFDF6</color>
+    <color name="yumi_surfaceRaised">#F4ECDA</color>
+    <color name="yumi_line">#E7DCC4</color>
+    <color name="yumi_ink">#3A2620</color>
+    <color name="yumi_muted">#6F5A4F</color>
+    <color name="yumi_faint">#9A887C</color>
+    <color name="yumi_brand">#6E413E</color>
+    <color name="yumi_accent">#F0A76A</color>
+    <color name="yumi_onAccent">#3A2018</color>
+    <color name="yumi_accentText">#9A4F17</color>
+    <color name="yumi_coral">#ED8770</color>
+    <color name="yumi_halo">#F3E6CA</color>
+    <color name="yumi_hush">#B7A8E8</color>
+    <color name="yumi_onHush">#2A2440</color>
+    <color name="ic_launcher_background">#F6DFBC</color>
+</resources>
