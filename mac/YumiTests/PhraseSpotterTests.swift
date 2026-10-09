@@ -164,6 +164,36 @@ struct PhraseSpotterTests {
         #expect(outcomes == [.spoke])
     }
 
+    // MARK: Yumi's own voice
+
+    final class RecordingVoice: SpeechOutput {
+        var said: [String] = []
+        var speakingWhileSaying: [Bool] = []
+        let model: AppModel
+        init(model: AppModel) { self.model = model }
+        func speak(_ text: String) async {
+            speakingWhileSaying.append(model.isSpeaking)
+            said.append("speak: \(text)")
+        }
+        func speakOpening(_ text: String) async {
+            speakingWhileSaying.append(model.isSpeaking)
+            said.append("opening: \(text)")
+        }
+    }
+
+    /// OBJ-58.4: Yumi counts as speaking while its voice talks, and the opening line still goes
+    /// to the voice's own `speakOpening`, so the meow is kept (OBJ-51).
+    @Test func yumiSpeakingIsTrackedAndTheOpeningLineIsPassedOn() async {
+        let model = AppModel()
+        let voice = RecordingVoice(model: model)
+        let speech = TrackedSpeech(voice, model: model)
+        await speech.speakOpening("You want me to open Notes?")
+        await speech.speak("Okay.")
+        #expect(voice.said == ["opening: You want me to open Notes?", "speak: Okay."])
+        #expect(voice.speakingWhileSaying == [true, true])
+        #expect(!model.isSpeaking)
+    }
+
     // MARK: End to end
 
     /// OBJ-58.5 with the real on-device recognizer: a recording of "Remind me to call Ana. Hey
