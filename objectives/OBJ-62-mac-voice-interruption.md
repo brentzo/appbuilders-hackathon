@@ -1,5 +1,5 @@
 ---
-id: OBJ-61
+id: OBJ-62
 title: Mac listens for interruptions during a task
 product: mac
 assignee: Patrick
@@ -7,12 +7,12 @@ touches: []
 specs: [SPEC-06, SPEC-01]
 status: todo
 priority: p1
-depends-on: [OBJ-16, OBJ-35, OBJ-59]
-integrates-with: [OBJ-40, OBJ-60]
+depends-on: [OBJ-16, OBJ-35, OBJ-60]
+integrates-with: [OBJ-40, OBJ-61]
 tags: [objective, p1, mac, voice, ux]
 ---
 
-# OBJ-61 Mac listens for interruptions during a task
+# OBJ-62 Mac listens for interruptions during a task
 
 **Product:** [Yumi Mac](../mac/README.md) · **Specs:** [SPEC-06](../specs/06-user-control.md), [SPEC-01](../specs/01-voice-intake.md) · **Assignee:** Patrick
 
@@ -29,26 +29,26 @@ tags: [objective, p1, mac, voice, ux]
 ## Why this objective
 
 SPEC-06 "Changing the goal mid-task" lets the user say "Hey Yumi, sorry, not Notes, put it in Keynote" while a cursor is working.
-The Mac hears it, freezes the cursors the moment the user starts talking, stops speaking, and hands what was said to the harness ([OBJ-60](OBJ-60-harness-goal-revision.md)) through the [OBJ-59](OBJ-59-goal-revision-contract.md) contract.
+The Mac hears it, freezes the cursors the moment the user starts talking, stops speaking, and hands what was said to the harness ([OBJ-61](OBJ-61-harness-goal-revision.md)) through the [OBJ-60](OBJ-60-goal-revision-contract.md) contract.
 It reuses the local stop and the `uiLanes` pause from [OBJ-35](OBJ-35-mac-stop-and-take-over.md), and the wake word from [OBJ-16](OBJ-16-mac-wake-word.md).
 
 ## Read first
 
 - [SPEC-06](../specs/06-user-control.md) requirements 2, 4 to 8, and 14 to 21, the "Changing the goal mid-task" scenarios, and the decision.
 - [SPEC-01](../specs/01-voice-intake.md) requirements 4 to 6, 8, and 14, and the false-trigger test under "Wake word detector".
-- The [OBJ-59](OBJ-59-goal-revision-contract.md) contract, and the Outcomes of OBJ-16, OBJ-17, and OBJ-35.
+- The [OBJ-60](OBJ-60-goal-revision-contract.md) contract, and the Outcomes of OBJ-16, OBJ-17, and OBJ-35.
 - [CONTEXT.md](../CONTEXT.md), for interruption, revised goal, take-over, UI lane, and helper.
 
 ## Tasks
 
-- [ ] **OBJ-61.1** Keep the wake word and push-to-talk live while a task runs and while Yumi is talking.
-- [ ] **OBJ-61.2** The moment an interruption starts, run the local stop from OBJ-35, call `pause` with `scope: uiLanes`, and stop any speech mid-sentence.
-- [ ] **OBJ-61.3** If no speech starts within 5 seconds, call `resumeTask` and say nothing. If speech starts but cannot be understood, show and say the SPEC-11 "Didn't catch speech" copy and keep the task paused.
-- [ ] **OBJ-61.4** Map "stop", "cancel", and "continue" to the existing pause, cancel, and resume paths; send anything else to the harness with the OBJ-59 revision method, with the Auto mode setting.
-- [ ] **OBJ-61.5** Show the revised goal's repeat-back with the same panel and buttons as a new goal, and in Auto mode show the revised goal on screen with the harness's acknowledgement.
-- [ ] **OBJ-61.6** While a card is open (OBJ-40): on a send card, anything other than its own answers declines the card first and then becomes an interruption; on a delete card, voice never approves. While Yumi waits on a model question, send the answer as today; the harness decides whether it is an interruption.
-- [ ] **OBJ-61.7** Add Yumi's own spoken copy, played through the Mac's speakers, to the wake word false-trigger check (SPEC-01 "Wake word detector").
-- [ ] **OBJ-61.8** Tests against the mock harness, and a hand check on the Mac of each SPEC-06 "Changing the goal mid-task" scenario.
+- [ ] **OBJ-62.1** Keep the wake word and push-to-talk live while a task runs and while Yumi is talking.
+- [ ] **OBJ-62.2** The moment an interruption starts, run the local stop from OBJ-35, call `pause` with `scope: uiLanes`, and stop any speech mid-sentence.
+- [ ] **OBJ-62.3** If no speech starts within 5 seconds, call `resumeTask` and say nothing. If speech starts but cannot be understood, show and say the SPEC-11 "Didn't catch speech" copy and keep the task paused.
+- [ ] **OBJ-62.4** Map "stop", "cancel", and "continue" to the existing pause, cancel, and resume paths; send anything else to the harness with the OBJ-60 revision method, with the Auto mode setting.
+- [ ] **OBJ-62.5** Show the revised goal's repeat-back with the same panel and buttons as a new goal, and in Auto mode show the revised goal on screen with the harness's acknowledgement.
+- [ ] **OBJ-62.6** While a card is open (OBJ-40): on a send card, anything other than its own answers declines the card first and then becomes an interruption; on a delete card, voice never approves. While Yumi waits on a model question, send the answer as today; the harness decides whether it is an interruption.
+- [ ] **OBJ-62.7** Add Yumi's own spoken copy, played through the Mac's speakers, to the wake word false-trigger check (SPEC-01 "Wake word detector").
+- [ ] **OBJ-62.8** Tests against the mock harness, and a hand check on the Mac of each SPEC-06 "Changing the goal mid-task" scenario.
 
 ## Expectations
 
@@ -62,8 +62,8 @@ It reuses the local stop and the `uiLanes` pause from [OBJ-35](OBJ-35-mac-stop-a
 
 ## Out of scope
 
-- Writing and applying the revised goal: [OBJ-60](OBJ-60-harness-goal-revision.md).
-- The contract: [OBJ-59](OBJ-59-goal-revision-contract.md).
+- Writing and applying the revised goal: [OBJ-61](OBJ-61-harness-goal-revision.md).
+- The contract: [OBJ-60](OBJ-60-goal-revision-contract.md).
 - The phone: later, SPEC-06 requirement 21.
 
 ## Outcome

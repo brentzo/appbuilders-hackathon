@@ -150,6 +150,16 @@ The harness and the Mac app talk JSON-RPC 2.0 over a Unix socket, one JSON messa
   The message is for logs only and never reaches the user.
 - Unknown methods answer `-32601`, and params that break the contract answer `-32602`.
 
+Goal changes during a task (SPEC-06 requirements 14 to 20, OBJ-60):
+
+- The Mac pauses UI lanes with `pause(scope: uiLanes)` before it sends `reviseGoal` with the existing task id and what the user said.
+- The harness returns the same `goalRestated` event used for a new goal; the task id identifies it as a revision, and the app sends `replyToConfirmation` as usual.
+- In Auto mode, `goalRestated.autoMode` is true so the app shows the revised goal without asking for confirmation; the harness also sends `speak` with a short acknowledgement.
+- `resumeTask` resumes after silence or "continue", `cancelTask` cancels on "cancel", and the app declines an open approval before it sends `reviseGoal`.
+- `Task.goalRevisions` stores confirmed revisions in order; each records the user's words, the revised goal, and confirmation time, while `confirmedGoal` stays the latest and `goal` stays the original.
+- Each confirmed revision adds an `ActionLogEntry` whose description starts with "Goal changed to".
+- A revised plan retains matching completed work and active helpers, records obsolete subtasks as `cancelled`, and starts new subtasks from the current goal.
+
 Pausing, approvals, and blocked actions (SPEC-06, SPEC-07, [OBJ-38](../objectives/OBJ-38-approvals-pause-and-action-log.md)):
 
 - `pause` takes an optional `scope`: `everyLane` (the default) for the stop shortcut and the menu bar "Stop", or `uiLanes` when the user takes over the mouse or keyboard, so helpers keep running.
@@ -321,5 +331,5 @@ A sheet usually has no `AXTitle`.
 | [OBJ-45](../objectives/OBJ-45-pause-scope-and-model-readiness-contracts.md) | Pause scope and model readiness contracts | Jepoy | in-progress |
 | [OBJ-48](../objectives/OBJ-48-unpair-without-device-clocks.md) | Bind unpair to the pairing instead of device clocks | Jepoy | todo |
 | [OBJ-56](../objectives/OBJ-56-unclassified-action-approval-contract.md) | Approval contract for unclassified risky actions | Jepoy | todo |
-| [OBJ-59](../objectives/OBJ-59-goal-revision-contract.md) | Contract for changing the goal mid-task | Jepoy | todo |
+| [OBJ-60](../objectives/OBJ-60-goal-revision-contract.md) | Contract for changing the goal mid-task | Jepoy | in-progress |
 <!-- generated:product-objectives:end -->

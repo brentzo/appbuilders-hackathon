@@ -552,5 +552,6 @@ Every line about a task has its `taskId`, and every line about a subtask has its
 | [OBJ-49](../objectives/OBJ-49-mac-bridge-test-support.md) | Mac answers ping and has bridge test hooks | Brent | todo |
 | [OBJ-52](../objectives/OBJ-52-harness-debug-logs.md) | Debug mode keeps full local logs | Brent | done |
 | [OBJ-57](../objectives/OBJ-57-route-classified-gui-deletes-through-strict-delete.md) | Route classified GUI delete asks through strict delete | Brent | todo |
-| [OBJ-60](../objectives/OBJ-60-harness-goal-revision.md) | Harness turns an interruption into a revised goal | Brent | todo |
+| [OBJ-61](../objectives/OBJ-61-harness-goal-revision.md) | Harness turns an interruption into a revised goal | Brent | in-progress |
+| [OBJ-63](../objectives/OBJ-63-question-answer-interruption.md) | Decide when an answer to a task question changes its goal | Brent | todo |
 <!-- generated:product-objectives:end -->

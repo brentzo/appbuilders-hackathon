@@ -93,6 +93,7 @@ enum SubtaskStatus: String, Codable {
     case handoff                     // failed on one lane, moving to main
     case done
     case failed
+    case cancelled                  // removed from a revised plan; historical work remains
 }
 
 struct SubtaskResult: Codable {
