@@ -31,6 +31,37 @@ struct NodeLocatorTests {
         #expect(ContinuousClock.now - start < .seconds(5))
     }
 
+    @Test(.timeLimit(.minutes(1)))
+    func aTimeoutStopsEverythingTheShellStarted() async throws {
+        // The shell starts two children and waits. It writes every pid to a file, so the test can
+        // check exactly those processes instead of searching the process list by name.
+        let pidFile = FileManager.default.temporaryDirectory.appendingPathComponent("yumi-pids-\(UUID().uuidString.prefix(8))")
+        let shell = try fakeShell("""
+            echo $$ >> '\(pidFile.path)'
+            sleep 30 & echo $! >> '\(pidFile.path)'
+            sleep 30 & echo $! >> '\(pidFile.path)'
+            wait
+
+            """)
+        defer {
+            try? FileManager.default.removeItem(atPath: shell)
+            try? FileManager.default.removeItem(at: pidFile)
+        }
+        // Long enough for a brand-new script's first launch, which macOS can slow down.
+        let outcome = await ShellCommand.run(shell, ["-l", "-c", "true"], timeout: .seconds(3))
+        guard case .timedOut = outcome else {
+            Issue.record("Expected a timeout, got \(outcome)")
+            return
+        }
+        let pids = try String(contentsOf: pidFile, encoding: .utf8).split(separator: "\n").compactMap { Int32($0) }
+        #expect(pids.count == 3)
+        try await Task.sleep(for: .milliseconds(300))
+        for pid in pids {
+            // kill with signal 0 only checks whether the process exists.
+            #expect(kill(pid, 0) == -1 && errno == ESRCH, "pid \(pid) survived the timeout")
+        }
+    }
+
     @Test func readsOnlyTheMarkedLine() async throws {
         let shell = try fakeShell("echo 'YUMI_NODE_PATH=/not/a/file'; echo '/bin/sh'\n")
         defer { try? FileManager.default.removeItem(atPath: shell) }

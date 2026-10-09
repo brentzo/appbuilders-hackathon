@@ -133,6 +133,10 @@ actor NodeLocator {
 }
 
 /// Runs a command with a time limit and returns its standard output.
+///
+/// The command runs in its own process group, so a timeout stops everything it started (a
+/// profile's background jobs included), not only the shell. Foundation's `Process` cannot set a
+/// process group, hence `posix_spawn`.
 nonisolated enum ShellCommand {
     enum Outcome: Sendable {
         case finished(String)
@@ -141,37 +145,64 @@ nonisolated enum ShellCommand {
     }
 
     static func run(_ executable: String, _ arguments: [String], timeout: Duration) async -> Outcome {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: executable)
-        process.arguments = arguments
-        process.standardInput = FileHandle.nullDevice
-        process.standardError = FileHandle.nullDevice
-        let output = Pipe()
-        process.standardOutput = output
-        // Collected as it arrives: a background job started by a profile could keep the pipe open
-        // after the shell exits, so waiting for end of file could hang.
+        var pipeEnds: [Int32] = [0, 0]
+        guard pipe(&pipeEnds) == 0 else { return .failedToStart(String(cString: strerror(errno))) }
+        let (readEnd, writeEnd) = (pipeEnds[0], pipeEnds[1])
+
+        var actions = posix_spawn_file_actions_t(nil as OpaquePointer?)
+        posix_spawn_file_actions_init(&actions)
+        defer { posix_spawn_file_actions_destroy(&actions) }
+        posix_spawn_file_actions_addopen(&actions, 0, "/dev/null", O_RDONLY, 0)
+        posix_spawn_file_actions_adddup2(&actions, writeEnd, 1)
+        posix_spawn_file_actions_addopen(&actions, 2, "/dev/null", O_WRONLY, 0)
+        posix_spawn_file_actions_addclose(&actions, readEnd)
+        posix_spawn_file_actions_addclose(&actions, writeEnd)
+
+        var attributes = posix_spawnattr_t(nil as OpaquePointer?)
+        posix_spawnattr_init(&attributes)
+        defer { posix_spawnattr_destroy(&attributes) }
+        posix_spawnattr_setflags(&attributes, Int16(POSIX_SPAWN_SETPGROUP))
+        posix_spawnattr_setpgroup(&attributes, 0) // a new group, led by the child
+
+        let argv = ([executable] + arguments).map { strdup($0) } + [nil]
+        defer { argv.forEach { free($0) } }
+        var pid: pid_t = 0
+        let spawned = posix_spawn(&pid, executable, &actions, &attributes, argv, environ)
+        close(writeEnd)
+        guard spawned == 0 else {
+            close(readEnd)
+            return .failedToStart(String(cString: strerror(spawned)))
+        }
+
+        // Collected as it arrives: a background job could keep the pipe open after the shell
+        // exits, so waiting for end of file could hang.
         let collected = OutputBuffer()
-        output.fileHandleForReading.readabilityHandler = { handle in
+        let output = FileHandle(fileDescriptor: readEnd, closeOnDealloc: true)
+        output.readabilityHandler = { handle in
             let data = handle.availableData
             if data.isEmpty { handle.readabilityHandler = nil } else { collected.append(data) }
         }
+
         let exited = ExitSignal()
-        process.terminationHandler = { _ in exited.fire() }
-        do {
-            try process.run()
-        } catch {
-            output.fileHandleForReading.readabilityHandler = nil
-            return .failedToStart(error.localizedDescription)
+        let child = pid
+        Thread.detachNewThread {
+            var status: Int32 = 0
+            while waitpid(child, &status, 0) == -1, errno == EINTR {}
+            exited.fire()
         }
+
         let finished = await exited.wait(timeout: timeout)
+        // Stop the whole group: after a timeout that is the shell and everything it started; after
+        // a normal exit it is any background job the shell left behind.
+        kill(-child, SIGTERM)
         if !finished {
-            process.terminate()
-            try? await Task.sleep(for: .milliseconds(300))
-            if process.isRunning { kill(process.processIdentifier, SIGKILL) }
+            if await !exited.wait(timeout: .milliseconds(300)) {
+                kill(-child, SIGKILL)
+            }
         }
         // Let the last chunk of output arrive.
         try? await Task.sleep(for: .milliseconds(50))
-        output.fileHandleForReading.readabilityHandler = nil
+        output.readabilityHandler = nil
         return finished ? .finished(collected.text) : .timedOut
     }
 
