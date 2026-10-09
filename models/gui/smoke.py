@@ -82,20 +82,20 @@ ANA = "ana@example.com"  # example.com never receives mail, and the run stops be
 # Accessibility reading
 # ---------------------------------------------------------------------------
 
-# SPEC-05 r2 roles (AXRole names as in docs/task-record-schema.md, updated on main in d5db14d),
-# plus combo boxes and menu buttons folded into the closest role. See SMOKE-TEST.md.
+# SPEC-05 r2 roles (AXRole in protocol/schemas/action.json, protocol version 3). Rows, cells, and the
+# scrollable containers are not read yet: none of the three demo tasks needs them. See SMOKE-TEST.md.
 ROLE_MAP = {
     "AXButton": "button",
     "AXMenuItem": "menuItem",
     "AXMenuBarItem": "menuBarItem",
     "AXTextField": "textField",
     "AXTextArea": "textArea",
-    "AXComboBox": "textField",
+    "AXComboBox": "comboBox",
     "AXLink": "link",
     "AXCheckBox": "checkbox",
     "AXRadioButton": "radioButton",
     "AXPopUpButton": "popUpButton",
-    "AXMenuButton": "popUpButton",
+    "AXMenuButton": "menuButton",
 }
 SKIP_SUBTREES = {"AXMenuBar"}  # the menu bar is read separately
 MAX_NODES = 6000
@@ -229,7 +229,7 @@ class Collector:
         subrole = ax(el, "AXSubrole") or ""
         secure = subrole == "AXSecureTextField"
         value = None
-        if (role in ("textField", "textArea", "checkbox", "radioButton") or raw_role == "AXPopUpButton") and not secure:
+        if (role in ("textField", "comboBox", "textArea", "checkbox", "radioButton") or raw_role == "AXPopUpButton") and not secure:
             v = ax(el, "AXValue")
             value = text(v) if v is not None else ""
             if role in ("checkbox", "radioButton"):
@@ -373,7 +373,7 @@ KEYCODES = {
     "6": 22, "5": 23, "=": 24, "9": 25, "7": 26, "-": 27, "8": 28, "0": 29, "]": 30, "o": 31,
     "u": 32, "[": 33, "i": 34, "p": 35, "l": 37, "j": 38, "'": 39, "k": 40, ";": 41, "\\": 42,
     ",": 43, "/": 44, "n": 45, "m": 46, ".": 47, "`": 50,
-    "return": 36, "enter": 36, "tab": 48, "space": 49, "escape": 53, "esc": 53,
+    "return": 36, "enter": 76, "tab": 48, "space": 49, "escape": 53, "esc": 53,
     "left": 123, "right": 124, "down": 125, "up": 126, "home": 115, "end": 119,
     "pageup": 116, "pagedown": 121,
 }
@@ -476,7 +476,7 @@ def check_safety(task, action, el):
         if el.secure and kind == "setValue":
             return "blocked", "password field (SPEC-05 r7)"
         lab = el.label.lower()
-        if kind == "axPress":
+        if kind == "click":
             if any(re.search(rf"\b{w}\b", lab) for w in SEND_WORDS):
                 return "approval", f"pressing {el.label!r} sends (SPEC-07, ask every time)"
             for w in BLOCKED_WORDS:
@@ -504,7 +504,7 @@ def action_schema(n_elements):
 
     The element number range is set per step, so constrained decoding cannot pick a number
     that is not in the list. `tool` is left out (no typed tools in this smoke test) and
-    `click` is p1 vision only.
+    `clickAt` is p1 vision only.
     """
     el = {"type": "integer", "minimum": 1, "maximum": max(n_elements, 1)}
     s = lambda v: {"type": "string", "maxLength": v}
@@ -514,7 +514,7 @@ def action_schema(n_elements):
 
     return {
         "oneOf": [
-            obj({"action": {"const": "axPress"}, "element": el}, ["action", "element"]),
+            obj({"action": {"const": "click"}, "element": el}, ["action", "element"]),
             obj({"action": {"const": "setValue"}, "element": el, "text": s(2000)}, ["action", "element", "text"]),
             obj({"action": {"const": "type"}, "text": s(2000)}, ["action", "text"]),
             obj({"action": {"const": "key"}, "combo": s(40)}, ["action", "combo"]),
@@ -536,7 +536,7 @@ Each turn you get the user's confirmed goal, your current subtask, your last few
 Reply with exactly one action as a single JSON object and nothing else. No prose, no code fences.
 
 Actions:
-{"action": "axPress", "element": N}                    press element N (buttons, menu items, menu bar items, checkboxes, radio buttons, links, pop-up buttons)
+{"action": "click", "element": N}                      click element N (buttons, menu items, menu bar items, checkboxes, radio buttons, links, pop-up buttons, menu buttons)
 {"action": "setValue", "element": N, "text": "..."}     replace the text in text field or text area N
 {"action": "type", "text": "..."}                       type text into whatever has keyboard focus
 {"action": "key", "combo": "cmd+shift+g"}               press a key or shortcut, for example "return", "escape", "tab", "down", "cmd+n"
@@ -633,7 +633,7 @@ def parse_action(raw, obs):
 
 def describe(action, el):
     k = action["action"]
-    if k in ("axPress", "setValue", "scroll"):
+    if k in ("click", "setValue", "scroll"):
         tgt = f"[{el.n}] {el.role} \"{el.label}\"" if el else f"[{action['element']}]"
         extra = f" text=\"{text(action['text'], 60)}\"" if k == "setValue" else ""
         extra += f" {action['direction']}" if k == "scroll" else ""
@@ -928,7 +928,7 @@ PING_OBS = Observation(
 
 def cmd_ping(args):
     """Model only, no screen. Checks the server, latency, and output validity."""
-    hist = [{"index": 1, "action_text": "axPress [5] menuBarItem \"File\"", "outcome": "ok", "observation": "new: menuItem \"Export To\", menuItem \"Save\""}]
+    hist = [{"index": 1, "action_text": "click [5] menuBarItem \"File\"", "outcome": "ok", "observation": "new: menuItem \"Export To\", menuItem \"Save\""}]
     msgs = build_messages(TASKS["keynote"]["goal"], instruction_for("keynote", 0), hist, PING_OBS)
     for i in range(args.n):
         raw, secs, usage = call_model(msgs, args.mode, len(PING_OBS.elements))
@@ -961,8 +961,8 @@ def cmd_bench(args):
     """Model only, no screen: per-step latency, validity, and server peak memory at a realistic prompt size."""
     obs = bench_observation(args.elements)
     hist = [
-        {"index": 1, "action_text": "axPress [12] menuBarItem \"File\"", "outcome": "ok", "observation": "new: menuItem \"New\", menuItem \"Open…\", menuItem \"Export To\""},
-        {"index": 2, "action_text": "axPress [9] menuItem \"Export To\"", "outcome": "ok", "observation": "new: menuItem \"PDF…\", menuItem \"PowerPoint…\", menuItem \"Movie…\""},
+        {"index": 1, "action_text": "click [12] menuBarItem \"File\"", "outcome": "ok", "observation": "new: menuItem \"New\", menuItem \"Open…\", menuItem \"Export To\""},
+        {"index": 2, "action_text": "click [9] menuItem \"Export To\"", "outcome": "ok", "observation": "new: menuItem \"PDF…\", menuItem \"PowerPoint…\", menuItem \"Movie…\""},
     ]
     msgs = build_messages(TASKS["keynote"]["goal"], instruction_for("keynote", 0), hist, obs)
     spid = server_pid()
@@ -973,7 +973,7 @@ def cmd_bench(args):
             for i in range(args.n):
                 raw, secs, usage = call_model(msgs, mode, len(obs.elements))
                 action, err = parse_action(raw, obs)
-                right = action == {"action": "axPress", "element": 1}
+                right = action == {"action": "click", "element": 1}
                 rows.append({"mode": mode, "secs": round(secs, 2), "valid": err is None, "right_element": right, "raw": raw, "usage": usage})
                 print(f"{mode} #{i+1}: {secs:.2f}s valid={err is None} right={right} tokens={usage.get('prompt_tokens')}/{usage.get('completion_tokens')} raw={raw!r}")
     _, lifetime = footprint(spid) if spid else (None, None)
@@ -1156,7 +1156,7 @@ def cmd_run(args):
 
             bring_to_front(app_el)
             k = action["action"]
-            if k == "axPress":
+            if k == "click":
                 code = press(el.ref)
             elif k == "setValue":
                 code = set_value(el.ref, action["text"])
