@@ -6,7 +6,7 @@ The apps load models; this product decides which ones, proves they are good enou
 Owner: Jepoy.
 
 Status: the Mac Whisper bake-off has a recommended model, pending Jepoy's confirmation ([RESULTS.md](whisper/RESULTS.md)).
-The custom wake-word model is not ready; app checks still use the documented stand-in until [OBJ-12](../objectives/OBJ-12-hey-yumi-wake-word.md) is unblocked.
+The custom wake-word model is being trained in [OBJ-12](../objectives/OBJ-12-hey-yumi-wake-word.md); app checks still use the documented stand-in until its model and thresholds are validated.
 
 ## Responsibilities
 
@@ -55,7 +55,7 @@ The public GUI scores (ScreenSpot-Pro, OSWorld) measure vision, which p0 does no
 | ID | Objective | Assignee | Status |
 |---|---|---|---|
 | [OBJ-11](../objectives/OBJ-11-whisper-bake-off.md) | Whisper bake-off | Jepoy | in-progress |
-| [OBJ-12](../objectives/OBJ-12-hey-yumi-wake-word.md) | "Hey Yumi" wake word model | Jepoy | blocked |
+| [OBJ-12](../objectives/OBJ-12-hey-yumi-wake-word.md) | "Hey Yumi" wake word model | Jepoy | in-progress |
 | [OBJ-26](../objectives/OBJ-26-gui-smoke-test.md) | Qwen3.5-9B smoke test on the demo tasks | Brent | in-progress |
 | [OBJ-28](../objectives/OBJ-28-android-whisper-bake-off.md) | Android Whisper bake-off | Jepoy | todo |
 | [OBJ-55](../objectives/OBJ-55-voice-stop-keyword-models.md) | Voice stop keyword models | Jepoy | todo |
