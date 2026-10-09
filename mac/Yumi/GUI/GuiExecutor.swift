@@ -315,7 +315,9 @@ final class GuiExecutor {
         case .cannotComplete where kept.role == .menuBarItem || kept.role == .menuItem:
             // The app is busy showing what the press opened: a menu, sheet or dialog.
             return
-        case .apiDisabled, .notImplemented where !AXIsProcessTrusted():
+        case .apiDisabled:
+            throw GuiFailure.accessibilityMissing
+        case .notImplemented where !AXIsProcessTrusted():
             throw GuiFailure.accessibilityMissing
         default:
             throw AXFailure(code: error)
