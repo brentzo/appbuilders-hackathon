@@ -44,7 +44,29 @@ final class VoiceIntake {
             self?.stopListening()
         }
         followShortcutSetting()
+        followTaglishSetting()
+        #if DEBUG
+        observeDebugPushToTalk()
+        #endif
         Task.detached { await NativeRecognizer.prepare() }
+    }
+
+    /// Whether Whisper is loaded, kept here so a press never waits on the model.
+    private var whisperReady = false
+
+    /// Loads Whisper when "I speak Taglish" is on, at launch or when the user turns it on. It stays
+    /// loaded after that, as the fallback for Apple's recognizer.
+    private func followTaglishSetting() {
+        let speaksTaglish = withObservationTracking {
+            model.settings.speaksTaglish
+        } onChange: { [weak self] in
+            Task { @MainActor in self?.followTaglishSetting() }
+        }
+        guard speaksTaglish, !whisperReady else { return }
+        Task {
+            await WhisperModel.shared.load()
+            whisperReady = await WhisperModel.shared.isReady
+        }
     }
 
     /// Registers the shortcut from settings, and again whenever the user changes it.
@@ -84,7 +106,10 @@ final class VoiceIntake {
             return
         }
         do {
-            let session = try NativeRecognizer.makeSession()
+            let session = try FallbackRecognitionSession(order: RecognizerRule.order(
+                speaksTaglish: model.settings.speaksTaglish,
+                whisperReady: whisperReady
+            ))
             #if DEBUG
             if let path = LaunchArguments.string("YumiVoiceFile") {
                 // Test aid: plays a recording into the recognizer in place of the microphone.
@@ -144,6 +169,22 @@ final class VoiceIntake {
         log.notice("Heard a goal of \(transcript.count) characters")
         submit(transcript)
     }
+
+    #if DEBUG
+    /// Test aid: scripts press and release push-to-talk with the distributed notification
+    /// `ph.appbuilders.yumi.debug.pushToTalk` and object `press` or `release`, because synthetic
+    /// key events do not reliably reach a Carbon hot key.
+    private func observeDebugPushToTalk() {
+        DistributedNotificationCenter.default().addObserver(
+            forName: Notification.Name("ph.appbuilders.yumi.debug.pushToTalk"), object: nil, queue: .main
+        ) { [weak self] note in
+            let press = note.object as? String == "press"
+            MainActor.assumeIsolated {
+                if press { self?.hotKey.onPress?() } else { self?.hotKey.onRelease?() }
+            }
+        }
+    }
+    #endif
 
     private static func nearPointer() -> CGPoint {
         let mouse = NSEvent.mouseLocation

@@ -13,6 +13,10 @@ struct SettingsView: View {
                 LabeledContent("Push-to-talk shortcut") {
                     ShortcutRecorder(shortcut: $store.pushToTalkShortcut)
                 }
+                Toggle(isOn: $store.speaksTaglish) {
+                    Text("I speak Taglish")
+                    Text("Yumi understands Tagalog and English mixed. It takes a moment longer.")
+                }
             }
 
             Section("Cursors") {

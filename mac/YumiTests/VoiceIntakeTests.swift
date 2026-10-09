@@ -22,6 +22,14 @@ struct VoiceIntakeTests {
         ])
     }
 
+    @Test func recognizerRule() {
+        #expect(RecognizerRule.order(speaksTaglish: false, whisperReady: true) == [.native, .whisper])
+        #expect(RecognizerRule.order(speaksTaglish: false, whisperReady: false) == [.native])
+        #expect(RecognizerRule.order(speaksTaglish: true, whisperReady: true) == [.whisper, .native])
+        // Until Whisper is loaded, Taglish speakers still get Apple's recognizer.
+        #expect(RecognizerRule.order(speaksTaglish: true, whisperReady: false) == [.native])
+    }
+
     @Test func listeningShowsInTheStatusLine() {
         let model = AppModel()
         model.harnessReady = true

@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		A1000000000000000000F104 /* YumiProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000F004 /* YumiProtocol.swift */; };
 		A1000000000000000000F105 /* libYumiProtocol.a in Frameworks */ = {isa = PBXBuildFile; fileRef = A1000000000000000000F005 /* libYumiProtocol.a */; };
+		A1000000000000000000F203 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = A1000000000000000000F202 /* WhisperKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -56,6 +57,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1000000000000000000F105 /* libYumiProtocol.a in Frameworks */,
+				A1000000000000000000F203 /* WhisperKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -126,6 +128,9 @@
 				A1000000000000000000D001 /* Yumi */,
 			);
 			name = Yumi;
+			packageProductDependencies = (
+				A1000000000000000000F202 /* WhisperKit */,
+			);
 			productName = Yumi;
 			productReference = A1000000000000000000F001 /* Yumi.app */;
 			productType = "com.apple.product-type.application";
@@ -198,6 +203,9 @@
 			);
 			mainGroup = A10000000000000000000002;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A1000000000000000000F201 /* XCRemoteSwiftPackageReference "WhisperKit" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A10000000000000000000003 /* Products */;
 			projectDirPath = "";
@@ -461,6 +469,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A1000000000000000000F201 /* XCRemoteSwiftPackageReference "WhisperKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/argmaxinc/WhisperKit";
+			requirement = {
+				kind = exactVersion;
+				version = 1.1.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A1000000000000000000F202 /* WhisperKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A1000000000000000000F201 /* XCRemoteSwiftPackageReference "WhisperKit" */;
+			productName = WhisperKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A10000000000000000000001 /* Project object */;
 }
