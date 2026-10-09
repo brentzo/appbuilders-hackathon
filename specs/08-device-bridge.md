@@ -92,6 +92,17 @@ Feature: Message delivery
 - **Command expiry:** every command expires after 2 minutes. Decided 2026-10-09, replacing the earlier "2 minutes for UI actions, 1 hour for data requests".
 - **No command queue on the VPS.** Commands to an offline device fail at once. Queued goals live on the origin device ([SPEC-09](09-cross-device-routing.md)). The VPS only holds results and events through short reconnects, until they expire. This follows SPEC-09 where the two specs disagreed: it is simpler, and an old command never runs late and surprises the user. Decided 2026-10-09.
 
+## Open questions
+
+- Should the VPS be able to read `replyTo`?
+  Requirement 3 lists the fields the VPS sees without `replyTo`, but requirement 4 puts `replyTo` in the envelope, outside the encrypted payload.
+  Readable, it lets the VPS link each result to its command; the VPS can already guess this from timing.
+  Options: (a) keep it readable and add it to requirement 3, or (b) move it inside the encrypted payload.
+  Recommendation: (b), because the VPS never needs it and it costs nothing before any client is built.
+  `protocol/` keeps it readable until this is decided (OBJ-02).
+- What does the phone say when pairing fails, for example because the QR code expired or the Mac did not answer?
+  [SPEC-11](11-user-facing-errors.md) has no copy for it yet.
+
 ## Later (p1)
 
 - Direct device-to-device path for large files (photos, PDFs) when both devices are on the same network, using a WebRTC connection set up through the bridge, falling back to the bridge. No separate VPN app needed.
