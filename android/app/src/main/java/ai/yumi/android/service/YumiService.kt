@@ -7,6 +7,7 @@ import android.app.ForegroundServiceStartNotAllowedException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
+import android.os.Build
 import android.util.Log
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
@@ -83,7 +84,12 @@ class YumiService : LifecycleService() {
     }
 
     private fun enterForeground(withMicrophone: Boolean): Boolean {
-        var types = ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+        // specialUse exists from Android 14. Android 12 and 13 need no type for the connection, only for the microphone.
+        var types = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+        } else {
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_NONE
+        }
         if (withMicrophone) types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
         return try {
             ServiceCompat.startForeground(
