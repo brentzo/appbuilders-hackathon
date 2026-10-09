@@ -7,8 +7,8 @@ touches: [harness, protocol]
 specs: [SPEC-01]
 status: in-progress
 priority: p0
-depends-on: [OBJ-17]
-integrates-with: []
+depends-on: []
+integrates-with: [OBJ-17]
 tags: [objective, p0, mac, harness, voice, ux]
 ---
 
