@@ -132,6 +132,32 @@ struct GoalConfirmationTests {
         #expect(overlay.cursors["main"] == nil)
     }
 
+    @Test func aCancelThatCameWithAnErrorSaysOnlyTheError() async throws {
+        let sent = Sent()
+        let flow = confirmation(FakeListener([]), sent: sent)
+        flow.goalSubmitted()
+        await flow.goalRestated(GoalRestated(taskId: Self.taskId, text: Self.restated))
+        // The harness could not read the answer: the error first, then the cancelled status.
+        flow.userError(UserError(kind: .modelFailedToLoad, taskId: Self.taskId))
+        flow.taskStatusChanged(Self.taskId, .cancelled)
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(!speech.said.contains(ConfirmationCopy.cancelled), "only the error copy is said")
+        #expect(overlay.cursors["main"] == nil, "the cursor still fades out")
+        #expect(!panel.isOpen)
+    }
+
+    @Test func anErrorForAnotherTaskDoesNotSilenceTheCancelLine() async throws {
+        let sent = Sent()
+        let flow = confirmation(FakeListener([]), sent: sent)
+        flow.goalSubmitted()
+        await flow.goalRestated(GoalRestated(taskId: Self.taskId, text: Self.restated))
+        flow.userError(UserError(kind: .unexpected, taskId: "00000000-0000-4000-8000-000000000000"))
+        flow.userError(UserError(kind: .unexpected))
+        flow.taskStatusChanged(Self.taskId, .cancelled)
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(speech.said.last == "Okay, I won't do anything.")
+    }
+
     @Test func anUnclearAnswerIsAskedOnceMoreThenOnlyButtonsWork() async {
         let sent = Sent()
         let listener = FakeListener(["umm", "hmm", "yes"])

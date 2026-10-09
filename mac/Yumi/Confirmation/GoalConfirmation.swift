@@ -41,6 +41,9 @@ final class GoalConfirmation {
     private var waiting: [String: (text: String, listensLeft: Int)] = [:]
     /// Tasks whose cancel line was already said, so a later `cancelled` status does not repeat it.
     private var cancelHandled: Set<String> = []
+    /// Tasks the harness reported an error for while confirming. The harness sends the error before
+    /// the `cancelled` status, and the user hears only the error copy, not the cancel line.
+    private var failed: Set<String> = []
     private let log = Logger(subsystem: "ph.appbuilders.yumi", category: "confirmation")
 
     init(speech: SpeechOutput, listener: ReplyListening, presenter: ConfirmationPresenting, overlay: CursorOverlay, reply: @escaping Reply) {
@@ -91,6 +94,13 @@ final class GoalConfirmation {
         }
     }
 
+    /// `userError` for a task still being confirmed: the harness could not repeat it back or read
+    /// the answer, and cancels it next. Only the error copy is said (Brent's decision, 2026-10-10).
+    func userError(_ error: UserError) {
+        guard let taskId = error.taskId, waiting[taskId] != nil else { return }
+        failed.insert(taskId)
+    }
+
     /// The task left `awaitingConfirmation`: confirmed (planning), or cancelled, possibly by voice.
     func taskStatusChanged(_ taskId: String, _ status: TaskStatus) {
         // Only a task still being confirmed: cancelling one that already runs has its own copy.
@@ -116,12 +126,14 @@ final class GoalConfirmation {
         }
     }
 
-    /// Closes the panel. A cancel also says the cancel line and fades the cursor (OBJ-17.6).
+    /// Closes the panel. A cancel also says the cancel line and fades the cursor (OBJ-17.6), but
+    /// a cancel that came with an error only fades the cursor: the error copy says what happened.
     private func finish(_ taskId: String, cancelled: Bool) {
         waiting.removeValue(forKey: taskId)
         presenter.close(taskId: taskId)
         guard cancelled, cancelHandled.insert(taskId).inserted else { return }
         overlay.fade(id: Self.mainCursorId)
+        guard failed.remove(taskId) == nil else { return }
         Task { await speech.speak(ConfirmationCopy.cancelled) }
     }
 }

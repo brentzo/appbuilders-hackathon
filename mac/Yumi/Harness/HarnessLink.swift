@@ -145,6 +145,7 @@ final class HarnessLink {
             }
         case .userError(let error):
             log.notice("The harness reported \(error.kind.rawValue, privacy: .public)")
+            confirmation.userError(error)
             onUserError?(error)
         case .goalRestated(let restated):
             Task { await confirmation.goalRestated(restated) }
