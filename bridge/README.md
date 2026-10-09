@@ -40,13 +40,24 @@ Status: relay implementation in progress (OBJ-13). Live VPS rollout is tracked b
 - **Reverse proxy:** the existing nginx, with a certificate from certbot (`certbot --nginx`). The site forwards to the bridge on a local port with WebSocket upgrade headers and `proxy_read_timeout 1h`, since nginx's default 60 seconds would cut idle phone connections.
 - **Runtime:** a Docker container on a current Node.js LTS image, bound to `127.0.0.1` only. The VPS's system Node is v18 (past end of life) and other apps may rely on it, so the bridge does not use it.
 - **Port:** `8787` on `127.0.0.1`. The nginx site already forwards to it. Publish it as `"127.0.0.1:8787:8787"`, never `"8787:8787"`: Docker's published ports bypass ufw, so a bare port would expose the bridge to the internet.
-- **Folder:** `/opt/yumi-bridge` on the VPS, with SQLite data in `/opt/yumi-bridge/data` mounted into the container.
-- **Prepare:** `install -d -o 1000 -g 1000 -m 0700 /opt/yumi-bridge/bridge/data`.
-- **Deploy:** `git pull && docker compose -f bridge/docker-compose.yml up -d --build` from the repository root in `/opt/yumi-bridge`.
-- **Check:** `docker compose -f bridge/docker-compose.yml ps` and `docker compose -f bridge/docker-compose.yml logs --tail=100 bridge`. The local health endpoint is `http://127.0.0.1:8787/health`; the public endpoint is `wss://yumibridge.studiokova.co`.
-- **Data and logs:** SQLite is in `/opt/yumi-bridge/bridge/data/bridge.sqlite`; logs are structured JSON and contain routing identifiers, connection events, and error codes only. Never copy the database or logs into a ticket without checking for private metadata.
-- **Access:** Brent runs deployments unless he explicitly hands Jepoy VPS access. The actual rollout and public endpoint check are tracked in [OBJ-32](../objectives/OBJ-32-production-bridge-deployment.md).
-- **Status:** DNS, TLS, and the nginx site were verified on 2026-10-09. The live relay deployment has not been verified.
+- **Docker:** the VPS has Snap's Docker (`/snap/bin/docker`). Snap confinement means two things:
+  - The project must live under root's home, not `/opt`, or Compose cannot read it. The VPS's other projects follow the same rule.
+  - Containers cannot use `no-new-privileges`, or no program starts in them. The relay still runs as the unprivileged `node` user, with every capability dropped and a read-only filesystem.
+- **Folder:** `/root/dev/brent/yumi-bridge` on the VPS. It holds only `bridge/` and `protocol/` from a pushed commit, plus a `REVISION` file naming that commit. The VPS has no access to the GitHub repository.
+- **Prepare (once):** `install -d -o 1000 -g 1000 -m 0700 /root/dev/brent/yumi-bridge/bridge/data`.
+- **Deploy:** from your clone, after pushing, run:
+
+  ```sh
+  C=$(git rev-parse --short origin/main)
+  git archive --format=tar origin/main bridge protocol | ssh contabovps "cd /root/dev/brent/yumi-bridge && tar -x && echo $C > REVISION"
+  ssh contabovps 'cd /root/dev/brent/yumi-bridge && docker compose -f bridge/docker-compose.yml up -d --build'
+  ```
+
+  `bridge/data` is not in the archive, so the database is kept.
+- **Check:** `docker compose -f bridge/docker-compose.yml ps` and `docker compose -f bridge/docker-compose.yml logs --tail=100 bridge` in that folder. The local health endpoint is `http://127.0.0.1:8787/health`; the public one is `https://yumibridge.studiokova.co/health`, and devices connect to `wss://yumibridge.studiokova.co`.
+- **Data and logs:** SQLite is in `/root/dev/brent/yumi-bridge/bridge/data/bridge.sqlite`; logs are structured JSON and contain routing identifiers, connection events, and error codes only. Never copy the database or logs into a ticket without checking for private metadata.
+- **Access:** Brent runs deployments unless he explicitly hands Jepoy VPS access.
+- **Status:** deployed and verified on 2026-10-09; see [wiki/bridge-deployment.md](../wiki/bridge-deployment.md).
 
 ## Implementation
 
@@ -73,5 +84,5 @@ Status: relay implementation in progress (OBJ-13). Live VPS rollout is tracked b
 |---|---|---|---|
 | [OBJ-13](../objectives/OBJ-13-bridge-relay-server.md) | Bridge relay server | Jepoy | in-progress |
 | [OBJ-30](../objectives/OBJ-30-live-cross-device-bridge-acceptance.md) | Live cross-device bridge acceptance | Jepoy | todo |
-| [OBJ-32](../objectives/OBJ-32-production-bridge-deployment.md) | Deploy the bridge relay to the VPS | Jepoy | todo |
+| [OBJ-32](../objectives/OBJ-32-production-bridge-deployment.md) | Deploy the bridge relay to the VPS | Brent | done |
 <!-- generated:product-objectives:end -->

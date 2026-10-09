@@ -7,8 +7,8 @@ services:
     restart: unless-stopped
     init: true
     read_only: true
-    security_opt:
-      - no-new-privileges:true
+    # No `no-new-privileges`: Snap's Docker (the VPS's) then refuses to start any program in the container.
+    # The relay still runs as the unprivileged node user, with every capability dropped and a read-only filesystem.
     cap_drop:
       - ALL
     tmpfs:
