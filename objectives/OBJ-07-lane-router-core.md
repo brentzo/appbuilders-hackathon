@@ -68,7 +68,7 @@ The router checks what the target app actually supports and picks the cheapest l
 - Window locks, busy windows, and the cursor cap: [OBJ-08](OBJ-08-locks-busy-windows-cap.md).
 - Ghost failure and handoff: [OBJ-09](OBJ-09-ghost-handoff.md).
 - Actually driving apps (clicks, presses, DevTools): [OBJ-39](OBJ-39-mac-gui-execution.md) (Mac) and [OBJ-36](OBJ-36-gui-act-sub-agent.md) (harness).
-- Drawing ghost cursors: [OBJ-18](OBJ-18-cursor-overlay-and-motion.md) and [OBJ-19](OBJ-19-rive-cat-cursor.md).
+- Drawing ghost cursors: [OBJ-18](OBJ-18-cursor-overlay-and-motion.md) and [OBJ-19](OBJ-19-cat-cursor.md).
 
 ## Outcome
 

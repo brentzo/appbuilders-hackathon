@@ -353,14 +353,14 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 
 ## Stand-ins in the app today
 
-- The menu bar icon is the SF Symbol `cat` until the Rive cat ([OBJ-19](../objectives/OBJ-19-rive-cat-cursor.md)) exists.
+- The menu bar icon is the SF Symbol `cat` until the Rive cat ([OBJ-19](../objectives/OBJ-19-cat-cursor.md)) exists.
 - Settings changes go to `PendingHarnessSettingsSink`, which only logs.
   The protocol has no method for settings yet, except Debug mode, which goes to the harness with `setDebugMode`.
 - Model readiness is a placeholder that is always unknown (`ModelReadiness`).
   The protocol cannot report it yet; this is open with the protocol and harness owners.
 - Error buttons whose feature comes in a later objective are shown disabled: for example "Try again" outside "Didn't catch speech", and "Stop" or "Keep going" when the error names no task.
 - "Hey Yumi" is spotted by the speech recognizer for the demo ([OBJ-58](../objectives/OBJ-58-mac-hey-yumi-recognizer.md)) until a trained model is good enough. With `-YumiWakeWordEngine openWakeWord`, the model is openWakeWord's "hey jarvis" until "Hey Yumi" from [OBJ-12](../objectives/OBJ-12-hey-yumi-wake-word.md), with openWakeWord's default threshold, 0.5.
-- Cursors are the cat as static poses, one per state, with small Core Animation motion: ginger for the main cursor, mint, sky, and slate for ghosts. The Rive cat ([OBJ-19](../objectives/OBJ-19-rive-cat-cursor.md)) replaces them.
+- Cursors are the cat as static poses, one per state, with small Core Animation motion: ginger for the main cursor, mint, sky, and slate for ghosts. The Rive cat ([OBJ-19](../objectives/OBJ-19-cat-cursor.md)) replaces them.
 - A cursor moving to an element whose path does not resolve goes to the center of the target window, or the app's frontmost window.
 - Vision clicks (`clickAt`) are refused until the p1 vision fallback.
 - The tiling question is answered with its buttons only, and its answer stays in the app: the protocol has no method to tell the harness.
@@ -388,7 +388,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 | [OBJ-16](../objectives/OBJ-16-mac-wake-word.md) | Mac wake word | Patrick | in-progress |
 | [OBJ-17](../objectives/OBJ-17-goal-confirmation.md) | Goal confirmation loop | Brent | in-progress |
 | [OBJ-18](../objectives/OBJ-18-cursor-overlay-and-motion.md) | Cursor overlay and motion | Patrick | done |
-| [OBJ-19](../objectives/OBJ-19-rive-cat-cursor.md) | Rive cat cursor | Patrick | todo |
+| [OBJ-19](../objectives/OBJ-19-cat-cursor.md) | Cat cursor without Rive | Patrick | in-progress |
 | [OBJ-20](../objectives/OBJ-20-window-tiling.md) | Window tiling with consent | Patrick | in-progress |
 | [OBJ-27](../objectives/OBJ-27-mac-native-services.md) | Mac native services for the harness | Patrick | done |
 | [OBJ-35](../objectives/OBJ-35-mac-stop-and-take-over.md) | Stop and take over on the Mac | Patrick | todo |

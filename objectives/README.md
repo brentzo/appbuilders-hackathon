@@ -76,7 +76,7 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-16](OBJ-16-mac-wake-word.md) | Mac wake word | mac | Patrick | 01 | 15 | 12 | in-progress |
 | [OBJ-17](OBJ-17-goal-confirmation.md) | Goal confirmation loop | mac | Brent | 01 | 04, 15, 18 | - | in-progress |
 | [OBJ-18](OBJ-18-cursor-overlay-and-motion.md) | Cursor overlay and motion | mac | Patrick | 04 | 14 | - | done |
-| [OBJ-19](OBJ-19-rive-cat-cursor.md) | Rive cat cursor | mac | Patrick | 04 | 10, 18 | - | todo |
+| [OBJ-19](OBJ-19-cat-cursor.md) | Cat cursor without Rive | mac | Patrick | 04 | 10, 18 | - | in-progress |
 | [OBJ-20](OBJ-20-window-tiling.md) | Window tiling with consent | mac | Patrick | 03 | 18, 27 | 08 | in-progress |
 | [OBJ-21](OBJ-21-mac-bridge-client-and-pairing.md) | Mac bridge client and pairing | harness | Jepoy | 08 | 02 | 03, 13, 27 | done |
 | [OBJ-22](OBJ-22-android-app-shell.md) | Android app shell and foreground service | android | Brent | 10, 08, 01 | - | 10 | done |

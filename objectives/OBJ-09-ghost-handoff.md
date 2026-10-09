@@ -62,7 +62,7 @@ If the main cursor gets stuck too, Yumi asks the user for help.
 
 ## Out of scope
 
-- Drawing the fade and move: [OBJ-18](OBJ-18-cursor-overlay-and-motion.md) and [OBJ-19](OBJ-19-rive-cat-cursor.md) consume these events.
+- Drawing the fade and move: [OBJ-18](OBJ-18-cursor-overlay-and-motion.md) and [OBJ-19](OBJ-19-cat-cursor.md) consume these events.
 - The "I'll show you" interaction from the stuck error: SPEC-05 and SPEC-06, not finalized.
 
 ## Outcome

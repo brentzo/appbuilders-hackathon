@@ -61,7 +61,7 @@ The overlay must never get in the way of the user's own clicks.
 
 ## Out of scope
 
-- The cat art and animation: [OBJ-19](OBJ-19-rive-cat-cursor.md).
+- The cat art and animation: [OBJ-19](OBJ-19-cat-cursor.md).
 - Performing the actual click or key press: SPEC-05, not finalized. The click point this objective exposes is what SPEC-05 will use.
 
 ## Outcome

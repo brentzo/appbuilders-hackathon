@@ -56,7 +56,7 @@ This was first planned as a Rive file; Rive is now out of scope, and the cat is 
 
 ## Out of scope
 
-- Checking the cat cursor against every SPEC-04 "Cursor character" scenario on the Mac: [OBJ-19](OBJ-19-rive-cat-cursor.md).
+- Checking the cat cursor against every SPEC-04 "Cursor character" scenario on the Mac: [OBJ-19](OBJ-19-cat-cursor.md).
 - The cat in the Android app: [OBJ-22](OBJ-22-android-app-shell.md) and later Android work.
 
 ## Outcome
