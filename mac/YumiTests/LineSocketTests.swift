@@ -23,7 +23,11 @@ struct LineSocketTests {
             },
             onClose: { _ in linesAtClose = received.count }
         )
-        _ = socket
+        // Nothing is delivered before reading starts, and nothing sent meanwhile is lost.
+        try await Task.sleep(for: .milliseconds(300))
+        #expect(received.isEmpty)
+        #expect(linesAtClose == nil)
+        socket.startReading()
 
         let clock = ContinuousClock()
         let deadline = clock.now + .seconds(20)

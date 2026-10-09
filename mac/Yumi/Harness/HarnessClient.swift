@@ -167,7 +167,10 @@ final class HarnessClient {
             }
             return false
         }
+        // Current before reading starts, so a line sent right on connect is not dropped as coming
+        // from a replaced socket.
         socket = connected
+        connected.startReading()
         do {
             let hello = try await hello()
             guard hello.protocolVersion == PROTOCOL_VERSION else {

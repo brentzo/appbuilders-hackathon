@@ -31,6 +31,9 @@ nonisolated final class LineSocket: @unchecked Sendable {
     private let onClose: @MainActor @Sendable (LineSocket) -> Void
 
     /// Connects, blocking the calling thread briefly. Call it off the main actor.
+    ///
+    /// The socket does not read until `startReading()`, so the owner can record it as its current
+    /// socket first. Anything the other side sends in the meantime waits in the kernel buffer.
     static func connect(
         path: String,
         onLine: @escaping @MainActor @Sendable (LineSocket, Data) -> Void,
@@ -60,9 +63,7 @@ nonisolated final class LineSocket: @unchecked Sendable {
             Darwin.close(fd)
             throw ConnectError.connectFailed(code)
         }
-        let socket = LineSocket(fd: fd, onLine: onLine, onClose: onClose)
-        socket.startReading()
-        return socket
+        return LineSocket(fd: fd, onLine: onLine, onClose: onClose)
     }
 
     private init(
@@ -101,7 +102,8 @@ nonisolated final class LineSocket: @unchecked Sendable {
         queue.async { [self] in closeOnQueue() }
     }
 
-    private func startReading() {
+    /// Starts delivering lines (and the close). Call it once.
+    func startReading() {
         let source = DispatchSource.makeReadSource(fileDescriptor: fd, queue: queue)
         source.setEventHandler { [self] in readAvailable() }
         source.setCancelHandler { [fd] in Darwin.close(fd) }
@@ -133,7 +135,11 @@ nonisolated final class LineSocket: @unchecked Sendable {
     private func closeOnQueue() {
         guard !closed else { return }
         closed = true
-        source?.cancel()
+        if let source {
+            source.cancel() // its cancel handler closes the file descriptor
+        } else {
+            Darwin.close(fd) // never started reading
+        }
         source = nil
         DispatchQueue.main.async { [self, onClose] in
             MainActor.assumeIsolated { onClose(self) }
