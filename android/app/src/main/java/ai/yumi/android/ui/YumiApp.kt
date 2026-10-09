@@ -138,7 +138,11 @@ fun YumiApp(graph: AppGraph) {
             onErrorButton = { button ->
                 error = null
                 when (button.action) {
-                    ErrorButton.OpenSettings -> context.startActivity(SystemSettings.appDetailsIntent(context))
+                    ErrorButton.OpenSettings -> if (error?.kind == ErrorKind.SpeechRecognitionNotSetUp) {
+                        SystemSettings.openSpeechSettings(context)
+                    } else {
+                        context.startActivity(SystemSettings.appDetailsIntent(context))
+                    }
                     ErrorButton.TypeInstead -> typing = true
                     ErrorButton.TryAgain -> graph.voice.start()
                     else -> Unit

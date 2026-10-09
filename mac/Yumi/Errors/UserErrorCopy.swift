@@ -58,6 +58,8 @@ struct UserErrorCopy: Equatable, Sendable {
             row("Phone too hot or battery low (p1)", "Your phone is getting hot, so I paused to let it cool down.", ["Keep going", "Stop"])
         case .languageNotSupported:
             row("Language not supported on this phone", "I can only understand English on this phone for now. Try saying it in English, or say it to your Mac.", ["Try again", "Type instead"])
+        case .speechRecognitionNotSetUp:
+            row("Speech recognition not set up on this phone", "I can't understand speech on this phone yet because its offline English speech pack isn't installed. Download it in your phone's speech settings, then try again.", ["Open settings", "Type instead"])
         case .didNotCatchSpeech:
             row("Didn't catch speech", "Sorry, I didn't catch that. Could you say it again?", ["Try again", "Type instead"])
         case .modelFailedToLoad:

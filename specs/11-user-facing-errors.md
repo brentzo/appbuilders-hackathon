@@ -54,6 +54,7 @@ Where a next step exists, it is a button, not a sentence telling them to go find
 | Accessibility service off (Android, p1) | "I need you to turn on my accessibility access before I can use other apps on your phone." | Open settings, Not now |
 | Phone too hot or battery low (p1) | "Your phone is getting hot, so I paused to let it cool down." | Keep going, Stop |
 | Language not supported on this phone | "I can only understand English on this phone for now. Try saying it in English, or say it to your Mac." | Try again, Type instead |
+| Speech recognition not set up on this phone | "I can't understand speech on this phone yet because its offline English speech pack isn't installed. Download it in your phone's speech settings, then try again." | Open settings, Type instead |
 | Didn't catch speech | "Sorry, I didn't catch that. Could you say it again?" | Try again, Type instead |
 | Model failed to load | "I couldn't start my brain on this device. Closing other apps usually helps." | Try again |
 | Unpaired device | "Your phone isn't paired with your Mac yet." | Pair now |
@@ -69,6 +70,7 @@ Notes:
 - "Show what I did" opens the action log ([SPEC-07](07-safety.md)) at that task.
 - "Unexpected" never claims nothing changed, because a step may have run halfway.
 - "Unexpected" before Yumi has done anything in the task drops the second sentence and "Show what I did": "Something went wrong and I stopped to be safe." with Try again, Stop.
+- "Open settings" on "Speech recognition not set up on this phone" opens the screen where the on-device language pack is installed if Android exposes one, otherwise the general speech settings.
 
 ## Scenarios
 
@@ -127,3 +129,4 @@ Feature: User-facing errors
 - **Android permission copy** is one row with a `{permission}` placeholder instead of one row per permission, so new tools only add a plain name. Decided 2026-10-09.
 - **"Unexpected" with nothing done yet** drops "Here's the last thing I did" and the "Show what I did" button, instead of showing a blank. Decided 2026-10-09.
 - **Couldn't finish a step** has its own row with a `{step}` placeholder (requirement 14), so a subtask that fails tells the user which step stopped and offers to retry it, skip it, or stop. The duplicate requirement number 12 is fixed. Decided 2026-10-09.
+- **Speech recognition not set up on this phone** has its own row, separate from "Language not supported on this phone". It covers a phone with no on-device recognizer or without the offline English pack, where telling the user to speak English would be wrong; the fix is downloading the pack. "Language not supported on this phone" stays for speech in another language. Decided 2026-10-09.

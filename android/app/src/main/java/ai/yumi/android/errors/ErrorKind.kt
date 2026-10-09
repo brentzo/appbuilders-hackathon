@@ -26,6 +26,7 @@ enum class ErrorKind(val specName: String) {
     AccessibilityServiceOffAndroid("Accessibility service off (Android, p1)"),
     PhoneTooHotOrBatteryLow("Phone too hot or battery low (p1)"),
     LanguageNotSupported("Language not supported on this phone"),
+    SpeechRecognitionNotSetUp("Speech recognition not set up on this phone"),
     DidntCatchSpeech("Didn't catch speech"),
     ModelFailedToLoad("Model failed to load"),
     UnpairedDevice("Unpaired device"),

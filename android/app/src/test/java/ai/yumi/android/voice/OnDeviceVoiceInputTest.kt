@@ -122,13 +122,13 @@ class OnDeviceVoiceInputTest {
     }
 
     @Test
-    fun missingLanguageModelShowsLanguageNotSupported() = runTest {
+    fun missingEnglishPackShowsSpeechRecognitionNotSetUp() = runTest {
         for (code in listOf(SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED, SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE)) {
             val voice = voice()
             voice.start()
             runCurrent()
             engine.send(SpeechEvent.Error(code))
-            assertEquals(ErrorKind.LanguageNotSupported, voice.failure.value?.kind)
+            assertEquals(ErrorKind.SpeechRecognitionNotSetUp, voice.failure.value?.kind)
         }
     }
 
@@ -186,7 +186,9 @@ class OnDeviceVoiceInputTest {
         voice.start()
         runCurrent()
         assertEquals(0, engine.starts)
-        assertEquals(ErrorKind.LanguageNotSupported, voice.failure.value?.kind)
+        assertEquals(ErrorKind.SpeechRecognitionNotSetUp, voice.failure.value?.kind)
+        val buttons = ErrorPresenter(log = { _, _ -> }).present(voice.failure.value!!).buttons.map { it.action }
+        assertEquals(listOf(ErrorButton.OpenSettings, ErrorButton.TypeInstead), buttons)
     }
 
     @Test

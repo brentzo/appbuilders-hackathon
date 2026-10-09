@@ -396,6 +396,7 @@ enum class ErrorKind {
     @SerialName("androidAccessibilityServiceOff") AndroidAccessibilityServiceOff,
     @SerialName("phoneTooHot") PhoneTooHot,
     @SerialName("languageNotSupported") LanguageNotSupported,
+    @SerialName("speechRecognitionNotSetUp") SpeechRecognitionNotSetUp,
     @SerialName("didNotCatchSpeech") DidNotCatchSpeech,
     @SerialName("modelFailedToLoad") ModelFailedToLoad,
     @SerialName("unpairedDevice") UnpairedDevice,

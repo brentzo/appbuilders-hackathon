@@ -87,6 +87,13 @@ struct UserErrorCopyTests {
         #expect(Set(try Self.spec11Rows().keys) == inCode)
     }
 
+    @Test func speechNotSetUpIsItsOwnRow() {
+        let copy = UserErrorCopy.copy(for: .speechRecognitionNotSetUp)
+        #expect(copy.source == .spec11Row("Speech recognition not set up on this phone"))
+        #expect(copy.buttons == ["Open settings", "Type instead"])
+        #expect(copy.message != UserErrorCopy.copy(for: .languageNotSupported).message)
+    }
+
     @Test func eachPermissionUsesItsSpecRow() {
         #expect(Permission.screenRecording.missingErrorKind == .screenPermissionMissing)
         #expect(Permission.accessibility.missingErrorKind == .accessibilityPermissionMissing)

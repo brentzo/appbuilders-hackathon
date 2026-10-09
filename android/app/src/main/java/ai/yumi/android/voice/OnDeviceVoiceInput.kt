@@ -64,7 +64,7 @@ class OnDeviceVoiceInput(
         spokenLanguage = null
         if (!microphoneAllowed()) return fail(ErrorKind.MicrophonePermissionMissing, "Microphone not allowed")
         if (!engine.isAvailable()) {
-            return fail(ErrorKind.LanguageNotSupported, "This phone has no on-device speech recognizer")
+            return fail(ErrorKind.SpeechRecognitionNotSetUp, "This phone has no on-device speech recognizer")
         }
         phase = Phase.Starting
         val id = ++session
@@ -77,7 +77,7 @@ class OnDeviceVoiceInput(
                 engine.start { event -> if (id == session) onEvent(event) }
             } catch (e: RuntimeException) {
                 // createOnDeviceSpeechRecognizer throws UnsupportedOperationException when there is none.
-                finish(YumiException(ErrorKind.LanguageNotSupported, "Could not start the on-device recognizer", e))
+                finish(YumiException(ErrorKind.SpeechRecognitionNotSetUp, "Could not start the on-device recognizer", e))
                 return@launch
             }
             watchdog = scope.launch {
@@ -167,9 +167,11 @@ class OnDeviceVoiceInput(
 
         /** Maps `SpeechRecognizer.ERROR_*` codes to SPEC-11 kinds. */
         fun errorKind(code: Int): ErrorKind = when (code) {
+            // The recognizer cannot do English, or its English pack is not downloaded yet. Speech in another
+            // language is told apart by language detection instead (LanguageNotSupported).
             SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED,
             SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE,
-            -> ErrorKind.LanguageNotSupported
+            -> ErrorKind.SpeechRecognitionNotSetUp
 
             SpeechRecognizer.ERROR_SPEECH_TIMEOUT,
             SpeechRecognizer.ERROR_NO_MATCH,

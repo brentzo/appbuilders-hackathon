@@ -687,6 +687,7 @@ public enum ErrorKind: String, Codable, Equatable, Sendable, CaseIterable {
     case androidAccessibilityServiceOff
     case phoneTooHot
     case languageNotSupported
+    case speechRecognitionNotSetUp
     case didNotCatchSpeech
     case modelFailedToLoad
     case unpairedDevice

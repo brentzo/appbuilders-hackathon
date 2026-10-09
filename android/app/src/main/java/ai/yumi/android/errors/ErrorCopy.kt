@@ -109,6 +109,11 @@ object ErrorCopyTable {
             "I can only understand English on this phone for now. Try saying it in English, or say it to your Mac.",
             listOf(ErrorButton.TryAgain, ErrorButton.TypeInstead),
         ),
+        ErrorKind.SpeechRecognitionNotSetUp to ErrorCopy(
+            "I can't understand speech on this phone yet because its offline English speech pack isn't installed. " +
+                "Download it in your phone's speech settings, then try again.",
+            listOf(ErrorButton.OpenSettings, ErrorButton.TypeInstead),
+        ),
         ErrorKind.DidntCatchSpeech to ErrorCopy(
             "Sorry, I didn't catch that. Could you say it again?",
             listOf(ErrorButton.TryAgain, ErrorButton.TypeInstead),

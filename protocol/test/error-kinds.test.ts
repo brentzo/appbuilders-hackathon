@@ -40,6 +40,12 @@ describe("ErrorKind", () => {
     expect(validate("UserError", { kind: "unexpected", message: "TypeError: x is undefined" }).valid).toBe(false);
   });
 
+  it("tells a phone without on-device speech apart from speech in another language", () => {
+    expect(validate("UserError", { kind: "speechRecognitionNotSetUp" }).valid).toBe(true);
+    expect(errorKindSchema()["x-specRows"]["speechRecognitionNotSetUp"]).toBe("Speech recognition not set up on this phone");
+    expect(errorKindSchema()["x-specRows"]["languageNotSupported"]).toBe("Language not supported on this phone");
+  });
+
   it("carries the step that could not finish as plain, bounded text", () => {
     expect(validate("UserError", { kind: "stepFailed", step: "Export the deck as a PDF" }).valid).toBe(true);
     expect(validate("UserError", { kind: "stepFailed" }).valid).toBe(true);
