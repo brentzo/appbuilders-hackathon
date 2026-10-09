@@ -163,6 +163,7 @@ The UI reads the phrase from there.
 | [OBJ-23](../objectives/OBJ-23-android-bridge-client.md) | Android bridge client and pairing | Brent | todo |
 | [OBJ-24](../objectives/OBJ-24-android-voice-intake.md) | Android voice intake and wake word | Brent | done |
 | [OBJ-42](../objectives/OBJ-42-version-mismatch-copy.md) | Add the protocol version mismatch copy | Brent | todo |
+| [OBJ-59](../objectives/OBJ-59-android-hey-yumi-vosk.md) | "Hey Yumi" on Android with Vosk | Brent | todo |
 <!-- generated:product-objectives:end -->
 
 Not written yet: Part A phone-only goals, phone tools, and delegated goals (SPEC-09 and SPEC-10 Part A), and everything in Part B.
