@@ -117,6 +117,11 @@ The approval flow that runs when the gate says "ask" is [OBJ-38](OBJ-38-approval
   - SPEC-07 r6 makes every unlisted key press ask, in every app, so Tab, Escape, and Command-S in Keynote ask. Is that intended, or should there be a short list of safe keys like the safe labels?
   - The table blocks "changing system settings", but r6 puts System Settings on the risky-app list, where unlisted clicks ask. The gate follows r6. Should clicks there be blocked instead?
   - Should the shell and installer apps above be written into SPEC-07, since they are an interpretation of the table?
+- **Note, 2026-10-09, after this objective was done:** Brent answered all four questions (SPEC-07 Decisions), and the gate follows.
+  - Reading dotfiles and `~/Library` is blocked in the SPEC-07 r1 table, as the gate already did.
+  - Unlisted key presses ask only in the risky apps, like clicks; elsewhere they are allowed, so Tab, Escape, and Command-S in Keynote no longer ask. Command-Q and Command-Option-Escape stay blocked everywhere.
+  - System Settings left the risky-app list. Every action in it is blocked with the new rule `changeSystemSettings`. For OBJ-36 and OBJ-38, `ask` decisions are still `send`, `delete`, or `unclassified`.
+  - The shell and installer apps are now in SPEC-07 r3.
 - **For the next objectives:**
   - OBJ-36 and OBJ-38: call `checkAction({ action, element }, { home: os.homedir(), app: observation.app })` on every action before it runs, and run it only when `level` is `allowed`. Store `decision.recorded` as the step's action. For `ask`, `decision.rule` is `send`, `delete`, or `unclassified`, and a delete carries `decision.files`. For `blocked`, never ask: show the r5 card. `missingPath` and `notATypedAction` are blocked too, but the r5 "keep your Mac safe" copy may not fit them; OBJ-38 should decide their copy.
   - OBJ-38: run `checkTrash(paths, home)` again right before trashing and compare `allPaths` (r12). It does not hash file contents, so a changed file is not caught yet.
