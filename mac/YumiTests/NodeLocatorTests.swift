@@ -21,14 +21,16 @@ struct NodeLocatorTests {
         #expect(node?.path == "/bin/sh")
     }
 
-    @Test(.timeLimit(.minutes(1)))
+    @Test(.timeLimit(.minutes(2)))
     func aHangingShellTimesOut() async throws {
-        let shell = try fakeShell("sleep 30\n")
+        // The shell hangs for 90 s. Coming back in under 30 s can only be the timeout, however slow
+        // a busy machine is to start the shell; without the timeout the test runs into its limit.
+        let shell = try fakeShell("sleep 90\n")
         defer { try? FileManager.default.removeItem(atPath: shell) }
         let start = ContinuousClock.now
         let node = await NodeLocator(shell: shell, timeout: .milliseconds(500)).nodeURL()
         #expect(node == nil)
-        #expect(ContinuousClock.now - start < .seconds(5))
+        #expect(ContinuousClock.now - start < .seconds(30))
     }
 
     @Test(.timeLimit(.minutes(1)))
@@ -47,18 +49,24 @@ struct NodeLocatorTests {
             try? FileManager.default.removeItem(atPath: shell)
             try? FileManager.default.removeItem(at: pidFile)
         }
-        // Long enough for a brand-new script's first launch, which macOS can slow down.
-        let outcome = await ShellCommand.run(shell, ["-l", "-c", "true"], timeout: .seconds(3))
+        // Long enough for a brand-new script to start and record its children on a busy machine,
+        // and still far below the children's 30 s, so only the timeout can stop them.
+        let outcome = await ShellCommand.run(shell, ["-l", "-c", "true"], timeout: .seconds(10))
         guard case .timedOut = outcome else {
             Issue.record("Expected a timeout, got \(outcome)")
             return
         }
         let pids = try String(contentsOf: pidFile, encoding: .utf8).split(separator: "\n").compactMap { Int32($0) }
         #expect(pids.count == 3)
-        try await Task.sleep(for: .milliseconds(300))
+        // The children exit asynchronously after the kill; a busy machine can take a while.
+        // kill with signal 0 only checks whether the process exists.
+        func alive(_ pid: Int32) -> Bool { !(kill(pid, 0) == -1 && errno == ESRCH) }
+        let deadline = ContinuousClock.now + .seconds(10)
+        while pids.contains(where: alive), ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(100))
+        }
         for pid in pids {
-            // kill with signal 0 only checks whether the process exists.
-            #expect(kill(pid, 0) == -1 && errno == ESRCH, "pid \(pid) survived the timeout")
+            #expect(!alive(pid), "pid \(pid) survived the timeout")
         }
     }
 
