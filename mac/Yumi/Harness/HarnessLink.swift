@@ -53,6 +53,7 @@ final class HarnessLink {
             dismissQuestion: { tilingPanel.dismiss(taskId: $0) },
             say: { text in Task { await speech.speak(text) } }
         )
+        tiler.carrier = CursorWindowCarrier(overlay: overlay)
         confirmation = GoalConfirmation(
             speech: speech, listener: NoReplyListener(), presenter: ConfirmationPanel(), overlay: overlay
         ) { [client] taskId, reply in

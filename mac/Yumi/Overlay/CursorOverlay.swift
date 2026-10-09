@@ -122,6 +122,44 @@ final class CursorOverlay {
         return duration
     }
 
+    /// Rides along with something moving in a straight line, such as a window's title bar while
+    /// Yumi carries the window: the given `duration`, on the same easing as a move.
+    func glide(id: String, to point: CGPoint, duration: CFTimeInterval) {
+        guard var cursor = cursors[id] else { return }
+        let from = cursor.position
+        cursor.position = point
+        cursors[id] = cursor
+        for panel in panels {
+            guard let layer = layers[id]?[ObjectIdentifier(panel)] else { continue }
+            let start = layer.root.presentation()?.position ?? panel.local(from)
+            let end = panel.local(point)
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            layer.root.position = end
+            CATransaction.commit()
+            layer.root.removeAnimation(forKey: Self.spawnPath)
+            layer.root.add(CursorMotion.animation(from: start, to: end, arcs: false, duration: duration), forKey: "move")
+            draw(cursor, with: layer, on: panel)
+        }
+    }
+
+    /// A pounce in place, for example to grab a window or to hide the jump of a resize. The
+    /// cursor's own state comes back afterwards.
+    func pounce(id: String) {
+        guard cursors[id] != nil else { return }
+        for panel in panels {
+            guard let layer = layers[id]?[ObjectIdentifier(panel)] else { continue }
+            layer.showPose(.acting)
+            DispatchQueue.main.asyncAfter(deadline: .now() + YumiMotion.pounce) { [weak self, weak layer] in
+                MainActor.assumeIsolated {
+                    guard let self, let layer, let current = self.cursors[id] else { return }
+                    layer.endPose(current, scale: panel.backingScaleFactor)
+                    self.draw(current, with: layer, on: panel)
+                }
+            }
+        }
+    }
+
     /// A move from A to B (SPEC-04 r2): a short arc like a cat's leap, eased in and out. Never a
     /// jump. With Reduce Motion on, a straight glide on the same easing (r17).
     private static let spawnPath = "spawn-path"

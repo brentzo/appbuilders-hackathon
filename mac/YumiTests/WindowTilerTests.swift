@@ -166,6 +166,35 @@ struct WindowTilerTests {
         let three = TilingLayout.frames(count: 3, in: Self.area)
         #expect(three[2].width > three[0].width * 1.9)
     }
+
+    final class FakeCarrier: WindowCarrier {
+        var events: [String] = []
+        func cursorId() -> String? { "main" }
+        func leap(_ cursorId: String, to point: CGPoint) -> TimeInterval { events.append("leap"); return 0 }
+        func ride(_ cursorId: String, to point: CGPoint, duration: TimeInterval) { events.append("ride") }
+        func pounce(_ cursorId: String) { events.append("pounce") }
+    }
+
+    @Test func theCatCarriesEachWindowInEasedStepsThenResizesOnce() async {
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let two = [4182: Self.originals[4182]!, 977: Self.originals[977]!]
+        let windows = FakeWindows(two)
+        let carrier = FakeCarrier()
+        let tiler = tiler(windows, demo: true)
+        tiler.carrier = carrier
+        tiler.suggest(TilingSuggested(taskId: "task-1", windows: Array(suggestion.windows.prefix(2))))
+        // Saved before anything moved (OBJ-20.3).
+        #expect(TiledLayoutStore(defaults: defaults).load()["task-1"]?.count == 2)
+        #expect(windows.moves.isEmpty)
+        await tiler.waitForMoves()
+
+        let first = windows.moves.filter { $0.0 == 4182 }.map(\.1)
+        let target = Rect(TilingLayout.frames(count: 2, in: Self.area)[0])
+        #expect(first.count == WindowTiler.carrySteps + 1)
+        #expect(first.dropLast().allSatisfy { $0.width == 900 && $0.height == 600 }, "position only while carried")
+        #expect(first.last == target, "one resize at the end")
+        #expect(carrier.events.prefix(4) == ["leap", "pounce", "ride", "pounce"])
+    }
 }
 
 extension CGRect {

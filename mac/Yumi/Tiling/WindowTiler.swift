@@ -16,6 +16,18 @@ struct LiveWindowFrames: WindowFrames {
     func windowIds(bundleId: String) -> [Int] { WindowService.windowIds(bundleId: bundleId) }
 }
 
+/// A cursor that can carry windows while they move: the overlay's cat in the app, nothing in
+/// tests (then windows jump, as before).
+@MainActor
+protocol WindowCarrier {
+    func cursorId() -> String?
+    /// Leaps to a point and returns how long the leap takes.
+    func leap(_ cursorId: String, to point: CGPoint) -> TimeInterval
+    /// Rides in a straight line to a point over `duration`, on the move easing.
+    func ride(_ cursorId: String, to point: CGPoint, duration: TimeInterval)
+    func pounce(_ cursorId: String)
+}
+
 /// The words of the tiling question (SPEC-03 r14). Kept word for word.
 enum TilingCopy {
     static let question = "Want me to arrange your windows so you can watch all of us work?"
@@ -43,6 +55,10 @@ final class WindowTiler {
     /// Tasks whose question is showing.
     private var asking: Set<String> = []
     private let log = Logger(subsystem: "ph.appbuilders.yumi", category: "tiling")
+    /// The cat that carries windows. Without one (or with Reduce Motion on) windows jump.
+    var carrier: WindowCarrier?
+    /// Window moves run one after another, so a put-back never races a tiling still under way.
+    private var carrying: Task<Void, Never>?
 
     init(
         frames: WindowFrames = LiveWindowFrames(),
@@ -131,28 +147,104 @@ final class WindowTiler {
         }
         layouts[taskId] = saved
         persist()
-        for (window, target) in zip(saved, TilingLayout.frames(count: saved.count, in: area)) {
-            do {
-                try frames.setFrame(of: window.windowId, to: Rect(target))
-            } catch {
-                log.error("Could not move window \(window.windowId) of \(window.bundleId, privacy: .public): \(String(describing: error), privacy: .public)")
-            }
+        let moves = zip(saved, TilingLayout.frames(count: saved.count, in: area)).map { window, target in
+            Move(window: window, from: window.frame, to: Rect(target))
         }
-        log.notice("Tiled \(saved.count) windows for task \(taskId, privacy: .public)")
+        carry(moves)
+        log.notice("Tiling \(saved.count) windows for task \(taskId, privacy: .public)")
     }
 
     private func restore(_ taskId: String) {
         guard let saved = layouts.removeValue(forKey: taskId) else { return }
-        for window in saved {
-            do {
-                try frames.setFrame(of: window.windowId, to: window.frame)
-            } catch {
-                // The app quit or closed the window: there is nothing left to put back.
-                log.notice("Could not restore window \(window.windowId) of \(window.bundleId, privacy: .public): \(String(describing: error), privacy: .public)")
+        persist()
+        // Where each window is now; one the app closed has nothing left to put back.
+        let moves = saved.compactMap { window in
+            (try? frames.frame(of: window.windowId)).map { Move(window: window, from: $0, to: window.frame) }
+        }
+        carry(moves)
+        log.notice("Putting back \(saved.count) windows for task \(taskId, privacy: .public)")
+    }
+
+    // MARK: Carrying
+
+    struct Move {
+        let window: SavedWindow
+        let from: Rect
+        let to: Rect
+    }
+
+    /// Position-only steps per carried window; the size changes once at the end.
+    static let carrySteps = 10
+
+    /// Moves windows to their frames. With a cat and without Reduce Motion, the cat carries them
+    /// one by one; otherwise each window jumps, as before.
+    private func carry(_ moves: [Move]) {
+        guard let carrier, !CursorMotion.reduceMotion else {
+            for move in moves { jump(move) }
+            return
+        }
+        let previous = carrying
+        carrying = Task { [weak self] in
+            await previous?.value
+            for move in moves {
+                guard let self else { return }
+                await self.carry(move, with: carrier)
             }
         }
-        persist()
-        log.notice("Restored \(saved.count) windows for task \(taskId, privacy: .public)")
+    }
+
+    /// Waits until every window move started so far has finished.
+    func waitForMoves() async {
+        await carrying?.value
+    }
+
+    private func jump(_ move: Move) {
+        do {
+            try frames.setFrame(of: move.window.windowId, to: move.to)
+        } catch {
+            log.notice("Could not move window \(move.window.windowId) of \(move.window.bundleId, privacy: .public): \(String(describing: error), privacy: .public)")
+        }
+    }
+
+    /// The cat leaps to the title bar and pounces, the window moves in eased position-only steps
+    /// with the cat riding its title bar on the same curve, and one resize at the end hides under
+    /// a second pounce. A step that fails falls back to one jump for this window.
+    private func carry(_ move: Move, with carrier: WindowCarrier) async {
+        guard let cursorId = carrier.cursorId() else { return jump(move) }
+        let from = move.from, to = move.to
+        await pause(carrier.leap(cursorId, to: Self.titleBar(of: from)))
+        carrier.pounce(cursorId)
+        await pause(YumiMotion.pounce)
+
+        let dx = to.x - from.x, dy = to.y - from.y
+        let duration = CursorMotion.duration(for: CGFloat(hypot(dx, dy)))
+        let riding = Rect(x: to.x, y: to.y, width: from.width, height: from.height)
+        carrier.ride(cursorId, to: Self.titleBar(of: riding), duration: duration)
+        let start = ContinuousClock.now
+        for step in 1...Self.carrySteps {
+            let time = Double(step) / Double(Self.carrySteps)
+            try? await Task.sleep(until: start + .milliseconds(Int(duration * time * 1000)))
+            let progress = CursorMotion.eased(time)
+            let rect = Rect(x: from.x + dx * progress, y: from.y + dy * progress, width: from.width, height: from.height)
+            do {
+                try frames.setFrame(of: move.window.windowId, to: rect)
+            } catch {
+                log.notice("Window \(move.window.windowId) refused a step; it jumps instead")
+                return jump(move)
+            }
+        }
+        carrier.pounce(cursorId)
+        jump(move)
+        await pause(YumiMotion.pounce)
+    }
+
+    private func pause(_ seconds: TimeInterval) async {
+        try? await Task.sleep(for: .milliseconds(Int(seconds * 1000)))
+    }
+
+    /// The middle of a window's title bar, where the cat grabs it.
+    static func titleBar(of frame: Rect) -> CGPoint {
+        CGPoint(x: frame.x + frame.width / 2, y: frame.y + 14)
     }
 
     private func persist() {

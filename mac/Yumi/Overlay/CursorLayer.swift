@@ -95,6 +95,8 @@ final class CursorLayer {
     /// Shows `pose` until `endPose`, keeping any state that arrives meanwhile for then.
     func showPose(_ pose: CursorState) {
         heldPose = pose
+        // Plays the pose's motion again even when it is already showing, such as a second pounce.
+        shownState = nil
         if let last { apply(last.cursor, scale: last.scale) }
     }
 
