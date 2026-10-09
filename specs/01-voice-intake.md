@@ -30,6 +30,10 @@ Yumi transcribes it on the device, repeats it back in its own words, and waits f
 10. Wake word detection runs on the device with a small dedicated detector (see "Wake word detector" below). Audio before the wake word is never transcribed, stored, or sent anywhere.
 11. The user can turn the wake word off on each device. Push-to-talk always works.
 12. On Android, wake word listening in the background runs inside the foreground service from [SPEC-10](10-android-companion.md), with its persistent notification.
+13. On the Mac, the recognizer follows an "I speak Taglish" setting, off by default:
+    - **On:** Whisper transcribes every goal, with the native on-device recognizer as the fallback.
+    - **Off:** the native on-device recognizer goes first, with Whisper as the fallback once it is loaded.
+    - A fallback is used only when the first recognizer fails, never when it heard silence.
 
 ## Scenarios
 
@@ -200,6 +204,7 @@ Work this needs:
 
 - **Android in p0 has no Whisper.** It uses Android's on-device recognizer, English only, and shows an error for other languages. Whisper on the phone is p1, with SPEC-10 Part B. This follows SPEC-10 where the two specs disagreed. Decided 2026-10-09.
 - **The phone's repeat-back in p0 uses fixed templates,** defined in SPEC-10 requirement 8. Decided 2026-10-09.
+- **The Mac picks its recognizer with an "I speak Taglish" setting** (requirement 13). Whisper handles Tagalog and English mixed, and the native recognizer is faster for English commands, so the user who speaks Taglish says so once instead of Yumi guessing per goal. Decided 2026-10-09.
 
 ## Open questions
 
