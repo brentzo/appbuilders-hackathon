@@ -25,6 +25,8 @@ enum ErrorButtonAction: Equatable, Sendable {
     case resumeTask(String)
     /// Opens the pairing window ("Pair now").
     case pairPhone
+    /// Opens the box for typing a goal ("Type instead").
+    case typeGoal
     /// The feature behind this button is built in a later objective. Shown disabled.
     case notAvailableYet
 }
@@ -90,6 +92,11 @@ enum ErrorPresenter {
             action = .dismiss
         case "Pair now":
             action = .pairPhone
+        case "Type instead":
+            action = .typeGoal
+        case "Try again" where error.kind == .didNotCatchSpeech:
+            // Push-to-talk: trying again is holding the shortcut again, so this only closes the error.
+            action = .dismiss
         case "Cancel":
             action = error.taskId.map(ErrorButtonAction.cancelTask) ?? .dismiss
         case "Stop":

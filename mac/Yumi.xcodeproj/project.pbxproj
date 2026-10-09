@@ -327,6 +327,7 @@
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Yumi uses the microphone so it can hear you.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Yumi turns what you say into text on this Mac. Your voice never leaves it.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -356,6 +357,7 @@
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Yumi uses the microphone so it can hear you.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Yumi turns what you say into text on this Mac. Your voice never leaves it.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",

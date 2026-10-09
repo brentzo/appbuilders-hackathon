@@ -39,7 +39,7 @@ struct MenuContent: View {
         }
 
         if model.mockHarnessName != nil {
-            // Debug aid: plays scripts that start on submitGoal, until voice intake exists (OBJ-15).
+            // Debug aid: plays scripts that start on submitGoal without speaking.
             Button("Send sample goal to the mock") {
                 harness.submitSampleGoal()
             }

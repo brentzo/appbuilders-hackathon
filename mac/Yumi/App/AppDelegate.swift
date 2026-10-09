@@ -26,6 +26,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         LaunchArguments.bool("YumiMockHarness") || LaunchArguments.bool("YumiSendSampleGoal")
             || LaunchArguments.string("YumiMockScript") != nil || LaunchArguments.string("YumiMockFail") != nil
     }
+    private(set) lazy var voice = VoiceIntake(
+        model: model,
+        overlay: harness.overlay,
+        submit: { [weak self] goal in self?.harness.submitGoal(goal) },
+        showError: { [weak self] error in self?.showError(error) }
+    )
     private var terminationSignal: DispatchSourceSignal?
     private let log = Logger(subsystem: "ph.appbuilders.yumi", category: "app")
 
@@ -42,6 +48,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         quitCleanlyOnSIGTERM()
         harness.onUserError = { [weak self] error in self?.showError(error) }
         harness.start()
+        voice.start()
         if LaunchArguments.bool("YumiSendSampleGoal") {
             harness.submitSampleGoalWhenConnected()
         }
@@ -74,8 +81,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             harness.resumeTask(taskId)
         case .pairPhone:
             PairingWindow.show()
+        case .typeGoal:
+            showTypeGoal()
         case .dismiss, .notAvailableYet:
             break
+        }
+    }
+
+    @discardableResult
+    func showTypeGoal() -> NSWindow {
+        TypeGoalWindow.show { [weak self] goal in
+            self?.harness.submitGoal(goal)
         }
     }
 

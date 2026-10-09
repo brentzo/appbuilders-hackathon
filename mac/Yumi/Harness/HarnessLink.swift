@@ -214,7 +214,7 @@ final class HarnessLink {
     }
 
     /// Debug aid for the mock: submits a fixed goal so scripts that play on `submitGoal`
-    /// (like keynote-export) run without voice intake (OBJ-15).
+    /// (like keynote-export) run without speaking.
     func submitSampleGoal() {
         guard usesMock else {
             log.error("Ignored the sample goal: it is only for the mock harness")

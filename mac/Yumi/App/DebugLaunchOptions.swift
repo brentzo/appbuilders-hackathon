@@ -8,7 +8,8 @@ import YumiProtocol
 ///
 /// - `-YumiAppearance light|dark` forces the app's appearance without changing the system's.
 /// - `-YumiStatus startingUp|ready|listening|working|paused` sets the menu's status line.
-/// - `-YumiOpen settings|onboarding|pairing|pairing-code|error:<ErrorKind>` opens a window at launch instead of the
+/// - `-YumiVoiceFile <path>` makes push-to-talk transcribe that recording instead of the microphone.
+/// - `-YumiOpen settings|onboarding|pairing|pairing-code|type-goal|error:<ErrorKind>` opens a window at launch instead of the
 ///   usual onboarding check. An error uses the sample last action "Clicked Export in Keynote".
 /// - `-YumiPermissions mixed|granted` pretends permissions are in that state, without asking macOS.
 ///   `mixed` has the microphone allowed and the other two missing.
@@ -52,6 +53,7 @@ enum DebugLaunchOptions {
         case "settings": opened = ("settings", app.windows.showSettings())
         case "onboarding": opened = ("onboarding", app.windows.showOnboarding())
         case "pairing": opened = ("pairing", PairingWindow.show())
+        case "type-goal": opened = ("type-goal", app.showTypeGoal())
         case "pairing-code":
             PhoneLink.shared.showSampleCode(.init(payload: "yumi-pair:sample", expiresAt: Date().addingTimeInterval(300)))
             opened = ("pairing-code", PairingWindow.show())

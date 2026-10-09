@@ -207,7 +207,8 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 ```
 
 - `-YumiAppearance light|dark` forces the app's appearance.
-- `-YumiOpen settings|onboarding|pairing|pairing-code|error:<ErrorKind>` opens that window at launch (`pairing-code` shows a sample pairing code).
+- `-YumiOpen settings|onboarding|pairing|pairing-code|type-goal|error:<ErrorKind>` opens that window at launch (`pairing-code` shows a sample pairing code).
+- `-YumiVoiceFile <path>` makes push-to-talk transcribe that recording instead of the microphone (Debug builds).
   An error window uses the sample last action "Clicked Export in Keynote".
 - `-YumiPermissions mixed|granted` pretends permissions are in that state, without asking macOS.
 - `-YumiStatus startingUp|ready|listening|working|paused` sets the menu's status line.
