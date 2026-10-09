@@ -53,6 +53,29 @@ export async function settledObservation(
   }
 }
 
+/**
+ * The first look at a window that may still be appearing: observes until it can be read, or until the settle timeout,
+ * then throws the last failure. Only failures `missing` accepts are retried; any other goes up at once. A window the
+ * router has just opened can be listed before the Mac app can read it, while it animates open (Brent's run,
+ * 2026-10-10: `windowNotFound` 18 ms after `openNewWindow`).
+ */
+export async function readableObservation(
+  observe: () => Promise<Observation>,
+  missing: (error: unknown) => boolean,
+  timing: SettleTiming,
+  signal?: AbortSignal,
+): Promise<{ observation: Observation; looks: number }> {
+  const deadline = Date.now() + timing.timeoutMs;
+  for (let looks = 1; ; looks++) {
+    try {
+      return { observation: await observe(), looks };
+    } catch (error) {
+      if (!missing(error) || signal?.aborted || Date.now() >= deadline) throw error;
+    }
+    await sleep(timing.intervalMs, signal);
+  }
+}
+
 /** One short clause on what changed, from the model's point of view. Screen text in it is data for the model only. */
 export function describeChange(before: Observation, after: Observation): string {
   const parts: string[] = [];

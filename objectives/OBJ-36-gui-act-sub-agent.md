@@ -99,6 +99,14 @@ Build against the mock Mac app from [OBJ-01](OBJ-01-task-record-schemas.md) unti
   - gui_act works in the window OBJ-08's router locked for the subtask (`subtask.target.windowId`), and never takes or releases a lock itself: the scheduler releases the window and the cursor when the run ends.
     When the router gave the subtask no window, because the app had none, the harness opens the app with `open_app` as a step of its own.
     When the locked window cannot be read, the attempt ends as stuck, and gui_act does not pick another window.
+- **Brent's first live run (2026-10-10, 1:30 am, task `da99e657`):** "write a note in Documents called Yumi test that says hello", typed and confirmed with "Go ahead".
+  It ended as "Stuck on screen" 18 ms after gui_act started, with no step run. Fixed in gui_act:
+  - The router opened a new Finder window and locked it, and the Mac app's `observeWindow` answered `windowNotFound` for it 150 ms later. Once open, the window's accessibility frame and window-server bounds matched, so the likely cause is the window still animating open. The first look now waits up to the settle timeout for a locked window to become readable.
+  - The Mac app paused the task ("Stopped by takeOver") a second after "Go ahead", while the plan was saved. The subtask was still routed and started, and its failure set the paused task to failed. gui_act now starts no attempt on a stopped run, and a first look that fails after a stop ends as stopped, so the pause flow keeps the statuses.
+  Raised for other owners, not changed here:
+  - The planner wrote the instruction as a tool call with a made-up home folder (`write_new_file(path="/Users/Yumi/Documents/Yumi test", ...)`), proposed the helper lane, and named Finder, so the router sent a file write to a ghost in Finder (planner and router, OBJ-07).
+  - The take-over the Mac app saw right after the confirmation click, before any cursor acted (Mac app, OBJ-38).
+  - The scheduler routes and starts a subtask after a pause of every lane, and a failure after the pause overrides the paused status (scheduler, OBJ-08 and OBJ-38).
 - **Known gap:** the harness names elements by number (`#3`), because the observation carries no paths. The Mac app resolves numbers itself for `executeAction`, but `readFieldValues` cannot, so the approval flow cannot read a Mail draft's recipients and a send is not run ("because Yumi couldn't read who it was going to").
   Fix: OBJ-39's protocol ask, either `ExecuteActionResult` returning the resolved element or `readFieldValues` taking element numbers (Patrick for the Mac app, Jepoy for the protocol).
 - **For the real runs:** the Mac app's socket is fixed at `~/Library/Application Support/Yumi/harness.sock` (`mac/Yumi/Harness/HarnessSocket.swift`), and the app launches its own harness from the repo it was built from, which does not run tasks yet.

@@ -5,7 +5,7 @@ import { validate } from "@yumi/protocol";
 import type { CursorCommand, ModelAction, QuestionAsked, Subtask, Task, TaskStatusChanged } from "@yumi/protocol/types";
 import { GUI_TOOLS, guiAct, STEPS_PER_ATTEMPT, type GuiActDeps, type GuiActRun } from "../src/gui/gui-act.ts";
 import { PASSWORD_QUESTION } from "../src/gui/copy.ts";
-import { macAppGui } from "../src/gui/mac.ts";
+import { MacGuiFailure, macAppGui } from "../src/gui/mac.ts";
 import { startHarness, type Harness } from "../src/harness.ts";
 import { MemoryLogger } from "../src/log.ts";
 import { ModelClient } from "../src/model/client.ts";
@@ -681,13 +681,47 @@ describe("gui_act limits and endings (OBJ-36.5 to OBJ-36.8)", () => {
     expect(harness.store.listSteps(subtask.id)).toEqual([]);
   });
 
+  it("starts no attempt when the run was stopped while the subtask was routed (Brent's run, 2026-10-10)", async () => {
+    const fake = await connect(new FakeKeynote({ home }));
+    const control = new RunControl();
+    const { subtask } = guiSubtask({ windowId: 7 });
+    const signal = control.enter(subtask.id, "ghost");
+    control.stop("paused");
+    const run = await guiAct(subtask.id, deps(), { confirmedGoal: GOAL, signal, control });
+    expect(run).toMatchObject({ outcome: "aborted", result: { status: "partial" } });
+    expect(fake.observes).toEqual([]);
+    expect(harness.store.getSubtask(subtask.id)!.attempts).toBe(0);
+  });
+
+  it("ends as stopped, not stuck, when the first look fails after a pause", async () => {
+    await connect(new FakeKeynote({ home }));
+    const control = new RunControl();
+    const { subtask } = guiSubtask({ windowId: 7 });
+    const mac = macGui();
+    const run = await act(
+      subtask,
+      {
+        mac: {
+          ...mac,
+          observe: () => {
+            control.stop("paused");
+            return Promise.reject(new MacGuiFailure("observeWindow", { kind: "stuckOnScreen", taskId: subtask.taskId }));
+          },
+        },
+      },
+      control,
+    );
+    expect(run.outcome).toBe("aborted");
+    expect(model.requests).toEqual([]);
+  });
+
   it("asks the model nothing when its lane is already paused", async () => {
     const fake = await connect(new FakeKeynote({ home }));
     const control = new RunControl();
     control.pauseUiLanes();
     const { subtask } = guiSubtask();
     expect((await act(subtask, {}, control)).outcome).toBe("aborted");
-    expect(fake.observes).toHaveLength(1);
+    expect(fake.observes).toEqual([]);
     expect(model.requests).toEqual([]);
   });
 
@@ -703,13 +737,27 @@ describe("gui_act limits and endings (OBJ-36.5 to OBJ-36.8)", () => {
     expect(harness.store.listActionLog(subtask.taskId).map((l) => l.description)).toEqual(["Opened com.apple.Keynote"]);
   });
 
-  it("fails the attempt, opening nothing, when the window the router locked cannot be read (OBJ-08)", async () => {
+  it("waits for a window the router just opened to become readable (Brent's run, 2026-10-10)", async () => {
     const fake = await connect(new FakeKeynote({ home }));
-    fake.failObserve("stuckOnScreen", 1);
+    // The router listed the new window before the Mac app could read it.
+    fake.failObserve("stuckOnScreen", 2);
     scriptModel(() => reply({ kind: "finish", status: "done", note: "" }));
     const { subtask } = guiSubtask({ windowId: 7 });
     const run = ended(await act(subtask));
-    expect(fake.observes[0]).toMatchObject({ target: { bundleId: KEYNOTE, windowId: 7 } });
+    expect(fake.observes.slice(0, 3).map((o) => o.target)).toEqual(Array(3).fill({ bundleId: KEYNOTE, windowId: 7 }));
+    expect(fake.executed).toEqual([]);
+    expect(run).toMatchObject({ reason: "finished", result: { status: "done" } });
+    expect(logger.entries.some((e) => e.event === "gui.windowAppeared" && e.looks === 3)).toBe(true);
+  });
+
+  it("fails the attempt, opening nothing, when the window the router locked never becomes readable (OBJ-08)", async () => {
+    const fake = await connect(new FakeKeynote({ home }));
+    fake.failObserve("stuckOnScreen");
+    scriptModel(() => reply({ kind: "finish", status: "done", note: "" }));
+    const { subtask } = guiSubtask({ windowId: 7 });
+    const run = ended(await act(subtask));
+    expect(fake.observes.length).toBeGreaterThan(1);
+    expect(fake.observes.every((o) => o.target.windowId === 7)).toBe(true);
     expect(fake.executed).toEqual([]);
     expect(model.requests).toEqual([]);
     expect(run).toMatchObject({

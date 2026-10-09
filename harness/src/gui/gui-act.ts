@@ -35,7 +35,14 @@ import { PASSWORD_QUESTION } from "./copy.ts";
 import { watchHome as realWatchHome, type FileChange, type FileWatch, type WatchHome } from "./file-watch.ts";
 import { MacGuiFailure, type MacGui } from "./mac.ts";
 import type { QuestionBroker } from "./questions.ts";
-import { DEFAULT_SETTLE, describeChange, sameTreeAndTitle, settledObservation, type SettleTiming } from "./screen.ts";
+import {
+  DEFAULT_SETTLE,
+  describeChange,
+  readableObservation,
+  sameTreeAndTitle,
+  settledObservation,
+  type SettleTiming,
+} from "./screen.ts";
 
 /**
  * `gui_act`: one attempt at a subtask in an app's window, on the ghost or main lane (SPEC-05, OBJ-36). It runs a
@@ -169,6 +176,12 @@ export async function guiAct(subtaskId: Uuid, deps: GuiActDeps, options: GuiActO
   if (subtask.status !== "running" || (lane !== "ghost" && lane !== "main") || !target) {
     throw new Error(`gui_act needs a running ghost or main subtask with a target, got ${subtask.status} on ${lane ?? "no lane"}`);
   }
+  if (options.signal.aborted) {
+    // Paused or cancelled while the subtask was being routed: no attempt starts, and the pause or cancel flow sets
+    // the statuses (Brent's run, 2026-10-10: a take-over right after "Go ahead" ended as "Stuck on screen").
+    deps.logger.info("gui.notStarted", { taskId: subtask.taskId, subtaskId, reason: "stopped" });
+    return { outcome: "aborted", result: buildSubtaskResult("partial", "Stopped before it started.", []) };
+  }
   const limits = deps.limits ?? DEFAULT_LIMITS;
   if (!options.continuing) {
     if (subtask.attempts >= limits.attemptsPerSubtask) {
@@ -245,7 +258,8 @@ class Attempt {
     });
 
     const first = await this.firstLook();
-    if ("end" in first) return first.end;
+    // A look that failed because the run stopped meanwhile is a stop, not a failure.
+    if ("end" in first) return this.stopped() ?? first.end;
     let observation = first.next;
 
     for (;;) {
@@ -310,15 +324,23 @@ class Attempt {
   /**
    * The first look at the target window. When the router gave the subtask no window, because the app had none, the
    * app is opened with `open_app` first, the cheapest way in (SPEC-05 r1), as a step of its own. A window the router
-   * locked that cannot be read fails the attempt: the lane never picks another window (OBJ-08).
+   * locked gets until the settle timeout to become readable, since the router may have just opened it; after that the
+   * attempt fails: the lane never picks another window (OBJ-08).
    */
   private async firstLook(): Promise<ActResult> {
+    const { signal } = this.options;
+    const locked = this.target.windowId !== undefined;
     try {
-      return { next: this.remember(await this.deps.mac.observe(this.target, this.options.signal)) };
+      const { observation, looks } = await readableObservation(
+        () => this.deps.mac.observe(this.target, signal),
+        (error) => locked && isMissingWindow(error),
+        this.settle,
+        signal,
+      );
+      if (looks > 1) this.deps.logger.info("gui.windowAppeared", { taskId: this.taskId, subtaskId: this.subtask.id, looks });
+      return { next: this.remember(observation) };
     } catch (error) {
-      if (!(error instanceof MacGuiFailure) || error.userError?.kind !== "stuckOnScreen" || this.target.windowId !== undefined) {
-        return this.lookFailed(error);
-      }
+      if (locked || !isMissingWindow(error)) return this.lookFailed(error);
     }
     const opened = await this.act({ kind: ACTION.tool, call: { tool: "open_app", bundleId: this.target.bundleId } }, undefined);
     if ("end" in opened) return opened;
@@ -790,4 +812,9 @@ function noteFor(
 
 function fit(line: string): string {
   return line.length <= MAX_OBSERVATION ? line : `${line.slice(0, MAX_OBSERVATION - 3)}...`;
+}
+
+/** The Mac app could not find the target window or app: "Stuck on screen". */
+function isMissingWindow(error: unknown): boolean {
+  return error instanceof MacGuiFailure && error.userError?.kind === "stuckOnScreen";
 }
