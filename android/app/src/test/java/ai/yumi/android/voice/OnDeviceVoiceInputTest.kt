@@ -144,6 +144,20 @@ class OnDeviceVoiceInputTest {
     }
 
     @Test
+    fun englishGoalWithProductNamesIsHandedOnEvenIfTheLastGuessIsFilipino() = runTest {
+        // Brent's "export my Keynote deck as a PDF" on the demo phone, session 55.
+        val voice = voice()
+        voice.start()
+        runCurrent()
+        listOf("cmn-hans-cn" to 1, "fil-ph" to 2, "en-us" to 3, "fil-ph" to 3).forEach { (tag, c) ->
+            engine.send(SpeechEvent.Language(tag, c))
+        }
+        engine.send(SpeechEvent.Results(listOf("Export my Keynote deck as a PDF")))
+        assertNull(voice.failure.value)
+        assertEquals(listOf("Export my Keynote deck as a PDF"), goals)
+    }
+
+    @Test
     fun noMatchInAConfidentlyDetectedLanguageShowsLanguageNotSupported() = runTest {
         // What the demo phone's recognizer did with Spanish: sure of the language, then no match.
         val voice = voice()
