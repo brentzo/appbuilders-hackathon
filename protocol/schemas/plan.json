@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yumi.local/protocol/plan.json",
+  "title": "Plan",
+  "description": "What the planner model returns for a confirmed goal: subtasks with dependencies (SPEC-02 r1 and r7). The harness checks it, gives each subtask a Uuid, and saves it as Subtask records. A Plan never leaves the harness as is; apps see the saved Subtasks.",
+  "$defs": {
+    "Plan": {
+      "description": "The subtasks in plan order. The harness also rejects dependency cycles, unknown or duplicate ids, and plans longer than its limit, which this schema cannot express.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["subtasks"],
+      "properties": {
+        "subtasks": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/PlannedSubtask" } }
+      }
+    },
+    "PlannedSubtaskId": {
+      "description": "A short id the planner picks, unique within the plan, used only for dependsOn. It is not stored: the harness gives each subtask a Uuid.",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,31}$"
+    },
+    "PlannedSubtask": {
+      "description": "One subtask as the planner proposes it. The router decides its lane (SPEC-03).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "instruction", "dependsOn", "proposedLane"],
+      "properties": {
+        "id": { "$ref": "#/$defs/PlannedSubtaskId" },
+        "title": { "description": "Short, shown on the dashboard and the cursor label.", "type": "string", "minLength": 1, "maxLength": 60 },
+        "instruction": { "description": "Narrow prompt for the worker.", "type": "string", "minLength": 1 },
+        "dependsOn": {
+          "description": "Ids of the subtasks in this plan that must be done before this one starts.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/PlannedSubtaskId" }
+        },
+        "proposedLane": { "$ref": "common.json#/$defs/Lane" }
+      }
+    }
+  }
+}

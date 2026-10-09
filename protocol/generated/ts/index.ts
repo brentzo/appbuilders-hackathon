@@ -593,6 +593,26 @@ export type PhoneToolCall =
   | SetTimerCall
   | PhoneOpenAppCall;
 
+/** The subtasks in plan order. The harness also rejects dependency cycles, unknown or duplicate ids, and plans longer than its limit, which this schema cannot express. */
+export interface Plan {
+  subtasks: PlannedSubtask[];
+}
+
+/** One subtask as the planner proposes it. The router decides its lane (SPEC-03). */
+export interface PlannedSubtask {
+  id: PlannedSubtaskId;
+  /** Short, shown on the dashboard and the cursor label. */
+  title: string;
+  /** Narrow prompt for the worker. */
+  instruction: string;
+  /** Ids of the subtasks in this plan that must be done before this one starts. */
+  dependsOn: PlannedSubtaskId[];
+  proposedLane: Lane;
+}
+
+/** A short id the planner picks, unique within the plan, used only for dependsOn. It is not stored: the harness gives each subtask a Uuid. */
+export type PlannedSubtaskId = string;
+
 export interface ProbeAppCapabilityParams {
   /** Use the bundle id the Mac app reports (WindowInfo.bundleId from listWindows), never one from memory: the same app can change id between versions, for example com.apple.Keynote for current Keynote and com.apple.iWork.Keynote for older ones. */
   bundleId: string;

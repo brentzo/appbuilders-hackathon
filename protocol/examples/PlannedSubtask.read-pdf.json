@@ -1,0 +1,7 @@
+{
+  "id": "read-1",
+  "title": "Summarize Invoice March.pdf",
+  "instruction": "Read ~/Downloads/Invoice March.pdf and write a three-line summary to ~/Documents/PDF Summary parts/Invoice March.txt.",
+  "dependsOn": [],
+  "proposedLane": "helper"
+}

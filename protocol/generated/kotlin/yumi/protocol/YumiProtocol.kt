@@ -715,6 +715,25 @@ data class PhoneOpenAppCall(
 @JsonClassDiscriminator("tool")
 sealed interface PhoneToolCall
 
+/** The subtasks in plan order. The harness also rejects dependency cycles, unknown or duplicate ids, and plans longer than its limit, which this schema cannot express. */
+@Serializable
+data class Plan(
+    val subtasks: List<PlannedSubtask>,
+)
+
+/** One subtask as the planner proposes it. The router decides its lane (SPEC-03). */
+@Serializable
+data class PlannedSubtask(
+    val id: String,
+    /** Short, shown on the dashboard and the cursor label. */
+    val title: String,
+    /** Narrow prompt for the worker. */
+    val instruction: String,
+    /** Ids of the subtasks in this plan that must be done before this one starts. */
+    val dependsOn: List<String>,
+    val proposedLane: Lane,
+)
+
 @Serializable
 data class ProbeAppCapabilityParams(
     /** Use the bundle id the Mac app reports (WindowInfo.bundleId from listWindows), never one from memory: the same app can change id between versions, for example com.apple.Keynote for current Keynote and com.apple.iWork.Keynote for older ones. */

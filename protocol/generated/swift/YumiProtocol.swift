@@ -1223,6 +1223,35 @@ public enum PhoneToolCall: Codable, Equatable, Sendable {
     }
 }
 
+/// The subtasks in plan order. The harness also rejects dependency cycles, unknown or duplicate ids, and plans longer than its limit, which this schema cannot express.
+public struct Plan: Codable, Equatable, Sendable {
+    public var subtasks: [PlannedSubtask]
+
+    public init(subtasks: [PlannedSubtask]) {
+        self.subtasks = subtasks
+    }
+}
+
+/// One subtask as the planner proposes it. The router decides its lane (SPEC-03).
+public struct PlannedSubtask: Codable, Equatable, Sendable {
+    public var id: String
+    /// Short, shown on the dashboard and the cursor label.
+    public var title: String
+    /// Narrow prompt for the worker.
+    public var instruction: String
+    /// Ids of the subtasks in this plan that must be done before this one starts.
+    public var dependsOn: [String]
+    public var proposedLane: Lane
+
+    public init(id: String, title: String, instruction: String, dependsOn: [String], proposedLane: Lane) {
+        self.id = id
+        self.title = title
+        self.instruction = instruction
+        self.dependsOn = dependsOn
+        self.proposedLane = proposedLane
+    }
+}
+
 public struct ProbeAppCapabilityParams: Codable, Equatable, Sendable {
     /// Use the bundle id the Mac app reports (WindowInfo.bundleId from listWindows), never one from memory: the same app can change id between versions, for example com.apple.Keynote for current Keynote and com.apple.iWork.Keynote for older ones.
     public var bundleId: String

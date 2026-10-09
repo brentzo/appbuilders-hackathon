@@ -165,6 +165,38 @@ describe("WorkerOutput", () => {
   });
 });
 
+describe("Plan", () => {
+  const subtask = (id: string, dependsOn: string[] = []) => ({
+    id,
+    title: `Subtask ${id}`,
+    instruction: "Read ~/Downloads/a.pdf and write a summary.",
+    dependsOn,
+    proposedLane: "helper",
+  });
+
+  it("holds subtasks with short ids, dependencies, and a proposed lane", () => {
+    expect(validate("Plan", { subtasks: [subtask("read-1"), subtask("note", ["read-1"])] }).valid).toBe(true);
+  });
+
+  it("rejects an empty plan", () => {
+    expect(validate("Plan", { subtasks: [] }).valid).toBe(false);
+  });
+
+  it("rejects ids that are not short lower-case words, and a repeated dependency", () => {
+    expect(validate("Plan", { subtasks: [subtask("Read 1")] }).valid).toBe(false);
+    expect(validate("Plan", { subtasks: [subtask("a".repeat(33))] }).valid).toBe(false);
+    expect(validate("Plan", { subtasks: [subtask("note", ["read-1", "read-1"])] }).valid).toBe(false);
+  });
+
+  it("rejects a missing field, an unknown lane, a long title, and fields the planner does not set", () => {
+    const { proposedLane: _lane, ...noLane } = subtask("read-1");
+    expect(validate("Plan", { subtasks: [noLane] }).valid).toBe(false);
+    expect(validate("Plan", { subtasks: [{ ...subtask("read-1"), proposedLane: "cloud" }] }).valid).toBe(false);
+    expect(validate("Plan", { subtasks: [{ ...subtask("read-1"), title: "x".repeat(61) }] }).valid).toBe(false);
+    expect(validate("Plan", { subtasks: [{ ...subtask("read-1"), status: "ready" }] }).valid).toBe(false);
+  });
+});
+
 describe("Task", () => {
   const task = (status: string, confirmedGoal?: string) => ({
     id: "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",

@@ -1,0 +1,25 @@
+{
+  "subtasks": [
+    {
+      "id": "read-1",
+      "title": "Summarize Invoice March.pdf",
+      "instruction": "Read ~/Downloads/Invoice March.pdf and write a three-line summary to ~/Documents/PDF Summary parts/Invoice March.txt.",
+      "dependsOn": [],
+      "proposedLane": "helper"
+    },
+    {
+      "id": "read-2",
+      "title": "Summarize Lease.pdf",
+      "instruction": "Read ~/Downloads/Lease.pdf and write a three-line summary to ~/Documents/PDF Summary parts/Lease.txt.",
+      "dependsOn": [],
+      "proposedLane": "helper"
+    },
+    {
+      "id": "write-note",
+      "title": "Write the PDF Summary note",
+      "instruction": "Read the two files in ~/Documents/PDF Summary parts and write them into one new note at ~/Documents/PDF Summary.md.",
+      "dependsOn": ["read-1", "read-2"],
+      "proposedLane": "helper"
+    }
+  ]
+}

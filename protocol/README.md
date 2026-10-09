@@ -50,6 +50,7 @@ Cross-device message kinds are next ([OBJ-25](../objectives/OBJ-25-cross-device-
 | `tools.json` | ToolName, ToolCall and one call type per typed tool, PhoneToolCall |
 | `observation.json` | Observation, TreeElement, Layer, LayerKind |
 | `worker.json` | WorkerInput, StepSummary, WorkerOutput |
+| `plan.json` | Plan, PlannedSubtask, PlannedSubtaskId: what the planner model returns, checked by the harness before it is saved as Subtasks |
 | `approval.json` | Approval, ApprovalKind, FileSummary, ApprovalDecision, ApprovalMethod |
 | `action-log.json` | ActionLogEntry |
 | `errors.json` | ErrorKind, UserError |
