@@ -5,7 +5,7 @@ product: protocol
 assignee: Jepoy
 touches: [mac]
 specs: [SPEC-09]
-status: in-progress
+status: done
 priority: p0
 depends-on: [OBJ-25]
 integrates-with: [OBJ-68, OBJ-70, OBJ-72]
@@ -43,9 +43,9 @@ This small contract unblocks the harness ([OBJ-68](OBJ-68-harness-delegated-goal
 ## Tasks
 
 - [x] **OBJ-64.1** Add an optional `deviceId` (this Mac's bridge device id) to `HelloResult` and `BridgeStateChanged`, documented as the value the app sends as `originDeviceId`.
-- [ ] **OBJ-64.2** Add the events `approvalWaitingElsewhere` (approval id, task id, asking device, approval kind) and `approvalAnsweredElsewhere` (approval id), and say in `x-rpc` that the harness never calls `showApprovalCard` for a task from another device.
-- [ ] **OBJ-64.3** Examples for each change and a mock harness script `delegated-approval.json` that plays a phone goal reaching an approval and the phone answering.
-- [ ] **OBJ-64.4** Regenerate the TypeScript, Swift, and Kotlin types, run the tests, and update `protocol/README.md`.
+- [x] **OBJ-64.2** Add the events `approvalWaitingElsewhere` (approval id, task id, asking device, approval kind) and `approvalAnsweredElsewhere` (approval id), and say in `x-rpc` that the harness never calls `showApprovalCard` for a task from another device.
+- [x] **OBJ-64.3** Examples for each change and a mock harness script `delegated-approval.json` that plays a phone goal reaching an approval and the phone answering.
+- [x] **OBJ-64.4** Regenerate the TypeScript, Swift, and Kotlin types, run the tests, and update `protocol/README.md`.
 
 ## Expectations
 
@@ -62,11 +62,27 @@ This small contract unblocks the harness ([OBJ-68](OBJ-68-harness-delegated-goal
 
 ## Outcome
 
-- **Result:** In progress.
-  OBJ-64.1 is done; OBJ-64.2 to OBJ-64.4 were cut for the demo by Brent's decision (approvals on the phone are out of the demo), so this objective is not finished.
-- **Delivered:** `HelloResult.deviceId` and `BridgeStateChanged.deviceId` in `protocol/schemas/rpc.json`, the examples `protocol/examples/HelloResult.with-device.json` and `BridgeStateChanged.connected.json`, regenerated TypeScript, Swift, and Kotlin, and the `protocol/README.md` note.
-- **Commits:** `c1019fd feat(protocol): report this Mac's bridge device id in hello and bridgeStateChanged`.
-- **Expectations:** the Mac app learns its bridge device id from `hello` and `bridgeStateChanged` with no new method call (asserted in `harness/test/delegated-goals.test.ts` and `mac/YumiTests/HarnessClientTests.swift`); the generated types compile in TypeScript (protocol verify), Swift (the Mac build), and Kotlin (the Android build).
-- **Not verified:** the Swift and Kotlin protocol round trips run in Docker, which was not running; CI covers them on push.
-- **Decisions and deviations:** OBJ-64.2 (`approvalWaitingElsewhere` and `approvalAnsweredElsewhere`), OBJ-64.3 (their examples and the `delegated-approval.json` mock script), and the approval parts of OBJ-64.4 were cut for the demo by Brent's decision.
-- **For the next objectives:** OBJ-68 and OBJ-72 read `deviceId` from `hello` and `bridgeStateChanged`; OBJ-70 and OBJ-72.2 still need OBJ-64.2.
+- **Result:** Done.
+  OBJ-64.1 is Brent's; OBJ-64.2 to OBJ-64.4, which Brent cut for the demo, were added afterwards at Jepoy's request, as optional events that change nothing for an app that ignores them.
+- **Delivered:**
+  - `HelloResult.deviceId` and `BridgeStateChanged.deviceId` in `protocol/schemas/rpc.json`, with the examples `HelloResult.with-device.json` and `BridgeStateChanged.connected.json` (Brent).
+  - The events `approvalWaitingElsewhere` (`ApprovalWaitingElsewhere`) and `approvalAnsweredElsewhere` (`ApprovalAnsweredElsewhere`), the `x-rpc` note on `showApprovalCard` that it is never called for a task from another device, and `ApprovalCancelled` documented as also closing the banner, including after the 5-minute timeout.
+  - Examples `ApprovalWaitingElsewhere.send-to-ana` and `ApprovalAnsweredElsewhere.send-to-ana`, `HelloResult.v1` with the same device id as `BridgeStateChanged.connected`, and the mock harness script `protocol/mocks/scripts/delegated-approval.json`.
+  - The two decoder cases in `mac/Yumi/Harness/HarnessEvent.swift`, so the Mac app keeps building, since its switch over `RpcEvent` is exhaustive (as in OBJ-45.3).
+  - Regenerated TypeScript, Swift, and Kotlin types, and `protocol/README.md` notes under "Local RPC", "Rules the schemas cannot express", and the script table.
+- **Commits:**
+  - `28f7ac6 feat(protocol): report this Mac's bridge device id in hello and bridgeStateChanged` (Brent)
+  - `2c3d40b feat(protocol): add the approval banner events for goals from another device (OBJ-64)`
+  - `1ebc1c7 docs(protocol): say the approval timeout closes the banner and list the origin-device approval rule (OBJ-64 review)`
+- **Expectations:**
+  - The Mac app learns its bridge device id from `hello` and `bridgeStateChanged` with no new method call: `harness/test/delegated-goals.test.ts`, `mac/YumiTests/HarnessClientTests.swift`, and `protocol/test/mocks.test.ts` "plays a goal from the phone reaching an approval", which checks the mock harness's `hello` and bridge event name the same id.
+  - Generated types compile: `npm run verify` in `protocol/`, and `npm run compile:swift` and `npm run compile:kotlin` round-trip every example.
+- **Not verified:** The Mac app build with the two decoder cases, since no Mac with Xcode was available. Patrick or Brent: run the Xcode build and tests on `mac/`.
+- **Decisions and deviations:**
+  - Every addition is optional or a new event, so the protocol version stays 4.
+  - `approvalAnsweredElsewhere` carries no decision; what happens next comes as the usual task and cursor events.
+  - The approval events land after Brent's demo cut. They change nothing until the harness sends them ([OBJ-70](OBJ-70-harness-phone-approvals-and-stop.md)) and the Mac shows the banner ([OBJ-72](OBJ-72-mac-cross-device-routing.md)); Brent can revert them if they should wait.
+- **For the next objectives:**
+  - OBJ-72 (Mac): show the banner on `approvalWaitingElsewhere` and close it on `approvalAnsweredElsewhere` or `approvalCancelled` with the same approval id. Both events reach the `default` branch in `HarnessLink.swift` today.
+  - OBJ-70 (harness): never call `showApprovalCard` for a task whose origin is another device, and send the two events instead.
+  - Build the Mac side against `npm run mock:harness -- --script delegated-approval`.
