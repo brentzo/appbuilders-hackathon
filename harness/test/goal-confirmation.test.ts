@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { validate } from "@yumi/protocol";
 import { PROTOCOL_VERSION } from "@yumi/protocol/types";
 import { classifyReply, CLASSIFY_SYSTEM_PROMPT, fixedReply } from "../src/confirm/classify.ts";
-import { CANCELLED_TEXT } from "../src/confirm/confirmation.ts";
 import { checkRestatement, confirmedGoalFrom, repeatBack, RESTATE_SYSTEM_PROMPT } from "../src/confirm/restate.ts";
 import { startHarness, type Harness } from "../src/harness.ts";
 import { MemoryLogger } from "../src/log.ts";
@@ -247,12 +246,13 @@ describe("SPEC-01 Voice intake and confirmation", () => {
     // When the user says "never mind"
     await client.call("replyToConfirmation", { taskId, reply: spoken("never mind") });
     // Then Yumi says "Okay, I won't do anything."
-    await until(() => client.named("speak").length === 1);
-    expect(client.named("speak")).toEqual([{ taskId, text: "Okay, I won't do anything." }]);
-    expect(CANCELLED_TEXT).toBe("Okay, I won't do anything.");
     // And the cursor fades out
-    await until(() => client.named("cursorCommand").some((c) => c.command === "fade"));
-    expect(client.named("cursorCommand").at(-1)).toEqual({ command: "fade", cursorId: "main" });
+    // The Mac app says the line and fades the cursor when the task turns cancelled
+    // (mac/YumiTests/GoalConfirmationTests.swift), so the harness sends neither, or they would come twice.
+    await until(() => h.store.getTask(taskId)!.status === "cancelled");
+    await until(() => client.named("taskStatusChanged").some((e) => e.taskId === taskId && e.status === "cancelled"));
+    expect(client.named("speak")).toEqual([]);
+    expect(client.named("cursorCommand").some((c) => c.command === "fade")).toBe(false);
     // And no task is created: the record ends cancelled with no confirmed goal, no plan, and nothing run.
     await settle();
     expect(model.purposes()).toEqual(["restate"]);
@@ -306,6 +306,8 @@ describe("OBJ-17 answers", () => {
     expect(client.named("goalRestated")[1]).toEqual({ taskId, text: SAID_INVOICES });
     await client.call("replyToConfirmation", { taskId, reply: spoken("the weather is nice") });
     await until(() => logger.entries.some((e) => e.event === "confirm.waitingForButton"));
+    // Not listening any more: the cursor waits for a button instead of thinking.
+    expect(client.named("cursorCommand").at(-1)).toEqual({ command: "setState", cursorId: "main", state: "waitingForUser" });
     // Not asked a third time, nothing planned, and still waiting.
     await settle();
     expect(client.named("goalRestated")).toHaveLength(2);
@@ -357,7 +359,7 @@ describe("OBJ-17 answers", () => {
     const taskId = await submitInvoices(client);
     await client.call("replyToConfirmation", { taskId, reply: button("cancel") });
     await until(() => h.store.getTask(taskId)!.status === "cancelled");
-    expect(client.named("speak")).toEqual([{ taskId, text: CANCELLED_TEXT }]);
+    expect(client.named("speak")).toEqual([]);
     expect(model.purposes()).toEqual(["restate"]);
     client.close();
   });
@@ -392,7 +394,8 @@ describe("OBJ-17 answers", () => {
     await client.call("replyToConfirmation", { taskId, reply: spoken("no, only the ones from October") });
     await until(() => client.named("goalRestated").length === 2);
     await client.call("replyToConfirmation", { taskId, reply: spoken("never mind") });
-    await until(() => client.named("speak").length === 1);
+    await until(() => h.store.getTask(taskId)!.status === "cancelled");
+    await settle(100);
     const types: Record<string, string> = {
       goalRestated: "GoalRestated",
       cursorCommand: "CursorCommand",
@@ -401,13 +404,12 @@ describe("OBJ-17 answers", () => {
     };
     for (const event of client.events) expect(validate(types[event.method]!, event.params).valid, event.method).toBe(true);
     expect(client.named("cursorCommand").map((c) => (c.command === "setState" ? c.state : c.command))).toEqual([
+      // The spawn keeps the cursor the app already spawned; thinking while the model restates, reads the
+      // correction, and restates again. No listening state, no fade: the app shows and does those.
       "spawn",
       "thinking",
-      "waitingForUser",
       "thinking",
       "thinking",
-      "waitingForUser",
-      "fade",
     ]);
     client.close();
   });
@@ -426,7 +428,6 @@ describe("OBJ-17 failures", () => {
     await until(() => client.named("userError").length === 1);
     expect(client.named("userError")).toEqual([{ kind: "modelFailedToLoad", taskId }]);
     expect(client.named("goalRestated")).toEqual([]);
-    expect(client.named("cursorCommand").at(-1)).toEqual({ command: "fade", cursorId: "main" });
     expect(h.store.getTask(taskId)!.status).toBe("cancelled");
     const shown = JSON.stringify(client.events);
     expect(shown).not.toMatch(/ECONNREFUSED|fetch failed|127\.0\.0\.1/);

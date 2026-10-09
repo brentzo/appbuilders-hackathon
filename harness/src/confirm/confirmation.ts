@@ -14,8 +14,13 @@ import { confirmedGoalFrom, repeatBack, restateGoal } from "./restate.ts";
  * and sends the repeat-back as `goalRestated`. The app speaks and shows it, listens, and sends the answer with
  * `replyToConfirmation`.
  *
+ * The Mac app (`mac/Yumi/Confirmation/GoalConfirmation.swift`) owns what happens on screen around it: it spawns the
+ * cursor as soon as the user submits (the harness's spawn then keeps it where it is), shows the listening state
+ * while it listens, and says "Okay, I won't do anything." and fades the cursor when the task turns cancelled. So the
+ * harness sends no listening state, no cancel line, and no fade, which would otherwise come twice.
+ *
  * - Go ahead: `confirmedGoal` is saved, the task moves to planning, and only then does its work start.
- * - Cancel: Yumi says "Okay, I won't do anything.", the cursor fades, and the task ends cancelled with no plan.
+ * - Cancel: the task ends cancelled with no confirmed goal and no plan; the app says the cancel line.
  * - A correction is combined with the goal and repeated back again ("Got it. You want me to ...").
  * - Change it (the button): the app listens again, and the next spoken answer is the correction.
  * - Unclear: asked once more (the same repeat-back again); after that, Yumi waits for a button.
@@ -24,9 +29,6 @@ import { confirmedGoalFrom, repeatBack, restateGoal } from "./restate.ts";
  * task are handled one at a time, in order. The state of an open question lives only in memory; after a restart,
  * `abandonUnconfirmed` cancels the tasks still waiting, since nothing ran and the app's question is gone.
  */
-
-/** Said when the user cancels before work starts (SPEC-01 "User cancels before work starts"). */
-export const CANCELLED_TEXT = "Okay, I won't do anything.";
 
 /** The one cursor that does the user's work (SPEC-04 r1); ghosts get their own ids. */
 export const MAIN_CURSOR_ID = "main";
@@ -227,8 +229,8 @@ export class GoalConfirmation {
 
   /** Sends the repeat-back for the app to speak, show, and listen after. */
   private ask(question: OpenQuestion): void {
+    // The app shows the listening state while it listens for the answer.
     this.deps.app.emit("goalRestated", { taskId: question.taskId, text: question.said! });
-    this.cursor({ command: "setState", cursorId: MAIN_CURSOR_ID, state: "waitingForUser" });
     this.deps.logger.info("confirm.asked", {
       taskId: question.taskId,
       corrections: question.corrections.length,
@@ -266,9 +268,8 @@ export class GoalConfirmation {
 
   private cancel(question: OpenQuestion): void {
     this.open.delete(question.taskId);
+    // The app says "Okay, I won't do anything." and fades the cursor when it sees the task cancelled.
     this.deps.store.setTaskStatus(question.taskId, "cancelled");
-    this.deps.voice.speak(question.originDeviceId, { taskId: question.taskId, text: CANCELLED_TEXT });
-    this.cursor({ command: "fade", cursorId: MAIN_CURSOR_ID });
     this.deps.logger.info("confirm.cancelled", { taskId: question.taskId });
   }
 
@@ -287,7 +288,6 @@ export class GoalConfirmation {
       const task = this.deps.store.getTask(question.taskId);
       if (task?.status === "awaitingConfirmation") this.deps.store.setTaskStatus(question.taskId, "cancelled");
       this.deps.voice.userError(question.originDeviceId, userError);
-      this.cursor({ command: "fade", cursorId: MAIN_CURSOR_ID });
     } catch (error) {
       this.deps.logger.error("confirm.endFailed", { taskId: question.taskId, ...describeError(error) });
     }
