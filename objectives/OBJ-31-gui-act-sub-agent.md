@@ -42,7 +42,7 @@ Build against the mock Mac app from [OBJ-01](OBJ-01-task-record-schemas.md) unti
 - [docs/task-record-schema.md](../docs/task-record-schema.md), "What the model sees", "Actions", "Step", "Limits", and "Checkpointing".
 - [OBJ-01](OBJ-01-task-record-schemas.md): `WorkerInput`, `WorkerOutput`, `ModelAction`, `RecordedAction`, `SubtaskResult`, and the Mac RPC methods.
 - The Outcome of [OBJ-03](OBJ-03-harness-skeleton.md) (validation and retry), [OBJ-05](OBJ-05-planner-and-scheduler.md) (worker input builder), [OBJ-06](OBJ-06-resume-and-limits.md) (limits), [OBJ-07](OBJ-07-lane-router-core.md) (lane tool sets), [OBJ-32](OBJ-32-permission-gate-and-file-tools.md) (the gate), and [OBJ-26](OBJ-26-gui-smoke-test.md) (prompt, failure patterns, constrained decoding), when done.
-- The open questions for OBJ-29 to OBJ-34 in the [objectives README](README.md).
+- The open questions for OBJ-30 to OBJ-35 in the [objectives README](README.md).
 
 ## Tasks
 

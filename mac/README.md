@@ -196,6 +196,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 | [OBJ-27](../objectives/OBJ-27-mac-native-services.md) | Mac native services for the harness | Patrick | todo |
 | [OBJ-30](../objectives/OBJ-30-mac-stop-and-take-over.md) | Stop and take over on the Mac | Patrick | todo |
 | [OBJ-34](../objectives/OBJ-34-mac-gui-execution.md) | Mac GUI execution | Patrick | todo |
+| [OBJ-35](../objectives/OBJ-35-mac-approval-cards.md) | Approval and blocked-action cards on the Mac | Patrick | todo |
 <!-- generated:product-objectives:end -->
 
 Related: [OBJ-21](../objectives/OBJ-21-mac-bridge-client-and-pairing.md) (Jepoy's bridge client; its pairing screen and connection state are built here in OBJ-27).

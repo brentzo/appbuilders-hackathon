@@ -90,8 +90,9 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-30](OBJ-30-mac-stop-and-take-over.md) | Stop and take over on the Mac | mac | Patrick | 06 | 17, 34 | 33 | todo |
 | [OBJ-31](OBJ-31-unpair-delivery-ack-contract.md) | Define unpair delivery acknowledgement | protocol | Jepoy | 08 | 02 | 13, 21, 23 | todo |
 | [OBJ-32](OBJ-32-permission-gate-and-file-tools.md) | Permission gate and typed file tools | harness | Brent | 07 | 03 | - | todo |
-| [OBJ-33](OBJ-33-approvals-pause-and-action-log.md) | Approvals, pause, and action log in the harness | harness | Brent | 07, 06 | 06, 32 | 29, 30, 34 | todo |
+| [OBJ-33](OBJ-33-approvals-pause-and-action-log.md) | Approvals, pause, and action log in the harness | harness | Brent | 07, 06 | 06, 32 | 30, 34, 35 | todo |
 | [OBJ-34](OBJ-34-mac-gui-execution.md) | Mac GUI execution | mac | Patrick | 05, 11 | 14, 18 | 26, 31 | todo |
+| [OBJ-35](OBJ-35-mac-approval-cards.md) | Approval and blocked-action cards on the Mac | mac | Patrick | 07, 11 | 17 | 33 | todo |
 <!-- generated:objectives-index:end -->
 
 ## Priority and blocking
@@ -107,21 +108,21 @@ Ranked by how many objectives each one holds up through hard dependencies:
 <!-- generated:objectives-priority:start -->
 | Rank | Objective | Assignee | Holds up (hard) | Holds up another person |
 |---|---|---|---|---|
-| 1 | OBJ-01 Task record schemas and cross-team contracts | Jepoy | 21 | Brent, Patrick |
-| 2 | OBJ-03 Harness skeleton and local model client | Brent | 10 | Patrick |
-| 3 | OBJ-14 Mac app shell, permissions, and harness link | Patrick | 9 | No |
-| 4 | OBJ-04 Task store and history | Brent | 8 | Patrick |
-| 5 | OBJ-02 Bridge envelope and end-to-end crypto | Jepoy | 5 | Brent |
-| 6 | OBJ-18 Cursor overlay and motion | Patrick | 5 | No |
-| 7 | OBJ-05 Planner, scheduler, and task summary | Brent | 3 | No |
-| 8 | OBJ-15 Mac voice intake | Patrick | 3 | No |
+| 1 | OBJ-01 Task record schemas and cross-team contracts | Jepoy | 22 | Brent, Patrick |
+| 2 | OBJ-03 Harness skeleton and local model client | Brent | 11 | Patrick |
+| 3 | OBJ-14 Mac app shell, permissions, and harness link | Patrick | 10 | No |
+| 4 | OBJ-04 Task store and history | Brent | 9 | Patrick |
+| 5 | OBJ-18 Cursor overlay and motion | Patrick | 6 | No |
+| 6 | OBJ-02 Bridge envelope and end-to-end crypto | Jepoy | 5 | Brent |
+| 7 | OBJ-15 Mac voice intake | Patrick | 4 | No |
+| 8 | OBJ-05 Planner, scheduler, and task summary | Brent | 3 | No |
 | 9 | OBJ-06 Resume and limits | Brent | 2 | No |
 | 10 | OBJ-07 Lane router core | Brent | 2 | No |
-| 11 | OBJ-22 Android app shell and foreground service | Brent | 2 | No |
-| 12 | OBJ-08 Window locks, busy windows, and cursor cap | Brent | 1 | No |
-| 13 | OBJ-10 Yumi cat v0 in Rive | Patrick | 1 | No |
-| 14 | OBJ-13 Bridge relay server | Jepoy | 1 | Brent |
-| 15 | OBJ-17 Goal confirmation loop | Patrick | 1 | No |
+| 11 | OBJ-17 Goal confirmation loop | Patrick | 2 | No |
+| 12 | OBJ-22 Android app shell and foreground service | Brent | 2 | No |
+| 13 | OBJ-08 Window locks, busy windows, and cursor cap | Brent | 1 | No |
+| 14 | OBJ-10 Yumi cat v0 in Rive | Patrick | 1 | No |
+| 15 | OBJ-13 Bridge relay server | Jepoy | 1 | Brent |
 | 16 | OBJ-27 Mac native services for the harness | Patrick | 1 | No |
 | 17 | OBJ-32 Permission gate and typed file tools | Brent | 1 | No |
 | 18 | OBJ-34 Mac GUI execution | Patrick | 1 | No |
@@ -145,7 +146,7 @@ Workload:
 |---|---|---|
 | Brent | 03, 04, 05, 06, 07, 08, 09, 22, 23, 24, 26, 29, 32, 33 | 14 |
 | Jepoy | 01, 02, 11, 12, 13, 21, 25, 28, 31 | 9 |
-| Patrick | 10, 14, 15, 16, 17, 18, 19, 20, 27, 30, 34 | 11 |
+| Patrick | 10, 14, 15, 16, 17, 18, 19, 20, 27, 30, 34, 35 | 12 |
 <!-- generated:objectives-workload:end -->
 ## Suggested order
 
@@ -158,7 +159,7 @@ Waves come from hard dependencies only. Each person works their column top to bo
 | 2 | OBJ-03, OBJ-24, OBJ-29 | OBJ-13, OBJ-21, OBJ-25, OBJ-31 | OBJ-14 |
 | 3 | OBJ-04, OBJ-23, OBJ-32 | - | OBJ-15, OBJ-18, OBJ-27 |
 | 4 | OBJ-05, OBJ-07 | - | OBJ-16, OBJ-17, OBJ-19, OBJ-20, OBJ-34 |
-| 5 | OBJ-06, OBJ-08 | - | OBJ-30 |
+| 5 | OBJ-06, OBJ-08 | - | OBJ-30, OBJ-35 |
 | 6 | OBJ-09, OBJ-33 | - | - |
 <!-- generated:objectives-waves:end -->
 ## Not covered yet
@@ -166,7 +167,7 @@ Waves come from hard dependencies only. Each person works their column top to bo
 Objectives exist for specs whose decisions are final: SPEC-01 to SPEC-08, plus the Android app shell and voice parts of SPEC-10 Part A.
 SPEC-05 is covered by OBJ-34 (Mac) and OBJ-31 (harness), with schemas in OBJ-01 and the p0 model check in OBJ-26.
 SPEC-06 is covered by OBJ-30 (Mac) and OBJ-33 (harness).
-SPEC-07 is covered by OBJ-29 (Mac), OBJ-32, and OBJ-33 (harness).
+SPEC-07 is covered by OBJ-35 (Mac), OBJ-32, and OBJ-33 (harness).
 Their p1 requirements (vision fallback, the model bake-off, voice stop, phone control, the injection warning, and crash approvals) are listed under each objective's Out of scope, except the password-logging test, which is p1 task OBJ-33.8.
 Some of their tasks wait on the open questions below.
 
@@ -177,7 +178,7 @@ Some of their tasks wait on the open questions below.
 | [SPEC-11 User-facing errors](../specs/11-user-facing-errors.md) | Expanded by Jepoy. Every objective follows it |
 | [SPEC-12 Yumi on iPhone](../specs/12-iphone-companion.md) | p2, after Android |
 
-### Open questions for OBJ-29 to OBJ-34
+### Open questions for OBJ-30 to OBJ-35
 
 Raised 2026-10-09 while writing these objectives.
 Each needs a decision in the spec (spec-lifecycle skill), not in code.
@@ -185,7 +186,7 @@ Open items name their owner; resolved items stay listed so the history is easy t
 
 - **G1 Take-over vs approvals (SPEC-06 r2 and r5, SPEC-07 r11):** Resolved 2026-10-09 by Patrick: clicks on Yumi's own windows (cards, panels) never count as take-over, and there is no take-over pause while Yumi waits for the user and no UI lane is acting. Recorded in SPEC-06 r2 and Decisions.
 - **G2 Take-over vs password fields (SPEC-05 r7, SPEC-06 r2):** Resolved 2026-10-09 by Patrick, by the G1 rule: a password field Yumi hands to the user never pauses the task. Recorded in SPEC-05 r7 and SPEC-06 r2.
-- **G3 Voice on a delete card (SPEC-11 r9 vs SPEC-07 r11):** SPEC-11 says every button works by saying its label; SPEC-07 says a delete is approved only by a tap. OBJ-29 follows SPEC-07. Proposal: add an exception to SPEC-11 r9. Owner: Jepoy.
+- **G3 Voice on a delete card (SPEC-11 r9 vs SPEC-07 r11):** SPEC-11 says every button works by saying its label; SPEC-07 says a delete is approved only by a tap. OBJ-35 follows SPEC-07. Proposal: add an exception to SPEC-11 r9. Owner: Jepoy.
 - **G4 "Cannot classify" (SPEC-07 r6):** Resolved 2026-10-09 by Patrick: "Quit", "Force Quit", Command-Q, and Command-Option-Escape are blocked; "cannot classify asks" applies only to key presses and to clicks in the risky apps (Mail, Messages, WhatsApp, Finder, System Settings); other clicks are allowed. Recorded in SPEC-07 r6 and Decisions. Follow-up for Patrick in SPEC-07 Open questions: unlisted clicks in Mail would ask during demo task 2.
 - **G5 Missing copy (SPEC-05 r7, SPEC-07, SPEC-11):** SPEC-11 has no row for the SPEC-07 r5 blocked-action message, so the SPEC-11 copy test does not cover it. The SPEC-07 copy (password, declined send, one-file and several-folder delete cards, Messages send, several recipients) is drafted in SPEC-07 and waits for Patrick's review. Owner: Jepoy for the SPEC-11 row.
 - **G6 Missing contracts (OBJ-01):** The scope of `pause` (every lane or UI lanes only; `PauseParams` has only `taskId`) and the reply to the blocked-action card ("Keep going" or "Stop"). The `ask` question and answer is covered by OBJ-01's `questionAsked` and `answerQuestion`. Owner: Jepoy.
@@ -198,7 +199,7 @@ Open items name their owner; resolved items stay listed so the history is easy t
 - **G13 "Show what I did" (SPEC-11):** The button is p0 and opens the action log, but opening the log from the menu bar is p1 (SPEC-07 r19). Owner: Jepoy.
 - **G14 Orchestrator tools (SPEC-05 r9):** The limit is 8, but the spec does not name them. OBJ-31.2 proposes a list. Owner: Brent.
 - **G15 Screenshot retention (SPEC-07 r20 vs SPEC-02 r10):** SPEC-07 (p1) deletes screenshots after 7 days; SPEC-02 keeps them forever. Owner: Brent.
-- **G16 Stale pointers:** OBJ-01 (Jepoy), OBJ-03, OBJ-06, OBJ-07, and OBJ-09 (Brent), and OBJ-14 and OBJ-18 (Patrick) still say SPEC-05, SPEC-06, or SPEC-07 is "not finalized" or "not written yet" in Out of scope. Point them at OBJ-29 to OBJ-34. Owner: each objective's owner.
+- **G16 Stale pointers:** OBJ-01 (Jepoy), OBJ-03, OBJ-06, OBJ-07, and OBJ-09 (Brent), and OBJ-14 and OBJ-18 (Patrick) still say SPEC-05, SPEC-06, or SPEC-07 is "not finalized" or "not written yet" in Out of scope. Point them at OBJ-30 to OBJ-35. Owner: each objective's owner.
 
 ### Resolved conflicts between specs
 

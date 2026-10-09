@@ -8,7 +8,7 @@ specs: [SPEC-07, SPEC-06]
 status: todo
 priority: p0
 depends-on: [OBJ-06, OBJ-32]
-integrates-with: [OBJ-29, OBJ-30, OBJ-34]
+integrates-with: [OBJ-30, OBJ-34, OBJ-35]
 tags: [objective, p0, harness, safety, ux]
 ---
 
@@ -31,7 +31,7 @@ tags: [objective, p0, harness, safety, ux]
 When the gate from [OBJ-32](OBJ-32-permission-gate-and-file-tools.md) says "ask", the harness must stop, build the approval from real data, wait for the user, and check again right before acting.
 When the user stops Yumi or takes the mouse, the harness must pause before the next action, cancel every pending approval, and on cancel drop everything still queued.
 Every action, including blocked and declined ones, goes into a plain-language action log.
-Build against the mock Mac app from [OBJ-01](OBJ-01-task-record-schemas.md) until [OBJ-34](OBJ-34-mac-gui-execution.md), [OBJ-29](OBJ-29-mac-approval-cards.md), and [OBJ-30](OBJ-30-mac-stop-and-take-over.md) are done.
+Build against the mock Mac app from [OBJ-01](OBJ-01-task-record-schemas.md) until [OBJ-34](OBJ-34-mac-gui-execution.md), [OBJ-35](OBJ-35-mac-approval-cards.md), and [OBJ-30](OBJ-30-mac-stop-and-take-over.md) are done.
 
 ## Read first
 
@@ -40,7 +40,7 @@ Build against the mock Mac app from [OBJ-01](OBJ-01-task-record-schemas.md) unti
 - [docs/task-record-schema.md](../docs/task-record-schema.md), "Approvals", "Action log", and "Checkpointing".
 - [OBJ-01](OBJ-01-task-record-schemas.md): `Approval`, `ApprovalDecision`, `ActionLogEntry`, `ErrorKind.blockedAction`, the RPC methods `showApprovalCard`, `readFieldValues`, `moveToTrash`, `pause`, `resumeTask`, and `cancelTask`, and the `approvalCancelled` and `userError` events.
 - The Outcome of [OBJ-04](OBJ-04-task-store.md) (store), [OBJ-06](OBJ-06-resume-and-limits.md) (resume and cancel), and [OBJ-32](OBJ-32-permission-gate-and-file-tools.md) (gate), when done.
-- The open questions for OBJ-29 to OBJ-34 in the [objectives README](README.md).
+- The open questions for OBJ-30 to OBJ-35 in the [objectives README](README.md).
 
 ## Tasks
 
@@ -52,7 +52,7 @@ Build against the mock Mac app from [OBJ-01](OBJ-01-task-record-schemas.md) unti
 - [ ] **OBJ-33.6** Cancel: extend the [OBJ-06](OBJ-06-resume-and-limits.md) `cancelTask` so it stops every lane, helpers included, drops every queued subtask and every command not yet run, and sets the task to `cancelled`. Nothing runs after cancel (SPEC-06 r8).
 - [ ] **OBJ-33.7** Action log: write an `ActionLogEntry` for every action that ran, was blocked, or was declined, with time (am/pm), device, lane, a plain-language description, and every path for deletes (SPEC-07 r18). Write it to a text file as lines like "3:42 pm, Mac, main cursor: Clicked Export in Keynote", plus a count line per task such as "Read 3 files and clicked 12 times". Record the file's location in `harness/README.md`.
 - [ ] **OBJ-33.8** (p1) Add a test that text typed into a password field never reaches the action log (SPEC-07 r20).
-- [ ] **OBJ-33.9** Tests with the mock Mac app: the send and delete re-checks, a voice "yes" on a delete, a blocked action after a yes, pausing with an open approval, cancel with a queued helper, and the log lines. Then run them with the real Mac app when OBJ-29 and OBJ-30 are done.
+- [ ] **OBJ-33.9** Tests with the mock Mac app: the send and delete re-checks, a voice "yes" on a delete, a blocked action after a yes, pausing with an open approval, cancel with a queued helper, and the log lines. Then run them with the real Mac app when OBJ-35 and OBJ-30 are done.
 
 ## Expectations
 
@@ -70,7 +70,7 @@ Build against the mock Mac app from [OBJ-01](OBJ-01-task-record-schemas.md) unti
 ## Out of scope
 
 - Deciding levels and the file tools: [OBJ-32](OBJ-32-permission-gate-and-file-tools.md).
-- The cards, `moveToTrash`, the stop shortcut, and the input watcher: [OBJ-29](OBJ-29-mac-approval-cards.md) and [OBJ-30](OBJ-30-mac-stop-and-take-over.md) (Patrick).
+- The cards, `moveToTrash`, the stop shortcut, and the input watcher: [OBJ-35](OBJ-35-mac-approval-cards.md) and [OBJ-30](OBJ-30-mac-stop-and-take-over.md) (Patrick).
 - Approvals on the other device and the 5-minute approval timeout: SPEC-09, not reviewed yet.
 - Asking after a crash whether an approved step happened (SPEC-07 r21, p1).
 - Deleting screenshots after 7 days (SPEC-07 r20, p1). It conflicts with SPEC-02 r10 (kept forever), an open question in [docs/task-record-schema.md](../docs/task-record-schema.md), and p0 takes no screenshots for the model.

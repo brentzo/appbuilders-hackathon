@@ -76,7 +76,7 @@ Until OBJ-31 exists, build and test against the mock harness from [OBJ-01](OBJ-0
 ## Out of scope
 
 - The step loop, the 10-step limit, the no-effect check, and the structured result: [OBJ-31](OBJ-31-gui-act-sub-agent.md) (Brent).
-- Permission levels and file tools: [OBJ-32](OBJ-32-permission-gate-and-file-tools.md) (Brent). `moveToTrash` and the approval card: [OBJ-29](OBJ-29-mac-approval-cards.md).
+- Permission levels and file tools: [OBJ-32](OBJ-32-permission-gate-and-file-tools.md) (Brent). `moveToTrash` and the approval card: [OBJ-35](OBJ-35-mac-approval-cards.md).
 - `probeAppCapability`, `openNewWindow`, and window frames: [OBJ-27](OBJ-27-mac-native-services.md).
 - Watching the user's input and pausing: [OBJ-30](OBJ-30-mac-stop-and-take-over.md).
 - Vision fallback, screenshots for the model, coordinate conversion, and the moved-window check (SPEC-05 r12 and r13, p1). Until then the `click` action is rejected.
