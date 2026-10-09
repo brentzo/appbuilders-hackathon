@@ -4,6 +4,7 @@ import { connect, createServer, type Socket } from "node:net";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { validate } from "@yumi/protocol";
+import { PROTOCOL_VERSION } from "@yumi/protocol/types";
 import { MemoryLogger } from "../src/log.ts";
 import { HarnessAlreadyRunningError, HarnessRpcServer } from "../src/rpc/server.ts";
 import { PROTOCOL_DIR, tempDir } from "./helpers.ts";
@@ -65,11 +66,11 @@ describe("the local RPC server", () => {
   it("answers hello with its protocol version, and refuses another version", async () => {
     server = await HarnessRpcServer.start({ socketPath, logger });
     const client = await rawClient(socketPath);
-    client.send({ jsonrpc: "2.0", id: 1, method: "hello", params: { protocolVersion: 1 } });
-    expect(await client.next()).toEqual({ jsonrpc: "2.0", id: 1, result: { protocolVersion: 1 } });
+    client.send({ jsonrpc: "2.0", id: 1, method: "hello", params: { protocolVersion: PROTOCOL_VERSION } });
+    expect(await client.next()).toEqual({ jsonrpc: "2.0", id: 1, result: { protocolVersion: PROTOCOL_VERSION } });
 
     const other = await rawClient(socketPath);
-    other.send({ jsonrpc: "2.0", id: 1, method: "hello", params: { protocolVersion: 99 } });
+    other.send({ jsonrpc: "2.0", id: 1, method: "hello", params: { protocolVersion: PROTOCOL_VERSION + 1 } });
     // ProtocolVersion is a const in the contract, so another version fails param validation before the handler runs.
     expect(await other.next()).toMatchObject({ id: 1, error: { code: -32602 } });
     expect(server.readyConnections).toBe(1);
@@ -116,7 +117,7 @@ describe("the local RPC server", () => {
     await client.next();
     expect(server.emit("speak", { text: "Hi." })).toBe(0);
 
-    client.send({ jsonrpc: "2.0", id: 2, method: "hello", params: { protocolVersion: 1 } });
+    client.send({ jsonrpc: "2.0", id: 2, method: "hello", params: { protocolVersion: PROTOCOL_VERSION } });
     await client.next();
     expect(server.emit("speak", { text: "Hi." })).toBe(1);
     expect(await client.next()).toEqual({ jsonrpc: "2.0", method: "speak", params: { text: "Hi." } });
@@ -157,7 +158,7 @@ describe("with the protocol's mock Mac app (npm run mock:mac)", () => {
     server = await HarnessRpcServer.start({ socketPath, logger });
     await startMockMac();
     expect(server.readyConnections).toBe(1);
-    expect(logger.entries).toContainEqual(expect.objectContaining({ event: "rpc.hello", protocolVersion: 1 }));
+    expect(logger.entries).toContainEqual(expect.objectContaining({ event: "rpc.hello", protocolVersion: PROTOCOL_VERSION }));
 
     server.emit("speak", { text: "Done. I exported the deck." });
     await waitFor(() => output.includes('[mock Mac app] event speak {"text":"Done. I exported the deck."}'));
