@@ -44,7 +44,7 @@ Cross-device message kinds are next ([OBJ-25](../objectives/OBJ-25-cross-device-
 
 | Schema file | Types |
 |---|---|
-| `common.json` | ProtocolVersion, Uuid, DeviceId, Timestamp, Path, Lane, RouteReason, PermissionLevel, ResultStatus, StepOutcome |
+| `common.json` | ProtocolVersion, PeerProtocolVersion, Uuid, DeviceId, Timestamp, Path, Lane, RouteReason, PermissionLevel, ResultStatus, StepOutcome |
 | `task.json` | Task, TaskStatus, Subtask, SubtaskStatus, SubtaskResult, Target, Step, WindowLock, AppCapability |
 | `action.json` | ModelAction and its variants, AXRole, ResolvedElement, RecordedAction |
 | `tools.json` | ToolName, ToolCall and one call type per typed tool, PhoneToolCall |
@@ -188,8 +188,10 @@ Our generator accepts only the schema subset that maps faithfully to all three l
 
 - `ProtocolVersion` in `common.json` is the version of these schemas, generated as `PROTOCOL_VERSION` in every language.
 - The Mac app sends it in `hello`, and the harness refuses a different version with a `UserError`.
-  `HelloParams.protocolVersion` is any positive integer, not the `ProtocolVersion` const, so that check is reachable; `HelloResult` and every bridge type still use the const.
-- Version 3 ([OBJ-29](../objectives/OBJ-29-protocol-mac-fixes.md)) fits the contracts to real macOS: `axPress` became `click`, the p1 vision `click` became `clickAt`, `AXRole` gained rows, cells, and scrollable containers, `Observation` gained `app`, `focused`, and `layer`, `open_app` takes a `name`, `open_file` takes a `bundleId`, and keys gained `enter`.
+  `HelloParams.protocolVersion` is a `PeerProtocolVersion` (any positive integer), not the `ProtocolVersion` const, so that check is reachable.
+- The same goes for the relay's `authenticate` frame and the pairing QR code (`PairingOffer`): a different version validates, so the relay answers `unsupportedVersion` and the phone shows "Pairing versions differ" ([docs/pairing.md](docs/pairing.md)).
+  Envelopes, `HelloResult`, and everything else keep the `ProtocolVersion` const.
+- Version 3 ([OBJ-29](../objectives/OBJ-29-protocol-mac-fixes.md)) fits the contracts to real macOS: `axPress` became `click`, the p1 vision `click` became `clickAt`, `AXRole` gained rows, cells, and scrollable containers, `Observation` gained `app`, `focused`, and `layer`, peers send a `PeerProtocolVersion` where the version is checked, `open_app` takes a `name`, `open_file` takes a `bundleId`, and keys gained `enter`.
 - Bridge messages carry it in the envelope, and devices send it when they authenticate with the relay.
 - **Breaking changes bump the version:** removing or renaming a type, property, enum value, RPC method, or event; making an optional property required; tightening a rule so that values that used to validate no longer do.
 - **Not breaking:** adding an optional property, a new type, a new RPC method or event, or loosening a rule.
@@ -224,7 +226,7 @@ The Mac app maps `kAXRoleAttribute` and `kAXSubroleAttribute` (`AXRoleConstants.
 | `AXScrollArea`, `AXTable`, `AXList`, `AXOutline` | `scrollArea`, `table`, `list`, `outline`, so the model can scroll the thing that scrolls |
 
 `Observation.layer` is `sheet` for an `AXSheet`, `dialog` for a window with subrole `AXDialog` or `AXSystemDialog`, and `menu` for an open `AXMenu`.
-macOS has no alert role or subrole, so `alert` is reported only when the Mac app can tell; otherwise an alert is a `sheet` or `dialog`.
+An alert is reported as the `sheet` or `dialog` it is shown in, because macOS has no alert role or subrole.
 A sheet usually has no `AXTitle`.
 `defaultButton` and `cancelButton` come from `AXDefaultButton` and `AXCancelButton`, and `focused` from `AXFocusedUIElement`.
 

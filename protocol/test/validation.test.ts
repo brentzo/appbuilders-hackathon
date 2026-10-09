@@ -281,6 +281,8 @@ describe("Observation", () => {
 
   it("rejects an unknown layer, a focus that is not an element number, and an empty app name", () => {
     expect(validate("Observation", { ...observation(1), layer: { kind: "popover" } }).valid).toBe(false);
+    // macOS has no alert role, so the Mac app reports an alert as the sheet or dialog it is shown in.
+    expect(validate("Observation", { ...observation(1), layer: { kind: "alert" } }).valid).toBe(false);
     expect(validate("Observation", { ...observation(1), layer: { kind: "sheet", title: "" } }).valid).toBe(false);
     expect(validate("Observation", { ...observation(1), layer: { kind: "sheet", defaultButton: 0 } }).valid).toBe(false);
     expect(validate("Observation", { ...observation(1), focused: 0 }).valid).toBe(false);

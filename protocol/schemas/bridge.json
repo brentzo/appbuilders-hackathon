@@ -58,7 +58,7 @@
       "additionalProperties": false,
       "required": ["protocolVersion", "deviceId", "deviceName", "platform", "signingPublicKey", "kxPublicKey", "pairingSecret", "bridgeUrl", "expiresAt"],
       "properties": {
-        "protocolVersion": { "$ref": "common.json#/$defs/ProtocolVersion" },
+        "protocolVersion": { "$ref": "common.json#/$defs/PeerProtocolVersion" },
         "deviceId": { "$ref": "common.json#/$defs/DeviceId" },
         "deviceName": { "$ref": "#/$defs/DeviceName" },
         "platform": { "$ref": "#/$defs/DevicePlatform" },
@@ -128,7 +128,7 @@
         "frame": { "const": "authenticate" },
         "deviceId": { "$ref": "common.json#/$defs/DeviceId" },
         "signingPublicKey": { "$ref": "#/$defs/Key32" },
-        "protocolVersion": { "$ref": "common.json#/$defs/ProtocolVersion" },
+        "protocolVersion": { "$ref": "common.json#/$defs/PeerProtocolVersion" },
         "signature": { "description": "Ed25519 over the challenge nonce and the device id.", "$ref": "#/$defs/Signature" }
       }
     },

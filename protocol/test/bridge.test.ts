@@ -51,6 +51,15 @@ describe("BridgeFrame", () => {
     expect(validate("BridgeFrame", { ...auth, signature: undefined }).valid).toBe(false);
   });
 
+  it("lets a device on another version through the schema, so the relay can answer unsupportedVersion", () => {
+    const auth = { frame: "authenticate", deviceId: envelope.from, signingPublicKey: key, protocolVersion: 3, signature: envelope.signature };
+    expect(validate("BridgeFrame", { ...auth, protocolVersion: 2 }).errors).toEqual([]);
+    expect(validate("BridgeFrame", { ...auth, protocolVersion: 4 }).errors).toEqual([]);
+    expect(validate("BridgeFrame", { ...auth, protocolVersion: 0 }).valid).toBe(false);
+    expect(validate("BridgeFrame", { ...auth, protocolVersion: "3" }).valid).toBe(false);
+    expect(validate("BridgeFrame", { frame: "refused", reason: "unsupportedVersion" }).valid).toBe(true);
+  });
+
   it("tells the sender at once that a command's target is offline (SPEC-08 'Command to an offline device fails at once')", () => {
     expect(validate("BridgeFrame", { frame: "targetOffline", messageId: envelope.id, to: envelope.to }).valid).toBe(true);
   });
@@ -88,6 +97,13 @@ describe("Pairing", () => {
 
   it("puts the Mac's id, keys, a one-time secret, and the bridge URL in the QR code (SPEC-08 r1)", () => {
     expect(validate("PairingOffer", offer).errors).toEqual([]);
+  });
+
+  it("lets an offer from another version validate, so the phone can say the versions differ (SPEC-11)", () => {
+    expect(validate("PairingOffer", { ...offer, protocolVersion: 2 }).errors).toEqual([]);
+    expect(validate("PairingOffer", { ...offer, protocolVersion: 4 }).errors).toEqual([]);
+    expect(validate("PairingOffer", { ...offer, protocolVersion: 0 }).valid).toBe(false);
+    expect(validate("PairingOffer", { ...offer, protocolVersion: 2.5 }).valid).toBe(false);
   });
 
   it("only points at an encrypted bridge URL", () => {

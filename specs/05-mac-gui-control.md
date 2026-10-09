@@ -44,7 +44,7 @@ The sub-agent uses the cheapest way into the app first: a typed direct tool, the
 12. `p1` Vision fallback: model coordinates are converted from the image size the model actually saw to screen points, including display scale, multiple displays, and displays with a negative origin.
 13. `p1` Before a vision click, the harness checks that the target window has not moved, resized, or lost focus since the screenshot. If it has, the step is skipped and the screen is captured again.
 14. `p1` Qwen3.5-4B, Qwen3.5-9B, and UI-TARS-1.5-7B are compared at 4-bit on the 3 demo tasks, 5 runs each. A model passes a task with 4 or more successful runs. Until then, `gui_act` uses Qwen3.5-9B.
-15. With the trimmed tree, the model also sees the app's name, which element has keyboard focus, and what is in front of the window: a sheet, dialog, alert, or open menu, with its title when it has one and its default and cancel buttons.
+15. With the trimmed tree, the model also sees the app's name, which element has keyboard focus, and what is in front of the window: a sheet, dialog, or open menu (an alert counts as the sheet or dialog it is shown in), with its title when it has one and its default and cancel buttons.
 
 ## Demo tasks
 

@@ -86,7 +86,7 @@ export interface AuthenticateFrame {
   frame: "authenticate";
   deviceId: DeviceId;
   signingPublicKey: Key32;
-  protocolVersion: ProtocolVersion;
+  protocolVersion: PeerProtocolVersion;
   /** Ed25519 over the challenge nonce and the device id. */
   signature: Signature;
 }
@@ -299,7 +299,7 @@ export interface GoalRestated {
 /** The app's version. Any version validates here, so the harness's own check runs and a different version gets a UserError, not a contract error. */
 export interface HelloParams {
   /** The version the app speaks. The harness refuses one that differs from ProtocolVersion with a UserError. */
-  protocolVersion: number;
+  protocolVersion: PeerProtocolVersion;
 }
 
 /** The harness's version. The app refuses to continue if it differs. */
@@ -332,9 +332,9 @@ export interface Layer {
   cancelButton?: ElementNumber;
 }
 
-/** window: nothing covers the window. sheet: an AXSheet (kAXSheetRole) attached to the window. dialog: a window with subrole AXDialog or AXSystemDialog (kAXDialogSubrole, kAXSystemDialogSubrole). alert: an alert; macOS has no alert role or subrole in AXRoleConstants.h, so the Mac app reports an alert as sheet or dialog unless it can tell. menu: an open AXMenu (kAXMenuRole). */
-export type LayerKind = "window" | "sheet" | "dialog" | "alert" | "menu";
-export const layerKindValues: readonly LayerKind[] = ["window", "sheet", "dialog", "alert", "menu"];
+/** window: nothing covers the window. sheet: an AXSheet (kAXSheetRole) attached to the window. dialog: a window with subrole AXDialog or AXSystemDialog (kAXDialogSubrole, kAXSystemDialogSubrole). An alert is reported as the sheet or dialog it is shown in: macOS has no alert role or subrole in AXRoleConstants.h. menu: an open AXMenu (kAXMenuRole). */
+export type LayerKind = "window" | "sheet" | "dialog" | "menu";
+export const layerKindValues: readonly LayerKind[] = ["window", "sheet", "dialog", "menu"];
 
 /** List a folder. Blocked for secret locations. */
 export interface ListDirCall {
@@ -412,7 +412,7 @@ export interface Observation {
   windowTitle: string;
   /** The element number with keyboard focus, read from kAXFocusedUIElementAttribute (AXFocusedUIElement). Absent when the focused element is not in the tree. The harness refuses a type action when this element is a secureTextField (SPEC-05 r7). */
   focused?: ElementNumber;
-  /** What is in front in the target window: the window itself, or a sheet, dialog, alert, or open menu over it. That is where the model should act next (SPEC-05 r15). */
+  /** What is in front in the target window: the window itself, or a sheet, dialog, or open menu over it. That is where the model should act next (SPEC-05 r15). */
   layer?: Layer;
   /** Visible, actionable elements only, numbered from 1, at most 200 (SPEC-05 r2). */
   elements: TreeElement[];
@@ -483,7 +483,7 @@ export interface PairedDeviceList {
 
 /** What the Mac's pairing QR code holds, as JSON text (SPEC-08 r1). The secret is used once and never sent to the relay. See protocol/docs/pairing.md. */
 export interface PairingOffer {
-  protocolVersion: ProtocolVersion;
+  protocolVersion: PeerProtocolVersion;
   deviceId: DeviceId;
   deviceName: DeviceName;
   platform: DevicePlatform;
@@ -522,6 +522,9 @@ export type Path = string;
 export interface PauseParams {
   taskId?: Uuid;
 }
+
+/** The version another side says it speaks, before it is checked: in hello, the relay's authenticate frame, and the pairing QR code. Any version validates, so the receiver's own check runs and answers with its structured error (a UserError for hello, unsupportedVersion from the relay, pairingVersionsDiffer on the phone) instead of a schema error. Everything else uses ProtocolVersion. */
+export type PeerProtocolVersion = number;
 
 /** Decided by the harness for every action, never by the model (SPEC-07 r1). */
 export type PermissionLevel = "allowed" | "ask" | "blocked";

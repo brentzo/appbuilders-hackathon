@@ -17,7 +17,7 @@
           "$ref": "action.json#/$defs/ElementNumber"
         },
         "layer": {
-          "description": "What is in front in the target window: the window itself, or a sheet, dialog, alert, or open menu over it. That is where the model should act next (SPEC-05 r15).",
+          "description": "What is in front in the target window: the window itself, or a sheet, dialog, or open menu over it. That is where the model should act next (SPEC-05 r15).",
           "$ref": "#/$defs/Layer"
         },
         "elements": {
@@ -60,9 +60,9 @@
       }
     },
     "LayerKind": {
-      "description": "window: nothing covers the window. sheet: an AXSheet (kAXSheetRole) attached to the window. dialog: a window with subrole AXDialog or AXSystemDialog (kAXDialogSubrole, kAXSystemDialogSubrole). alert: an alert; macOS has no alert role or subrole in AXRoleConstants.h, so the Mac app reports an alert as sheet or dialog unless it can tell. menu: an open AXMenu (kAXMenuRole).",
+      "description": "window: nothing covers the window. sheet: an AXSheet (kAXSheetRole) attached to the window. dialog: a window with subrole AXDialog or AXSystemDialog (kAXDialogSubrole, kAXSystemDialogSubrole). An alert is reported as the sheet or dialog it is shown in: macOS has no alert role or subrole in AXRoleConstants.h. menu: an open AXMenu (kAXMenuRole).",
       "type": "string",
-      "enum": ["window", "sheet", "dialog", "alert", "menu"]
+      "enum": ["window", "sheet", "dialog", "menu"]
     }
   }
 }

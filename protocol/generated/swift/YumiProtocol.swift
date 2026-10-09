@@ -719,12 +719,11 @@ public struct Layer: Codable, Equatable, Sendable {
     }
 }
 
-/// window: nothing covers the window. sheet: an AXSheet (kAXSheetRole) attached to the window. dialog: a window with subrole AXDialog or AXSystemDialog (kAXDialogSubrole, kAXSystemDialogSubrole). alert: an alert; macOS has no alert role or subrole in AXRoleConstants.h, so the Mac app reports an alert as sheet or dialog unless it can tell. menu: an open AXMenu (kAXMenuRole).
+/// window: nothing covers the window. sheet: an AXSheet (kAXSheetRole) attached to the window. dialog: a window with subrole AXDialog or AXSystemDialog (kAXDialogSubrole, kAXSystemDialogSubrole). An alert is reported as the sheet or dialog it is shown in: macOS has no alert role or subrole in AXRoleConstants.h. menu: an open AXMenu (kAXMenuRole).
 public enum LayerKind: String, Codable, Equatable, Sendable, CaseIterable {
     case window
     case sheet
     case dialog
-    case alert
     case menu
 }
 
@@ -899,7 +898,7 @@ public struct Observation: Codable, Equatable, Sendable {
     public var windowTitle: String
     /// The element number with keyboard focus, read from kAXFocusedUIElementAttribute (AXFocusedUIElement). Absent when the focused element is not in the tree. The harness refuses a type action when this element is a secureTextField (SPEC-05 r7).
     public var focused: Int?
-    /// What is in front in the target window: the window itself, or a sheet, dialog, alert, or open menu over it. That is where the model should act next (SPEC-05 r15).
+    /// What is in front in the target window: the window itself, or a sheet, dialog, or open menu over it. That is where the model should act next (SPEC-05 r15).
     public var layer: Layer?
     /// Visible, actionable elements only, numbered from 1, at most 200 (SPEC-05 r2).
     public var elements: [TreeElement]

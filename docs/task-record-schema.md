@@ -124,13 +124,13 @@ struct Observation: Codable {
     var app: String?                 // the app's name, e.g. Keynote
     var windowTitle: String
     var focused: Int?                // element number with keyboard focus, absent when not in the tree
-    var layer: Layer?                // what is in front: the window, or a sheet, dialog, alert, or menu
+    var layer: Layer?                // what is in front: the window, or a sheet, dialog, or menu
     var elements: [TreeElement]      // trimmed tree, at most 200 (SPEC-05 r2)
     var screenshotPath: String?      // p1 only, for the vision fallback
 }
 
 struct Layer: Codable {
-    let kind: LayerKind              // window, sheet, dialog, alert, menu
+    let kind: LayerKind              // window, sheet, dialog, menu
     var title: String?               // a sheet usually has none
     var defaultButton: Int?          // element number of AXDefaultButton
     var cancelButton: Int?           // element number of AXCancelButton

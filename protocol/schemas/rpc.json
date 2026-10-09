@@ -63,8 +63,7 @@
       "properties": {
         "protocolVersion": {
           "description": "The version the app speaks. The harness refuses one that differs from ProtocolVersion with a UserError.",
-          "type": "integer",
-          "minimum": 1
+          "$ref": "common.json#/$defs/PeerProtocolVersion"
         }
       }
     },

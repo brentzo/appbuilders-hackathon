@@ -29,6 +29,7 @@ Every connection starts the same way, for every device, every time.
 4. The relay checks, in order:
    - The frame matches the schema, or it refuses with `invalidFrame`.
    - The protocol version is one it speaks, or `unsupportedVersion`.
+     The schema accepts any positive version (`PeerProtocolVersion`), so a device on another version reaches this check instead of failing as `invalidFrame`.
    - The device id is derived from the public key (see [crypto.md](crypto.md)), or `deviceIdMismatch`.
    - The signature verifies, or `badSignature`.
 5. A device id the relay has not seen is registered on the spot.
@@ -51,6 +52,7 @@ Both devices must be connected to the relay.
    - The bridge URL.
    - An expiry 5 minutes ahead.
 2. The phone scans it and checks that the protocol version matches and the offer has not expired.
+   The QR code's `protocolVersion` is a `PeerProtocolVersion`, so an offer from another version still validates and the phone shows the "Pairing versions differ" error from SPEC-11 rather than "Not a pairing code".
 3. The phone connects to the bridge URL from the offer and sends `pairRequest` to the Mac.
    The frame holds a `PairRequest` (the phone's name, platform, and public keys) sealed with the pairing secret ([crypto.md](crypto.md), "Pairing request").
    The relay can neither read the phone's name nor swap in its own keys, because it never sees the secret (SPEC-08 r3).
