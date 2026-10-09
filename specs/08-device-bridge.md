@@ -22,7 +22,7 @@ Design: [device-bridge](../docs/device-bridge.md).
 3. The VPS sees only routing fields (`id`, `from`, `to`, `expiresAt`) and ciphertext.
 4. Every message uses the envelope in the design doc: `id`, `from`, `to`, `type`, `replyTo`, `expiresAt`, `signature`, `payload`.
 5. Messages with a bad signature or from an unpaired device are dropped and logged on the receiving device.
-6. Expired commands are never executed.
+6. Expired commands are never executed. Default expiry is 2 minutes for UI actions and 1 hour for data requests, tuned during development.
 7. The VPS stores messages for an offline device and delivers them when it reconnects.
 8. Each message is executed at most once, even if delivered twice.
 9. The user can unpair a device from either side, which revokes its keys immediately.
@@ -80,7 +80,12 @@ Feature: Message delivery
     And the original result is sent back again
 ```
 
-## Open questions
+## Decisions
 
-- Default expiry per command type? Suggest 2 minutes for UI actions, 1 hour for data requests.
-- Do we use NetBird for a direct device-to-device path, with the VPS as fallback relay?
+- **Transport:** the plain VPS bridge is the only path between devices for the hackathon. Security comes from end-to-end encryption, device signatures, and pairing, not from a private network. Decided 2026-10-09.
+- **NetBird is not used by Yumi.** It cannot replace the bridge, because offline queueing and phone wake-ups still need the VPS. Running it on the phone would take Android's only VPN slot and make Yumi depend on another app staying connected. NetBird stays on the VPS for the team's private access to the server, logs, and dev machines. Decided 2026-10-09.
+- **Command expiry:** 2 minutes for UI actions, 1 hour for data requests, tuned during development. Decided 2026-10-09.
+
+## Later (p1)
+
+- Direct device-to-device path for large files (photos, PDFs) when both devices are on the same network, using a WebRTC connection set up through the bridge, falling back to the bridge. No separate VPN app needed.
