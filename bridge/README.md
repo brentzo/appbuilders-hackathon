@@ -36,7 +36,10 @@ Status: empty scaffold, nothing built yet.
 - **Server:** Brent's VPS (Ubuntu 24.04). Brent prepares it and gives Jepoy SSH access.
 - **Reverse proxy:** the existing nginx, with a certificate from certbot (`certbot --nginx`). The site forwards to the bridge on a local port with WebSocket upgrade headers and `proxy_read_timeout 1h`, since nginx's default 60 seconds would cut idle phone connections.
 - **Runtime:** a Docker container on a current Node.js LTS image, bound to `127.0.0.1` only. The VPS's system Node is v18 (past end of life) and other apps may rely on it, so the bridge does not use it.
-- **Port:** agree the local port with Brent before deploying, and keep it in the nginx site and the container config.
+- **Port:** `8787` on `127.0.0.1`. The nginx site already forwards to it. Publish it as `"127.0.0.1:8787:8787"`, never `"8787:8787"`: Docker's published ports bypass ufw, so a bare port would expose the bridge to the internet.
+- **Folder:** `/opt/yumi-bridge` on the VPS, with SQLite data in `/opt/yumi-bridge/data` mounted into the container.
+- **Deploy:** `git pull && docker compose up -d --build` in `/opt/yumi-bridge`. Brent runs deploys unless he gives someone access.
+- **Status:** DNS, TLS, and the nginx site are live (verified 2026-10-09: valid Let's Encrypt certificate, `502` until the bridge runs).
 
 ## Initial technical plan
 

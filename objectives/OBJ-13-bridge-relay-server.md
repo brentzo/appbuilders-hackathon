@@ -48,7 +48,7 @@ It never sees plaintext, which keeps the "local AI" claim honest.
 - [ ] **OBJ-13.6** Expiry: never deliver an expired envelope. Send the sender an `expired` event for it (when the sender is online, or queued for it).
 - [ ] **OBJ-13.7** Revocation: on unpair, mark the device revoked, close its connection, and drop any results or events held for it.
 - [ ] **OBJ-13.8** Logging: routing fields, connection events, and errors only. Never log payloads.
-- [ ] **OBJ-13.9** Deploy on Brent's VPS at `wss://yumibridge.studiokova.co`, behind the VPS's existing nginx, which handles TLS, in a Docker container on a current Node.js LTS image (see "Deployment" in `bridge/README.md`). Document the deploy steps, config, and how to read logs in `bridge/README.md`.
+- [ ] **OBJ-13.9** Deploy on Brent's VPS at `wss://yumibridge.studiokova.co`, behind the VPS's existing nginx, which handles TLS, in a Docker container on a current Node.js LTS image (see "Deployment" in `bridge/README.md`). Commit a `Dockerfile` and `docker-compose.yml` in `bridge/` that publish only `127.0.0.1:8787`, persist SQLite in a mounted `data/` folder, and restart unless stopped. Document the deploy steps, config, and how to read logs in `bridge/README.md`.
 - [ ] **OBJ-13.10** Tests: auth success and failure, routing, cross-group routing refused, offline notice for commands, result held through a short reconnect, expiry with sender notice, revocation.
 
 ## Expectations
