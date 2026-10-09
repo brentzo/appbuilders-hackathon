@@ -384,10 +384,21 @@ export interface GoalFinishedPayload {
   summary: string;
 }
 
-/** The repeat-back sentence to speak and show (SPEC-01 r4). */
+/** The goal the Mac displays for confirmation. For a revision, the existing taskId lets the Mac distinguish it from a new task. In Auto mode, autoMode=true means show the goal without asking for confirmation; the harness separately sends a short speak acknowledgement. */
 export interface GoalRestated {
   taskId: Uuid;
   text: string;
+  /** True for an automatically applied goal revision; omit otherwise. */
+  autoMode?: boolean;
+}
+
+/** A confirmed change to a task's goal. */
+export interface GoalRevision {
+  /** The user's words that caused this revision. */
+  userSaid: string;
+  /** The revised goal the user confirmed. */
+  goal: string;
+  confirmedAt: Timestamp;
 }
 
 /** The app's version. Any version validates here, so the harness's own check runs and a different version gets a UserError, not a contract error. */
@@ -872,6 +883,15 @@ export interface RevealInFinderCall {
   path: Path;
 }
 
+/** The user's new instructions for an existing paused task (OBJ-60, SPEC-06 requirements 14 to 20). The harness proposes a revised goal for the same task, then waits for confirmation unless autoMode is true. */
+export interface ReviseGoalParams {
+  taskId: Uuid;
+  /** What the user said after interrupting the running task. */
+  transcript: string;
+  /** The Mac's Auto mode setting. True applies the revision without a repeat-back. Missing means false. */
+  autoMode?: boolean;
+}
+
 /** A routing decision and its reason, for the dashboard (SPEC-03 r10). */
 export interface RouteDecided {
   taskId: Uuid;
@@ -1085,8 +1105,8 @@ export interface SubtaskResult {
   note: string;
 }
 
-export type SubtaskStatus = "pending" | "ready" | "queued" | "running" | "needsApproval" | "handoff" | "done" | "failed";
-export const subtaskStatusValues: readonly SubtaskStatus[] = ["pending", "ready", "queued", "running", "needsApproval", "handoff", "done", "failed"];
+export type SubtaskStatus = "pending" | "ready" | "queued" | "running" | "needsApproval" | "handoff" | "done" | "failed" | "cancelled";
+export const subtaskStatusValues: readonly SubtaskStatus[] = ["pending", "ready", "queued", "running", "needsApproval", "handoff", "done", "failed", "cancelled"];
 
 /** The app and window a UI subtask works in. */
 export interface Target {
@@ -1125,6 +1145,8 @@ export interface Task {
   originDeviceId: DeviceId;
   /** What the user said, transcribed. */
   goal: string;
+  /** Confirmed changes to the goal, oldest first. The original `goal` never changes, and `confirmedGoal` is always the latest confirmed revision (SPEC-02 r12). Proposed, cancelled, or unconfirmed revisions are not stored. */
+  goalRevisions: GoalRevision[];
   /** What Yumi repeated back and the user accepted, or in Auto mode the transcript as heard, trimmed (SPEC-01 r14). Set when the task leaves awaitingConfirmation. */
   confirmedGoal?: string;
   status: TaskStatus;
@@ -1395,6 +1417,7 @@ export interface RpcMethods {
   hello: { direction: "appToHarness"; params: HelloParams; result: HelloResult };
   ping: { direction: "appToHarness"; params: Empty; result: Empty };
   submitGoal: { direction: "appToHarness"; params: SubmitGoalParams; result: SubmitGoalResult };
+  reviseGoal: { direction: "appToHarness"; params: ReviseGoalParams; result: Empty };
   replyToConfirmation: { direction: "appToHarness"; params: ReplyToConfirmationParams; result: Empty };
   answerQuestion: { direction: "appToHarness"; params: AnswerQuestionParams; result: Empty };
   pause: { direction: "appToHarness"; params: PauseParams; result: Empty };

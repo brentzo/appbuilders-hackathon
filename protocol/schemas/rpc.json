@@ -9,6 +9,7 @@
       "hello": { "direction": "appToHarness", "params": "HelloParams", "result": "HelloResult" },
       "ping": { "direction": "appToHarness", "params": "Empty", "result": "Empty" },
       "submitGoal": { "direction": "appToHarness", "params": "SubmitGoalParams", "result": "SubmitGoalResult" },
+      "reviseGoal": { "direction": "appToHarness", "params": "ReviseGoalParams", "result": "Empty" },
       "replyToConfirmation": { "direction": "appToHarness", "params": "ReplyToConfirmationParams", "result": "Empty" },
       "answerQuestion": { "direction": "appToHarness", "params": "AnswerQuestionParams", "result": "Empty" },
       "pause": { "direction": "appToHarness", "params": "PauseParams", "result": "Empty" },
@@ -122,6 +123,17 @@
       "additionalProperties": false,
       "required": ["taskId"],
       "properties": { "taskId": { "$ref": "common.json#/$defs/Uuid" } }
+    },
+    "ReviseGoalParams": {
+      "description": "The user's new instructions for an existing paused task (OBJ-60, SPEC-06 requirements 14 to 20). The harness proposes a revised goal for the same task, then waits for confirmation unless autoMode is true.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["taskId", "transcript"],
+      "properties": {
+        "taskId": { "$ref": "common.json#/$defs/Uuid" },
+        "transcript": { "description": "What the user said after interrupting the running task.", "type": "string", "minLength": 1 },
+        "autoMode": { "description": "The Mac's Auto mode setting. True applies the revision without a repeat-back. Missing means false.", "type": "boolean" }
+      }
     },
     "ReplyToConfirmationParams": {
       "description": "The user's answer to the repeat-back (SPEC-01, OBJ-17).",
@@ -386,13 +398,14 @@
       }
     },
     "GoalRestated": {
-      "description": "The repeat-back sentence to speak and show (SPEC-01 r4).",
+      "description": "The goal the Mac displays for confirmation. For a revision, the existing taskId lets the Mac distinguish it from a new task. In Auto mode, autoMode=true means show the goal without asking for confirmation; the harness separately sends a short speak acknowledgement.",
       "type": "object",
       "additionalProperties": false,
       "required": ["taskId", "text"],
       "properties": {
         "taskId": { "$ref": "common.json#/$defs/Uuid" },
-        "text": { "type": "string", "minLength": 1 }
+        "text": { "type": "string", "minLength": 1 },
+        "autoMode": { "description": "True for an automatically applied goal revision; omit otherwise.", "type": "boolean" }
       }
     },
     "CursorCommand": {

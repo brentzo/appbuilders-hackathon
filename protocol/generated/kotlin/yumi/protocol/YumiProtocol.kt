@@ -510,11 +510,23 @@ data class GoalFinishedPayload(
     val summary: String,
 ) : Payload
 
-/** The repeat-back sentence to speak and show (SPEC-01 r4). */
+/** The goal the Mac displays for confirmation. For a revision, the existing taskId lets the Mac distinguish it from a new task. In Auto mode, autoMode=true means show the goal without asking for confirmation; the harness separately sends a short speak acknowledgement. */
 @Serializable
 data class GoalRestated(
     val taskId: String,
     val text: String,
+    /** True for an automatically applied goal revision; omit otherwise. */
+    val autoMode: Boolean? = null,
+)
+
+/** A confirmed change to a task's goal. */
+@Serializable
+data class GoalRevision(
+    /** The user's words that caused this revision. */
+    val userSaid: String,
+    /** The revised goal the user confirmed. */
+    val goal: String,
+    val confirmedAt: String,
 )
 
 /** The app's version. Any version validates here, so the harness's own check runs and a different version gets a UserError, not a contract error. */
@@ -1043,6 +1055,16 @@ data class RevealInFinderCall(
     val path: String,
 ) : ToolCall
 
+/** The user's new instructions for an existing paused task (OBJ-60, SPEC-06 requirements 14 to 20). The harness proposes a revised goal for the same task, then waits for confirmation unless autoMode is true. */
+@Serializable
+data class ReviseGoalParams(
+    val taskId: String,
+    /** What the user said after interrupting the running task. */
+    val transcript: String,
+    /** The Mac's Auto mode setting. True applies the revision without a repeat-back. Missing means false. */
+    val autoMode: Boolean? = null,
+)
+
 /** A routing decision and its reason, for the dashboard (SPEC-03 r10). */
 @Serializable
 data class RouteDecided(
@@ -1301,7 +1323,8 @@ enum class SubtaskStatus {
     @SerialName("needsApproval") NeedsApproval,
     @SerialName("handoff") Handoff,
     @SerialName("done") Done,
-    @SerialName("failed") Failed;
+    @SerialName("failed") Failed,
+    @SerialName("cancelled") Cancelled;
 }
 
 /** The app and window a UI subtask works in. */
@@ -1346,6 +1369,8 @@ data class Task(
     val originDeviceId: String,
     /** What the user said, transcribed. */
     val goal: String,
+    /** Confirmed changes to the goal, oldest first. The original `goal` never changes, and `confirmedGoal` is always the latest confirmed revision (SPEC-02 r12). Proposed, cancelled, or unconfirmed revisions are not stored. */
+    val goalRevisions: List<GoalRevision>,
     /** What Yumi repeated back and the user accepted, or in Auto mode the transcript as heard, trimmed (SPEC-01 r14). Set when the task leaves awaitingConfirmation. */
     val confirmedGoal: String? = null,
     val status: TaskStatus,
@@ -1658,6 +1683,7 @@ enum class RpcMethod(val wireName: String) {
     Hello("hello"),
     Ping("ping"),
     SubmitGoal("submitGoal"),
+    ReviseGoal("reviseGoal"),
     ReplyToConfirmation("replyToConfirmation"),
     AnswerQuestion("answerQuestion"),
     Pause("pause"),

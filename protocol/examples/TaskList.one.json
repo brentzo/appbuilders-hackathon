@@ -4,6 +4,7 @@
       "id": "6f1d2c3b-4a5e-4f60-8172-93a4b5c6d7e8",
       "originDeviceId": "phone-ana",
       "goal": "export my Keynote deck as a PDF",
+      "goalRevisions": [],
       "confirmedGoal": "export my Keynote deck as a PDF",
       "status": "running",
       "plan": [

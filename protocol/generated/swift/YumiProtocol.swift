@@ -837,14 +837,32 @@ public struct GoalFinishedPayload: Codable, Equatable, Sendable {
     }
 }
 
-/// The repeat-back sentence to speak and show (SPEC-01 r4).
+/// The goal the Mac displays for confirmation. For a revision, the existing taskId lets the Mac distinguish it from a new task. In Auto mode, autoMode=true means show the goal without asking for confirmation; the harness separately sends a short speak acknowledgement.
 public struct GoalRestated: Codable, Equatable, Sendable {
     public var taskId: String
     public var text: String
+    /// True for an automatically applied goal revision; omit otherwise.
+    public var autoMode: Bool?
 
-    public init(taskId: String, text: String) {
+    public init(taskId: String, text: String, autoMode: Bool? = nil) {
         self.taskId = taskId
         self.text = text
+        self.autoMode = autoMode
+    }
+}
+
+/// A confirmed change to a task's goal.
+public struct GoalRevision: Codable, Equatable, Sendable {
+    /// The user's words that caused this revision.
+    public var userSaid: String
+    /// The revised goal the user confirmed.
+    public var goal: String
+    public var confirmedAt: String
+
+    public init(userSaid: String, goal: String, confirmedAt: String) {
+        self.userSaid = userSaid
+        self.goal = goal
+        self.confirmedAt = confirmedAt
     }
 }
 
@@ -1772,6 +1790,21 @@ public struct RevealInFinderCall: Codable, Equatable, Sendable {
     }
 }
 
+/// The user's new instructions for an existing paused task (OBJ-60, SPEC-06 requirements 14 to 20). The harness proposes a revised goal for the same task, then waits for confirmation unless autoMode is true.
+public struct ReviseGoalParams: Codable, Equatable, Sendable {
+    public var taskId: String
+    /// What the user said after interrupting the running task.
+    public var transcript: String
+    /// The Mac's Auto mode setting. True applies the revision without a repeat-back. Missing means false.
+    public var autoMode: Bool?
+
+    public init(taskId: String, transcript: String, autoMode: Bool? = nil) {
+        self.taskId = taskId
+        self.transcript = transcript
+        self.autoMode = autoMode
+    }
+}
+
 /// A routing decision and its reason, for the dashboard (SPEC-03 r10).
 public struct RouteDecided: Codable, Equatable, Sendable {
     public var taskId: String
@@ -2141,6 +2174,7 @@ public enum SubtaskStatus: String, Codable, Equatable, Sendable, CaseIterable {
     case handoff
     case done
     case failed
+    case cancelled
 }
 
 /// The app and window a UI subtask works in.
@@ -2198,6 +2232,8 @@ public struct TaskRecord: Codable, Equatable, Sendable {
     public var originDeviceId: String
     /// What the user said, transcribed.
     public var goal: String
+    /// Confirmed changes to the goal, oldest first. The original `goal` never changes, and `confirmedGoal` is always the latest confirmed revision (SPEC-02 r12). Proposed, cancelled, or unconfirmed revisions are not stored.
+    public var goalRevisions: [GoalRevision]
     /// What Yumi repeated back and the user accepted, or in Auto mode the transcript as heard, trimmed (SPEC-01 r14). Set when the task leaves awaitingConfirmation.
     public var confirmedGoal: String?
     public var status: TaskStatus
@@ -2208,10 +2244,11 @@ public struct TaskRecord: Codable, Equatable, Sendable {
     public var createdAt: String
     public var updatedAt: String
 
-    public init(id: String, originDeviceId: String, goal: String, confirmedGoal: String? = nil, status: TaskStatus, plan: [String], summary: String? = nil, createdAt: String, updatedAt: String) {
+    public init(id: String, originDeviceId: String, goal: String, goalRevisions: [GoalRevision], confirmedGoal: String? = nil, status: TaskStatus, plan: [String], summary: String? = nil, createdAt: String, updatedAt: String) {
         self.id = id
         self.originDeviceId = originDeviceId
         self.goal = goal
+        self.goalRevisions = goalRevisions
         self.confirmedGoal = confirmedGoal
         self.status = status
         self.plan = plan
@@ -2721,6 +2758,7 @@ public enum RpcMethod: String, CaseIterable, Sendable {
     case hello
     case ping
     case submitGoal
+    case reviseGoal
     case replyToConfirmation
     case answerQuestion
     case pause

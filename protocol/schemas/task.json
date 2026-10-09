@@ -8,7 +8,7 @@
       "description": "One per confirmed goal.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "originDeviceId", "goal", "status", "plan", "createdAt", "updatedAt"],
+      "required": ["id", "originDeviceId", "goal", "goalRevisions", "status", "plan", "createdAt", "updatedAt"],
       "properties": {
         "id": { "$ref": "common.json#/$defs/Uuid" },
         "originDeviceId": {
@@ -16,6 +16,7 @@
           "$ref": "common.json#/$defs/DeviceId"
         },
         "goal": { "description": "What the user said, transcribed.", "type": "string", "minLength": 1 },
+        "goalRevisions": { "description": "Confirmed changes to the goal, oldest first. The original `goal` never changes, and `confirmedGoal` is always the latest confirmed revision (SPEC-02 r12). Proposed, cancelled, or unconfirmed revisions are not stored.", "type": "array", "items": { "$ref": "#/$defs/GoalRevision" } },
         "confirmedGoal": {
           "description": "What Yumi repeated back and the user accepted, or in Auto mode the transcript as heard, trimmed (SPEC-01 r14). Set when the task leaves awaitingConfirmation.",
           "type": "string",
@@ -29,6 +30,17 @@
       },
       "if": { "properties": { "status": { "enum": ["awaitingConfirmation", "cancelled"] } } },
       "else": { "required": ["confirmedGoal"] }
+    },
+    "GoalRevision": {
+      "description": "A confirmed change to a task's goal.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["userSaid", "goal", "confirmedAt"],
+      "properties": {
+        "userSaid": { "description": "The user's words that caused this revision.", "type": "string", "minLength": 1 },
+        "goal": { "description": "The revised goal the user confirmed.", "type": "string", "minLength": 1 },
+        "confirmedAt": { "$ref": "common.json#/$defs/Timestamp" }
+      }
     },
     "TaskStatus": {
       "type": "string",
@@ -89,7 +101,7 @@
     },
     "SubtaskStatus": {
       "type": "string",
-      "enum": ["pending", "ready", "queued", "running", "needsApproval", "handoff", "done", "failed"]
+      "enum": ["pending", "ready", "queued", "running", "needsApproval", "handoff", "done", "failed", "cancelled"]
     },
     "SubtaskResult": {
       "description": "Structured result for the planner, built by the harness from the step log. Never a transcript (SPEC-05 r4).",

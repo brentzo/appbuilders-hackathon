@@ -29,6 +29,18 @@ describe("local RPC", () => {
     expect(missing).toEqual([]);
   });
 
+  it("validates a goal revision and records only confirmed revisions on a task", () => {
+    const taskId = "00000000-0000-4000-8000-000000000001";
+    expect(validate("ReviseGoalParams", { taskId, transcript: "put it in Keynote" }).errors).toEqual([]);
+    expect(validate("ReviseGoalParams", { taskId, transcript: "put it in Keynote", autoMode: true }).errors).toEqual([]);
+    expect(validate("ReviseGoalParams", { taskId, autoMode: true }).valid).toBe(false);
+    expect(validate("GoalRevision", { userSaid: "not Notes, Keynote", goal: "put the summary in Keynote", confirmedAt: "2026-10-10T00:00:00.000Z" }).errors).toEqual([]);
+    expect(validate("GoalRevision", { goal: "put it in Keynote", confirmedAt: "2026-10-10T00:00:00.000Z" }).valid).toBe(false);
+    expect(validate("SubtaskStatus", "cancelled").valid).toBe(true);
+    expect(rpc().methods["reviseGoal"]).toEqual({ direction: "appToHarness", params: "ReviseGoalParams", result: "Empty" });
+    expect(validate("GoalRestated", { taskId, text: "Put it in Keynote", autoMode: true }).valid).toBe(true);
+  });
+
   it("refers only to types that exist", () => {
     const { methods, events } = rpc();
     const referenced = [...Object.values(methods).flatMap((m) => [m.params, m.result]), ...Object.values(events)];
