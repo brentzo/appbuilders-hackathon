@@ -297,7 +297,7 @@ A sheet usually has no `AXTitle`.
 |---|---|---|---|
 | [OBJ-01](../objectives/OBJ-01-task-record-schemas.md) | Task record schemas and cross-team contracts | Jepoy | done |
 | [OBJ-02](../objectives/OBJ-02-bridge-envelope-and-crypto.md) | Bridge envelope and end-to-end crypto | Jepoy | done |
-| [OBJ-25](../objectives/OBJ-25-cross-device-messages.md) | Cross-device message kinds | Jepoy | blocked |
+| [OBJ-25](../objectives/OBJ-25-cross-device-messages.md) | Cross-device message kinds | Jepoy | done |
 | [OBJ-29](../objectives/OBJ-29-protocol-mac-fixes.md) | Protocol v3, fit the contracts to real macOS | Brent | done |
 | [OBJ-31](../objectives/OBJ-31-unpair-delivery-ack-contract.md) | Define unpair delivery acknowledgement | Jepoy | done |
 | [OBJ-33](../objectives/OBJ-33-pairing-response-timeout-contract.md) | Align the pairing response timeout contract | Jepoy | in-progress |

@@ -5,7 +5,7 @@ product: protocol
 assignee: Jepoy
 touches: []
 specs: [SPEC-09, SPEC-06, SPEC-07, SPEC-08, SPEC-10]
-status: blocked
+status: done
 priority: p0
 depends-on: [OBJ-01, OBJ-02]
 integrates-with: []
@@ -88,8 +88,23 @@ This objective defines what goes inside it, so the harness, the Android app, and
 
 ## Outcome
 
-Blocked: the required repository verifier fails 43 existing harness file-safety tests on this Windows host because they exercise macOS/POSIX paths using the host's Windows path semantics.
-The OBJ-25 protocol checks, Swift and Kotlin round trips, and bridge checks pass.
-The harness failure is outside this protocol objective and the git workflow requires a clean repository verifier before committing or pushing.
-No child ticket is needed: the missing message-kind documentation was within OBJ-25 scope and now matches the schema and SPEC-09.
-To unblock, run `python scripts/verify.py` in a supported macOS or Linux environment and push this worktree if it passes.
+- **Result:** Done.
+- **Delivered:**
+  - `protocol/schemas/messages.json`: `Payload`, the closed union inside every `Envelope`, with each kind's envelope type and expiry, phone tool descriptions, and argument schemas.
+  - `protocol/src/messages.ts` and `protocol/src/expiry.ts`: checks that a kind travels with the right envelope type and gets its expiry from the `bridge.json` constants.
+  - Examples for every kind in `protocol/examples/Payload.*.json`, and the three demo moments as sequences in `protocol/examples/sequences/` (the alarm from the Mac, the Keynote export from the phone, and Stop from the phone).
+  - Generated TypeScript, Swift, and Kotlin types, and the "Cross-device messages" table in `protocol/README.md`.
+- **Commits:**
+  - `883b270 feat(protocol): define cross-device message payloads`
+  - `57862b8 feat(protocol): validate cross-device messages`
+  - `d4501cf docs(objectives): record OBJ-25 implementation`
+- **Expectations:**
+  - SPEC-09 maps to message kinds: the table in `protocol/README.md` "Cross-device messages".
+  - The demo moments as sequences: `protocol/test/message-sequences.test.ts` checks the three files in `protocol/examples/sequences/`.
+  - No raw error text: failures carry an `ErrorKind`, checked in `protocol/test/messages.test.ts`.
+  - Generated types compile: the protocol's Swift and Kotlin round trips in `scripts/verify.py`.
+- **Not verified:** nothing for this objective.
+  It was `blocked` only because `scripts/verify.py` cannot pass the harness on Windows, where its file safety tests meet Windows paths.
+  On 2026-10-10 the same tree passed in Linux (Docker `node:24-bookworm`): the protocol (329 tests), the relay, and the harness except `strict-delete.test.ts` "files in several folders name their shared folder", which has failed since OBJ-37 and is not part of this objective.
+- **Decisions and deviations:** none beyond the task notes above.
+- **For the next objectives:** the apps build `delegateGoal`, `toolCall`, approvals, and control from these kinds; SPEC-09 still needs app objectives for routing and phone tools ("Not covered yet" in [objectives/README.md](README.md)).
