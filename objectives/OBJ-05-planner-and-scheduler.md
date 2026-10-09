@@ -128,6 +128,13 @@ When everything is done, Yumi speaks a short summary.
   - If the model cannot write a summary, Yumi says "Done. I finished everything you asked for." (SPEC-02 r9).
   - A task from the phone is spoken on the Mac until OBJ-25 (Brent's decision); `localVoice` logs `voice.originNotReachable` when it knows the Mac's device id.
   - `savePlan` emits the task's change to running first, then one event per subtask, all after the commit.
+- **Follow-up fix (2026-10-10, found in Brent's first live run, made on the OBJ-36 branch):**
+  - The planner made up a home folder: its plan wrote to `/Users/Yumi/Documents/Yumi test`.
+    The planner now gets the user's real home, Documents, Desktop, and Downloads folders in its context, and a rule never to make up a user name or home folder (`buildPlannerMessages(goal, tools, home)` in `harness/src/planner/prompt.ts`).
+  - `checkPlan(raw, home)` rejects a plan whose title or instruction names an absolute path outside the home folder, so it goes back to the planner once with the reason; the error does not quote the path. `~/` paths and links are accepted.
+  - The planner prompt also says that writing, reading, listing, copying, or moving files is helper work with no `targetApp`, even when the goal names a folder or Finder.
+  - `makePlan` now needs `home` in its deps; `runTask` passes `deps.home`.
+  - Tests: "rejects a path outside the user's home folder", "accepts paths inside the home folder, ~ paths, and links", "gives the planner the user's real home, Documents, Desktop, and Downloads folders", and "sends a plan with a made-up home folder back once" in `harness/test/planner.test.ts`.
 - **For the next objectives:**
   - OBJ-17: `submitGoal` is not wired to `runTask` on purpose. Starting work straight from `submitGoal` would skip the repeat-back and the confirm (SPEC-01 r4, OBJ-17.7), so Brent left it to OBJ-17's harness flow. When a task reaches planning, call `runTask(taskId, deps)` with `store: harness.store`, `route: routeWith(harness.router)`, `lanes: { helper: fileHelperLane({ home: os.homedir(), logger }) }`, `slots: config.model.parallelSlots`, `home: os.homedir()`, the Mac's `deviceId`, and `voice: localVoice(harness.server, logger, macDeviceId)`.
   - OBJ-36: add ghost and main to `lanes` as `LaneRunner`s (an `observe` that calls the Mac app and tools), and run element actions through `checkAction` with their resolved element and `observation.app`, as `runTool` does for tools.

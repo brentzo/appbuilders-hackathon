@@ -121,6 +121,14 @@ Build against the mock Mac app from [OBJ-01](OBJ-01-task-record-schemas.md) unti
   - The action log file is one file a day, `Action log/<yyyy-mm-dd>.txt`, rather than one file for everything, so each file stays readable and the date need not be on every line. The count line is written when a task ends: done, stopped (failed), or cancelled.
   - The action log names a line's device "Mac" when it is this Mac's device id and "phone" otherwise.
   - Approvals expire 5 minutes after they are asked, as the contract requires, but nothing acts on `expiresAt` yet (SPEC-09, out of scope).
+- **Follow-up fix (2026-10-10, found in Brent's first live run, made on the OBJ-36 branch):**
+  - A take-over pause arrived while the plan was saved; the scheduler still routed and started the subtask, and its failure set the paused task to failed and showed "Stuck on screen".
+  - The scheduler now routes and starts nothing once the run is stopped: it checks before routing, after routing (giving back the lock and cursor), and when a routing check fails after the stop (`notStarted` in `harness/src/scheduler/scheduler.ts`).
+  - A subtask that ends in any way but done after a pause or cancel leaves its statuses to the pause and cancel flow, and a pause or cancel wins over a failure when the schedule ends.
+  - `fail` in `harness/src/scheduler/run-task.ts` never overwrites a paused or cancelled task and shows no error then (`task.failureAfterStop` in the log).
+  - gui_act starts no attempt on a stopped run, and a first look that fails after a stop ends as stopped (OBJ-36).
+  - Tests: "a pause or cancel always wins over work that was still being routed" in `harness/test/pause-and-cancel.test.ts`.
+  - Still open for the Mac app (OBJ-35): it saw a take-over right after the confirmation click, before any cursor acted.
 - **For the next objectives:**
   - OBJ-36 (`gui_act`): call `checkAction`, then `if (!control.mayAct(lane)) stop` right before `beginStep`. For an `ask`, call `approvals.request(decision, { subtask, step, lane, control, send }, signal)` with `send` from `findRecipientFields(observation)` resolved to element paths, and press Send only on `approved`. For a `blocked` action, record the step as blocked, then `approvals.blocked(...)` and stop the attempt unless it answers `keepGoing`. Write log lines with `describeGuiAction` and `describeNotDone`. The run's `RunControl` and the subtask's signal reach `runSubtask`. If OBJ-36 landed its own approval seam, reconcile it with `ApprovalGate` here.
   - OBJ-35 (Patrick): the stop shortcut and menu bar "Stop" call `pause` with no scope (or `everyLane`); a take-over calls `pause` with `scope: "uiLanes"`; Resume calls `resumeTask`; Cancel calls `cancelTask`. The harness ignores a `uiLanes` pause while it waits for the user and no UI lane acts.

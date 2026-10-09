@@ -126,6 +126,12 @@ The router checks what the target app actually supports and picks the cheapest l
   - Found along the way: since protocol version 3, the schema sent to the model contains `if`, `then`, and `else`, which llguidance 1.9.1 (mlx-vlm 0.7.6) refuses, so any real step offering `open_app` would fail. `scripts/check-grammar.py` reproduced it on the example step without loading a model. The bundler now drops those keywords for the model, the same way it drops `uniqueItems`; replies are still validated against the full schema. All three lanes' schemas compile.
   - A fix for the flaky bridge client test was dropped in the rebase, because `main` fixed it the same way in `712e727`.
   - `runWorkerStep` requires the lane, so OBJ-37's two worker step tests in `test/permission-gate.test.ts` now pass `{ lane: "main" }`, the lane that offers every action, as when they were written.
+- **Follow-up fix (2026-10-10, found in Brent's first live run, made on the OBJ-36 branch):**
+  - A plain file write the planner proposed for the helper but placed in Finder went to a ghost in Finder, because any target app sends a subtask to a UI lane.
+    The router now treats file work in Finder as having no target app, so it goes to the helper with reason `noUI`, without resolving or probing Finder (`isFileWorkInFinder` in `harness/src/router/router.ts`).
+    File work means the planner proposed the helper, or the instruction names one of the helper's file tools (`read_file`, `list_dir`, `write_new_file`, `move_to_trash`).
+    Work the user wants to see in a Finder window still goes through the app checks.
+  - Tests: the "file work the planner places in Finder" scenarios in `harness/test/lane-router.test.ts`, and Brent's plan end to end in `harness/test/gui-act.test.ts` ("writes the note with the helper's file tools, never a ghost in Finder").
 - **For the next objectives:**
   - Probing on the real Mac took about 14 seconds for Chrome and about 3 seconds for WezTerm (2026-10-09, one run each before and after a restart). Without `getAppVersion` that cost is paid once per app per run, before its first subtask starts.
   - Accessibility is granted per code signature. A grant made for an ad hoc build does not cover the team-signed build with the same bundle id: tccd logs "Failed to match existing code requirement" and the probe answers `accessibilityPermissionMissing`. Fix it with `tccutil reset Accessibility <bundle id>`, then grant it to the build you run.
