@@ -33,6 +33,17 @@ Status: empty scaffold, nothing built yet.
 - Cat: Rive's Apple runtime (rive-ios, which supports macOS) playing the `.riv` file from [character](../character/README.md).
 - Talks to the harness over a local Unix socket with JSON-RPC, using types from [protocol](../protocol/README.md).
 
+## Signing
+
+Free Apple accounts ("Personal Team") are enough for the hackathon. Build Yumi from source on the Mac that runs it, including the demo Mac.
+
+- **Certificate:** "Apple Development" with automatic signing, never "Sign to Run Locally". A signature that changes on every build makes macOS forget Yumi's Accessibility and Screen Recording permissions after each rebuild.
+- **App Sandbox:** off. Apps that control other apps through Accessibility cannot be sandboxed.
+- **Hardened Runtime:** on, with Audio Input for the microphone.
+- **Info.plist:** microphone and speech recognition usage descriptions. They are user-facing copy, shown in macOS permission prompts.
+- **Per-person signing:** Apple registers a bundle identifier for one team only, so each person uses their own. A committed `Signing.xcconfig` holds the shared settings and includes a gitignored `Signing.local.xcconfig` with each person's `DEVELOPMENT_TEAM` and bundle identifier suffix (for example `co.studiokova.yumi.brent`). The demo Mac uses Brent's.
+- **Sharing a built app** with another Mac needs Developer ID signing and notarization, which need the paid Apple Developer Program. Not needed for the hackathon.
+
 ## Specs
 
 - [SPEC-01 Voice intake and confirmation](../specs/01-voice-intake.md)

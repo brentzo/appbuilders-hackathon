@@ -39,7 +39,7 @@ Permission onboarding is the first thing users see, so it must be clear and frie
 
 ## Tasks
 
-- [ ] **OBJ-14.1** Create the Xcode project in `mac/`: a Swift, SwiftUI and AppKit menu bar app, minimum macOS 15, using the generated Swift types from `protocol/`.
+- [ ] **OBJ-14.1** Create the Xcode project in `mac/`: a Swift, SwiftUI and AppKit menu bar app, minimum macOS 15, using the generated Swift types from `protocol/`. Set up signing as in "Signing" in `mac/README.md`: Apple Development certificate, App Sandbox off, Hardened Runtime with Audio Input, and a committed `Signing.xcconfig` that includes a gitignored `Signing.local.xcconfig` per person.
 - [ ] **OBJ-14.2** Menu bar item with Yumi's icon, a status line (ready, listening, working, paused), and menu entries for settings and quitting.
 - [ ] **OBJ-14.3** Permission onboarding for Microphone, Accessibility, and Screen Recording: explain in one plain sentence why each is needed, then show an "Open settings" button that opens the right System Settings pane. Detect when each is granted without restarting the app where macOS allows it.
 - [ ] **OBJ-14.4** Start the harness process (the mock harness from OBJ-01 until OBJ-03 is done) and the local model server (or check it is running), restart the harness if it exits, and show a friendly state if the model is still loading.
