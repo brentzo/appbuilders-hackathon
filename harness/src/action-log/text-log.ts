@@ -3,6 +3,7 @@ import { join } from "node:path";
 import type { ActionLogEntry, DeviceId, Lane, Step, Task, TaskStatus } from "@yumi/protocol/types";
 import { describeError, type Logger } from "../log.ts";
 import type { TaskStore } from "../store/task-store.ts";
+import { LEGACY_MAC_DEVICE_ID } from "../device.ts";
 
 /**
  * The action log file (SPEC-07 r18, OBJ-38.7): every action Yumi ran, blocked, or was told not to run, as plain
@@ -171,7 +172,7 @@ export class ActionLogFile {
 
   private device(deviceId: DeviceId | undefined): string {
     const mac = this.options.macDeviceId?.();
-    return deviceId === undefined || mac === undefined || deviceId === mac ? "Mac" : "phone";
+    return deviceId === undefined || mac === undefined || deviceId === mac || deviceId === LEGACY_MAC_DEVICE_ID ? "Mac" : "phone";
   }
 
   private write(at: Date, text: string): void {

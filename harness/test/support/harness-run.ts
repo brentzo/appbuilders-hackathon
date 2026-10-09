@@ -43,7 +43,10 @@ export interface WorkerRequest {
  * A model that plans with `plan`, answers each worker step with `worker`, and summarizes. Records every worker
  * request.
  */
-export function scriptModel(server: MockModelServer, options: { plan: string; worker: (request: WorkerRequest) => MockReply }) {
+export function scriptModel(
+  server: MockModelServer,
+  options: { plan: string; worker: (request: WorkerRequest) => MockReply | Promise<MockReply> },
+) {
   const calls: WorkerRequest[] = [];
   server.respond((body) => {
     const request = body as unknown as ChatRequest;

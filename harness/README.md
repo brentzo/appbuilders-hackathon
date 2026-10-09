@@ -179,6 +179,18 @@ mlx-vlm 0.7.6 compiles schemas with llguidance 1.9.1, which rejects `uniqueItems
 
 - The harness starts the bridge client after the Mac app completes `hello`; device keys are stored through the Mac app Keychain RPC, and paired devices/outbox state is stored in `bridge.sqlite` in the support folder.
 - Set `YUMI_BRIDGE_URL` to override the default `wss://yumibridge.studiokova.co` endpoint.
+- This Mac's bridge device id goes to the app in `hello` (once the keys are loaded) and in every `bridgeStateChanged` ([OBJ-64](../objectives/OBJ-64-cross-device-local-rpc-contract.md)). New action log lines name this Mac by it; `mac-local`, the id used before, still reads as this Mac (`src/device.ts`).
+
+### Goals from the phone
+
+`src/bridge-client/delegated-goals.ts` runs goals the paired phone sends ([SPEC-09](../specs/09-cross-device-routing.md) r4 to r9, [OBJ-68](../objectives/OBJ-68-harness-delegated-goals.md)).
+
+- `delegateGoal` creates the task with the goal id as its id and the phone as its origin, straight in `planning` with no repeat-back, spawns the main cursor, and answers `goalAccepted` (`started`). The same goal sent again is answered again, not run twice.
+- `progress` goes to the phone on every task and subtask status change, after `goalAccepted`, and every 25 seconds until the task ends. Its title is the subtask in progress, or "Making a plan" while planning.
+- `goalFinished` carries the summary, the failure in SPEC-11 words without the Mac's buttons, or "Okay, I stopped. Nothing else will happen." None of it is spoken or shown on the Mac. Anything said while the task still runs (a blocked action, a question) stays on the Mac.
+- `pause`, `resume`, and `cancel` act only on the sending phone's own goals. `pauseConfirmed` and `cancelConfirmed` are sent once the pause or cancel is in effect. The protocol has no resume confirmation, so `resume` is answered with `goalAccepted` (`started`). `ping` is answered with `pingResult`.
+- Not built yet: queueing behind a busy Mac (r14; every goal starts at once) and approvals on the phone (r10, [OBJ-70](../objectives/OBJ-70-harness-phone-approvals-and-stop.md)). Approvals for a phone goal show on the Mac for now.
+- Tests: `test/delegated-goals.test.ts`, with a scripted phone (`test/support/scripted-phone.ts`) on the fake relay.
 
 ## Local RPC
 

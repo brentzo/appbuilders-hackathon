@@ -160,7 +160,7 @@ function deps(overrides: Partial<RunTaskDeps> = {}): RunTaskDeps {
     home,
     lanes: { helper: fileHelperLane({ home, logger }) },
     slots: 3,
-    voice: localVoice(harness.server, logger, "mac-brent"),
+    voice: localVoice(harness.server),
     ...overrides,
   };
 }

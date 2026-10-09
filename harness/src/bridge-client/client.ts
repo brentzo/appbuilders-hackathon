@@ -18,7 +18,15 @@ import {
   expiresAt,
   type DeviceKeys,
 } from "@yumi/protocol/crypto";
-import { PROTOCOL_VERSION, type BridgeFrame, type PairingOffer, type PairedDevice, type UnpairFrame } from "@yumi/protocol/types";
+import {
+  PROTOCOL_VERSION,
+  type BridgeFrame,
+  type DeviceId,
+  type EnvelopeType,
+  type PairingOffer,
+  type PairedDevice,
+  type UnpairFrame,
+} from "@yumi/protocol/types";
 import { WebSocket } from "ws";
 
 const SEED_KEY = "bridge.device-seeds";
@@ -34,7 +42,8 @@ export interface BridgeClientOptions {
   databasePath: string;
   /** Allows plain ws only for an explicitly loopback test endpoint. */
   allowLoopbackWs?: boolean;
-  onMessage?: (message: unknown, peer: PairedDevice) => unknown | Promise<unknown>;
+  /** A message from a paired device, opened. A command's return value is its encrypted result. */
+  onMessage?: (message: unknown, peer: PairedDevice, type: EnvelopeType) => unknown | Promise<unknown>;
   onLog?: (event: string) => void;
   /** First reconnect delay; it doubles up to 30 seconds. Tests shorten it. */
   reconnectBaseMs?: number;
@@ -129,6 +138,16 @@ export class BridgeClient {
       };
       this.waiters.push(waiter);
     });
+  }
+
+  /** This Mac's bridge device id, once the keys are loaded at start. */
+  get deviceId(): DeviceId | undefined {
+    return this.keys?.deviceId;
+  }
+
+  /** True when `deviceId` is a paired device that is not being unpaired. */
+  isPaired(deviceId: DeviceId): boolean {
+    return this.listPairedDevices().devices.some((device) => device.deviceId === deviceId);
   }
 
   listPairedDevices(): { devices: PairedDevice[] } {
@@ -448,7 +467,11 @@ export class BridgeClient {
     if (envelope.type === "event" || envelope.type === "result") {
       this.db.prepare("INSERT INTO processed VALUES (?, ?, ?)").run(envelope.id, "", new Date().toISOString());
       try {
-        await this.options.onMessage?.(opened.payload, { deviceId: peer.deviceId, name: peer.name, pairedAt: peer.pairedAt });
+        await this.options.onMessage?.(
+          opened.payload,
+          { deviceId: peer.deviceId, name: peer.name, pairedAt: peer.pairedAt },
+          envelope.type,
+        );
       } catch {
         this.options.onLog?.("message-handler-failed");
       }
@@ -471,11 +494,11 @@ export class BridgeClient {
       .run(envelope.id, JSON.stringify(fallback), new Date().toISOString());
     let output: unknown;
     try {
-      output = await this.options.onMessage?.(opened.payload, {
-        deviceId: peer.deviceId,
-        name: peer.name,
-        pairedAt: peer.pairedAt,
-      });
+      output = await this.options.onMessage?.(
+        opened.payload,
+        { deviceId: peer.deviceId, name: peer.name, pairedAt: peer.pairedAt },
+        envelope.type,
+      );
     } catch {
       output = { ok: false };
       this.options.onLog?.("message-handler-failed");
@@ -572,7 +595,8 @@ export class BridgeClient {
 
   private notifyState(state: "connected" | "reconnecting" | "offline"): void {
     this.state = state;
-    this.options.rpc.notify("bridgeStateChanged", { state });
+    // With this Mac's device id, which the app sends as originDeviceId (OBJ-64).
+    this.options.rpc.notify("bridgeStateChanged", { state, ...(this.keys ? { deviceId: this.keys.deviceId } : {}) });
     for (const waiter of [...this.waiters])
       if (waiter.state === state) {
         this.waiters.splice(this.waiters.indexOf(waiter), 1);

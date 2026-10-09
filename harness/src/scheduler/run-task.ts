@@ -273,26 +273,15 @@ function fail(task: Task, userError: UserError, deps: RunTaskDeps, why?: string)
 }
 
 /**
- * Speaks through the Mac app on the local socket (`speak` and `userError` events). Cross-device messages are not
- * built yet (OBJ-25), so a task the user started on the phone is spoken on the Mac too, and the log says so; swap
- * this for a voice that sends to the phone over the bridge when `originDeviceId` is not this Mac.
+ * Speaks through the Mac app on the local socket (`speak` and `userError` events). A task from the paired phone has
+ * its summary and final failure sent back to the phone instead (`DelegatedGoals.voice`, OBJ-68).
  */
-export function localVoice(
-  app: { emit(event: string, payload: unknown): number },
-  logger: RunTaskDeps["logger"],
-  macDeviceId?: DeviceId,
-): TaskVoice {
-  const note = (originDeviceId: DeviceId, event: string) => {
-    if (macDeviceId !== undefined && originDeviceId !== macDeviceId)
-      logger.warn("voice.originNotReachable", { originDeviceId, event });
-  };
+export function localVoice(app: { emit(event: string, payload: unknown): number }): TaskVoice {
   return {
-    speak: (originDeviceId, payload) => {
-      note(originDeviceId, "speak");
+    speak: (_originDeviceId, payload) => {
       app.emit("speak", payload);
     },
-    userError: (originDeviceId, error) => {
-      note(originDeviceId, "userError");
+    userError: (_originDeviceId, error) => {
       app.emit("userError", error);
     },
   };

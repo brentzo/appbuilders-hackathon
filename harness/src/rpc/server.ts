@@ -19,6 +19,8 @@ export interface RpcServerOptions {
   handlers?: Record<string, Handler>;
   /** Called after an app completes the protocol handshake. */
   onReady?: () => void;
+  /** This Mac's bridge device id, once known, for the `hello` answer (OBJ-64). */
+  deviceId?: () => string | undefined;
 }
 
 interface Connection {
@@ -40,6 +42,7 @@ export class HarnessRpcServer {
     private readonly server: Server,
     readonly socketPath: string,
     private readonly logger: Logger,
+    private readonly deviceId?: () => string | undefined,
   ) {}
 
   static async start(options: RpcServerOptions): Promise<HarnessRpcServer> {
@@ -48,7 +51,7 @@ export class HarnessRpcServer {
     await removeStaleSocket(socketPath);
 
     const server = createServer();
-    const instance = new HarnessRpcServer(server, socketPath, logger);
+    const instance = new HarnessRpcServer(server, socketPath, logger, options.deviceId);
     server.on("connection", (socket) => instance.accept(socket, options.handlers ?? {}, options.onReady));
     await new Promise<void>((resolve, reject) => server.once("error", reject).listen(socketPath, () => resolve()));
     // Only this user may connect.
@@ -124,7 +127,8 @@ export class HarnessRpcServer {
     connection.ready = true;
     onReady?.();
     this.logger.info("rpc.hello", { connection: connection.id, protocolVersion: params.protocolVersion });
-    return { protocolVersion: PROTOCOL_VERSION };
+    const deviceId = this.deviceId?.();
+    return { protocolVersion: PROTOCOL_VERSION, ...(deviceId ? { deviceId } : {}) };
   }
 }
 

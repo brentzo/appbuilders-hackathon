@@ -1,8 +1,9 @@
 import { join } from "node:path";
 import { RpcFailure, type Handler } from "@yumi/protocol";
-import type { AnswerQuestionParams, Empty, WorkerThought } from "@yumi/protocol/types";
+import type { AnswerQuestionParams, DeviceId, Empty, WorkerThought } from "@yumi/protocol/types";
 import { ActionLogFile } from "./action-log/text-log.ts";
 import { ApprovalFlow } from "./approvals/approval-flow.ts";
+import { DelegatedGoals, type PhoneBridge } from "./bridge-client/delegated-goals.ts";
 import { DEFAULT_LIMITS, type HarnessConfig } from "./config.ts";
 import { abandonUnconfirmed, GoalConfirmation } from "./confirm/confirmation.ts";
 import { DEBUG_LOG_FOLDER, DebugLog } from "./debug/debug-log.ts";
@@ -42,6 +43,8 @@ export interface Harness {
   recovery: Recovery;
   /** The detailed debug log, and with it Debug mode (OBJ-52). */
   debug: DebugLog;
+  /** Goals from the paired phone (OBJ-68). Absent without a bridge. */
+  delegated?: DelegatedGoals;
   close(): Promise<void>;
 }
 
@@ -68,6 +71,16 @@ export interface HarnessOptions {
    * folder that starts off, so only `setDebugMode` turns it on.
    */
   debug?: DebugLog;
+  /**
+   * The bridge to the paired phone (OBJ-68): goals it sends run here, and their progress and result go back to it.
+   * Its `onMessage` is `Harness.delegated.handle`.
+   */
+  phone?: PhoneBridge;
+  /**
+   * This Mac's bridge device id, once known (OBJ-64, OBJ-68.1). It is sent to the app with `hello` and names this Mac
+   * in new action log lines; until it is known, `work.deviceId` does.
+   */
+  deviceId?: () => DeviceId | undefined;
 }
 
 /**
@@ -95,7 +108,7 @@ export async function startHarness(
     supportDir: config.supportDir,
     store,
     logger,
-    macDeviceId: () => options.work?.deviceId,
+    macDeviceId: () => options.deviceId?.() ?? options.work?.deviceId,
   }).start();
   try {
     // Before the server starts, so no app can ask about a task while its records are being repaired.
@@ -141,6 +154,7 @@ export async function startHarness(
       socketPath: config.socketPath,
       logger,
       handlers: { ...ownHandlers, ...options.handlers },
+      ...(options.deviceId ? { deviceId: options.deviceId } : {}),
       onReady: () => {
         options.onReady?.();
         // After the hello answer is written, so the app knows the harness before it hears about a task.
@@ -159,7 +173,12 @@ export async function startHarness(
     const thoughts = (thought: WorkerThought) => {
       if (debug.enabled) server.emit("workerThought", thought);
     };
-    const voice = work && (work.voice ?? localVoice(server, logger, work.deviceId));
+    const delegated =
+      options.phone &&
+      new DelegatedGoals({ store, logger, tasks: (): TaskControl => tasks!, app: server, bridge: options.phone });
+    const macVoice = work && (work.voice ?? localVoice(server));
+    // A phone task's summary and final failure go back to the phone (OBJ-68).
+    const voice = macVoice && (delegated ? delegated.voice(macVoice) : macVoice);
     approvals =
       work &&
       voice &&
@@ -177,6 +196,10 @@ export async function startHarness(
       work &&
         voice && {
           ...work,
+          // Read when each subtask starts, so lines say this Mac's bridge device id once it is known.
+          get deviceId() {
+            return options.deviceId?.() ?? work.deviceId;
+          },
           store,
           limits,
           route: work.route ?? routeWith(router),
@@ -198,7 +221,7 @@ export async function startHarness(
       store,
       logger,
       app: server,
-      voice: voice ?? localVoice(server, logger),
+      voice: voice ?? localVoice(server),
       tasks: () => control,
       debug,
       ...(work ? { client: work.client } : {}),
@@ -213,9 +236,11 @@ export async function startHarness(
       actionLog,
       confirmation: confirming,
       questions,
+      ...(delegated ? { delegated } : {}),
       recovery,
       debug,
       close: async () => {
+        delegated?.close();
         await confirming.close();
         await control.close();
         router.close();

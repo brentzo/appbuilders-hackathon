@@ -694,7 +694,7 @@ describe.skipIf(process.platform === "win32")("SPEC-03 busy windows and the curs
       home: dir.path,
       lanes: { ghost: standIn, main: standIn },
       slots: options.slots ?? 3,
-      voice: localVoice(harness.server, logger, "mac-brent"),
+      voice: localVoice(harness.server),
     });
     const subtasks = harness.store.listSubtasks(task.id);
     const byPlanId = (id: string) => subtasks.find((s) => s.title === `Fill ${id}`)!;
