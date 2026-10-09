@@ -5,7 +5,7 @@ product: models
 assignee: Jepoy
 touches: [mac, android]
 specs: [SPEC-01]
-status: blocked
+status: in-progress
 priority: p0
 depends-on: []
 integrates-with: []
@@ -68,10 +68,5 @@ Push-to-talk is the fallback if the wake word is not reliable by demo day.
 
 ## Outcome
 
-Blocked: the custom training notebook does not produce an ONNX model in the current runtime.
-Its DeepPhonemizer checkpoint cannot be loaded because it expects the legacy `deep_phonemizer` import path, while the installed package exposes `dp`.
-The notebook generated 1,000 positive training clips and 500 positive test clips, but no model was produced.
-The notebook documents its mixed-license training data as non-commercial personal use only, and its available synthetic speech is US English; neither the artifact's permitted distribution nor Filipino-accent coverage is established.
-OBJ-60 tracks the reproducible training, accent-data, and licensing gaps.
-After those are resolved, rerun the teammate miss test and one-hour Taglish/TV/music false-trigger test, tune the threshold, validate on Mac and Android, and complete `models/wake-word/RESULTS.md`.
+_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._
 
