@@ -1,5 +1,6 @@
 import AppKit
 import OSLog
+import YumiProtocol
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let model = AppModel(permissions: DebugLaunchOptions.permissionCenter())
@@ -29,6 +30,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         model.permissions.observeActivation()
         quitCleanlyOnSIGTERM()
+        harness.onUserError = { [weak self] error in self?.showError(error) }
         harness.start()
         if DebugLaunchOptions.apply(to: self) { return }
         if !model.permissions.allGranted {
@@ -38,6 +40,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         harness.stop()
+    }
+
+    /// Shows an error from the harness or a failed call, through the one error presenter.
+    @discardableResult
+    func showError(_ error: UserError) -> NSWindow {
+        log.notice("Showing the \(error.kind.rawValue, privacy: .public) error")
+        return windows.showError(ErrorPresenter.present(error)) { [weak self] action in
+            self?.perform(action)
+        }
+    }
+
+    private func perform(_ action: ErrorButtonAction) {
+        switch action {
+        case .openSettings(let permission):
+            Task { await model.permissions.openSettings(for: permission) }
+        case .cancelTask(let taskId):
+            harness.cancelTask(taskId)
+        case .dismiss, .notAvailableYet:
+            break
+        }
     }
 
     /// `kill` and logout send SIGTERM, which would end Yumi without `applicationWillTerminate`

@@ -1,5 +1,6 @@
 import AppKit
 import OSLog
+import YumiProtocol
 
 /// Launch arguments for checking the UI by screenshot, in Debug builds only. For example:
 ///
@@ -7,7 +8,8 @@ import OSLog
 ///
 /// - `-YumiAppearance light|dark` forces the app's appearance without changing the system's.
 /// - `-YumiStatus startingUp|ready|listening|working|paused` sets the menu's status line.
-/// - `-YumiOpen settings|onboarding` opens a window at launch instead of the usual onboarding check.
+/// - `-YumiOpen settings|onboarding|error:<ErrorKind>` opens a window at launch instead of the
+///   usual onboarding check. An error uses the sample last action "Clicked Export in Keynote".
 /// - `-YumiPermissions mixed|granted` pretends permissions are in that state, without asking macOS.
 ///   `mixed` has the microphone allowed and the other two missing.
 /// - `-YumiSendSampleGoal YES` submits the sample goal once the harness is connected.
@@ -52,6 +54,11 @@ enum DebugLaunchOptions {
         switch arguments.string(forKey: "YumiOpen") {
         case "settings": opened = ("settings", app.windows.showSettings())
         case "onboarding": opened = ("onboarding", app.windows.showOnboarding())
+        case let value? where value.hasPrefix("error:"):
+            let name = String(value.dropFirst("error:".count))
+            opened = ErrorKind(rawValue: name).map {
+                ("error-\(name)", app.showError(UserError(kind: $0, lastAction: "Clicked Export in Keynote")))
+            }
         default: opened = nil
         }
 

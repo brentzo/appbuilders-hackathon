@@ -1,22 +1,24 @@
 import Foundation
 import Testing
+import YumiProtocol
 @testable import Yumi
 
-/// SPEC-11 requirement 7 and scenario "Copy table matches the code": every row the app has in
-/// code matches the table in specs/11-user-facing-errors.md, word for word.
+/// SPEC-11 requirement 7 and scenario "Copy table matches the code": every row of the SPEC-11
+/// table has the same text and buttons in code, word for word, and every protocol `ErrorKind`
+/// has copy. Which kind belongs to which row comes from the protocol's own `x-specRows` mapping.
 struct UserErrorCopyTests {
-    struct SpecRow {
+    struct SpecRow: Equatable {
         let message: String
         let buttons: [String]
     }
 
-    static func specRows() throws -> [String: SpecRow] {
-        let spec = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent() // YumiTests
-            .deletingLastPathComponent() // mac
-            .deletingLastPathComponent() // repo root
-            .appendingPathComponent("specs/11-user-facing-errors.md")
-        let text = try String(contentsOf: spec, encoding: .utf8)
+    static let repoRoot = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent() // YumiTests
+        .deletingLastPathComponent() // mac
+        .deletingLastPathComponent()
+
+    static func spec11Rows() throws -> [String: SpecRow] {
+        let text = try String(contentsOf: repoRoot.appendingPathComponent("specs/11-user-facing-errors.md"), encoding: .utf8)
         var rows: [String: SpecRow] = [:]
         for line in text.split(separator: "\n") where line.hasPrefix("| ") {
             let cells = line.split(separator: "|").map { $0.trimmingCharacters(in: .whitespaces) }
@@ -29,12 +31,46 @@ struct UserErrorCopyTests {
         return rows
     }
 
-    @Test(arguments: UserErrorKind.allCases)
-    func matchesSpec11(kind: UserErrorKind) throws {
+    /// `ErrorKind` to SPEC-11 row name, from protocol/schemas/errors.json.
+    static func protocolSpecRows() throws -> [String: String] {
+        let data = try Data(contentsOf: repoRoot.appendingPathComponent("protocol/schemas/errors.json"))
+        let schema = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        let defs = schema?["$defs"] as? [String: Any]
+        let errorKind = defs?["ErrorKind"] as? [String: Any]
+        return try #require(errorKind?["x-specRows"] as? [String: String])
+    }
+
+    /// SPEC-07 requirement 5: `Yumi says "..." with "Keep going" and "Stop" buttons.`
+    static func spec07BlockedCopy() throws -> SpecRow {
+        let text = try String(contentsOf: repoRoot.appendingPathComponent("specs/07-safety.md"), encoding: .utf8)
+        let line = try #require(text.split(separator: "\n").first { $0.hasPrefix("5. A blocked action never runs") })
+        let quotes = line.split(separator: "\"", omittingEmptySubsequences: false).enumerated()
+            .filter { $0.offset % 2 == 1 }.map { String($0.element) }
+        return SpecRow(message: quotes[0], buttons: Array(quotes.dropFirst()))
+    }
+
+    @Test(arguments: ErrorKind.allCases)
+    func everyKindMatchesItsSpecText(kind: ErrorKind) throws {
         let copy = UserErrorCopy.copy(for: kind)
-        let row = try #require(try Self.specRows()[copy.specRow], "No SPEC-11 row named \(copy.specRow)")
-        #expect(copy.message == row.message)
-        #expect(copy.buttons == row.buttons)
+        let expected: SpecRow
+        if kind == .blockedAction {
+            #expect(copy.source == .spec07Requirement5)
+            expected = try Self.spec07BlockedCopy()
+        } else {
+            let rowName = try #require(try Self.protocolSpecRows()[kind.rawValue], "\(kind) has no x-specRows entry")
+            #expect(copy.source == .spec11Row(rowName))
+            expected = try #require(try Self.spec11Rows()[rowName], "No SPEC-11 row named \(rowName)")
+        }
+        #expect(copy.message == expected.message)
+        #expect(copy.buttons == expected.buttons)
+    }
+
+    @Test func everySpec11RowIsInCode() throws {
+        let inCode = Set(ErrorKind.allCases.compactMap { kind -> String? in
+            if case .spec11Row(let name) = UserErrorCopy.copy(for: kind).source { return name }
+            return nil
+        })
+        #expect(Set(try Self.spec11Rows().keys) == inCode)
     }
 
     @Test func eachPermissionUsesItsSpecRow() {

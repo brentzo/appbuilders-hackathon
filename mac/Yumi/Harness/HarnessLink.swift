@@ -12,6 +12,8 @@ final class HarnessLink {
     /// The last status the harness reported for each task.
     private var taskStatuses: [String: TaskStatus] = [:]
     private var eventsTask: Task<Void, Never>?
+    /// Called with every error the user should see. `AppDelegate` shows it with the presenter.
+    var onUserError: ((UserError) -> Void)?
     private let log = Logger(subsystem: "ph.appbuilders.yumi", category: "harness")
 
     init(model: AppModel, launcher: HarnessLauncher, socketPath: String) {
@@ -49,6 +51,7 @@ final class HarnessLink {
             model.taskStatus = Self.appStatus(for: Array(taskStatuses.values))
         case .userError(let error):
             log.notice("The harness reported \(error.kind.rawValue, privacy: .public)")
+            onUserError?(error)
         default:
             // Voice, confirmation, cursors, approvals and tiling consume these in later objectives.
             log.info("Not handled yet: \(event.name, privacy: .public)")
@@ -72,11 +75,26 @@ final class HarnessLink {
                     SubmitGoalParams(transcript: "export my Keynote deck as a PDF", originDeviceId: "mac-local")
                 )
                 log.notice("Sample goal submitted, task \(result.taskId, privacy: .public)")
-            } catch let error as HarnessCallError {
-                log.error("Sample goal failed: \(error.userError.kind.rawValue, privacy: .public)")
             } catch {
-                log.error("Sample goal failed: \(String(describing: error), privacy: .public)")
+                report(error, from: "submitGoal")
             }
         }
+    }
+
+    func cancelTask(_ taskId: String) {
+        Task {
+            do {
+                try await client.cancelTask(taskId)
+            } catch {
+                report(error, from: "cancelTask")
+            }
+        }
+    }
+
+    /// A failed call the user started: log it, then show it. Only the structured kind travels on.
+    private func report(_ error: Error, from method: String) {
+        let userError = (error as? HarnessCallError)?.userError ?? UserError(kind: .unexpected)
+        log.error("\(method, privacy: .public) failed: \(String(describing: error), privacy: .public)")
+        onUserError?(userError)
     }
 }

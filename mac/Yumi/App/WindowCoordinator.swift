@@ -8,6 +8,7 @@ final class WindowCoordinator {
     private var settingsWindow: NSWindow?
     private var onboardingWindow: NSWindow?
     private var onboardingCloseObserver: NSObjectProtocol?
+    private var errorWindow: NSWindow?
 
     init(model: AppModel) {
         self.model = model
@@ -41,6 +42,24 @@ final class WindowCoordinator {
         }
         onboardingWindow = window
         model.permissions.startPolling()
+        present(window)
+        return window
+    }
+
+    /// Shows an error, replacing any error already showing. `perform` runs a button's action; the
+    /// window closes after every action.
+    @discardableResult
+    func showError(_ error: PresentedError, perform: @escaping (ErrorButtonAction) -> Void) -> NSWindow {
+        errorWindow?.close()
+        let window = makeWindow(
+            title: "Yumi",
+            content: ErrorView(error: error) { [weak self] action in
+                perform(action)
+                self?.errorWindow?.close()
+            }
+        )
+        window.level = .floating
+        errorWindow = window
         present(window)
         return window
     }

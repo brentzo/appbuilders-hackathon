@@ -1,4 +1,5 @@
 import Foundation
+import enum YumiProtocol.ErrorKind
 
 /// The macOS privacy permissions Yumi needs.
 enum Permission: String, CaseIterable, Identifiable, Sendable {
@@ -26,7 +27,7 @@ enum Permission: String, CaseIterable, Identifiable, Sendable {
     }
 
     /// The SPEC-11 row whose copy explains why Yumi needs this permission.
-    var missingErrorKind: UserErrorKind {
+    var missingErrorKind: ErrorKind {
         switch self {
         case .microphone: .microphonePermissionMissing
         case .accessibility: .accessibilityPermissionMissing

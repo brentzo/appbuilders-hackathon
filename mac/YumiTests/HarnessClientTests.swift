@@ -43,6 +43,11 @@ struct HarnessClientTests {
             Issue.record("submitGoal should have failed")
         } catch HarnessCallError.failed(let error) {
             #expect(error.kind == .bridgeDown)
+            // The mock's JSON-RPC message ("Mock failure for submitGoal") stays out of what the user sees.
+            let presented = ErrorPresenter.present(error)
+            #expect(presented.message == UserErrorCopy.copy(for: .bridgeDown).message)
+            #expect(!presented.message.contains("Mock failure"))
+            #expect(!presented.buttons.contains { $0.label.contains("Mock") || $0.label.contains("32000") })
         }
     }
 
