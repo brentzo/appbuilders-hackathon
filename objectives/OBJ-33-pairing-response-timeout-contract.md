@@ -62,4 +62,27 @@ This objective defines cancellation and late-accept behavior so a pairing cannot
 
 ## Outcome
 
-_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._
+In progress: the contract and the relay are done.
+The first expectation also needs both clients to follow the contract, which is [OBJ-41](OBJ-41-mac-pairing-verdict.md) for the Mac and [OBJ-23](OBJ-23-android-bridge-client.md) for the phone.
+
+- **Delivered:**
+  - `protocol/schemas/bridge.json`: `PairCancelFrame`, `PairedFrame`, `PairExpiredFrame`, `PairingOfferSeconds` (300), and `PairingAnswerSeconds` (30), with examples and generated types.
+  - `protocol/docs/pairing.md`: the new section "The answer window", with the relay, phone, and Mac rules.
+  - `bridge/src/relay.ts` and `bridge/src/store.ts`: the relay keeps each request open for 30 seconds by its own clock and decides alone.
+    It pairs, forwards, and sends `paired` in one step, sends `pairExpired` otherwise, handles `pairCancel`, holds verdicts for 2 minutes, and closes open requests on unpair.
+  - SPEC-08: the "Pairing answer window" decision and the scenario "Mac answers pairing too late".
+- **Commits:** e5f20eb feat(protocol): add the pairing answer window, verdict frames, and pairCancel; e566c82 feat(bridge): close pairing requests after 30 seconds and send pairing verdicts; 6ce8beb docs(spec-08): decide the pairing answer window and align its objectives.
+- **Expectations:**
+  - "A pairing cannot complete after the phone has shown the 30-second timeout error": the relay side passes in `bridge/test/e2e.test.ts` "pairing answer window (OBJ-33)" (late answer, cancel, phone offline, unpair while open).
+    The client side waits on OBJ-41 and OBJ-23, so the box stays open.
+  - "The pairing offer can remain valid for up to five minutes without keeping an abandoned request actionable": `PairingOfferSeconds` stays 300, and the relay closes every request after 30 seconds, on cancel, or on unpair (same tests).
+- **Not verified:** the Mac and phone behavior, until OBJ-41 and OBJ-23 are done.
+- **Decisions and deviations:**
+  - No protocol version bump: the frames and constants are additions, which protocol/README "Versioning" calls not breaking.
+    A Mac built on OBJ-21 still stores the phone when it sends `pairAccept`, so OBJ-41 must land before pairing is demoed.
+  - The phone gives up on its own only after 60 seconds without a verdict, and undoes a pairing it missed with an `unpair`, recorded in the SPEC-08 decision.
+  - The relay now holds a request for a Mac that is offline, so a short reconnect still gets it, instead of dropping it.
+  - Client coverage moved to each client's owner, and the Mac's change became OBJ-41 because OBJ-21 is done.
+  - OBJ-30's tasks were renumbered from `OBJ-29.x` to `OBJ-30.x`, fixing a copy error.
+- **For the next objectives:** devices act on a held verdict only while they wait for that device, because a held verdict is sent again on every reconnect within 2 minutes.
+  `paired` and `pairExpired` name the other device in `device`.
