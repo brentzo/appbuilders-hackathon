@@ -3,9 +3,9 @@ id: OBJ-33
 title: Align the pairing response timeout contract
 product: protocol
 assignee: Jepoy
-touches: []
+touches: [bridge]
 specs: [SPEC-08]
-status: todo
+status: in-progress
 priority: p0
 depends-on: [OBJ-02]
 integrates-with: [OBJ-13, OBJ-21, OBJ-23]
@@ -41,15 +41,15 @@ This objective defines cancellation and late-accept behavior so a pairing cannot
 
 ## Tasks
 
-- [ ] **OBJ-33.1** Define how the phone cancels a pending pairing and how the relay rejects a late `pairAccept` while preserving the QR offer's five-minute lifetime.
-- [ ] **OBJ-33.2** Align SPEC-08, pairing documentation, frame schema, examples, and generated protocol types with that behavior.
-- [ ] **OBJ-33.3** Add relay and client coverage for acceptance before the deadline, cancellation, expiry, reconnect, and a late response.
-- [ ] **OBJ-33.4** Update OBJ-13, OBJ-21, and OBJ-23 acceptance criteria to match the contract.
+- [x] **OBJ-33.1** Define how the phone cancels a pending pairing and how the relay rejects a late `pairAccept` while preserving the QR offer's five-minute lifetime.
+- [x] **OBJ-33.2** Align SPEC-08, pairing documentation, frame schema, examples, and generated protocol types with that behavior.
+- [x] **OBJ-33.3** Add relay coverage for acceptance before the deadline, cancellation, expiry, reconnect, and a late response. Client coverage belongs to each client's owner: the Mac in [OBJ-41](OBJ-41-mac-pairing-verdict.md), the phone in [OBJ-23](OBJ-23-android-bridge-client.md).
+- [x] **OBJ-33.4** Update OBJ-13 and OBJ-23 acceptance criteria to match the contract. OBJ-21 is done, so the Mac's change is the new [OBJ-41](OBJ-41-mac-pairing-verdict.md).
 
 ## Expectations
 
 - [ ] A pairing cannot complete after the phone has shown the 30-second timeout error.
-- [ ] The pairing offer can remain valid for up to five minutes without keeping an abandoned request actionable.
+- [x] The pairing offer can remain valid for up to five minutes without keeping an abandoned request actionable.
 
 ## Expected outcomes
 

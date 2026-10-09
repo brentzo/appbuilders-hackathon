@@ -39,15 +39,16 @@ This follow-up runs the real Mac and Android clients against the deployed relay 
 
 ## Tasks
 
-- [ ] **OBJ-29.1** Connect the real Mac harness client and Android client to the deployed bridge using the same protocol version.
-- [ ] **OBJ-29.2** Pair the phone by scanning the QR code shown by the Mac app, then verify each side lists the paired device.
-- [ ] **OBJ-29.3** Exchange encrypted commands, results, and events in both directions, and confirm the relay logs and storage contain no plaintext payload.
-- [ ] **OBJ-29.4** Exercise unknown-device rejection, command expiry, duplicate delivery, short reconnect delivery, offline command rejection, and unpair from either device.
-- [ ] **OBJ-29.5** Record device models, OS versions, relay version, protocol version, exact steps, and results for every scenario in the bridge integration report.
+- [ ] **OBJ-30.1** Connect the real Mac harness client and Android client to the deployed bridge using the same protocol version.
+- [ ] **OBJ-30.2** Pair the phone by scanning the QR code shown by the Mac app, then verify each side lists the paired device.
+  Also scan an expired code, and scan a fresh code with the Mac app quit until the 30-second answer window passes, then verify neither side is paired.
+- [ ] **OBJ-30.3** Exchange encrypted commands, results, and events in both directions, and confirm the relay logs and storage contain no plaintext payload.
+- [ ] **OBJ-30.4** Exercise unknown-device rejection, command expiry, duplicate delivery, short reconnect delivery, offline command rejection, and unpair from either device.
+- [ ] **OBJ-30.5** Record device models, OS versions, relay version, protocol version, exact steps, and results for every scenario in the bridge integration report.
 
 ## Expectations
 
-- [ ] SPEC-08 scenarios pass on the real Mac, Android phone, and deployed relay: "Pair the phone with the Mac", "Unpair a device", "VPS cannot read messages", "Message from an unknown device is dropped", "Command to an offline device fails at once", "Result survives a short reconnect", "Expired command is not run", and "Duplicate delivery runs once".
+- [ ] SPEC-08 scenarios pass on the real Mac, Android phone, and deployed relay: "Pair the phone with the Mac", "Unpair a device", "Pairing code expired", "Mac does not answer pairing", "VPS cannot read messages", "Message from an unknown device is dropped", "Command to an offline device fails at once", "Result survives a short reconnect", "Expired command is not run", and "Duplicate delivery runs once".
 - [ ] No secret or plaintext payload appears in relay logs, relay storage, Mac files, or Android files.
 - [ ] The report identifies any scenario not run and the exact blocker.
 

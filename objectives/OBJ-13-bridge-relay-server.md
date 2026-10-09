@@ -41,7 +41,8 @@ It never sees plaintext, which keeps the "local AI" claim honest.
 ## Tasks
 
 - [x] **OBJ-13.1** Set up `bridge/` as a TypeScript project on Node.js LTS, using the envelope types and reference crypto from `protocol/`.
-- [x] **OBJ-13.2** Implement the device registry in SQLite: device id, public signing key, and the pairings between two devices. Implement the pairing steps from `protocol/docs/pairing.md`: remember a `pairRequest` for 5 minutes, and record the pairing when the matching `pairAccept` passes through. The interaction between this 5-minute window and SPEC-08's 30-second Mac response scenario is tracked in [OBJ-33](OBJ-33-pairing-response-timeout-contract.md).
+- [x] **OBJ-13.2** Implement the device registry in SQLite: device id, public signing key, and the pairings between two devices. 
+  Implement the pairing steps from `protocol/docs/pairing.md`: keep a `pairRequest` open for the 30-second answer window, record the pairing when the matching `pairAccept` passes through in time, and send the `paired` and `pairExpired` verdicts and handle `pairCancel` as in `pairing.md` "The answer window" ([OBJ-33](OBJ-33-pairing-response-timeout-contract.md)).
 - [x] **OBJ-13.3** Accept WebSocket connections and authenticate each device with a signed challenge, as in `pairing.md` "Connecting". Register a new device id on first use when it is derived from its key, and refuse with the `RefusedReason` values otherwise.
 - [x] **OBJ-13.4** Route each envelope to its `to` device if online. Only allow routing between paired devices, and answer anything else with `notPaired`.
 - [x] **OBJ-13.5** Commands are never queued. If a command's target is offline, send the sender a `targetOffline` event at once. Hold results and events for a device that dropped off in SQLite until they expire, deliver them in order on reconnect, and delete each one after the receiver acknowledges it.
@@ -53,7 +54,7 @@ It never sees plaintext, which keeps the "local AI" claim honest.
 
 ## Expectations
 
-- [ ] SPEC-08 scenarios pass at the bridge level: "VPS cannot read messages", "Message from an unknown device is dropped" (bridge refuses it; the device-side check is in client objectives), "Command to an offline device fails at once", "Result survives a short reconnect", "Expired command is not run", "Unpair a device" including duplicate retry, offline recipient, and re-pairing.
+- [ ] SPEC-08 scenarios pass at the bridge level: "VPS cannot read messages", "Message from an unknown device is dropped" (bridge refuses it; the device-side check is in client objectives), "Command to an offline device fails at once", "Result survives a short reconnect", "Expired command is not run", "Unpair a device" including duplicate retry, offline recipient, and re-pairing, "Mac does not answer pairing", "Mac answers pairing too late".
 - [x] A test client using the protocol's test vectors can authenticate, pair, send, and receive through a local relay. Production endpoint acceptance is tracked in [OBJ-30](OBJ-30-live-cross-device-bridge-acceptance.md).
 - [x] Database and logs contain no plaintext payloads.
 

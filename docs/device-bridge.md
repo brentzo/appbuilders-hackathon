@@ -98,6 +98,8 @@ Message kinds inside the payload:
 | Tool list | event | on connect | 2 minutes |
 | Busy (goal queued behind another task) | result | back to the origin device | 2 minutes |
 | Target offline, expired, not paired | relay frame, not an envelope ([pairing](../protocol/docs/pairing.md)) | relay to the sender | held 2 minutes |
+| Pairing request | relay frame, sealed with the QR code's secret | phone to Mac | open 30 seconds at the relay |
+| Paired, pairing expired | relay frame, not an envelope ([pairing](../protocol/docs/pairing.md)) | relay to the phone or Mac | held 2 minutes |
 
 Schemas: [OBJ-02](../objectives/OBJ-02-bridge-envelope-and-crypto.md) (envelope and crypto) and [OBJ-25](../objectives/OBJ-25-cross-device-messages.md) (message kinds).
 

@@ -41,7 +41,14 @@ After this objective, the phone and Mac can exchange messages in both directions
 
 - [ ] **OBJ-23.1** Generate and store the phone's device keys in the Android Keystore (or encrypted storage backed by it), never in plain files.
 - [ ] **OBJ-23.2** Implement the libsodium crypto with lazysodium and prove it matches the protocol test vectors.
-- [ ] **OBJ-23.3** Pairing: scan the Mac's QR code with CameraX and an on-device barcode scanner, then complete the pairing steps from `pairing.md`. Show "Paired with <device name>".
+- [ ] **OBJ-23.3** Pairing: scan the Mac's QR code with CameraX and an on-device barcode scanner, then complete the pairing steps from `pairing.md`.
+  Show "Paired with <device name>".
+  Follow the phone's rules in `pairing.md` "The answer window" ([OBJ-33](OBJ-33-pairing-response-timeout-contract.md)):
+  - Show "Pairing code expired" for an expired QR code, and send nothing.
+  - Show the SPEC-11 "Mac didn't answer pairing" copy on `pairExpired`, not on a local 30-second timer.
+  - Send `pairCancel` when the user leaves the pairing screen.
+  - Give up only after 60 seconds without a verdict.
+  - Answer a `pairAccept` for a request it gave up on with a signed `unpair`.
 - [ ] **OBJ-23.4** Run the WebSocket connection (OkHttp) inside the foreground service: authenticate, reconnect with backoff, and survive network changes (Wi-Fi to mobile data).
 - [ ] **OBJ-23.5** Verify signatures and drop messages from unpaired or revoked devices, recording them in the local log.
 - [ ] **OBJ-23.6** At-most-once execution: remember processed message ids and their results; on a duplicate, resend the stored result.
@@ -52,7 +59,7 @@ After this objective, the phone and Mac can exchange messages in both directions
 
 ## Expectations
 
-- [ ] SPEC-08 scenarios pass from the phone side: "Pair the phone with the Mac", "Unpair a device", "Message from an unknown device is dropped", "Result survives a short reconnect", "Expired command is not run", "Duplicate delivery runs once".
+- [ ] SPEC-08 scenarios pass from the phone side: "Pair the phone with the Mac", "Unpair a device", "Pairing code expired", "Mac does not answer pairing", "Mac answers pairing too late", "Message from an unknown device is dropped", "Result survives a short reconnect", "Expired command is not run", "Duplicate delivery runs once".
 - [ ] A command from the Mac reaches the backgrounded phone within 2 seconds on a normal connection.
 - [ ] Keys never appear in files or logs.
 

@@ -260,4 +260,5 @@ Only `allowed` may run without the user; asking and the Trash are [OBJ-38](../ob
 | [OBJ-36](../objectives/OBJ-36-gui-act-sub-agent.md) | gui_act sub-agent | Brent | todo |
 | [OBJ-37](../objectives/OBJ-37-permission-gate-and-file-tools.md) | Permission gate and typed file tools | Brent | done |
 | [OBJ-38](../objectives/OBJ-38-approvals-pause-and-action-log.md) | Approvals, pause, and action log in the harness | Brent | todo |
+| [OBJ-41](../objectives/OBJ-41-mac-pairing-verdict.md) | Mac pairing waits for the relay's verdict | Brent | todo |
 <!-- generated:product-objectives:end -->

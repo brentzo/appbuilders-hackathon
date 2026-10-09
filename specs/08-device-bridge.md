@@ -69,6 +69,12 @@ Feature: Pairing
     When the Mac does not answer within 30 seconds
     Then the phone shows the "Mac didn't answer pairing" copy from SPEC-11
     And the phone is not paired
+
+  Scenario: Mac answers pairing too late
+    Given the phone showed the "Mac didn't answer pairing" copy from SPEC-11
+    When the Mac answers the pairing request after that
+    Then neither device shows "Paired with <device name>"
+    And the Mac and phone are not paired
 ```
 
 ```gherkin
@@ -113,6 +119,12 @@ Feature: Message delivery
 
 - **`replyTo` is encrypted.** It moves inside the encrypted payload, so the VPS cannot link a result to its command. The VPS never needs it, and changing it costs nothing before any client is built. Requirement 3 stays as written. The protocol matches it (`bridge.json` and the signed routing fields in `crypto.md`). Decided 2026-10-09.
 - **Pairing failures** show the phone copy added to SPEC-11 for an expired code, a code that is not Yumi's, different versions, and no answer from the Mac within 30 seconds. Decided 2026-10-09.
+- **Pairing answer window:** the QR code stays valid for 5 minutes, but the VPS keeps each pairing request open for only 30 seconds, by its own clock, and tells both devices whether the Mac answered in time.
+  The phone shows "Mac didn't answer pairing" when the VPS says the request closed, and the Mac shows "Paired with <device name>" only when the VPS confirms the pairing.
+  With one clock deciding, a pairing never completes after the phone showed the error.
+  A phone that cannot reach the VPS gives up after 60 seconds, shows the same copy, and undoes any pairing it missed with an unpair on its next connection.
+  Details are in `protocol/docs/pairing.md` "The answer window" ([OBJ-33](../objectives/OBJ-33-pairing-response-timeout-contract.md)).
+  Decided 2026-10-09.
 - **Transport:** the plain VPS bridge is the only path between devices for the hackathon. Security comes from end-to-end encryption, device signatures, and pairing, not from a private network. Decided 2026-10-09.
 - **NetBird is not used by Yumi.** It cannot replace the bridge, because offline notices, short-reconnect delivery, and phone wake-ups still need the VPS. Running it on the phone would take Android's only VPN slot and make Yumi depend on another app staying connected. NetBird stays on the VPS for the team's private access to the server, logs, and dev machines. Decided 2026-10-09.
 - **Command expiry:** every command expires after 2 minutes. Decided 2026-10-09, replacing the earlier "2 minutes for UI actions, 1 hour for data requests".
