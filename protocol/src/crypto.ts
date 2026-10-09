@@ -8,6 +8,7 @@ import {
   RESULT_EXPIRY_SECONDS,
   type Envelope,
   type EnvelopeType,
+  type PairRequest,
 } from "../generated/ts/index.ts";
 import { validate } from "./index.ts";
 
@@ -48,9 +49,17 @@ export type OpenFailure =
   | "badSignature"
   | "expired"
   | "badExpiry"
-  | "cannotDecrypt";
+  | "cannotDecrypt"
+  | "invalidPayload";
 
-export type OpenResult = { ok: true; envelope: Envelope; payload: unknown } | { ok: false; reason: OpenFailure };
+/**
+ * An expired envelope comes back with the envelope, because it is authentic: if its id already ran,
+ * the receiver resends the stored result (SPEC-08 r8); otherwise it tells the sender it expired.
+ */
+export type OpenResult =
+  | { ok: true; envelope: Envelope; payload: unknown }
+  | { ok: false; reason: "expired"; envelope: Envelope }
+  | { ok: false; reason: Exclude<OpenFailure, "expired"> };
 
 export interface SealInput {
   sender: DeviceKeys;
@@ -71,6 +80,7 @@ const ENVELOPE_DOMAIN = "yumi-envelope-v1";
 const RELAY_AUTH_DOMAIN = "yumi-relay-auth-v1";
 const PAIR_REQUEST_DOMAIN = "yumi-pair-request-v1";
 const PAIR_ACCEPT_DOMAIN = "yumi-pair-accept-v1";
+const UNPAIR_DOMAIN = "yumi-unpair-v1";
 const NONCE_BYTES = sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES;
 const BASE64 = sodium.base64_variants.ORIGINAL;
 const EXPIRY_SECONDS: Record<ExpiryKind, number> = {
@@ -162,33 +172,44 @@ export function relayAuthSigningBytes(nonce: Uint8Array, deviceId: string): Uint
   return canonicalBytes([RELAY_AUTH_DOMAIN, nonce, deviceId]);
 }
 
-/** The pairing request fields the tag covers. `from` is the phone, `to` is the Mac. */
-export interface PairRequestFields {
+/** Who a pairing request is from (the phone) and to (the Mac). */
+export interface PairRoute {
   from: string;
   to: string;
-  deviceName: string;
-  platform: string;
-  signingPublicKey: Uint8Array;
-  kxPublicKey: Uint8Array;
 }
 
-export function pairRequestTagBytes(r: PairRequestFields): Uint8Array {
-  return canonicalBytes([PAIR_REQUEST_DOMAIN, r.from, r.to, r.deviceName, r.platform, r.signingPublicKey, r.kxPublicKey]);
+/** The additional data bound into a sealed pairing request, so it cannot be replayed on another route. */
+export function pairRequestAdditionalData(route: PairRoute): Uint8Array {
+  return canonicalBytes([PAIR_REQUEST_DOMAIN, route.from, route.to]);
 }
 
-/** Keyed BLAKE2b-256 of the request fields, keyed with the QR code's one-time pairing secret. */
-export function pairRequestTag(r: PairRequestFields, pairingSecret: Uint8Array): Uint8Array {
-  return sodium.crypto_generichash(32, pairRequestTagBytes(r), pairingSecret);
+/**
+ * Seals a pairing request with the QR code's one-time pairing secret. Only a device that saw the
+ * QR code can make one, and the relay can neither read nor change it.
+ */
+export function sealPairRequest(request: PairRequest, route: PairRoute, pairingSecret: Uint8Array): string {
+  return sealPairRequestWithNonce(request, route, pairingSecret, sodium.randombytes_buf(NONCE_BYTES));
 }
 
-/** Compares a received tag with the expected one in constant time. */
-export function tagsEqual(a: Uint8Array, b: Uint8Array): boolean {
-  return a.length === b.length && sodium.memcmp(a, b);
+/** sealPairRequest with a given nonce, for the test vectors only. */
+export function sealPairRequestWithNonce(request: PairRequest, route: PairRoute, pairingSecret: Uint8Array, nonce: Uint8Array): string {
+  return seal(new TextEncoder().encode(JSON.stringify(request)), pairRequestAdditionalData(route), nonce, pairingSecret);
+}
+
+/** Returns the request, or null when the secret or route is wrong or the request is malformed. */
+export function openPairRequest(sealed: string, route: PairRoute, pairingSecret: Uint8Array): PairRequest | null {
+  const json = openJson(sealed, pairRequestAdditionalData(route), pairingSecret);
+  return json.ok && validate("PairRequest", json.value).valid ? (json.value as PairRequest) : null;
 }
 
 /** The bytes the Mac signs to accept a pairing request. `from` is the Mac, `to` is the phone. */
 export function pairAcceptSigningBytes(a: { from: string; to: string; signingPublicKey: Uint8Array; kxPublicKey: Uint8Array }): Uint8Array {
   return canonicalBytes([PAIR_ACCEPT_DOMAIN, a.from, a.to, a.signingPublicKey, a.kxPublicKey]);
+}
+
+/** The bytes a device signs to unpair another. `at` is the exact timestamp text sent. */
+export function unpairSigningBytes(u: { from: string; to: string; at: string }): Uint8Array {
+  return canonicalBytes([UNPAIR_DOMAIN, u.from, u.to, u.at]);
 }
 
 /** XChaCha20-Poly1305 (IETF). Returns the ciphertext with its 16-byte tag appended. */
@@ -226,8 +247,18 @@ export function fromBase64(text: string): Uint8Array {
   return sodium.from_base64(text, BASE64);
 }
 
-/** Encrypts the payload for the recipient and signs the envelope. */
+/** Encrypts the payload for the recipient with a new random nonce, and signs the envelope. */
 export function sealEnvelope(input: SealInput): Envelope {
+  return sealEnvelopeWithNonce(input, sodium.randombytes_buf(NONCE_BYTES));
+}
+
+/**
+ * sealEnvelope with a given nonce, for the test vectors only.
+ * Never reuse a nonce with the same key: that breaks the encryption.
+ */
+export function sealEnvelopeWithNonce(input: SealInput, nonce: Uint8Array): Envelope {
+  const json = JSON.stringify(input.payload) as string | undefined;
+  if (json === undefined) throw new TypeError("The payload must be a JSON value");
   const routing: Routing = {
     id: input.id ?? randomUUID(),
     from: input.sender.deviceId,
@@ -237,11 +268,8 @@ export function sealEnvelope(input: SealInput): Envelope {
     expiresAt: input.expiresAt,
     protocolVersion: PROTOCOL_VERSION,
   };
-  const nonce = sodium.randombytes_buf(NONCE_BYTES);
-  const plaintext = new TextEncoder().encode(JSON.stringify(input.payload));
   const { tx } = sessionKeys(input.sender, input.recipient);
-  const ciphertext = encryptPayload(plaintext, envelopeAdditionalData(routing), nonce, tx);
-  const payload = toBase64(concat(nonce, ciphertext));
+  const payload = seal(new TextEncoder().encode(json), envelopeAdditionalData(routing), nonce, tx);
   const signature = toBase64(sign(envelopeSigningBytes({ ...routing, payload }), input.sender.signing.secretKey));
   return { ...routing, signature, payload };
 }
@@ -260,20 +288,37 @@ export function openEnvelope(value: unknown, receiver: DeviceKeys, sender: PeerK
     return { ok: false, reason: "badSignature" };
   }
   const expiry = Date.parse(envelope.expiresAt);
-  if (now.getTime() >= expiry) return { ok: false, reason: "expired" };
+  if (now.getTime() >= expiry) return { ok: false, reason: "expired", envelope };
   if (expiry - now.getTime() > MAX_EXPIRY_AHEAD_MS) return { ok: false, reason: "badExpiry" };
-  const sealed = fromBase64(envelope.payload);
-  const { rx } = sessionKeys(receiver, sender);
-  const plaintext = decryptPayload(sealed.subarray(NONCE_BYTES), envelopeAdditionalData(envelope), sealed.subarray(0, NONCE_BYTES), rx);
-  if (!plaintext) return { ok: false, reason: "cannotDecrypt" };
-  return { ok: true, envelope, payload: JSON.parse(new TextDecoder().decode(plaintext)) as unknown };
+  if (compareBytes(receiver.kx.publicKey, sender.kxPublicKey) === 0) return { ok: false, reason: "cannotDecrypt" };
+  const json = openJson(envelope.payload, envelopeAdditionalData(envelope), sessionKeys(receiver, sender).rx);
+  return json.ok ? { ok: true, envelope, payload: json.value } : { ok: false, reason: json.reason };
 }
 
-function concat(a: Uint8Array, b: Uint8Array): Uint8Array {
-  const out = new Uint8Array(a.length + b.length);
-  out.set(a);
-  out.set(b, a.length);
-  return out;
+/** base64 of the nonce followed by the XChaCha20-Poly1305 ciphertext and tag: a SealedPayload. */
+function seal(plaintext: Uint8Array, additionalData: Uint8Array, nonce: Uint8Array, key: Uint8Array): string {
+  return toBase64(Uint8Array.from([...nonce, ...encryptPayload(plaintext, additionalData, nonce, key)]));
+}
+
+/** Opens a SealedPayload and parses its UTF-8 JSON. Never throws. */
+function openJson(
+  sealed: string,
+  additionalData: Uint8Array,
+  key: Uint8Array,
+): { ok: true; value: unknown } | { ok: false; reason: "cannotDecrypt" | "invalidPayload" } {
+  let bytes: Uint8Array;
+  try {
+    bytes = fromBase64(sealed);
+  } catch {
+    return { ok: false, reason: "cannotDecrypt" };
+  }
+  const plaintext = decryptPayload(bytes.subarray(NONCE_BYTES), additionalData, bytes.subarray(0, NONCE_BYTES), key);
+  if (!plaintext) return { ok: false, reason: "cannotDecrypt" };
+  try {
+    return { ok: true, value: JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(plaintext)) as unknown };
+  } catch {
+    return { ok: false, reason: "invalidPayload" };
+  }
 }
 
 function compareBytes(a: Uint8Array, b: Uint8Array): number {

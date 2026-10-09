@@ -562,22 +562,20 @@ data class PairingOffer(
     val signingPublicKey: String,
     /** X25519 public key for crypto_kx. */
     val kxPublicKey: String,
-    /** 32 random bytes, used once, that key the pairing request's tag. */
+    /** 32 random bytes, used once, that seal the pairing request. */
     val pairingSecret: String,
     val bridgeUrl: String,
     /** 5 minutes after the code is shown. */
     val expiresAt: String,
 )
 
-/** The phone's keys, sent to the Mac after scanning the QR code. */
+/** The phone's name and keys, sent to the Mac after scanning the QR code. Travels sealed with the pairing secret inside a pairRequest frame, so the relay can neither read nor replace it. */
 @Serializable
 data class PairRequest(
     val deviceName: String,
     val platform: DevicePlatform,
     val signingPublicKey: String,
     val kxPublicKey: String,
-    /** Keyed BLAKE2b-256 with the pairing secret, so the relay cannot swap in its own keys. */
-    val tag: String,
 )
 
 /** Phone to relay to Mac, after scanning the QR code. The relay checks that from is the authenticated sender and forwards the frame unchanged. */
@@ -586,7 +584,8 @@ data class PairRequest(
 data class PairRequestFrame(
     val from: String,
     val to: String,
-    val request: PairRequest,
+    /** A PairRequest as JSON, sealed with the pairing secret (protocol/docs/crypto.md). */
+    val sealed: String,
 ) : BridgeFrame
 
 /** Pause one task, or every task when taskId is absent (SPEC-06 r1). */
@@ -1106,12 +1105,16 @@ data class TypeTextAction(
     val text: String,
 ) : ModelAction
 
-/** Either device to relay to the other (SPEC-08 r9). The relay removes the pairing at once, then forwards the frame. */
+/** Either device to relay to the other (SPEC-08 r9). The relay removes the pairing at once, then forwards the frame and holds it until the other device acks it. */
 @Serializable
 @SerialName("unpair")
 data class UnpairFrame(
     val from: String,
     val to: String,
+    /** When the user unpaired. The other device ignores an unpair older than its pairing, so an old frame cannot be replayed. */
+    val at: String,
+    /** Ed25519 by the sending device, so the relay cannot unpair two devices on its own. */
+    val signature: String,
 ) : BridgeFrame
 
 @Serializable

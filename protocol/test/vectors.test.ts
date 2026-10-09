@@ -9,14 +9,15 @@ import {
   envelopeSigningBytes,
   fromBase64,
   openEnvelope,
+  openPairRequest,
   pairAcceptSigningBytes,
-  pairRequestTag,
-  pairRequestTagBytes,
+  pairRequestAdditionalData,
   publicKeysOf,
   relayAuthSigningBytes,
   sessionKeys,
   sign,
   toBase64,
+  unpairSigningBytes,
   verify,
 } from "../src/crypto.ts";
 import { validate } from "../src/index.ts";
@@ -103,18 +104,14 @@ describe("Yumi bridge vectors", () => {
     expect(t.signature).toBe(toBase64(sign(hex(t.signingBytes), mac.signing.secretKey)));
   });
 
-  it("tags the pairing request with the QR code's secret", () => {
+  it("seals the pairing request with the QR code's secret", () => {
     const t = v.pairRequest;
-    const fields = {
-      from: phone.deviceId,
-      to: mac.deviceId,
-      deviceName: t.request.deviceName,
-      platform: t.request.platform,
-      signingPublicKey: fromBase64(t.request.signingPublicKey),
-      kxPublicKey: fromBase64(t.request.kxPublicKey),
-    };
-    expect(toHex(pairRequestTagBytes(fields))).toBe(t.tagBytes);
-    expect(t.request.tag).toBe(toBase64(pairRequestTag(fields, fromBase64(t.pairingSecret))));
+    const route = { from: phone.deviceId, to: mac.deviceId };
+    expect(toHex(pairRequestAdditionalData(route))).toBe(t.additionalData);
+    const ciphertext = encryptPayload(new TextEncoder().encode(t.plaintext), hex(t.additionalData), hex(t.nonce), fromBase64(t.pairingSecret));
+    expect(t.frame.sealed).toBe(toBase64(Uint8Array.from([...hex(t.nonce), ...ciphertext])));
+    expect(openPairRequest(t.frame.sealed, route, fromBase64(t.pairingSecret))).toEqual(JSON.parse(t.plaintext));
+    expect(validate("BridgeFrame", t.frame).errors).toEqual([]);
   });
 
   it("signs the pairing accept over the phone's keys", () => {
@@ -122,5 +119,13 @@ describe("Yumi bridge vectors", () => {
     const bytes = pairAcceptSigningBytes({ from: mac.deviceId, to: phone.deviceId, signingPublicKey: phone.signing.publicKey, kxPublicKey: phone.kx.publicKey });
     expect(toHex(bytes)).toBe(t.signingBytes);
     expect(verify(fromBase64(t.accept.signature), bytes, mac.signing.publicKey)).toBe(true);
+  });
+
+  it("signs an unpair", () => {
+    const t = v.unpair;
+    const bytes = unpairSigningBytes({ from: phone.deviceId, to: mac.deviceId, at: t.frame.at });
+    expect(toHex(bytes)).toBe(t.signingBytes);
+    expect(t.frame.signature).toBe(toBase64(sign(bytes, phone.signing.secretKey)));
+    expect(validate("BridgeFrame", t.frame).errors).toEqual([]);
   });
 });

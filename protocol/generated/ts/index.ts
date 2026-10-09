@@ -307,7 +307,7 @@ export interface HelloResult {
   protocolVersion: ProtocolVersion;
 }
 
-/** 32 bytes in standard base64 with padding: a public key, a pairing secret, a challenge nonce, or a pairing tag. */
+/** 32 bytes in standard base64 with padding: a public key, a pairing secret, or a challenge nonce. */
 export type Key32 = string;
 
 /** Press a key combination, for example cmd+shift+e. Main lane only. Risk comes from a per-app list (SPEC-07 r6). */
@@ -465,21 +465,19 @@ export interface PairingOffer {
   signingPublicKey: Key32;
   /** X25519 public key for crypto_kx. */
   kxPublicKey: Key32;
-  /** 32 random bytes, used once, that key the pairing request's tag. */
+  /** 32 random bytes, used once, that seal the pairing request. */
   pairingSecret: Key32;
   bridgeUrl: string;
   /** 5 minutes after the code is shown. */
   expiresAt: Timestamp;
 }
 
-/** The phone's keys, sent to the Mac after scanning the QR code. */
+/** The phone's name and keys, sent to the Mac after scanning the QR code. Travels sealed with the pairing secret inside a pairRequest frame, so the relay can neither read nor replace it. */
 export interface PairRequest {
   deviceName: DeviceName;
   platform: DevicePlatform;
   signingPublicKey: Key32;
   kxPublicKey: Key32;
-  /** Keyed BLAKE2b-256 with the pairing secret, so the relay cannot swap in its own keys. */
-  tag: Key32;
 }
 
 /** Phone to relay to Mac, after scanning the QR code. The relay checks that from is the authenticated sender and forwards the frame unchanged. */
@@ -487,7 +485,8 @@ export interface PairRequestFrame {
   frame: "pairRequest";
   from: DeviceId;
   to: DeviceId;
-  request: PairRequest;
+  /** A PairRequest as JSON, sealed with the pairing secret (protocol/docs/crypto.md). */
+  sealed: SealedPayload;
 }
 
 /** An exact file path, absolute or starting with ~/. The wildcard characters * and ? are rejected (SPEC-07 r8); brackets and braces are allowed because they are common in real file names. */
@@ -640,7 +639,7 @@ export interface ScrollAction {
 export type ScrollDirection = "up" | "down" | "left" | "right";
 export const scrollDirectionValues: readonly ScrollDirection[] = ["up", "down", "left", "right"];
 
-/** The 24-byte nonce followed by the XChaCha20-Poly1305 ciphertext and tag, in standard base64 with padding. At most 1 MiB of base64 text. */
+/** The 24-byte nonce followed by the XChaCha20-Poly1305 ciphertext and tag, in standard base64 with padding. At most 1 MiB of base64 text. Used for envelope payloads and pairing requests. */
 export type SealedPayload = string;
 
 export interface SearchTasksParams {
@@ -921,11 +920,15 @@ export interface TypeTextAction {
   text: string;
 }
 
-/** Either device to relay to the other (SPEC-08 r9). The relay removes the pairing at once, then forwards the frame. */
+/** Either device to relay to the other (SPEC-08 r9). The relay removes the pairing at once, then forwards the frame and holds it until the other device acks it. */
 export interface UnpairFrame {
   frame: "unpair";
   from: DeviceId;
   to: DeviceId;
+  /** When the user unpaired. The other device ignores an unpair older than its pairing, so an old frame cannot be replayed. */
+  at: Timestamp;
+  /** Ed25519 by the sending device, so the relay cannot unpair two devices on its own. */
+  signature: Signature;
 }
 
 export interface UnpairParams {

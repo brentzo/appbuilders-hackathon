@@ -1,12 +1,19 @@
 import { describe, expect, it } from "vitest";
 import {
+  encryptPayload,
+  envelopeAdditionalData,
   envelopeSigningBytes,
   expiresAt,
   fromBase64,
   generateDeviceKeys,
   openEnvelope,
+  openPairRequest,
   publicKeysOf,
   sealEnvelope,
+  sealPairRequest,
+  sessionKeys,
+  sign,
+  toBase64,
   verify,
 } from "../src/crypto.ts";
 import { validate } from "../src/index.ts";
@@ -98,11 +105,59 @@ describe("sealEnvelope and openEnvelope", () => {
     }
   });
 
+  it("never throws: an authentic payload that is not JSON is refused as invalidPayload", () => {
+    const { signature: _, payload: __, ...routing } = sealAlarm();
+    const nonce = new Uint8Array(24);
+    const ciphertext = encryptPayload(new TextEncoder().encode("set an alarm"), envelopeAdditionalData(routing), nonce, sessionKeys(mac, publicKeysOf(phone)).tx);
+    const payload = toBase64(Uint8Array.from([...nonce, ...ciphertext]));
+    const signature = toBase64(sign(envelopeSigningBytes({ ...routing, payload }), mac.signing.secretKey));
+    expect(openEnvelope({ ...routing, signature, payload }, phone, publicKeysOf(mac), now)).toEqual({ ok: false, reason: "invalidPayload" });
+  });
+
+  it("refuses to seal a payload that is not a JSON value", () => {
+    expect(() =>
+      sealEnvelope({ sender: mac, recipient: publicKeysOf(phone), type: "command", expiresAt: expiresAt("command", now), payload: undefined }),
+    ).toThrow(TypeError);
+  });
+
+  it("never throws: a sender claiming the receiver's own exchange key cannot be decrypted", () => {
+    const mirror = { ...publicKeysOf(mac), kxPublicKey: phone.kx.publicKey };
+    expect(openEnvelope(sealAlarm(), phone, mirror, now)).toEqual({ ok: false, reason: "cannotDecrypt" });
+  });
+
   it("refuses a value that is not an envelope", () => {
     expect(openEnvelope({ ...sealAlarm(), payload: "plain text" }, phone, publicKeysOf(mac), now)).toEqual({
       ok: false,
       reason: "invalidEnvelope",
     });
+  });
+});
+
+describe("sealPairRequest and openPairRequest", () => {
+  const secret = new Uint8Array(32).fill(7);
+  const route = { from: phone.deviceId, to: mac.deviceId };
+  const request = {
+    deviceName: "Pixel 9",
+    platform: "android" as const,
+    signingPublicKey: toBase64(phone.signing.publicKey),
+    kxPublicKey: toBase64(phone.kx.publicKey),
+  };
+
+  it("opens with the QR code's secret and nothing else", () => {
+    const sealed = sealPairRequest(request, route, secret);
+    expect(openPairRequest(sealed, route, secret)).toEqual(request);
+    expect(openPairRequest(sealed, route, new Uint8Array(32).fill(8))).toBeNull();
+  });
+
+  it("keeps the phone's name and keys away from the relay (SPEC-08 r3)", () => {
+    const sealed = sealPairRequest(request, route, secret);
+    expect(Buffer.from(fromBase64(sealed)).toString("latin1")).not.toContain("Pixel");
+    expect(sealed).not.toContain(request.signingPublicKey);
+  });
+
+  it("is bound to its route, so the relay cannot replay it as another device's request", () => {
+    const sealed = sealPairRequest(request, route, secret);
+    expect(openPairRequest(sealed, { ...route, from: stranger.deviceId }, secret)).toBeNull();
   });
 });
 
@@ -117,7 +172,13 @@ describe("expiry", () => {
   it("refuses an expired envelope (SPEC-08 'Expired command is not run')", () => {
     const envelope = sealAlarm();
     const later = new Date("2026-10-09T07:44:00Z");
-    expect(openEnvelope(envelope, phone, publicKeysOf(mac), later)).toEqual({ ok: false, reason: "expired" });
+    expect(openEnvelope(envelope, phone, publicKeysOf(mac), later)).toEqual({ ok: false, reason: "expired", envelope });
+  });
+
+  it("returns an authentic expired envelope, so a repeat of a command that already ran gets its stored result (SPEC-08 'Duplicate delivery runs once')", () => {
+    const envelope = sealAlarm();
+    const result = openEnvelope(envelope, phone, publicKeysOf(mac), new Date("2026-10-09T07:50:00Z"));
+    expect(result.ok === false && result.reason === "expired" && result.envelope.id).toBe(envelope.id);
   });
 
   it("refuses an expiry further ahead than any message kind allows, so a sender cannot make a command live forever", () => {

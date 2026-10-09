@@ -2,21 +2,22 @@
 // With --check, fails instead if the file differs from what the reference implementation produces.
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { PROTOCOL_VERSION, type Envelope, type PairAccept, type PairRequest } from "../generated/ts/index.ts";
+import type { Envelope, EnvelopeType, PairAccept, PairRequest, PairRequestFrame, UnpairFrame } from "../generated/ts/index.ts";
 import {
   canonicalBytes,
   deviceKeysFromSeeds,
-  encryptPayload,
   envelopeAdditionalData,
   envelopeSigningBytes,
   pairAcceptSigningBytes,
-  pairRequestTag,
-  pairRequestTagBytes,
+  pairRequestAdditionalData,
   publicKeysOf,
   relayAuthSigningBytes,
+  sealEnvelopeWithNonce,
+  sealPairRequestWithNonce,
   sessionKeys,
   sign,
   toBase64,
+  unpairSigningBytes,
   type DeviceKeys,
 } from "../src/crypto.ts";
 
@@ -49,8 +50,9 @@ export interface CryptoVectors {
   canonical: { fields: string[]; bytes: string };
   envelopes: EnvelopeVector[];
   relayAuth: { nonce: string; signingBytes: string; signature: string };
-  pairRequest: { pairingSecret: string; tagBytes: string; request: PairRequest };
+  pairRequest: { pairingSecret: string; nonce: string; additionalData: string; plaintext: string; frame: PairRequestFrame };
   pairAccept: { signingBytes: string; accept: PairAccept };
+  unpair: { signingBytes: string; frame: UnpairFrame };
 }
 
 const hex = (b: Uint8Array) => Buffer.from(b).toString("hex");
@@ -75,18 +77,24 @@ function envelopeVector(
   sender: DeviceKeys,
   senderName: "mac" | "phone",
   recipient: DeviceKeys,
-  routing: Pick<Envelope, "id" | "type" | "replyTo" | "expiresAt">,
+  routing: { id: string; type: EnvelopeType; replyTo?: string; expiresAt: string },
   plaintext: string,
   nonce: Uint8Array,
   openAt: string,
 ): EnvelopeVector {
-  const fields: Omit<Envelope, "signature" | "payload"> = { ...routing, from: sender.deviceId, to: recipient.deviceId, protocolVersion: PROTOCOL_VERSION };
-  const additionalData = envelopeAdditionalData(fields);
-  const ciphertext = encryptPayload(new TextEncoder().encode(plaintext), additionalData, nonce, sessionKeys(sender, publicKeysOf(recipient)).tx);
-  const payload = toBase64(Uint8Array.from([...nonce, ...ciphertext]));
-  const signingBytes = envelopeSigningBytes({ ...fields, payload });
-  const envelope: Envelope = { ...fields, signature: toBase64(sign(signingBytes, sender.signing.secretKey)), payload };
-  return { sender: senderName, plaintext, nonce: hex(nonce), additionalData: hex(additionalData), signingBytes: hex(signingBytes), openAt, envelope };
+  const envelope = sealEnvelopeWithNonce(
+    { ...routing, sender, recipient: publicKeysOf(recipient), payload: JSON.parse(plaintext) as unknown },
+    nonce,
+  );
+  return {
+    sender: senderName,
+    plaintext,
+    nonce: hex(nonce),
+    additionalData: hex(envelopeAdditionalData(envelope)),
+    signingBytes: hex(envelopeSigningBytes(envelope)),
+    openAt,
+    envelope,
+  };
 }
 
 export function buildVectors(): CryptoVectors {
@@ -113,15 +121,17 @@ export function buildVectors(): CryptoVectors {
   const relayBytes = relayAuthSigningBytes(relayNonce, mac.deviceId);
 
   const pairingSecret = run(0xe0, 32);
-  const requestFields = {
-    from: phone.deviceId,
-    to: mac.deviceId,
+  const pairNonce = run(0x10, 24);
+  const pairRoute = { from: phone.deviceId, to: mac.deviceId };
+  const request: PairRequest = {
     deviceName: "Pixel 9",
-    platform: "android" as const,
-    signingPublicKey: phone.signing.publicKey,
-    kxPublicKey: phone.kx.publicKey,
+    platform: "android",
+    signingPublicKey: toBase64(phone.signing.publicKey),
+    kxPublicKey: toBase64(phone.kx.publicKey),
   };
   const acceptBytes = pairAcceptSigningBytes({ from: mac.deviceId, to: phone.deviceId, signingPublicKey: phone.signing.publicKey, kxPublicKey: phone.kx.publicKey });
+  const unpair = { from: phone.deviceId, to: mac.deviceId, at: "2026-10-09T07:50:00.000Z" };
+  const unpairBytes = unpairSigningBytes(unpair);
 
   return {
     description:
@@ -161,16 +171,13 @@ export function buildVectors(): CryptoVectors {
     relayAuth: { nonce: toBase64(relayNonce), signingBytes: hex(relayBytes), signature: toBase64(sign(relayBytes, mac.signing.secretKey)) },
     pairRequest: {
       pairingSecret: toBase64(pairingSecret),
-      tagBytes: hex(pairRequestTagBytes(requestFields)),
-      request: {
-        deviceName: requestFields.deviceName,
-        platform: requestFields.platform,
-        signingPublicKey: toBase64(phone.signing.publicKey),
-        kxPublicKey: toBase64(phone.kx.publicKey),
-        tag: toBase64(pairRequestTag(requestFields, pairingSecret)),
-      },
+      nonce: hex(pairNonce),
+      additionalData: hex(pairRequestAdditionalData(pairRoute)),
+      plaintext: JSON.stringify(request),
+      frame: { frame: "pairRequest", ...pairRoute, sealed: sealPairRequestWithNonce(request, pairRoute, pairingSecret, pairNonce) },
     },
     pairAccept: { signingBytes: hex(acceptBytes), accept: { signature: toBase64(sign(acceptBytes, mac.signing.secretKey)) } },
+    unpair: { signingBytes: hex(unpairBytes), frame: { frame: "unpair", ...unpair, signature: toBase64(sign(unpairBytes, phone.signing.secretKey)) } },
   };
 }
 

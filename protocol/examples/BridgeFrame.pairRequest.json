@@ -2,11 +2,5 @@
   "frame": "pairRequest",
   "from": "0e934e02183f97e0cd83ad10d6c4be5a",
   "to": "40bca4eaf9d2b097ff8dbaa4d61767ed",
-  "request": {
-    "deviceName": "Pixel 9",
-    "platform": "android",
-    "signingPublicKey": "JUO5L/EJVRFHatyDadtt3JM2ZaEZeN2hQE7hBmypVZ0=",
-    "kxPublicKey": "p+CdISlWjoqlz5bqf9ng+IGl14v1kiaVYpY/e29okFA=",
-    "tag": "FodU09Oc7ye/BJfHuwNa3dq20OENDZH4UvD5kRp69uA="
-  }
+  "sealed": "EBESExQVFhcYGRobHB0eHyAhIiMkJSYnkD33FVsh1+zXNyxdbM5RPlbhIL6XY76zkkH9Vay9OA4qzhSQRU2YCGYEIjz/QKyXIj+PpGMEYay5DLZRjXp0I7BOQJk2YG0v0aBfb+MAEJJjXNFLLnld8IOoz/ejc/Z9rShBSemGqvn2daITWAW5+NMBc8H47GWKRwLFxEWXwO/4mR/QhDc+Ne5Ssyez4Lalnjf3mAnLQqGgHRvgrjjoM/cqTX+lm2qdgzPfJoIRvznajAOM67Dmk4oA+W4="
 }

@@ -83,7 +83,7 @@ CI runs all of the above except the mocks ([.github/workflows/protocol.yml](../.
 
 - Import types from `@yumi/protocol/types` and validation from `@yumi/protocol`.
 - Validate every value that crosses a process or device boundary, including every model output (`WorkerOutput`).
-- Import the bridge crypto from `@yumi/protocol/crypto`: `generateDeviceKeys`, `sealEnvelope`, `openEnvelope`, `expiresAt`, and the byte builders for relay authentication and pairing.
+- Import the bridge crypto from `@yumi/protocol/crypto`: `generateDeviceKeys`, `sealEnvelope`, `openEnvelope`, `expiresAt`, `sealPairRequest`, `openPairRequest`, and the signing-bytes builders for relay authentication, pairing accept, and unpair.
 
 **Swift (Mac app)**
 

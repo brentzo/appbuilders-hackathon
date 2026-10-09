@@ -66,10 +66,10 @@
       "openAt": "2026-10-09T07:42:00.000Z",
       "envelope": {
         "id": "6f9619ff-8b86-4d01-b42d-00cf4fc964ff",
-        "type": "command",
-        "expiresAt": "2026-10-09T07:44:00.000Z",
         "from": "40bca4eaf9d2b097ff8dbaa4d61767ed",
         "to": "0e934e02183f97e0cd83ad10d6c4be5a",
+        "type": "command",
+        "expiresAt": "2026-10-09T07:44:00.000Z",
         "protocolVersion": 1,
         "signature": "OSmBxym89Dv7/bLH51XOWgrTLYrX6TkxR+pJnmmhke3gbtutLFyZEk6FDEGJ9nFZICHnjJWZrjRUjlWT4ojKCw==",
         "payload": "gIGCg4SFhoeIiYqLjI2Oj5CRkpOUlZaXu/0GX7w8AZp/YYgHh3LXOBjAMAptpan9Ukdyu/603skN5OqVi2iJvFkseh/aUb11zTNZ"
@@ -84,11 +84,11 @@
       "openAt": "2026-10-09T07:42:01.000Z",
       "envelope": {
         "id": "1b4e28ba-2fa1-41d2-883f-0016d3cca427",
+        "from": "0e934e02183f97e0cd83ad10d6c4be5a",
+        "to": "40bca4eaf9d2b097ff8dbaa4d61767ed",
         "type": "result",
         "replyTo": "6f9619ff-8b86-4d01-b42d-00cf4fc964ff",
         "expiresAt": "2026-10-09T07:44:01.000Z",
-        "from": "0e934e02183f97e0cd83ad10d6c4be5a",
-        "to": "40bca4eaf9d2b097ff8dbaa4d61767ed",
         "protocolVersion": 1,
         "signature": "qZnpc71gFcji51slZsMO+imcTSMnCdKTlzuXmiJYnziuAOiQmvE9CvbjVCSgjHxKFWNRc7PBb2nPTw1w2sWSCA==",
         "payload": "oKGio6SlpqeoqaqrrK2ur7CxsrO0tba3dxsect5pmg7rpyyDHfy1cseSX+mP70Ws5DLW"
@@ -102,19 +102,30 @@
   },
   "pairRequest": {
     "pairingSecret": "4OHi4+Tl5ufo6err7O3u7/Dx8vP09fb3+Pn6+/z9/v8=",
-    "tagBytes": "0000001479756d692d706169722d726571756573742d763100000020306539333465303231383366393765306364383361643130643663346265356100000020343062636134656166396432623039376666386462616134643631373637656400000007506978656c203900000007616e64726f6964000000202543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d00000020a7e09d2129568e8aa5cf96ea7fd9e0f881a5d78bf592269562963f7b6f689050",
-    "request": {
-      "deviceName": "Pixel 9",
-      "platform": "android",
-      "signingPublicKey": "JUO5L/EJVRFHatyDadtt3JM2ZaEZeN2hQE7hBmypVZ0=",
-      "kxPublicKey": "p+CdISlWjoqlz5bqf9ng+IGl14v1kiaVYpY/e29okFA=",
-      "tag": "FodU09Oc7ye/BJfHuwNa3dq20OENDZH4UvD5kRp69uA="
+    "nonce": "101112131415161718191a1b1c1d1e1f2021222324252627",
+    "additionalData": "0000001479756d692d706169722d726571756573742d7631000000203065393334653032313833663937653063643833616431306436633462653561000000203430626361346561663964326230393766663864626161346436313736376564",
+    "plaintext": "{\"deviceName\":\"Pixel 9\",\"platform\":\"android\",\"signingPublicKey\":\"JUO5L/EJVRFHatyDadtt3JM2ZaEZeN2hQE7hBmypVZ0=\",\"kxPublicKey\":\"p+CdISlWjoqlz5bqf9ng+IGl14v1kiaVYpY/e29okFA=\"}",
+    "frame": {
+      "frame": "pairRequest",
+      "from": "0e934e02183f97e0cd83ad10d6c4be5a",
+      "to": "40bca4eaf9d2b097ff8dbaa4d61767ed",
+      "sealed": "EBESExQVFhcYGRobHB0eHyAhIiMkJSYnkD33FVsh1+zXNyxdbM5RPlbhIL6XY76zkkH9Vay9OA4qzhSQRU2YCGYEIjz/QKyXIj+PpGMEYay5DLZRjXp0I7BOQJk2YG0v0aBfb+MAEJJjXNFLLnld8IOoz/ejc/Z9rShBSemGqvn2daITWAW5+NMBc8H47GWKRwLFxEWXwO/4mR/QhDc+Ne5Ssyez4Lalnjf3mAnLQqGgHRvgrjjoM/cqTX+lm2qdgzPfJoIRvznajAOM67Dmk4oA+W4="
     }
   },
   "pairAccept": {
     "signingBytes": "0000001379756d692d706169722d6163636570742d7631000000203430626361346561663964326230393766663864626161346436313736376564000000203065393334653032313833663937653063643833616431306436633462653561000000202543b92ff1095511476adc8369db6ddc933665a11978dda1404ee1066ca9559d00000020a7e09d2129568e8aa5cf96ea7fd9e0f881a5d78bf592269562963f7b6f689050",
     "accept": {
       "signature": "QDhOiyrl0ZuUMg3jU3LdYn9m+xORJenjSJhY7jCYv0GCM5h1YrW9ZUA1DVvmciqDMNIRWwSyovj4rAR7BSwNDw=="
+    }
+  },
+  "unpair": {
+    "signingBytes": "0000000e79756d692d756e706169722d763100000020306539333465303231383366393765306364383361643130643663346265356100000020343062636134656166396432623039376666386462616134643631373637656400000018323032362d31302d30395430373a35303a30302e3030305a",
+    "frame": {
+      "frame": "unpair",
+      "from": "0e934e02183f97e0cd83ad10d6c4be5a",
+      "to": "40bca4eaf9d2b097ff8dbaa4d61767ed",
+      "at": "2026-10-09T07:50:00.000Z",
+      "signature": "quUFUIitXI/VmnrcXlt2MQvVQu1y3T2Qek6GJF385TZtLqcPt4lwOwESQU72xvWObpdkNM4ZdSsJB/W8uWt4CA=="
     }
   }
 }

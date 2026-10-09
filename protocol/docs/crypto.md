@@ -28,7 +28,7 @@ It is missing from the standard libsodium-wrappers build (checked in 0.8.4), and
 | X25519 key pair from seed | `crypto_kx_seed_keypair` | `keyExchange.keyPair(seed:)` | `cryptoKxSeedKeypair` |
 | Session keys | `crypto_kx_client_session_keys`, `crypto_kx_server_session_keys` | `keyExchange.sessionKeyPair(publicKey:secretKey:otherPublicKey:side:)` | `cryptoKxClientSessionKeys`, `cryptoKxServerSessionKeys` |
 | Encrypt, decrypt | `crypto_aead_xchacha20poly1305_ietf_encrypt`, `_decrypt` | `aead.xchacha20poly1305ietf.encrypt`, `.decrypt` | `cryptoAeadXChaCha20Poly1305IetfEncrypt`, `Decrypt` |
-| Hash, keyed hash | `crypto_generichash` | `genericHash.hash(message:key:outputLength:)` | `cryptoGenericHash` |
+| Hash (device id) | `crypto_generichash` | `genericHash.hash(message:outputLength:)` | `cryptoGenericHash` |
 
 The versions are the latest releases on 2026-10-09.
 The function names were checked in each library's source; Swift and Kotlin argument labels may differ slightly, so follow the library's own docs.
@@ -53,7 +53,7 @@ Do not use libsodium's `sodium_compare` for the ordering: it compares numbers in
 
 ## Canonical bytes
 
-Everything that is signed, tagged, or used as additional data is a list of fields in a fixed order.
+Everything that is signed or used as additional data is a list of fields in a fixed order.
 Each field is written as its byte length as a 4-byte big-endian unsigned integer, followed by its bytes.
 Text is UTF-8.
 The first field is always a domain string, so bytes signed for one purpose can never be replayed as another:
@@ -62,8 +62,9 @@ The first field is always a domain string, so bytes signed for one purpose can n
 |---|---|
 | `yumi-envelope-v1` | Envelope additional data and signature |
 | `yumi-relay-auth-v1` | The answer to the relay's challenge |
-| `yumi-pair-request-v1` | The pairing request tag |
+| `yumi-pair-request-v1` | The pairing request's additional data |
 | `yumi-pair-accept-v1` | The pairing accept signature |
+| `yumi-unpair-v1` | The unpair signature |
 
 ## Envelope
 
@@ -73,11 +74,13 @@ The envelope schema is `Envelope` in [`schemas/bridge.json`](../schemas/bridge.j
 
 To seal:
 
-1. Write the payload as UTF-8 JSON text. The payload kinds are defined in [OBJ-25](../../objectives/OBJ-25-cross-device-messages.md).
+1. Write the payload as UTF-8 JSON text.
+   The payload kinds are defined in [OBJ-25](../../objectives/OBJ-25-cross-device-messages.md).
 2. Pick a random 24-byte nonce.
 3. Encrypt with XChaCha20-Poly1305, the sender's `tx` key, and the canonical routing fields as additional data.
 4. `payload` is the base64 of the nonce followed by the ciphertext and its 16-byte tag.
-5. Sign the canonical routing fields followed by one more field, the `payload` base64 text, with the sender's Ed25519 key. `signature` is its base64.
+5. Sign the canonical routing fields followed by one more field, the `payload` base64 text, with the sender's Ed25519 key.
+6. `signature` is the base64 of that signature.
 
 To open, check in this order and stop at the first failure:
 
@@ -87,9 +90,13 @@ To open, check in this order and stop at the first failure:
 | `to` is this device | `wrongRecipient` | Drop it and log it |
 | `from` is a paired device | (the caller's lookup fails) | Drop it and log it (SPEC-08 r5) |
 | The signature verifies with that device's Ed25519 key | `badSignature` | Drop it and log it (SPEC-08 r5) |
-| `expiresAt` is still in the future | `expired` | Never run it (SPEC-08 r6) |
+| `expiresAt` is still in the future | `expired` | Never run it (SPEC-08 r6). If its id already ran, resend the stored result; otherwise tell the sender it expired ([pairing.md](pairing.md)) |
 | `expiresAt` is at most 6 minutes ahead | `badExpiry` | Drop it and log it |
 | The payload decrypts with this device's `rx` key | `cannotDecrypt` | Drop it and log it |
+| The plaintext is UTF-8 JSON | `invalidPayload` | Drop it and log it |
+
+`openEnvelope` never throws.
+An `expired` failure still returns the envelope, because its signature was checked.
 
 The 6-minute limit is the longest expiry, 5 minutes for an approval request, plus a minute for clocks that disagree.
 Without it, a sender could make a command that never expires.
@@ -97,6 +104,26 @@ The receiver then checks the expiry for the payload's kind once it is decrypted 
 Every device uses the operating system's network-synced clock.
 
 A message that opens is run at most once: the receiver remembers its `id` and, on a repeat, resends the stored result instead of running it again (SPEC-08 r8).
+
+## Pairing request
+
+The phone's `PairRequest` travels to the Mac sealed with the QR code's one-time pairing secret, so the relay can neither read nor replace it ([pairing.md](pairing.md)).
+
+1. Write the `PairRequest` as UTF-8 JSON text.
+2. Pick a random 24-byte nonce.
+3. Encrypt with XChaCha20-Poly1305, the 32-byte pairing secret as the key, and the canonical fields `yumi-pair-request-v1`, `from` (the phone), and `to` (the Mac) as additional data.
+4. `sealed` is the base64 of the nonce followed by the ciphertext and its 16-byte tag.
+
+The Mac opens it with the same secret and additional data, then checks it against the `PairRequest` schema.
+A request that fails to open was not made by someone who saw the QR code.
+
+## Signatures outside envelopes
+
+| What | Signed by | Canonical fields |
+|---|---|---|
+| Relay authentication | The connecting device | `yumi-relay-auth-v1`, the 32 challenge bytes, the device id |
+| Pairing accept | The Mac | `yumi-pair-accept-v1`, `from` (the Mac), `to` (the phone), the phone's Ed25519 public key, the phone's X25519 public key |
+| Unpair | The unpairing device | `yumi-unpair-v1`, `from`, `to`, `at` (the exact text sent) |
 
 ## Expiry
 
@@ -115,7 +142,7 @@ The constants are generated in every language from [`schemas/bridge.json`](../sc
 
 [`vectors/bridge-crypto-v1.json`](../vectors/bridge-crypto-v1.json) holds fixed inputs and the exact expected outputs.
 Binary values are lowercase hex, except where the wire format itself uses base64.
-Every fixed input counts up byte by byte (`000102...`), so it is easy to type in any language.
+Our own fixed inputs count up byte by byte (`000102...`), so they are easy to type in any language.
 
 | Entry | Proves |
 |---|---|
@@ -126,8 +153,9 @@ Every fixed input counts up byte by byte (`000102...`), so it is easy to type in
 | `canonical` | The length-prefixed encoding, including an empty field and non-ASCII text |
 | `envelopes` | A command from the Mac and its result from the phone: additional data, payload, signing bytes, and signature, with a fixed nonce |
 | `relayAuth` | The signed answer to a relay challenge |
-| `pairRequest` | The pairing request tag |
+| `pairRequest` | The sealed pairing request, with a fixed nonce |
 | `pairAccept` | The pairing accept signature |
+| `unpair` | The unpair signature |
 
 The Swift and Kotlin clients must reproduce every entry in a test.
 `npm run vectors` rewrites the file from the reference implementation, and the test suite fails if the file and the implementation ever disagree.

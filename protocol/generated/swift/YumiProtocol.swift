@@ -972,7 +972,7 @@ public struct PairingOffer: Codable, Equatable, Sendable {
     public var signingPublicKey: String
     /// X25519 public key for crypto_kx.
     public var kxPublicKey: String
-    /// 32 random bytes, used once, that key the pairing request's tag.
+    /// 32 random bytes, used once, that seal the pairing request.
     public var pairingSecret: String
     public var bridgeUrl: String
     /// 5 minutes after the code is shown.
@@ -991,21 +991,18 @@ public struct PairingOffer: Codable, Equatable, Sendable {
     }
 }
 
-/// The phone's keys, sent to the Mac after scanning the QR code.
+/// The phone's name and keys, sent to the Mac after scanning the QR code. Travels sealed with the pairing secret inside a pairRequest frame, so the relay can neither read nor replace it.
 public struct PairRequest: Codable, Equatable, Sendable {
     public var deviceName: String
     public var platform: DevicePlatform
     public var signingPublicKey: String
     public var kxPublicKey: String
-    /// Keyed BLAKE2b-256 with the pairing secret, so the relay cannot swap in its own keys.
-    public var tag: String
 
-    public init(deviceName: String, platform: DevicePlatform, signingPublicKey: String, kxPublicKey: String, tag: String) {
+    public init(deviceName: String, platform: DevicePlatform, signingPublicKey: String, kxPublicKey: String) {
         self.deviceName = deviceName
         self.platform = platform
         self.signingPublicKey = signingPublicKey
         self.kxPublicKey = kxPublicKey
-        self.tag = tag
     }
 }
 
@@ -1013,12 +1010,13 @@ public struct PairRequest: Codable, Equatable, Sendable {
 public struct PairRequestFrame: Codable, Equatable, Sendable {
     public var from: String
     public var to: String
-    public var request: PairRequest
+    /// A PairRequest as JSON, sealed with the pairing secret (protocol/docs/crypto.md).
+    public var sealed: String
 
-    public init(from: String, to: String, request: PairRequest) {
+    public init(from: String, to: String, sealed: String) {
         self.from = from
         self.to = to
-        self.request = request
+        self.sealed = sealed
     }
 }
 
@@ -1842,14 +1840,20 @@ public struct TypeTextAction: Codable, Equatable, Sendable {
     }
 }
 
-/// Either device to relay to the other (SPEC-08 r9). The relay removes the pairing at once, then forwards the frame.
+/// Either device to relay to the other (SPEC-08 r9). The relay removes the pairing at once, then forwards the frame and holds it until the other device acks it.
 public struct UnpairFrame: Codable, Equatable, Sendable {
     public var from: String
     public var to: String
+    /// When the user unpaired. The other device ignores an unpair older than its pairing, so an old frame cannot be replayed.
+    public var at: String
+    /// Ed25519 by the sending device, so the relay cannot unpair two devices on its own.
+    public var signature: String
 
-    public init(from: String, to: String) {
+    public init(from: String, to: String, at: String, signature: String) {
         self.from = from
         self.to = to
+        self.at = at
+        self.signature = signature
     }
 }
 

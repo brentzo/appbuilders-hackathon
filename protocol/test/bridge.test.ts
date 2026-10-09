@@ -94,14 +94,24 @@ describe("Pairing", () => {
     expect(validate("PairingOffer", { ...offer, bridgeUrl: "ws://bridge.example.com/v1" }).valid).toBe(false);
   });
 
-  it("sends the phone's keys to the Mac with a tag only the QR secret can make", () => {
-    const request = { deviceName: "Pixel 9", platform: "android", signingPublicKey: key, kxPublicKey: key, tag: key };
-    expect(validate("BridgeFrame", { frame: "pairRequest", from: envelope.to, to: envelope.from, request }).errors).toEqual([]);
-    expect(validate("BridgeFrame", { frame: "pairRequest", from: envelope.to, to: envelope.from, request: { ...request, tag: undefined } }).valid).toBe(false);
+  it("describes the phone to the Mac in a pairing request", () => {
+    const request = { deviceName: "Pixel 9", platform: "android", signingPublicKey: key, kxPublicKey: key };
+    expect(validate("PairRequest", request).errors).toEqual([]);
   });
 
-  it("answers with the Mac's signature, and either side can unpair (SPEC-08 r9)", () => {
+  it("sends the pairing request sealed, so the relay never reads the phone's name (SPEC-08 r3)", () => {
+    const frame = { frame: "pairRequest", from: envelope.to, to: envelope.from, sealed: envelope.payload };
+    expect(validate("BridgeFrame", frame).errors).toEqual([]);
+    expect(validate("BridgeFrame", { ...frame, sealed: undefined, request: { deviceName: "Pixel 9" } }).valid).toBe(false);
+  });
+
+  it("answers with the Mac's signature", () => {
     expect(validate("BridgeFrame", { frame: "pairAccept", from: envelope.from, to: envelope.to, accept: { signature: envelope.signature } }).valid).toBe(true);
-    expect(validate("BridgeFrame", { frame: "unpair", from: envelope.to, to: envelope.from }).valid).toBe(true);
+  });
+
+  it("signs an unpair with the device's own key, so the relay cannot unpair two devices on its own", () => {
+    const unpair = { frame: "unpair", from: envelope.to, to: envelope.from, at: "2026-10-09T15:50:00+08:00", signature: envelope.signature };
+    expect(validate("BridgeFrame", unpair).errors).toEqual([]);
+    expect(validate("BridgeFrame", { ...unpair, signature: undefined }).valid).toBe(false);
   });
 });
