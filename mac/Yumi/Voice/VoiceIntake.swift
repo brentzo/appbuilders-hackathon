@@ -84,8 +84,12 @@ final class VoiceIntake: ReplyListening {
         }
     }
 
+    /// Called when the user takes the turn by voice, so Yumi stops talking at once (SPEC-06 r14).
+    var onStopSpeaking: (() -> Void)?
+
     func startListening() {
         guard phase == .idle else { return }
+        onStopSpeaking?()
         guard let session = openMicrophone(promptIfNeeded: true, endpoint: nil) else { return }
         self.session = session
         phase = .listening
@@ -139,6 +143,8 @@ final class VoiceIntake: ReplyListening {
     /// breath is kept. Only the words after the phrase become the goal.
     func listenForGoalAfterWakeWord(_ handover: WakeHandover? = nil) async {
         guard phase == .idle else { return }
+        // The wake word is an interruption: Yumi stops talking at once (SPEC-06 r14).
+        onStopSpeaking?()
         guard case .heard(var transcript) = await listenHandsFree(promptIfNeeded: false, handover: handover) else {
             dropCursor()
             return

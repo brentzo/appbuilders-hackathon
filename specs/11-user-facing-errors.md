@@ -145,12 +145,11 @@ Feature: User-facing errors
 - **The blocked-action message** stays in [SPEC-07](07-safety.md) requirement 5 instead of becoming a row here, so its copy lives in one place. The Mac's copy test reads it from there, the same way it reads this table, and the phone never shows it in p0, since it does not control apps. Decided 2026-10-10, closing gap G5's SPEC-11 part.
 - **"Show what I did"** opens the action log of the task in the error, read from `getTask`'s `actionLog`. That view is p0, because the button is; only opening the log from the menu bar is p1 (SPEC-07 requirement 19). Decided 2026-10-10, closing gap G13.
 - **Voice didn't load (Mac)** has its own row. Yumi stays quiet instead of falling back to the robotic system voice ([SPEC-04](04-cursor-presence.md) requirement 20), so the copy is shown in a panel that does not take focus rather than spoken, and "Try again" loads the voice again. Decided 2026-10-10 by Brent.
+- **A goal spoken while the model loads** is held instead of dropped (OBJ-46.3): Yumi says "I'm still waking up. I'll start on that as soon as I'm ready.", and the goal starts by itself once the model is ready.
+  Only the latest goal is kept: a second one replaces the first.
+  If the model fails instead, the held goal is dropped and "Model failed to load" shows.
+  The status line has no separate wording for a failed model; the error window is enough. Decided 2026-10-10 by Brent.
 
 ## Open questions
 
-- **A goal spoken while the model loads (OBJ-46.3).** Proposal, waiting for Brent's yes: the Mac holds the goal, Yumi says "I'm still waking up. I'll start on that as soon as I'm ready.", and the goal starts by itself once the model is ready.
-  Only the latest goal is kept: a second one replaces the first.
-  If the model fails instead, the held goal is dropped and "Model failed to load" shows; a goal spoken while it has failed shows that error again.
-  The other option is to say so and drop the goal, which makes the user say it again.
-  Recommended: hold it, because a demo that starts right after launch then just works a little later instead of looking frozen or ignoring the user.
-  The Mac does this now, so changing it is a small edit in `mac/Yumi/App/ModelReadiness.swift`.
+None right now.

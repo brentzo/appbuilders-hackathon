@@ -79,6 +79,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         quitCleanlyOnSIGTERM()
         harness.onUserError = { [weak self] error in self?.showError(error) }
         harness.start()
+        voice.onStopSpeaking = { [weak self] in self?.harness.stopSpeaking() }
         voice.start()
         harness.confirmation.listener = voice
         wakeWord.start()

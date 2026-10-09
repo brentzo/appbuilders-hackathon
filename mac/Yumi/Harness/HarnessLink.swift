@@ -279,6 +279,13 @@ final class HarnessLink {
 
     /// Speech from push-to-talk or the wake word: the answer to a repeat-back that is waiting, or
     /// else a new goal (OBJ-17).
+    /// Stops Yumi's voice at once: the user pressed push-to-talk, so they are taking the turn
+    /// (SPEC-06 r14). The wake word and the shortcut are the interruption; the open microphone alone
+    /// cannot tell the user from Yumi without echo cancellation.
+    func stopSpeaking() {
+        speech.stop()
+    }
+
     func submitSpeech(_ transcript: String) {
         guard !confirmation.takeSpokenAnswer(transcript) else {
             log.notice("Speech taken as the answer to the repeat-back")
