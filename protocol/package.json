@@ -6,11 +6,14 @@
   "description": "Yumi shared contracts: JSON Schemas, validation, and generated TypeScript, Swift, and Kotlin types.",
   "exports": {
     ".": "./src/index.ts",
-    "./types": "./generated/ts/index.ts"
+    "./types": "./generated/ts/index.ts",
+    "./crypto": "./src/crypto.ts"
   },
   "scripts": {
     "generate": "tsx scripts/generate.ts",
     "check:generated": "tsx scripts/generate.ts --check",
+    "vectors": "tsx scripts/vectors.ts",
+    "check:vectors": "tsx scripts/vectors.ts --check",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "compile:swift": "tsx scripts/compile-check.ts swift",
@@ -20,13 +23,15 @@
     "verify": "npm run typecheck && npm test"
   },
   "dependencies": {
-    "ajv": "8.17.1",
-    "ajv-formats": "3.0.1"
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "libsodium-wrappers": "0.8.4"
   },
   "devDependencies": {
-    "@types/node": "22.10.2",
-    "tsx": "4.19.2",
-    "typescript": "5.7.2",
-    "vitest": "2.1.8"
+    "@types/libsodium-wrappers": "0.8.2",
+    "@types/node": "22.20.5",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "vitest": "4.1.11"
   }
 }
