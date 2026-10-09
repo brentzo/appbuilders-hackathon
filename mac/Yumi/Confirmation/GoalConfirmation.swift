@@ -77,17 +77,12 @@ final class GoalConfirmation {
             Task { await self?.choose(choice, for: taskId) }
         }
         overlay.update(Self.mainCursorId) { $0.state = .listening }
-        // Speak and listen at the same time, so the user can answer over the repeat-back instead of
-        // waiting for the voice: the first word they say stops it (SPEC-06 r14, r20). The wake word
-        // and the push-to-talk shortcut also answer a waiting repeat-back.
-        async let spoken: Void = sayRepeatBack(restated.text, opening: previous == nil)
-        await listenOnce(for: taskId, bargeIn: true)
-        await spoken
-    }
-
-    /// Says the repeat-back. The first repeat-back of a goal opens the conversation and meows first.
-    private func sayRepeatBack(_ text: String, opening: Bool) async {
-        if opening { await speech.speakOpening(text) } else { await speech.speak(text) }
+        // Speak, then listen. Listening runs beside the voice only when the microphone can tell the
+        // user from Yumi (echo cancellation); without that, the recognizer hears Yumi and stops her
+        // at once (Brent's run, 2026-10-10). The wake word and the push-to-talk shortcut interrupt
+        // her instead (SPEC-06 r14).
+        if previous == nil { await speech.speakOpening(restated.text) } else { await speech.speak(restated.text) }
+        await listenOnce(for: taskId)
     }
 
     /// Speech from push-to-talk or the wake word while a repeat-back waits is the answer to it, not

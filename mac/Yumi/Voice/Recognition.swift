@@ -43,15 +43,6 @@ nonisolated final class MicrophoneCapture: @unchecked Sendable {
         destination.set(sending)
         let engine = AVAudioEngine()
         let input = engine.inputNode
-        // Echo cancellation, so the recognizer hears the user and not Yumi's own voice while she
-        // talks: without it a barge-in would hear her and never her interrupt (SPEC-06 r14). Best
-        // effort: a Mac that cannot do it still records, only less cleanly.
-        do {
-            try input.setVoiceProcessingEnabled(true)
-        } catch {
-            Logger(subsystem: "ph.appbuilders.yumi", category: "voice")
-                .notice("Echo cancellation is off: \(String(describing: error), privacy: .public)")
-        }
         input.installTap(onBus: 0, bufferSize: 1024, format: input.outputFormat(forBus: 0)) { [destination] buffer, _ in
             destination.get()?(buffer)
         }

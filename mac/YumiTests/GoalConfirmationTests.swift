@@ -94,18 +94,6 @@ struct GoalConfirmationTests {
         #expect(overlay.cursors["main"] != nil, "confirmed work keeps the cursor")
     }
 
-    @Test func userAnswersOverTheRepeatBackAndStopsYumisVoice() async {
-        // SPEC-06 r14, r20: the answer is heard while Yumi is still talking, and it stops her voice
-        // so the user does not wait for a slow line.
-        let sent = Sent()
-        let flow = confirmation(BargeInListener(["yes"]), sent: sent)
-
-        await flow.goalRestated(GoalRestated(taskId: Self.taskId, text: Self.restated))
-
-        #expect(speech.stopped >= 1)
-        #expect(sent.replies == [.spoken(SpokenReply(text: "yes"))])
-    }
-
     @Test func buttonsSendTheirChoice() async {
         let sent = Sent()
         let flow = confirmation(FakeListener([]), sent: sent)
