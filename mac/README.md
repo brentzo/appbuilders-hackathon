@@ -6,7 +6,7 @@ It is everything the user sees and hears on the Mac, and every native capability
 Owner: Patrick.
 
 Status: the app shell is in progress ([OBJ-14](../objectives/OBJ-14-mac-app-shell.md)): menu bar item, status line, permission onboarding, settings, harness supervision, the harness RPC client, and the error presenter.
-It runs against the mock harness until the real one exists (OBJ-27.8).
+It starts the real harness from `harness/` by default, or the mock harness with `-YumiMockHarness YES`.
 
 ## Responsibilities
 
@@ -86,9 +86,10 @@ A rename in the generator has been proposed to the protocol owner.
 
 ### Harness
 
-Until OBJ-27.8, Yumi starts the mock harness from `protocol/mocks` itself.
-It finds `node` through your login shell, runs `node --import tsx mocks/mock-harness.ts` in `protocol/`, restarts it whenever it exits, and stops it when Yumi quits.
-The menu says "Using the mock harness" so it is never demoed by accident.
+Yumi starts the harness itself: the real one from `harness/` by default ([OBJ-27](../objectives/OBJ-27-mac-native-services.md)), or the mock from `protocol/mocks` with `-YumiMockHarness YES` or any mock option below.
+It finds `node` through your login shell, runs the harness with `node --import tsx`, restarts it whenever it exits, and stops it when Yumi quits.
+Run `npm install` in `harness/` and `protocol/` first.
+With the mock, the menu says "Using the mock harness" so it is never demoed by accident.
 The status line says "Yumi is getting ready" until the harness answers `hello` and `ping`.
 
 Launch arguments, in Debug and Release:
@@ -104,6 +105,24 @@ What happens is logged under the subsystem `ph.appbuilders.yumi`, including the 
 ```sh
 /usr/bin/log stream --level info --predicate 'subsystem == "ph.appbuilders.yumi"'
 ```
+
+### Controlling other apps
+
+Yumi reads and presses other apps' windows through the Accessibility API ([OBJ-44](../objectives/OBJ-44-mac-gui-execution.md)).
+The harness calls `observeWindow`, `executeAction`, and `readFieldValues`; `Yumi/GUI/` answers them.
+
+- The trimmed tree keeps visible, actionable elements and the containers that scroll, numbered from 1, at most 200.
+  An open menu is read instead of the window, followed by any open submenu.
+  A sheet is read instead of the window.
+  Otherwise the window comes first and the app's menu bar items last.
+- Each element has an accessibility path such as `AXWindow/AXSheet[0]/AXButton[2]`; it never leaves the Mac except as `ResolvedElement.path`.
+- A password field is listed with no value, never read, and never filled.
+- `type` and `key` run only for the main cursor, and every event carries the tag `0x59554D49` ("YUMI") in `kCGEventSourceUserData`.
+- `open_app`, `open_file`, `open_url`, and `reveal_in_finder` go through `NSWorkspace`. There is no shell or AppleScript anywhere in `Yumi/GUI/`.
+
+Debug builds have "GUI debug…" in the menu: a floating window that shows the trimmed tree of any running app's front window and runs real `executeAction` calls on it, as the main cursor.
+Clicking it does not activate Yumi, so a menu Yumi opened stays open while you press the next item.
+Yumi needs Accessibility permission for it, like for any task.
 
 ### Signing and permissions
 
@@ -156,6 +175,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 | `Yumi/Permissions/` | Permission states and "Open settings" behavior |
 | `Yumi/Onboarding/` | The permission onboarding window |
 | `Yumi/Settings/` | Settings, their local storage, and the harness settings hand-off |
+| `Yumi/GUI/` | Controlling other apps: the trimmed tree reader, element actions, tagged keystrokes, the direct tools, and the GUI debug window |
 | `Yumi/Overlay/` | The click-through cursor overlay: panels per display, the placeholder cursor drawing, motion, helper chips, and the cursor debug actions |
 | `Yumi/Harness/` | Harness launcher and supervisor, the Unix socket, the JSON-RPC client, and event handling |
 | `Yumi/Errors/` | Error copy (the only place user-facing error text lives), the error presenter, and the error window |
@@ -164,15 +184,15 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 ## Stand-ins in the app today
 
 - The menu bar icon is the SF Symbol `cat` until the Rive cat ([OBJ-19](../objectives/OBJ-19-rive-cat-cursor.md)) exists.
-- The harness is the mock from `protocol/mocks` until the real harness exists (OBJ-27.8).
 - Settings changes go to `PendingHarnessSettingsSink`, which only logs.
   The protocol has no method for settings yet.
 - Model readiness is a placeholder that is always unknown (`ModelReadiness`).
   The protocol cannot report it yet; this is open with the protocol and harness owners.
 - Error buttons whose feature comes in a later objective are shown disabled: for example "Try again", "Stop", and "Type instead".
-- Harness-to-app methods such as `executeAction` answer "method not found" until [OBJ-27](../objectives/OBJ-27-mac-native-services.md) serves them.
+- `showApprovalCard` and `moveToTrash` answer "method not found" until [OBJ-45](../objectives/OBJ-45-mac-approval-cards.md).
 - Cursors are a placeholder drawing (a black and white pointer, ghosts outlined in their color) until the Rive cat ([OBJ-19](../objectives/OBJ-19-rive-cat-cursor.md)).
-- A cursor moving to an element goes to the center of the target window, or the app's frontmost window, until native execution resolves element paths ([OBJ-44](../objectives/OBJ-44-mac-gui-execution.md)).
+- A cursor moving to an element whose path does not resolve goes to the center of the target window, or the app's frontmost window.
+- Vision clicks (`clickAt`) are refused until the p1 vision fallback.
 - Helper chips say "Helper working": the protocol's `routeDecided` event has no subtask title.
 - The status line follows task events. "Listening" waits for voice intake ([OBJ-15](../objectives/OBJ-15-mac-voice-intake.md)).
 
