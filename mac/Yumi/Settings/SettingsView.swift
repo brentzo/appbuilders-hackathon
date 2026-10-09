@@ -2,6 +2,11 @@ import SwiftUI
 
 struct SettingsView: View {
     @Bindable var store: SettingsStore
+    /// Read where sounds play (the cats' meow). A plain defaults key, so any part of the app can
+    /// check it without the settings store.
+    @AppStorage(SettingsView.playSoundsKey) private var playSounds = true
+
+    static let playSoundsKey = "YumiPlaySounds"
 
     var body: some View {
         Form {
@@ -30,6 +35,10 @@ struct SettingsView: View {
                 }
                 .pickerStyle(.segmented)
                 .fixedSize()
+                Toggle(isOn: $playSounds) {
+                    Text("Play sounds")
+                    Text("A cat meows when it finishes its task.")
+                }
             }
 
             PhoneSettingsSection(phone: .shared)
