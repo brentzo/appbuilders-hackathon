@@ -8,23 +8,25 @@ Objective: [OBJ-26](../../objectives/OBJ-26-gui-smoke-test.md).
 
 | Demo task | Runs | Status |
 |---|---|---|
-| Keynote: "Export my deck as a PDF." | 5 constrained, 5 unconstrained | Done, fails |
+| Keynote: "Export my deck as a PDF." | Round 1 (baseline): 5 constrained, 5 unconstrained. Round 2 (fixes 1-3): 5 constrained, 5 unconstrained | Done, fails in both rounds |
 | Mail: "Email the PDF to Ana." | 0 | Not yet run. Parked by Brent: Mail account and Notes location not decided |
 | Notes: "Put a summary of the PDF in a new note." | 0 | Not yet run. Parked by Brent: Mail account and Notes location not decided |
 
 ## Verdict
 
-**Keynote fails: 0 of 5 runs succeeded with constrained decoding, and 0 of 5 without.**
-SPEC-05's bar is 4 or more successful runs out of 5, so the Keynote task does not pass in either mode.
+**Keynote fails: 0 of 5 runs succeeded in every combination tried, with constrained decoding and without, before and after fixes 1-3.**
+SPEC-05's bar is 4 or more successful runs out of 5, so the Keynote task does not pass.
 Mail and Notes have no verdict yet.
 
 The model is not hopeless.
-It never produced invalid output (0 of 60 steps), and it navigated the menus right in every run: File, then Export To, then PDF…, in 3 steps.
-It fails at one point, the export options dialog, and the same way every time.
+It navigated the menus right in all 20 runs: File, then Export To, then PDF…, in 3 steps.
+It fails at one point, the export options dialog, where it has to press `[15] button "Save…"`.
+Round 2 shows it can find that button once it is told why typing failed, but it then names the action `click`, which is not in the action schema.
+The next fix to try is an action verb the model already uses (see "Fixes to try next").
 
-## Failure pattern: no effect
+## Round 1 failure pattern: no effect
 
-In all 10 runs, after the "Export Your Presentation" dialog opened, the model answered `{"action": "type", "text": "Q3 Report run N"}` instead of pressing `[15] button "Save…"`.
+In all 10 baseline runs, after the "Export Your Presentation" dialog opened, the model answered `{"action": "type", "text": "Q3 Report run N"}` instead of pressing `[15] button "Save…"`.
 The dialog has no text field, so typing changed nothing and the step outcome was `noEffect`.
 The model repeated the same `type` action three times, even though its history said "nothing changed" and the prompt says "If your last action had no effect, try something different."
 After 3 consecutive `noEffect` steps the run ended as `stuck`, as the limits in [docs/task-record-schema.md](../../docs/task-record-schema.md) say.
@@ -39,18 +41,40 @@ Against the objective's list of patterns:
 The behavior was the same at temperature 0.7 in all 10 runs, so this is a confident choice, not sampling noise.
 The subtask names the file ("a PDF named ..."), and the model tries to type the name as soon as a dialog appears.
 
-## Fixes to try
+## Round 2: fixes 1-3
 
-In order of cost.
-None of these were tried here, because the runs were limited to the 10 counted runs.
+Round 2 ran the same task with three changes, switched on by `smoke.py run --fixes`:
 
-1. **Say why there was no effect.** When `type` runs and no text field or text area has keyboard focus, the harness tells the model: "Typing had no effect: no text field has keyboard focus. Press a button to continue." This is better than the bare "nothing changed".
-2. **Reject a repeated no-effect action.** If the model repeats the exact action that just had no effect, the harness treats it as invalid output and retries once with that reason, as SPEC-02's retry rule does.
-3. **Prompt rule for dialogs.** Add: "In a dialog, if there is no text field for what you need, press the button that continues (for example Save…, Next…, OK). Type only into a text field that is in the list."
-4. **Keep the file name out of the first subtask.** Let the planner split "export as PDF" from "name the file", or accept Keynote's default name, so the model has no name to type early.
-5. **Thinking mode on dialog steps.** Turn on `enable_thinking` only when a dialog is open. It costs latency, and it was not measured here.
+1. **Say why there was no effect.** When `type` has no effect and no text field has keyboard focus, the step's observation reads "nothing changed. Typing had no effect: no text field has keyboard focus. Press a button to continue." Other no-effect steps read "nothing changed. This action did not work here; choose a different one."
+2. **Reject a repeated no-effect action.** Repeating the exact action that just had no effect counts as invalid output, with the reason "you repeated an action that just had no effect. Choose a different action". Two invalid outputs in a row end the run as `stuck`.
+3. **Prompt rule for dialogs.** The system prompt gains: "In a dialog, if there is no text field for what you need, press the button that continues (for example Save…, Next…, OK). Type only into a text field that is in the list."
 
-Fix 1 or 3 is a one-line change in the script (`smoke.py`), so the next session can measure it quickly.
+Steps 1 to 3 were unchanged, and the model still typed the file name at step 4 in all 10 runs.
+What it did after reading the fix 1 explanation depended on the decoding mode:
+
+| Mode | Step 5 and 6 replies | How the run ended |
+|---|---|---|
+| Unconstrained | `{"action": "click", "element": 15}` in 9 of 10 replies, `type` again in 1 | Invalid output twice (`click` is not an action), `stuck` |
+| Constrained | `type` again in 8 of 9 replies, `ask` in 1 | Fix 2 rejected the repeats as invalid, `stuck`. In run 15 the model asked the user instead, claiming wrongly that "Save..." had already been pressed |
+
+So with fixes 1-3, the model finds the right element (15, "Save…") when it is free to answer, but it calls the action `click`.
+`click` is the p1 vision action in the `ModelAction` design and takes `x` and `y`, so the schema correctly rejects it.
+Under constrained decoding the grammar cannot produce `click` at all, so the model never gets to say what it means and falls back to typing.
+Fix 3, the prompt rule, made no visible difference: the first step in the dialog was still `type` in every run.
+
+Against the objective's list of patterns, round 2's failure is **invalid output** (18 invalid replies in 59 steps), caused by a wrong action name, on top of one **no effect** step per run.
+
+## Fixes to try next
+
+In order of expected value.
+
+1. **Use the verb the model uses.** Name the element-press action `click` with an `element` field, or accept `{"action": "click", "element": N}` as an alias of `axPress` that the harness converts. The vision action keeps `x` and `y`, so the two do not clash if the schema tells them apart by fields. This is an OBJ-01 schema decision; raise it there before changing the contract. Measuring it in `smoke.py` is a few lines: run round 2 again with the alias.
+2. **Keep the file name out of the first subtask.** Let the planner split "export as PDF" from "name the file", or accept Keynote's default name, so the model has nothing to type early. This targets the step 4 mistake directly, which no fix so far changed.
+3. **Thinking mode on dialog steps.** Turn on `enable_thinking` only when a dialog is open. It costs latency, and it was not measured here.
+4. **Show the actions as a short list of verbs in the user message too**, right above "Your next action as JSON", so the allowed names are close to where the model answers.
+
+Fixes 1-3 from round 1 stay in the script behind `--fixes`.
+Keep fix 1 (the explanation) in the harness design: it is what got the model to the right element.
 
 ## Setup
 
@@ -84,28 +108,41 @@ When the OBJ-01 schemas are used for constrained decoding, strip `uniqueItems` f
 
 ## Results
 
-All runs on 2026-10-09 between 7:25 pm and 7:31 pm.
+Round 1 (baseline) ran on 2026-10-09 between 7:25 pm and 7:31 pm, and round 2 (fixes 1-3) between 7:40 pm and 7:46 pm.
 "s/step (model)" is the model request alone. "s/step (total)" adds reading the tree, acting, and the 1-second settle.
 
-| Task | Mode | Run | Success | Steps | s/step (model) | s/step (total) | Invalid | No effect | Blocked | Peak GiB | End | Gradle | Emulator | VM | Free mem |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| keynote | constrained | 1 | no | 6 | 5.33 | 6.46 | 0 | 3 | 0 | 7.2 | three steps in a row had no effect | no | no | yes | 31% |
-| keynote | constrained | 2 | no | 6 | 4.1 | 5.21 | 0 | 3 | 0 | 7.22 | three steps in a row had no effect | no | no | yes | 33% |
-| keynote | constrained | 3 | no | 6 | 4.05 | 5.14 | 0 | 3 | 0 | 7.22 | three steps in a row had no effect | no | no | yes | 32% |
-| keynote | constrained | 4 | no | 6 | 4.1 | 5.18 | 0 | 3 | 0 | 7.2 | three steps in a row had no effect | no | no | yes | 33% |
-| keynote | constrained | 5 | no | 6 | 4.04 | 5.11 | 0 | 3 | 0 | 7.22 | three steps in a row had no effect | no | no | yes | 34% |
-| keynote | free | 6 | no | 6 | 4.11 | 5.21 | 0 | 3 | 0 | 7.23 | three steps in a row had no effect | no | no | yes | 31% |
-| keynote | free | 7 | no | 6 | 4.12 | 5.21 | 0 | 3 | 0 | 7.22 | three steps in a row had no effect | no | no | yes | 33% |
-| keynote | free | 8 | no | 6 | 4.08 | 5.16 | 0 | 3 | 0 | 7.22 | three steps in a row had no effect | no | no | yes | 33% |
-| keynote | free | 9 | no | 6 | 4.01 | 5.08 | 0 | 3 | 0 | 7.22 | three steps in a row had no effect | no | no | yes | 32% |
-| keynote | free | 10 | no | 6 | 4.12 | 5.23 | 0 | 3 | 0 | 7.19 | three steps in a row had no effect | no | no | yes | 33% |
+| Task | Variant | Mode | Run | Success | Steps | s/step (model) | s/step (total) | Invalid | No effect | Blocked | Peak GiB | End | Gradle | Emulator | VM | Free mem |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| keynote | baseline | constrained | 1 | no | 6 | 5.33 | 6.46 | 0 | 3 | 0 | 7.2 | three steps in a row had no effect | no | no | yes | 31% |
+| keynote | baseline | constrained | 2 | no | 6 | 4.1 | 5.21 | 0 | 3 | 0 | 7.22 | three steps in a row had no effect | no | no | yes | 33% |
+| keynote | baseline | constrained | 3 | no | 6 | 4.05 | 5.14 | 0 | 3 | 0 | 7.22 | three steps in a row had no effect | no | no | yes | 32% |
+| keynote | baseline | constrained | 4 | no | 6 | 4.1 | 5.18 | 0 | 3 | 0 | 7.2 | three steps in a row had no effect | no | no | yes | 33% |
+| keynote | baseline | constrained | 5 | no | 6 | 4.04 | 5.11 | 0 | 3 | 0 | 7.22 | three steps in a row had no effect | no | no | yes | 34% |
+| keynote | baseline | free | 6 | no | 6 | 4.11 | 5.21 | 0 | 3 | 0 | 7.23 | three steps in a row had no effect | no | no | yes | 31% |
+| keynote | baseline | free | 7 | no | 6 | 4.12 | 5.21 | 0 | 3 | 0 | 7.22 | three steps in a row had no effect | no | no | yes | 33% |
+| keynote | baseline | free | 8 | no | 6 | 4.08 | 5.16 | 0 | 3 | 0 | 7.22 | three steps in a row had no effect | no | no | yes | 33% |
+| keynote | baseline | free | 9 | no | 6 | 4.01 | 5.08 | 0 | 3 | 0 | 7.22 | three steps in a row had no effect | no | no | yes | 32% |
+| keynote | baseline | free | 10 | no | 6 | 4.12 | 5.23 | 0 | 3 | 0 | 7.19 | three steps in a row had no effect | no | no | yes | 33% |
+| keynote | fixes-1-3 | constrained | 11 | no | 6 | 4.51 | 5.33 | 2 | 1 | 0 | 7.22 | two invalid outputs in a row | no | no | yes | 31% |
+| keynote | fixes-1-3 | constrained | 12 | no | 6 | 4.95 | 5.74 | 2 | 1 | 0 | 7.22 | two invalid outputs in a row | no | no | yes | 31% |
+| keynote | fixes-1-3 | constrained | 13 | no | 6 | 4.38 | 5.12 | 2 | 1 | 0 | 7.2 | two invalid outputs in a row | no | no | yes | 31% |
+| keynote | fixes-1-3 | constrained | 14 | no | 6 | 4.47 | 5.21 | 2 | 1 | 0 | 7.22 | two invalid outputs in a row | no | no | yes | 63% |
+| keynote | fixes-1-3 | constrained | 15 | no | 5 | 4.72 | 5.63 | 0 | 1 | 0 | 7.22 | model asked: The 'Save...' button was pressed in the previou | no | no | yes | 33% |
+| keynote | fixes-1-3 | free | 16 | no | 6 | 4.21 | 4.99 | 2 | 1 | 0 | 7.22 | two invalid outputs in a row | no | no | yes | 32% |
+| keynote | fixes-1-3 | free | 17 | no | 6 | 4.53 | 5.34 | 2 | 1 | 0 | 7.22 | two invalid outputs in a row | no | no | yes | 31% |
+| keynote | fixes-1-3 | free | 18 | no | 6 | 4.32 | 5.09 | 2 | 1 | 0 | 7.22 | two invalid outputs in a row | no | no | yes | 31% |
+| keynote | fixes-1-3 | free | 19 | no | 6 | 4.33 | 5.12 | 2 | 1 | 0 | 7.22 | two invalid outputs in a row | no | no | yes | 32% |
+| keynote | fixes-1-3 | free | 20 | no | 6 | 4.22 | 4.98 | 2 | 1 | 0 | 7.22 | two invalid outputs in a row | no | no | yes | 32% |
 
-| Task | Mode | Successes | Verdict (4 of 5 passes) |
-|---|---|---|---|
-| keynote | constrained | 0 of 5 | fail |
-| keynote | free | 0 of 5 | fail |
+| Task | Variant | Mode | Successes | Verdict (4 of 5 passes) |
+|---|---|---|---|---|
+| keynote | baseline | constrained | 0 of 5 | fail |
+| keynote | baseline | free | 0 of 5 | fail |
+| keynote | fixes-1-3 | constrained | 0 of 5 | fail |
+| keynote | fixes-1-3 | free | 0 of 5 | fail |
 
-Every run's steps were the same: press File, press Export To, press PDF…, then `type` three times with no effect.
+In round 1, every run's steps were the same: press File, press Export To, press PDF…, then `type` three times with no effect.
+In round 2, every run pressed File, Export To, and PDF…, typed once, then gave two invalid replies (or asked, in run 15).
 The step logs (with the model's raw replies) are in `models/gui/runs/`, which is gitignored because a log can hold screen text.
 The aggregates are in [results/runs.jsonl](results/runs.jsonl).
 
@@ -120,19 +157,27 @@ That script bug was fixed before the counted runs, and the pilot failed in the s
 - Reading and trimming the tree took 0.01 to 0.05 seconds. Keynote's trees had 30 to 54 elements.
 - Nearly all model time is prompt processing, so latency grows with the tree. In a model-only benchmark with no screen access ([results/bench.jsonl](results/bench.jsonl)), a step took 4.2 to 4.7 seconds at 40 elements (1,025 prompt tokens), 7.1 to 7.7 seconds at 120 elements (2,032), and 11.0 to 11.3 seconds at 200 elements (3,164).
 - Constrained decoding made no measurable difference to speed.
+- Round 2: 3.6 to 8.1 seconds of model time per step, 4.5 seconds on average over 59 steps. The 8.1-second step was the first step of run 12.
 
 ### Memory (for the Whisper choice in OBJ-11)
 
-- Server peak physical footprint with the model loaded: **7.2 GiB** during the Keynote runs (prompts up to 1,200 tokens).
+- Server peak physical footprint with the model loaded: **7.2 GiB** during the Keynote runs in both rounds (prompts up to 1,200 tokens).
 - In the benchmark, the peak was 7.1 GiB at 40 elements and **8.6 GiB at 200 elements** (3,164 prompt tokens). Plan for about 8.6 GiB for the brain at the 200-element cap.
 - Footprint is measured with `proc_pid_rusage`, which includes Metal buffers (RSS does not).
 
 ### Conditions during the runs
 
+Round 1:
+
+
 - No Gradle daemon and no Android emulator was running (the OBJ-22 agent stopped them).
 - A Virtualization.framework VM that had been running for 4 days was still running.
 - 15 `java` processes were running. They are Maestro MCP servers from other Claude sessions, not Gradle, and use little memory.
 - System memory pressure was "warn" throughout, with 31 to 34 percent free and swap nearly full (17.8 to 18.3 GB used).
+Round 2: no Gradle and no emulator; the same VM still running; 59 percent free before the server started and 31 to 33 percent free during the runs (63 percent in one run); memory pressure "normal" or "warn".
+
+Earlier:
+
 - The earlier attempt with the emulator and Gradle running could not run the model at all: a 618-token prompt took 3 minutes 41 seconds to process, and the request timed out. **On the demo Mac, the 9B model does not fit next to an Android dev setup.**
 
 ## The prompt
@@ -209,7 +254,8 @@ Elements:
 Your next action as JSON:
 ```
 
-The model's reply in every run: `{"action": "type", "text": "Q3 Report run N"}`.
+The model's reply in every run of both rounds: `{"action": "type", "text": "Q3 Report run N"}`.
+In round 2 the system prompt also has the dialog rule from fix 3, after "If your last action had no effect, try something different."
 The right reply: `{"action": "axPress", "element": 15}`.
 
 The `ModelAction` JSON schema is `action_schema()` in [smoke.py](smoke.py).
@@ -224,7 +270,8 @@ python3 -m venv .venv && .venv/bin/pip install mlx-vlm mlx-lm pyobjc-framework-A
 HF_HUB_OFFLINE=1 .venv/bin/mlx_vlm.server --model mlx-community/Qwen3.5-9B-4bit --host 127.0.0.1 --port 8080 &
 .venv/bin/python smoke.py env                      # Gradle, emulator, VM, memory pressure
 .venv/bin/python smoke.py tree --app com.apple.Keynote
-.venv/bin/python smoke.py run --task keynote --run 11 --mode constrained
+.venv/bin/python smoke.py run --task keynote --run 21 --mode constrained          # baseline
+.venv/bin/python smoke.py run --task keynote --run 22 --mode constrained --fixes  # round 2 fixes 1-3
 .venv/bin/python smoke.py report
 ```
 
