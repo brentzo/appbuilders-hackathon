@@ -128,7 +128,17 @@ class OnDeviceVoiceInput(
                     }
                 }
             }
-            is SpeechEvent.Error -> finish(YumiException(errorKind(event.code), "Recognizer error ${event.code}"))
+            is SpeechEvent.Error -> {
+                val language = spokenLanguage
+                val kind = errorKind(event.code)
+                // An English-only recognizer often finds no match in another language even though it is sure
+                // which language it heard. The language is the real reason, so say that.
+                if (kind == ErrorKind.DidntCatchSpeech && language != null && !isEnglish(language)) {
+                    finish(YumiException(ErrorKind.LanguageNotSupported, "Spoken language was $language, recognizer error ${event.code}"))
+                } else {
+                    finish(YumiException(kind, "Recognizer error ${event.code}"))
+                }
+            }
         }
     }
 

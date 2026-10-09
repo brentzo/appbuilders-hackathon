@@ -43,6 +43,14 @@
             </intent-filter>
         </activity>
 
+        <!-- ONNX Runtime 1.29 and later start an HTTP telemetry client from this provider. We pin 1.28, which has
+             none, and remove it here too so a version bump can never turn it on. -->
+        <provider
+            android:name="ai.onnxruntime.TelemetryInitializer"
+            android:authorities="${applicationId}.onnxruntime_telemetry_initializer"
+            tools:ignore="MissingClass"
+            tools:node="remove" />
+
         <service
             android:name=".service.YumiService"
             android:exported="false"

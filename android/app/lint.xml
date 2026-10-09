@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- ONNX Runtime is pinned to 1.28.0 on purpose: later versions add telemetry. See gradle/libs.versions.toml. -->
+    <issue id="NewerVersionAvailable">
+        <ignore regexp="onnxruntime" />
+    </issue>
+    <!-- Yumi runs on arm64 phones only. Each extra ONNX Runtime ABI adds about 40 MB. -->
+    <issue id="ChromeOsAbiSupport" severity="ignore" />
+</lint>

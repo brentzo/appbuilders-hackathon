@@ -95,6 +95,11 @@ fun YumiApp(graph: AppGraph) {
         if (micAllowed && error?.kind == ErrorKind.MicrophonePermissionMissing) error = null
     }
 
+    // A new listening session replaces whatever went wrong last time.
+    LaunchedEffect(voiceActive) {
+        if (voiceActive) error = null
+    }
+
     // Voice failures can happen with the app closed, after the wake word. They stay until the app shows them.
     LaunchedEffect(voiceFailure) {
         voiceFailure?.let {

@@ -114,7 +114,10 @@ class OnDeviceSpeechEngine(context: Context) : SpeechEngine {
         }
 
         override fun onPartialResults(partialResults: Bundle?) {
-            texts(partialResults).firstOrNull()?.let { onEvent(SpeechEvent.Partial(it)) }
+            texts(partialResults).firstOrNull()?.let {
+                Log.d(TAG, "Partial result (${it.length} characters)")
+                onEvent(SpeechEvent.Partial(it))
+            }
         }
 
         override fun onLanguageDetection(results: Bundle) {

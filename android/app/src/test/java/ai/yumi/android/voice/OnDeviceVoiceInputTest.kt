@@ -144,6 +144,17 @@ class OnDeviceVoiceInputTest {
     }
 
     @Test
+    fun noMatchInAConfidentlyDetectedLanguageShowsLanguageNotSupported() = runTest {
+        // What the demo phone's recognizer did with Spanish: sure of the language, then no match.
+        val voice = voice()
+        voice.start()
+        runCurrent()
+        engine.send(SpeechEvent.Language("es-us", SpeechRecognizer.LANGUAGE_DETECTION_CONFIDENCE_LEVEL_HIGHLY_CONFIDENT))
+        engine.send(SpeechEvent.Error(SpeechRecognizer.ERROR_NO_MATCH))
+        assertEquals(ErrorKind.LanguageNotSupported, voice.failure.value?.kind)
+    }
+
+    @Test
     fun earlyWrongLanguageGuessesDoNotRejectEnglish() = runTest {
         // The sequence the demo phone's recognizer reported for "set a timer for ten minutes".
         val voice = voice()

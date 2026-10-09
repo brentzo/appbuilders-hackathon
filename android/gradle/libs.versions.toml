@@ -8,7 +8,9 @@ lifecycle = "2.10.0"
 datastore = "1.2.1"
 coroutines = "1.11.0"
 junit = "4.13.2"
-onnxruntime = "1.31.0"
+# 1.28.0 is the newest ONNX Runtime without telemetry. 1.29.0 and later add INTERNET and a provider that starts an
+# HTTP telemetry client at app start, which breaks "everything runs locally". Check the AAR manifest before bumping.
+onnxruntime = "1.28.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
