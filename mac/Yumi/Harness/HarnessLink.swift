@@ -81,6 +81,15 @@ final class HarnessLink {
         }
     }
 
+    func submitSampleGoalWhenConnected() {
+        Task {
+            while client.linkState != .connected {
+                try? await Task.sleep(for: .milliseconds(200))
+            }
+            submitSampleGoal()
+        }
+    }
+
     func cancelTask(_ taskId: String) {
         Task {
             do {

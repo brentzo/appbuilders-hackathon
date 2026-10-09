@@ -12,7 +12,6 @@ import YumiProtocol
 ///   usual onboarding check. An error uses the sample last action "Clicked Export in Keynote".
 /// - `-YumiPermissions mixed|granted` pretends permissions are in that state, without asking macOS.
 ///   `mixed` has the microphone allowed and the other two missing.
-/// - `-YumiSendSampleGoal YES` submits the sample goal once the harness is connected.
 /// - `-YumiSnapshotDir <dir>` makes the opened window key and active, renders it to PNG files at
 ///   1x and 2x scale, then quits. If the window cannot become key, it writes nothing.
 ///   Yumi draws its own window, so this needs no Screen Recording permission. The window's
@@ -41,13 +40,6 @@ enum DebugLaunchOptions {
 
         if let status = arguments.string(forKey: "YumiStatus").flatMap(AppStatus.init(rawValue:)) {
             app.model.statusOverride = status
-        }
-
-        if arguments.bool(forKey: "YumiSendSampleGoal") {
-            Task {
-                while !app.model.harnessReady { try? await Task.sleep(for: .milliseconds(200)) }
-                app.harness.submitSampleGoal()
-            }
         }
 
         let opened: (name: String, window: NSWindow)?

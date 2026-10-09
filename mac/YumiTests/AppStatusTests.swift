@@ -17,3 +17,13 @@ struct AppStatusTests {
         #expect(model.status == .startingUp)
     }
 }
+
+extension AppStatusTests {
+    @Test func taskEventsDriveTheStatusLine() {
+        #expect(HarnessLink.appStatus(for: []) == .ready)
+        #expect(HarnessLink.appStatus(for: [.running]) == .working)
+        #expect(HarnessLink.appStatus(for: [.paused, .done]) == .paused)
+        #expect(HarnessLink.appStatus(for: [.paused, .planning]) == .working)
+        #expect(HarnessLink.appStatus(for: [.done, .cancelled, .failed]) == .ready)
+    }
+}

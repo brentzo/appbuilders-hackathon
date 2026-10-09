@@ -6,7 +6,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let model = AppModel(permissions: DebugLaunchOptions.permissionCenter())
     private(set) lazy var windows = WindowCoordinator(model: model)
     /// Until OBJ-14.8 the harness is always the mock. `-YumiMockScript <name>` picks its event
-    /// script (default `keynote-export`) and `-YumiMockFail method=kind,...` makes methods fail.
+    /// script (default `keynote-export`), `-YumiMockFail method=kind,...` makes methods fail, and
+    /// `-YumiSendSampleGoal YES` submits the sample goal once connected. All work in Release too,
+    /// which is what smoke tests run.
     private(set) lazy var harness = HarnessLink(
         model: model,
         launcher: MockHarnessLauncher(
@@ -32,6 +34,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         quitCleanlyOnSIGTERM()
         harness.onUserError = { [weak self] error in self?.showError(error) }
         harness.start()
+        if UserDefaults.standard.bool(forKey: "YumiSendSampleGoal") {
+            harness.submitSampleGoalWhenConnected()
+        }
         if DebugLaunchOptions.apply(to: self) { return }
         if !model.permissions.allGranted {
             windows.showOnboarding()
