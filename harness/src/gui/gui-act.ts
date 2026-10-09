@@ -26,6 +26,7 @@ import { describeSees } from "../debug/thoughts.ts";
 import { SubtaskTrail, type TrailDeps } from "../debug/trail.ts";
 import type { Logger } from "../log.ts";
 import type { ModelClient } from "../model/client.ts";
+import { expandNoteText } from "../planner/list-note.ts";
 import { checkAction } from "../safety/gate.ts";
 import { withPlainNames } from "../file-names.ts";
 import { describeGuiAction, describeNotDone, describeSkipped, type NotDone } from "../scheduler/describe.ts";
@@ -449,8 +450,10 @@ class Attempt {
    * Resolves, checks, records, and runs one action, then looks again. `before` is what the model saw; it is absent
    * only for the `open_app` the harness runs when the app had no window.
    */
-  private async act(action: ModelAction, before: Observation | undefined): Promise<ActResult> {
+  private async act(proposed: ModelAction, before: Observation | undefined): Promise<ActResult> {
     const { store } = this.deps;
+    // A note subtask's placeholder becomes the list the harness found (OBJ-74), before it is checked and recorded.
+    const action = expandNoteText(proposed, this.subtask.instruction);
     const app = before?.app;
     const layer = before?.layer?.kind;
     const decision = checkAction(

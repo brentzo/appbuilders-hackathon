@@ -1,10 +1,12 @@
-import type { DeviceId, Speak, Subtask, Task, UserError, Uuid } from "@yumi/protocol/types";
+import type { DeviceId, FoundList, Speak, Subtask, Task, UserError, Uuid } from "@yumi/protocol/types";
 import { RunControl } from "../control/run-control.ts";
 import { orchestratorTools } from "../gui/orchestrator-tools.ts";
 import { makePlan, subtasksFromPlan } from "../planner/planner.ts";
 import type { NewSubtask } from "../store/task-store.ts";
+import { foundList, isNoteSubtask, listTitle, noteSubtask, noteTitleOf } from "../planner/list-note.ts";
 import { lookingOnlyFindings, summarizeTask } from "../planner/summary.ts";
-import { runSchedule, type ScheduleOptions, type SchedulerDeps } from "./scheduler.ts";
+import type { TaskStore } from "../store/task-store.ts";
+import { runSchedule, type ScheduleOptions, type ScheduleOutcome, type SchedulerDeps } from "./scheduler.ts";
 
 /**
  * Carries a confirmed task from planning to done (SPEC-02 r1, r7, r9): plan it, save the checked plan and move the
@@ -174,6 +176,20 @@ function canReuse(existing: Subtask, planned: Omit<NewSubtask, "taskId" | "paren
   );
 }
 
+/**
+ * The full list a finished task found (SPEC-02 r13): from the real tool output of its subtasks, leaving out a note
+ * subtask, which only writes the list. Undefined when the task did more than look, or listed nothing.
+ */
+export function foundListOf(store: TaskStore, task: Task, inNote = false): FoundList | undefined {
+  const listing = store.listSubtasks(task.id).filter((subtask) => !isNoteSubtask(subtask));
+  return foundList(lookingOnlyFindings(store, listing), listTitle(task.confirmedGoal ?? task.goal), inNote);
+}
+
+/** The sentence added to the summary once the list is in a new note. */
+export function inNoteSentence(title: string): string {
+  return `I put the full list in a new note called ${title}.`;
+}
+
 /** Runs a saved plan to the end: the schedule, then the summary, spoken on the device the user spoke to. */
 async function runPlan(
   task: Task,
@@ -187,28 +203,57 @@ async function runPlan(
   const model = { client: deps.client, logger, debug: deps.debug };
   const signal = control.signal;
   const scheduled = await runSchedule(taskId, confirmedGoal, deps, control, options);
-  if (scheduled.outcome === "aborted") return { outcome: "aborted" };
-  if (scheduled.outcome === "failed") {
-    // Without its own error, the failure was a bug in the harness, not the subtask: "Unexpected" with the last action.
-    const lastAction = store.listActionLog(taskId).at(-1)?.description;
-    return fail(
-      task,
-      scheduled.userError ?? { kind: "unexpected", taskId, ...(lastAction ? { lastAction } : {}) },
-      deps,
-      `Subtask ${scheduled.subtaskId} failed${scheduled.userError ? "" : " without its own error, so the harness says Unexpected"}`,
-    );
+  if (scheduled.outcome !== "done") return scheduleEnded(task, scheduled, deps);
+
+  // The user said yes to the note (SPEC-02 r13): once the list is found, one more subtask writes it into a new note.
+  const latestGoal = store.getTask(taskId)?.confirmedGoal ?? confirmedGoal;
+  let note = store.listSubtasks(taskId).find(isNoteSubtask);
+  const list = foundListOf(store, store.getTask(taskId)!);
+  if (list && !note && store.wantsListInNote(taskId)) {
+    note = store.addSubtask({ taskId, ...noteSubtask(list) });
+    logger.info("task.noteAdded", { taskId, subtaskId: note.id, items: list.items.length });
+    deps.debug?.write("task.noteAdded", { taskId, subtaskId: note.id, title: list.title, items: list.items.length });
+    const noted = await runSchedule(taskId, latestGoal, deps, control);
+    if (noted.outcome !== "done") return scheduleEnded(task, noted, deps);
   }
 
   const subtasks = store.listSubtasks(taskId);
-  const findings = lookingOnlyFindings(store, subtasks);
-  const latestGoal = store.getTask(taskId)?.confirmedGoal ?? confirmedGoal;
-  const summary = await summarizeTask(latestGoal, subtasks, model, { taskId, signal, ...(findings ? { findings } : {}) });
-  if (summary === undefined) return { outcome: "aborted" };
+  const listing = subtasks.filter((subtask) => !isNoteSubtask(subtask));
+  const noteTitle = note && store.getSubtask(note.id)?.status === "done" ? noteTitleOf(note.instruction) : undefined;
+  let summary: string | undefined;
+  if (listing.length === 0 && noteTitle) {
+    // A follow-up that only wrote the note ("Save to Notes" on the card).
+    summary = `Done. ${inNoteSentence(noteTitle)}`;
+  } else {
+    const findings = lookingOnlyFindings(store, listing);
+    summary = await summarizeTask(latestGoal, listing, model, { taskId, signal, ...(findings ? { findings } : {}) });
+    if (summary === undefined) return { outcome: "aborted" };
+    if (noteTitle) summary = `${firstSentence(summary)} ${inNoteSentence(noteTitle)}`;
+  }
   store.setTaskStatus(taskId, "done", { summary });
-  deps.voice.speak(task.originDeviceId, { taskId, text: summary });
+  const shown = list && { ...list, inNote: noteTitle !== undefined };
+  deps.voice.speak(task.originDeviceId, { taskId, text: summary, ...(shown ? { list: shown } : {}) });
   logger.info("task.done", { taskId, subtasks: store.listSubtasks(taskId).length, summaryChars: summary.length });
   deps.debug?.write("task.done", { taskId, summary });
   return { outcome: "done", summary };
+}
+
+/** A schedule that did not finish: stopped from outside, or failed, which fails the task. */
+function scheduleEnded(task: Task, scheduled: Exclude<ScheduleOutcome, { outcome: "done" }>, deps: RunTaskDeps): RunTaskOutcome {
+  if (scheduled.outcome === "aborted") return { outcome: "aborted" };
+  // Without its own error, the failure was a bug in the harness, not the subtask: "Unexpected" with the last action.
+  const lastAction = deps.store.listActionLog(task.id).at(-1)?.description;
+  return fail(
+    task,
+    scheduled.userError ?? { kind: "unexpected", taskId: task.id, ...(lastAction ? { lastAction } : {}) },
+    deps,
+    `Subtask ${scheduled.subtaskId} failed${scheduled.userError ? "" : " without its own error, so the harness says Unexpected"}`,
+  );
+}
+
+/** The first sentence of a summary: the answer, before the sentence about the note. */
+function firstSentence(summary: string): string {
+  return summary.split(/(?<=[.!?])\s+/)[0]!.trim();
 }
 
 /** Fails the task and tells the user. `why` is for the debug log only: what went wrong, in the team's words. */

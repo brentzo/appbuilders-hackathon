@@ -31,6 +31,7 @@ import { modelConfig, tempDir } from "./helpers.ts";
 import { startMockModelServer, type MockModelServer, type MockReply } from "./mock-model-server.ts";
 import { connectFakeMac, type FakeAppModel, type FakeMac, type FakeScreen } from "./support/fake-mac.ts";
 import { FakeKeynote, KEYNOTE, staticApp } from "./support/fake-keynote.ts";
+import { NOTE_TEXT, noteSubtask } from "../src/planner/list-note.ts";
 
 /**
  * `gui_act` (OBJ-36) end to end inside the harness: the real task store, permission gate, worker step, and local RPC
@@ -1570,5 +1571,34 @@ describe("gui_act in Debug mode (OBJ-52)", () => {
     expect(entries()).toEqual([]);
     expect(existsSync(join(dir.path, "s", "Debug log"))).toBe(false);
     expect(JSON.stringify(calls[0]!.body["response_format"])).not.toContain('"reason"');
+  });
+});
+
+// --- OBJ-74 lists in a new note --------------------------------------------------------------------------------
+
+describe("OBJ-74 the note subtask", () => {
+  it("types the list the harness found in place of the placeholder, so the model never writes it out", async () => {
+    const notes = staticApp("com.apple.Notes", {
+      app: "Notes",
+      title: "Notes",
+      elements: [{ role: "textArea", label: "Note body" }],
+    });
+    const fake = await connect(notes);
+    const list = { title: "Files in your Downloads folder", items: ["invoice-oct.pdf", "Receipts (folder)"], inNote: false };
+    scriptModel((_text, call) =>
+      call === 1
+        ? reply({ kind: "key", combo: "cmd+n" })
+        : call === 2
+          ? reply({ kind: "type", text: NOTE_TEXT })
+          : reply({ kind: "finish", status: "done", note: "Wrote the list into a new note." }),
+    );
+    const { subtask } = guiSubtask({ bundleId: "com.apple.Notes", lane: "main", instruction: noteSubtask(list).instruction });
+
+    await act(subtask);
+
+    expect(fake.executed.map((c) => c.params.action.action)).toEqual([
+      { kind: "key", combo: "cmd+n" },
+      { kind: "type", text: "Files in your Downloads folder\ninvoice-oct.pdf\nReceipts (folder)" },
+    ]);
   });
 });

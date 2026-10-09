@@ -1,5 +1,5 @@
 import { RpcFailure, type Handler } from "@yumi/protocol";
-import type { Empty, PauseParams, TaskRef, UserError } from "@yumi/protocol/types";
+import type { Empty, PauseParams, SubmitGoalResult, TaskRef, UserError } from "@yumi/protocol/types";
 import type { Logger } from "../log.ts";
 import type { TaskStore } from "../store/task-store.ts";
 import { TaskControl, TaskControlError } from "../scheduler/task-control.ts";
@@ -8,7 +8,8 @@ import { TaskControl, TaskControlError } from "../scheduler/task-control.ts";
  * The task control methods the Mac app calls: `resumeTask` and `cancelTask` (OBJ-06.3) when the user answers "Want
  * me to pick up where I left off?" or presses Resume or Cancel; `pause` (OBJ-38.5) for the stop shortcut, the menu
  * bar "Stop", and a take-over. The blocked-action card (OBJ-38.4) has no method of its own: "Keep going" calls
- * `resumeTask` and "Stop" calls `cancelTask` (gap G6, resolved in OBJ-45). `RpcPeer` checks
+ * `resumeTask` and "Stop" calls `cancelTask` (gap G6, resolved in OBJ-45). `saveListToNote` (OBJ-74) is "Save to
+ * Notes" on the summary card, and "save it" while the card is up. `RpcPeer` checks
  * params and results against the contract. A refused request answers the "Unexpected" kind; the reason is in the log.
  */
 export function taskControlHandlers(
@@ -44,6 +45,14 @@ export function taskControlHandlers(
         throw refused(error, store, taskId);
       }
       return {};
+    },
+    saveListToNote: (params): SubmitGoalResult => {
+      const { taskId } = params as TaskRef;
+      try {
+        return { taskId: control().saveListToNote(taskId) };
+      } catch (error) {
+        throw refused(error, store, taskId);
+      }
     },
     cancelTask: async (params): Promise<Empty> => {
       const { taskId } = params as TaskRef;

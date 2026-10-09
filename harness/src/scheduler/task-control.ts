@@ -3,7 +3,8 @@ import { RunControl } from "../control/run-control.ts";
 import { describeError, type Logger } from "../log.ts";
 import type { TaskStore } from "../store/task-store.ts";
 import { resetSubtasks } from "./recovery.ts";
-import { continueTask, prepareRevisedPlan, runTask, type RunTaskDeps, type RunTaskOutcome } from "./run-task.ts";
+import { noteSubtask } from "../planner/list-note.ts";
+import { continueTask, foundListOf, prepareRevisedPlan, runTask, type RunTaskDeps, type RunTaskOutcome } from "./run-task.ts";
 
 /**
  * Starts, pauses, resumes, and cancels tasks, and keeps track of the ones running in this process (OBJ-06.3,
@@ -17,6 +18,9 @@ import { continueTask, prepareRevisedPlan, runTask, type RunTaskDeps, type RunTa
  * - `resume` only ever runs because the user asked: the app calls `resumeTask` after the user says yes to "Want me
  *   to pick up where I left off?", presses Resume, or says "continue" or "resume". Nothing else calls it, so nothing
  *   resumes on its own. A risky action asks again after it (SPEC-06 r5).
+ * - `saveListToNote` starts a short follow-up task that writes a finished task's list into a new note, when the user
+ *   presses "Save to Notes" on the summary card or says "save it" (SPEC-02 r13, OBJ-74). The user asked for exactly
+ *   this, so there is no repeat-back.
  * - `cancel` stops every lane, helpers included, drops every queued subtask and every approval or card not yet
  *   answered, and sets the task to cancelled. Nothing runs after it (SPEC-06 r8).
  */
@@ -35,7 +39,7 @@ export interface PendingApprovals {
 /** Why a request about a task was refused. A bug or a race in the app; logged, and the app shows "Unexpected". */
 export class TaskControlError extends Error {
   constructor(
-    readonly rule: "unknownTask" | "notPaused" | "alreadyRunning" | "cannotRun",
+    readonly rule: "unknownTask" | "notPaused" | "alreadyRunning" | "cannotRun" | "noList",
     readonly taskId: Uuid,
     message: string,
   ) {
@@ -142,6 +146,30 @@ export class TaskControl {
     this.store.setTaskStatus(taskId, planned ? "running" : "planning");
     this.logger.info("task.resumed", { taskId, planned });
     void this.track(taskId, (control) => (planned ? continueTask(taskId, work, control) : runTask(taskId, work, control)));
+  }
+
+  /**
+   * Starts a follow-up task that puts a finished task's list into a new note (SPEC-02 r13): planning is skipped, since
+   * the plan is the one note subtask, with the list from the finished task's real tool output. Returns the new task.
+   */
+  saveListToNote(sourceTaskId: Uuid): Uuid {
+    const source = this.store.getTask(sourceTaskId);
+    if (!source) throw this.refuse("unknownTask", sourceTaskId, `No task ${sourceTaskId}`);
+    const list = source.status === "done" ? foundListOf(this.store, source) : undefined;
+    if (!list) throw this.refuse("noList", sourceTaskId, `Task ${sourceTaskId} is ${source.status} with no list to save`);
+    const work = this.requireWork(sourceTaskId);
+    const what = list.title[0]!.toLowerCase() + list.title.slice(1);
+    const task = this.store.createTask({
+      originDeviceId: source.originDeviceId,
+      goal: `Save the list to Notes: ${list.title}`,
+      confirmedGoal: `Put the ${what.replace(/^the /, "")} in a new note`,
+      status: "planning",
+      autoMode: this.store.isAutoMode(sourceTaskId),
+    });
+    this.store.savePlan(task.id, [noteSubtask(list)]);
+    this.logger.info("task.saveListToNote", { taskId: task.id, sourceTaskId, items: list.items.length });
+    void this.track(task.id, (control) => continueTask(task.id, work, control));
+    return task.id;
   }
 
   /** Replans a paused task after the user confirmed a revised goal. */

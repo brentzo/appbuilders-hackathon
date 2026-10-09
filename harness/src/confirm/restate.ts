@@ -3,6 +3,7 @@ import type { Logger } from "../log.ts";
 import type { DebugLog } from "../debug/debug-log.ts";
 import type { ModelClient, ModelFailure } from "../model/client.ts";
 import type { ChatMessage } from "../model/openai.ts";
+import { NOTE_OFFER } from "../planner/list-note.ts";
 
 /**
  * The repeat-back (OBJ-17.2, SPEC-01 r4 and r6): the model restates what the user asked for as one short clause,
@@ -92,9 +93,12 @@ function lowerFirstWord(text: string): string {
   return text;
 }
 
-/** The repeat-back sentence Yumi says and shows (SPEC-01 "User gives a goal and confirms it" and "User corrects the goal"). */
-export function repeatBack(goal: string, afterCorrection: boolean): string {
-  return `${afterCorrection ? "Got it. " : ""}You want me to ${goal}. Should I go ahead?`;
+/**
+ * The repeat-back sentence Yumi says and shows (SPEC-01 "User gives a goal and confirms it" and "User corrects the
+ * goal"). For a goal that asks for a list, the question offers the note instead (SPEC-02 r13).
+ */
+export function repeatBack(goal: string, afterCorrection: boolean, offersNote = false): string {
+  return `${afterCorrection ? "Got it. " : ""}You want me to ${goal}. ${offersNote ? NOTE_OFFER : "Should I go ahead?"}`;
 }
 
 /** The goal as stored on the task once the user confirms it: the clause they said yes to, as a sentence-case instruction. */

@@ -155,6 +155,11 @@ export const MIGRATIONS: readonly string[] = [
   `
   ALTER TABLE tasks ADD COLUMN auto_mode INTEGER NOT NULL DEFAULT 0;
   `,
+  // 10: the user said yes to putting the task's list in a new note (SPEC-02 r13, OBJ-74). Harness-only, like
+  // auto_mode. Older tasks never offered it, so they get 0.
+  `
+  ALTER TABLE tasks ADD COLUMN list_to_note INTEGER NOT NULL DEFAULT 0;
+  `,
 ];
 
 /** Thrown when the database was written by a newer harness, whose schema this one does not know. */

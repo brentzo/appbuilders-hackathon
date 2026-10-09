@@ -322,6 +322,18 @@ export class TaskStore {
     return row?.auto_mode === 1;
   }
 
+  /** Records that the user wants the task's list in a new note (SPEC-02 r13), when they said yes to the offer. */
+  setListToNote(id: Uuid): void {
+    this.requireTask(id);
+    this.stmt("UPDATE tasks SET list_to_note = 1 WHERE id = ?").run(id);
+  }
+
+  /** Whether the user asked for the task's list in a new note. False for a task that does not exist. */
+  wantsListInNote(id: Uuid): boolean {
+    const row = this.stmt("SELECT list_to_note FROM tasks WHERE id = ?").get(id) as { list_to_note: number } | undefined;
+    return row?.list_to_note === 1;
+  }
+
   getTask(id: Uuid): Task | undefined {
     const row = this.stmt("SELECT * FROM tasks WHERE id = ?").get(id) as TaskRow | undefined;
     return row && taskFromRow(row);

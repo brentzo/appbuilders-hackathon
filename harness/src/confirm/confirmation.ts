@@ -6,7 +6,8 @@ import type { ModelClient, ModelFailure } from "../model/client.ts";
 import type { TaskVoice } from "../scheduler/run-task.ts";
 import { GoalRevisionFailed, TaskControlError, type TaskControl } from "../scheduler/task-control.ts";
 import type { TaskStore } from "../store/task-store.ts";
-import { classifyReply, fixedReply, type ReplyKind } from "./classify.ts";
+import { asksForList } from "../planner/list-note.ts";
+import { classifyReply, fixedReply, noteReply, type ReplyKind } from "./classify.ts";
 import { confirmedGoalFrom, repeatBack, restateGoal } from "./restate.ts";
 import { reviseGoalWords } from "./revision.ts";
 
@@ -26,6 +27,9 @@ import { reviseGoalWords } from "./revision.ts";
  * - A correction is combined with the goal and repeated back again ("Got it. You want me to ...").
  * - Change it (the button): the app listens again, and the next spoken answer is the correction.
  * - Unclear: asked once more (the same repeat-back again); after that, Yumi waits for a button.
+ * - A goal that asks for a list ends its repeat-back with "Want me to put the list in a new note too?" instead of
+ *   "Should I go ahead?" (SPEC-02 r13, OBJ-74). "Yes, in a note" goes ahead with the note, which the task store
+ *   keeps; a plain yes, or Go ahead, goes ahead without it.
  *
  * Auto mode (SPEC-01 r14, OBJ-50): a goal sent with `autoMode` skips all of this. The task is created straight in
  * planning with the transcript, trimmed, as its `confirmedGoal`, and its work starts at once. The app shows what it
@@ -48,6 +52,8 @@ interface OpenQuestion {
   goal?: string;
   /** The sentence Yumi last said. */
   said?: string;
+  /** The last repeat-back offered to put the list in a new note (SPEC-02 r13). */
+  offersNote?: boolean;
   /** Unclear answers since the last repeat-back. */
   unclear: number;
   /** "Change it" was pressed: the next spoken answer is the correction. */
@@ -212,7 +218,9 @@ export class GoalConfirmation {
     if (kind === undefined || !this.stillOpen(question)) return;
     switch (kind) {
       case "confirm":
-        return this.confirm(question);
+        return this.confirm(question, false);
+      case "confirmWithNote":
+        return this.confirm(question, true);
       case "cancel":
         return this.cancel(question);
       case "correction":
@@ -241,13 +249,17 @@ export class GoalConfirmation {
       logger.info("confirm.answer", { taskId, kind: "correction", by: "changeIt", answerChars: reply.text.length });
       return "correction";
     }
-    const fixed = fixedReply(reply.text);
+    const fixed = fixedReply(reply.text) ?? (question.offersNote ? noteReply(reply.text) : undefined);
     if (fixed) {
       logger.info("confirm.answer", { taskId, kind: fixed, by: "fixed", answerChars: reply.text.length });
       return fixed;
     }
     this.cursor({ command: "setState", cursorId: MAIN_CURSOR_ID, state: "thinking" });
-    const result = await classifyReply(question.said!, reply.text, this.model(), { taskId, signal: this.stopping.signal });
+    const result = await classifyReply(question.said!, reply.text, this.model(), {
+      taskId,
+      signal: this.stopping.signal,
+      offersNote: question.offersNote === true,
+    });
     if (result.by === "failure" && result.failure.kind !== "invalidOutput") {
       this.modelFailed(question, result.failure);
       return undefined;
@@ -284,7 +296,8 @@ export class GoalConfirmation {
       return;
     }
     question.goal = result.goal;
-    question.said = repeatBack(result.goal, afterCorrection);
+    question.offersNote = asksForList(result.goal);
+    question.said = repeatBack(result.goal, afterCorrection, question.offersNote);
     this.deps.debug?.write("confirm.repeatBack", {
       taskId: question.taskId,
       transcript: question.transcript,
@@ -378,8 +391,11 @@ export class GoalConfirmation {
     this.deps.logger.info("confirm.waitingForButton", { taskId: question.taskId });
   }
 
-  /** Where a task's work starts from a goal, with the repeat-back: after the user said yes to this exact repeat-back. */
-  private async confirm(question: OpenQuestion): Promise<void> {
+  /**
+   * Where a task's work starts from a goal, with the repeat-back: after the user said yes to this exact repeat-back.
+   * `withNote`: they also said yes to putting the list in a new note.
+   */
+  private async confirm(question: OpenQuestion, withNote: boolean): Promise<void> {
     const { store, logger } = this.deps;
     const taskId = question.taskId;
     this.open.delete(taskId);
@@ -395,9 +411,10 @@ export class GoalConfirmation {
       }
       return;
     }
+    if (withNote) store.setListToNote(taskId);
     store.setTaskStatus(taskId, "planning", { confirmedGoal: confirmedGoalFrom(question.goal!) });
-    logger.info("confirm.confirmed", { taskId, corrections: question.corrections.length });
-    this.deps.debug?.write("confirm.confirmed", { taskId, confirmedGoal: confirmedGoalFrom(question.goal!) });
+    logger.info("confirm.confirmed", { taskId, corrections: question.corrections.length, withNote });
+    this.deps.debug?.write("confirm.confirmed", { taskId, confirmedGoal: confirmedGoalFrom(question.goal!), withNote });
     this.startWork(taskId, question.originDeviceId);
   }
 
