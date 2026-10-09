@@ -3,3 +3,4 @@ protocol/examples/** text eol=lf
 protocol/generated/** text eol=lf
 *.md text eol=lf
 protocol/vectors/** text eol=lf
+harness/** text=auto eol=lf
