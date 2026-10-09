@@ -5,7 +5,7 @@ product: models
 assignee: Jepoy
 touches: [mac, android]
 specs: [SPEC-01]
-status: in-progress
+status: blocked
 priority: p0
 depends-on: []
 integrates-with: []
@@ -63,9 +63,14 @@ Push-to-talk is the fallback if the wake word is not reliable by demo day.
 ## Out of scope
 
 - Running the model in the apps, including porting the audio feature step: [OBJ-16](OBJ-16-mac-wake-word.md) (Mac), [OBJ-24](OBJ-24-android-voice-intake.md) (Android).
+- Training the p1 stop keywords: [OBJ-55](OBJ-55-voice-stop-keyword-models.md).
 - The full training notebook. Skip it for the hackathon.
 
 ## Outcome
 
-_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._
+Blocked: training and the required acoustic evaluation need an authenticated Colab run, teammate voice samples, and an approved hour of representative non-wake audio.
+Jepoy can unblock the model work by running the official notebook and coordinating those recordings; this environment has no Colab session or team audio corpus.
+`python scripts/objectives.py check` and `python scripts/verify.py` pass.
+The Android unit-test attempt stopped before execution because the Android SDK is not installed; macOS tools and a connected phone are also unavailable, so no app end-to-end or device smoke result is claimed.
+The SPEC-06 p1 voice-stop model gap is tracked by [OBJ-55](OBJ-55-voice-stop-keyword-models.md).
 

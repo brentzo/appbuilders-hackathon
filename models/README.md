@@ -6,6 +6,7 @@ The apps load models; this product decides which ones, proves they are good enou
 Owner: Jepoy.
 
 Status: the Mac Whisper bake-off has a recommended model, pending Jepoy's confirmation ([RESULTS.md](whisper/RESULTS.md)).
+The custom wake-word model is not ready; app checks still use the documented stand-in until [OBJ-12](../objectives/OBJ-12-hey-yumi-wake-word.md) is unblocked.
 
 ## Responsibilities
 
@@ -15,7 +16,7 @@ Status: the Mac Whisper bake-off has a recommended model, pending Jepoy's confir
 - **Wake word:** train and test the "Hey Yumi" model with openWakeWord ([SPEC-01](../specs/01-voice-intake.md)).
 - **GUI smoke test (p0):** check that Qwen3.5-9B at 4-bit completes the 3 demo tasks from the trimmed accessibility tree ([SPEC-05](../specs/05-mac-gui-control.md), [OBJ-26](../objectives/OBJ-26-gui-smoke-test.md)).
 - **GUI model bake-off (p1):** compare Qwen3.5-4B, Qwen3.5-9B, and UI-TARS-1.5-7B on the 3 demo tasks, 5 runs each ([SPEC-05](../specs/05-mac-gui-control.md) r14). UI-TARS is a vision model, so this matters for the p1 vision fallback.
-- **Voice stop keywords (p1):** a small detector for "stop", "teka", "tama na", and "hinto" that works while Yumi is talking ([SPEC-06](../specs/06-user-control.md) r10). Reuse the openWakeWord training from OBJ-12.
+- **Voice stop keywords (p1):** model training and evaluation are tracked in [OBJ-55](../objectives/OBJ-55-voice-stop-keyword-models.md). The Mac app integration belongs with [OBJ-35](../objectives/OBJ-35-mac-stop-and-take-over.md) or its p1 follow-up.
 - **Model manifest:** which model files each app loads, where to download them, and their checksums.
 
 ## Current model choices
@@ -53,9 +54,10 @@ The public GUI scores (ScreenSpot-Pro, OSWorld) measure vision, which p0 does no
 | ID | Objective | Assignee | Status |
 |---|---|---|---|
 | [OBJ-11](../objectives/OBJ-11-whisper-bake-off.md) | Whisper bake-off | Jepoy | in-progress |
-| [OBJ-12](../objectives/OBJ-12-hey-yumi-wake-word.md) | "Hey Yumi" wake word model | Jepoy | in-progress |
+| [OBJ-12](../objectives/OBJ-12-hey-yumi-wake-word.md) | "Hey Yumi" wake word model | Jepoy | blocked |
 | [OBJ-26](../objectives/OBJ-26-gui-smoke-test.md) | Qwen3.5-9B smoke test on the demo tasks | Brent | in-progress |
 | [OBJ-28](../objectives/OBJ-28-android-whisper-bake-off.md) | Android Whisper bake-off | Jepoy | todo |
+| [OBJ-55](../objectives/OBJ-55-voice-stop-keyword-models.md) | Voice stop keyword models | Jepoy | todo |
 <!-- generated:product-objectives:end -->
 
-Not written yet: the p1 GUI model bake-off and the p1 voice stop keywords.
+Not written yet: the p1 GUI model bake-off.
