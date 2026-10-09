@@ -69,7 +69,7 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-09](OBJ-09-ghost-handoff.md) | Ghost handoff | harness | Brent | 03 | 06, 08 | - | todo |
 | [OBJ-10](OBJ-10-yumi-cat-v0.md) | Yumi cat v0 in Rive | character | Patrick | 04 | - | - | todo |
 | [OBJ-11](OBJ-11-whisper-bake-off.md) | Whisper bake-off | models | Jepoy | 01 | - | - | in-progress |
-| [OBJ-12](OBJ-12-hey-yumi-wake-word.md) | "Hey Yumi" wake word model | models | Jepoy | 01 | - | - | in-progress |
+| [OBJ-12](OBJ-12-hey-yumi-wake-word.md) | "Hey Yumi" wake word model | models | Jepoy | 01 | - | - | blocked |
 | [OBJ-13](OBJ-13-bridge-relay-server.md) | Bridge relay server | bridge | Jepoy | 08 | 02 | 31, 33 | done |
 | [OBJ-14](OBJ-14-mac-app-shell.md) | Mac app shell, permissions, and harness link | mac | Patrick | 01, 04 | 01 | 03 | done |
 | [OBJ-15](OBJ-15-mac-voice-intake.md) | Mac voice intake | mac | Patrick | 01 | 14 | 11 | done |
@@ -117,6 +117,7 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-57](OBJ-57-route-classified-gui-deletes-through-strict-delete.md) | Route classified GUI delete asks through strict delete | harness | Brent | 07 | 37, 38 | 36, 40 | todo |
 | [OBJ-58](OBJ-58-mac-hey-yumi-recognizer.md) | "Hey Yumi" on the Mac with the on-device recognizer | mac | Brent | 01 | - | 16 | in-progress |
 | [OBJ-59](OBJ-59-quick-hey-yumi-model.md) | Quick "Hey Yumi" wake word model for the demo | models | Brent | 01 | - | 16, 24, 58 | todo |
+| [OBJ-60](OBJ-60-filipino-wake-word-training.md) | Filipino-accented wake-word training workflow | models | Jepoy | 01 | - | - | todo |
 <!-- generated:objectives-index:end -->
 
 ## Priority and blocking
@@ -200,7 +201,7 @@ Workload:
 | Person | Objectives | Count |
 |---|---|---|
 | Brent | 03, 04, 05, 06, 07, 08, 09, 17, 22, 23, 24, 26, 29, 32, 36, 37, 38, 41, 42, 43, 47, 49, 50, 51, 52, 53, 54, 57, 58, 59 | 30 |
-| Jepoy | 01, 02, 11, 12, 13, 21, 25, 28, 30, 31, 33, 34, 45, 48, 55, 56 | 16 |
+| Jepoy | 01, 02, 11, 12, 13, 21, 25, 28, 30, 31, 33, 34, 45, 48, 55, 56, 60 | 17 |
 | Patrick | 10, 14, 15, 16, 18, 19, 20, 27, 35, 39, 40, 44, 46 | 13 |
 <!-- generated:objectives-workload:end -->
 ## Suggested order
@@ -210,7 +211,7 @@ Waves come from hard dependencies only. Each person works their column top to bo
 <!-- generated:objectives-waves:start -->
 | Wave | Brent | Jepoy | Patrick |
 |---|---|---|---|
-| 1 | OBJ-22, OBJ-26, OBJ-32, OBJ-50, OBJ-51, OBJ-52, OBJ-54, OBJ-58, OBJ-59 | OBJ-01, OBJ-02, OBJ-11, OBJ-12, OBJ-28, OBJ-55 | OBJ-10 |
+| 1 | OBJ-22, OBJ-26, OBJ-32, OBJ-50, OBJ-51, OBJ-52, OBJ-54, OBJ-58, OBJ-59 | OBJ-01, OBJ-02, OBJ-11, OBJ-12, OBJ-28, OBJ-55, OBJ-60 | OBJ-10 |
 | 2 | OBJ-03, OBJ-24, OBJ-29, OBJ-53 | OBJ-13, OBJ-21, OBJ-25, OBJ-31, OBJ-33, OBJ-45, OBJ-56 | OBJ-14 |
 | 3 | OBJ-04, OBJ-23, OBJ-37, OBJ-41, OBJ-47, OBJ-49 | OBJ-34, OBJ-48 | OBJ-15, OBJ-18, OBJ-27, OBJ-46 |
 | 4 | OBJ-05, OBJ-07, OBJ-17, OBJ-42, OBJ-43 | - | OBJ-16, OBJ-19, OBJ-20, OBJ-39, OBJ-44 |
