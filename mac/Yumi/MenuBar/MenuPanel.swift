@@ -36,7 +36,7 @@ struct MenuPanel: View {
                 VStack(spacing: YumiSpace.xs) {
                     ForEach(cursors, id: \.id) { CursorRow(cursor: $0) }
                 }
-                .padding(.horizontal, YumiSpace.s)
+                .padding(.horizontal, YumiSpace.l)
                 .padding(.bottom, YumiSpace.m)
             }
 
@@ -176,8 +176,9 @@ private struct CursorRow: View {
             Text(cursor.label ?? (cursor.kind == .main ? "Main task" : "Helper task"))
                 .font(YumiFont.label)
                 .foregroundStyle(YumiColor.ink)
-                .lineLimit(1)
+                .lineLimit(2)
                 .truncationMode(.tail)
+                .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: YumiSpace.s)
             Text(Self.stateText(cursor.state))
                 .font(YumiFont.caption)
