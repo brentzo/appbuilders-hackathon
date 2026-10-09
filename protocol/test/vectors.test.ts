@@ -74,7 +74,7 @@ describe("Yumi bridge vectors", () => {
     expect(toHex(canonicalBytes(v.canonical.fields))).toBe(v.canonical.bytes);
   });
 
-  it("has a command and a result, so replyTo is covered both absent and present", () => {
+  it("has a command and a result, so encrypted replyTo is covered both absent and present", () => {
     expect(v.envelopes.map((t) => t.envelope.type)).toEqual(["command", "result"]);
   });
 
@@ -94,7 +94,8 @@ describe("Yumi bridge vectors", () => {
 
     it(`opens the ${t.envelope.type} envelope on the recipient`, () => {
       const result = openEnvelope(t.envelope, recipient, publicKeysOf(sender), new Date(t.openAt));
-      expect(result).toEqual({ ok: true, envelope: t.envelope, payload: JSON.parse(t.plaintext) });
+      const body = JSON.parse(t.plaintext) as { payload: unknown; replyTo?: string };
+      expect(result).toEqual({ ok: true, envelope: t.envelope, payload: body.payload, ...(body.replyTo ? { replyTo: body.replyTo } : {}) });
     });
   }
 

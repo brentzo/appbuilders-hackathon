@@ -248,7 +248,7 @@ data class ElementTarget(
 @Serializable
 data object Empty
 
-/** One message between two paired devices. The relay reads only id, from, to, type, expiresAt, and protocolVersion (SPEC-08 r3). Everything that says what the message means is inside the encrypted payload. */
+/** One message between two paired devices. The relay reads only id, from, to, type, expiresAt, and protocolVersion (SPEC-08 r3). Everything else is inside the encrypted payload. */
 @Serializable
 data class Envelope(
     /** Unique message id. The receiver runs each id at most once (SPEC-08 r8). */
@@ -256,8 +256,6 @@ data class Envelope(
     val from: String,
     val to: String,
     val type: EnvelopeType,
-    /** The id of the command this result answers. Required on a result. */
-    val replyTo: String? = null,
     /** After this time the message is never delivered or run (SPEC-08 r6). */
     val expiresAt: String,
     val protocolVersion: Long,
@@ -631,7 +629,7 @@ data class ProbeAppCapabilityParams(
 )
 
 /** Version of these schemas. Bump it on every breaking change; see protocol/README.md. */
-const val PROTOCOL_VERSION: Long = 1L
+const val PROTOCOL_VERSION: Long = 2L
 
 /** The model asked the user something (a ModelAction ask). The task waits for answerQuestion. */
 @Serializable

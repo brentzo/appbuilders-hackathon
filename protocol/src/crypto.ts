@@ -14,7 +14,7 @@ import { validate } from "./index.ts";
 
 /**
  * The reference implementation of the bridge crypto in protocol/docs/crypto.md.
- * The Swift and Kotlin clients must produce the same bytes; vectors/bridge-crypto-v1.json proves it.
+ * The Swift and Kotlin clients must produce the same bytes; vectors/bridge-crypto-v2.json proves it.
  */
 
 await sodium.ready;
@@ -57,7 +57,7 @@ export type OpenFailure =
  * the receiver resends the stored result (SPEC-08 r8); otherwise it tells the sender it expired.
  */
 export type OpenResult =
-  | { ok: true; envelope: Envelope; payload: unknown }
+  | { ok: true; envelope: Envelope; payload: unknown; replyTo?: string }
   | { ok: false; reason: "expired"; envelope: Envelope }
   | { ok: false; reason: Exclude<OpenFailure, "expired"> };
 
@@ -71,12 +71,12 @@ export interface SealInput {
   payload: unknown;
   /** Defaults to a new random UUID. */
   id?: string;
-  /** Required for a result: the id of the command it answers. */
+  /** For a result, encrypted alongside the payload: the id of the command it answers. */
   replyTo?: string;
 }
 
 // Every signed or tagged byte string starts with its own domain, so one can never be replayed as another.
-const ENVELOPE_DOMAIN = "yumi-envelope-v1";
+const ENVELOPE_DOMAIN = "yumi-envelope-v2";
 const RELAY_AUTH_DOMAIN = "yumi-relay-auth-v1";
 const PAIR_REQUEST_DOMAIN = "yumi-pair-request-v1";
 const PAIR_ACCEPT_DOMAIN = "yumi-pair-accept-v1";
@@ -151,10 +151,10 @@ export function canonicalBytes(fields: readonly (string | Uint8Array)[]): Uint8A
   return out;
 }
 
-type Routing = Pick<Envelope, "id" | "from" | "to" | "type" | "replyTo" | "expiresAt" | "protocolVersion">;
+type Routing = Pick<Envelope, "id" | "from" | "to" | "type" | "expiresAt" | "protocolVersion">;
 
 function routingFields(e: Routing): string[] {
-  return [ENVELOPE_DOMAIN, e.id, e.from, e.to, e.type, e.replyTo ?? "", e.expiresAt, String(e.protocolVersion)];
+  return [ENVELOPE_DOMAIN, e.id, e.from, e.to, e.type, e.expiresAt, String(e.protocolVersion)];
 }
 
 /** The additional data bound into the payload encryption: the routing fields. */
@@ -257,14 +257,17 @@ export function sealEnvelope(input: SealInput): Envelope {
  * Never reuse a nonce with the same key: that breaks the encryption.
  */
 export function sealEnvelopeWithNonce(input: SealInput, nonce: Uint8Array): Envelope {
-  const json = JSON.stringify(input.payload) as string | undefined;
-  if (json === undefined) throw new TypeError("The payload must be a JSON value");
+  if (input.type === "result" && (input.replyTo === undefined || !validate("Uuid", input.replyTo).valid)) {
+    throw new TypeError("A result requires a UUID replyTo");
+  }
+  const payloadJson = JSON.stringify(input.payload) as string | undefined;
+  if (payloadJson === undefined) throw new TypeError("The payload must be a JSON value");
+  const json = JSON.stringify({ ...(input.replyTo === undefined ? {} : { replyTo: input.replyTo }), payload: JSON.parse(payloadJson) as unknown });
   const routing: Routing = {
     id: input.id ?? randomUUID(),
     from: input.sender.deviceId,
     to: input.recipient.deviceId,
     type: input.type,
-    ...(input.replyTo === undefined ? {} : { replyTo: input.replyTo }),
     expiresAt: input.expiresAt,
     protocolVersion: PROTOCOL_VERSION,
   };
@@ -292,7 +295,18 @@ export function openEnvelope(value: unknown, receiver: DeviceKeys, sender: PeerK
   if (expiry - now.getTime() > MAX_EXPIRY_AHEAD_MS) return { ok: false, reason: "badExpiry" };
   if (compareBytes(receiver.kx.publicKey, sender.kxPublicKey) === 0) return { ok: false, reason: "cannotDecrypt" };
   const json = openJson(envelope.payload, envelopeAdditionalData(envelope), sessionKeys(receiver, sender).rx);
-  return json.ok ? { ok: true, envelope, payload: json.value } : { ok: false, reason: json.reason };
+  if (!json.ok) return { ok: false, reason: json.reason };
+  if (!json.value || typeof json.value !== "object" || Array.isArray(json.value) || !("payload" in json.value)) {
+    return { ok: false, reason: "invalidPayload" };
+  }
+  const body = json.value as { payload: unknown; replyTo?: unknown };
+  if (envelope.type === "result" && (typeof body.replyTo !== "string" || !validate("Uuid", body.replyTo).valid)) {
+    return { ok: false, reason: "invalidPayload" };
+  }
+  if (body.replyTo !== undefined && (typeof body.replyTo !== "string" || !validate("Uuid", body.replyTo).valid)) {
+    return { ok: false, reason: "invalidPayload" };
+  }
+  return { ok: true, envelope, payload: body.payload, ...(body.replyTo === undefined ? {} : { replyTo: body.replyTo }) };
 }
 
 /** base64 of the nonce followed by the XChaCha20-Poly1305 ciphertext and tag: a SealedPayload. */

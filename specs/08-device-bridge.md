@@ -20,7 +20,7 @@ Design: [device-bridge](../docs/device-bridge.md).
 1. Devices pair once, in person, by scanning a QR code shown on the Mac with the phone.
 2. Pairing creates a key pair per device. Messages are encrypted end to end and signed by the sender.
 3. The VPS sees only routing fields (`id`, `from`, `to`, `type`, `expiresAt`, `protocolVersion`) and ciphertext. It needs `type` to tell commands, which it never holds, from results and events, which it holds through a short reconnect (requirement 7).
-4. Every message uses the envelope in the design doc: `id`, `from`, `to`, `type`, `replyTo`, `expiresAt`, `protocolVersion`, `signature`, `payload`.
+4. Every message uses the envelope in the design doc: `id`, `from`, `to`, `type`, `expiresAt`, `protocolVersion`, `signature`, `payload`. A result's `replyTo` is inside the encrypted payload.
 5. Messages with a bad signature or from an unpaired device are dropped and logged on the receiving device.
 6. Expired commands are never executed. Every single command (one tool call) expires after 2 minutes, as in [SPEC-09](09-cross-device-routing.md) requirement 16.
 7. The VPS never queues commands. If the target device is offline, the VPS at once tells the sender, and the sender's brain tells the user. Whole goals waiting for an offline device are held on the origin device, not on the VPS ([SPEC-09](09-cross-device-routing.md) requirement 15). Results and events for a device that drops off briefly are held on the VPS until they expire (2 minutes), so a short reconnect does not lose a result.
@@ -94,12 +94,6 @@ Feature: Message delivery
 
 ## Open questions
 
-- Should the VPS be able to read `replyTo`?
-  Requirement 3 lists the fields the VPS sees without `replyTo`, but requirement 4 puts `replyTo` in the envelope, outside the encrypted payload.
-  Readable, it lets the VPS link each result to its command; the VPS can already guess this from timing.
-  Options: (a) keep it readable and add it to requirement 3, or (b) move it inside the encrypted payload.
-  Recommendation: (b), because the VPS never needs it and it costs nothing before any client is built.
-  `protocol/` keeps it readable until this is decided (OBJ-02).
 - What does the phone say when pairing fails, for example because the QR code expired or the Mac did not answer?
   [SPEC-11](11-user-facing-errors.md) has no copy for it yet.
 

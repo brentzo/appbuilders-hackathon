@@ -206,15 +206,13 @@ export interface ElementTarget {
 export interface Empty {
 }
 
-/** One message between two paired devices. The relay reads only id, from, to, type, expiresAt, and protocolVersion (SPEC-08 r3). Everything that says what the message means is inside the encrypted payload. */
+/** One message between two paired devices. The relay reads only id, from, to, type, expiresAt, and protocolVersion (SPEC-08 r3). Everything else is inside the encrypted payload. */
 export interface Envelope {
   /** Unique message id. The receiver runs each id at most once (SPEC-08 r8). */
   id: Uuid;
   from: DeviceId;
   to: DeviceId;
   type: EnvelopeType;
-  /** The id of the command this result answers. Required on a result. */
-  replyTo?: Uuid;
   /** After this time the message is never delivered or run (SPEC-08 r6). */
   expiresAt: Timestamp;
   protocolVersion: ProtocolVersion;
@@ -525,7 +523,7 @@ export interface ProbeAppCapabilityParams {
 }
 
 /** Version of these schemas. Bump it on every breaking change; see protocol/README.md. */
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2;
 export type ProtocolVersion = typeof PROTOCOL_VERSION;
 
 /** The model asked the user something (a ModelAction ask). The task waits for answerQuestion. */

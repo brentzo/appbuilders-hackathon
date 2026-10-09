@@ -64,7 +64,7 @@ Run from `protocol/` after `npm install`.
 |---|---|
 | `npm run generate` | Regenerates every file under `generated/` from the schemas. Commit the result with the schema change. |
 | `npm run check:generated` | Fails if `generated/` is out of date. The test suite checks this too. |
-| `npm run vectors` | Rewrites `vectors/bridge-crypto-v1.json` from the reference crypto. The test suite fails if the file and the code disagree. |
+| `npm run vectors` | Rewrites `vectors/bridge-crypto-v2.json` from the reference crypto. The test suite fails if the file and the code disagree. |
 | `npm run typecheck` | Type-checks the package, including `test/types-check.ts`, which proves unions stay strict. |
 | `npm test` | Runs every test. |
 | `npm run verify` | Typecheck and tests. Run it before every commit that touches `protocol/`. |

@@ -79,7 +79,6 @@ describe("sealEnvelope and openEnvelope", () => {
     const tampered = [
       { ...envelope, id: "0e9a3f5c-6b1d-4e2f-8a7b-9c0d1e2f3a4b" },
       { ...envelope, type: "event" as const },
-      { ...envelope, replyTo: "0e9a3f5c-6b1d-4e2f-8a7b-9c0d1e2f3a4b" },
       { ...envelope, expiresAt: "2026-10-09T07:50:00.000Z" },
       { ...envelope, payload: flipped.toString("base64") },
     ];
@@ -93,10 +92,9 @@ describe("sealEnvelope and openEnvelope", () => {
     const changes = [
       { from: stranger.deviceId },
       { to: stranger.deviceId },
-      { protocolVersion: 2 as 1 },
+      { protocolVersion: 3 as 2 },
       { id: "0e9a3f5c-6b1d-4e2f-8a7b-9c0d1e2f3a4b" },
       { type: "result" as const },
-      { replyTo: envelope.id },
       { expiresAt: "2026-10-09T07:43:00.000Z" },
       { payload: sealAlarm().payload },
     ];

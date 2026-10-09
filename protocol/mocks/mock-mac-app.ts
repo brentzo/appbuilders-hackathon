@@ -50,7 +50,7 @@ export async function connectMockMacApp(options: MockMacAppOptions = {}): Promis
       options.onEvent?.(event, payload);
     },
   });
-  await peer.request("hello", { protocolVersion: 1 });
+  await peer.request("hello", { protocolVersion: 2 });
   log(`connected to ${socketPath}`);
   return { peer, close: () => peer.close() };
 }

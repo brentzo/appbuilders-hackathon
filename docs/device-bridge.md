@@ -70,13 +70,14 @@ type Envelope = {
   from: DeviceId
   to: DeviceId
   type: "command" | "result" | "event"
-  replyTo?: string        // matches a result to its command
   expiresAt: string       // stale commands are dropped, never executed late
   protocolVersion: number
   signature: string       // signed with the sender's paired device key
   payload: string         // encrypted body
 }
 ```
+
+For results, `replyTo` is inside the encrypted payload and matches the command being answered.
 
 The VPS can read `id`, `from`, `to`, `type`, `expiresAt`, and `protocolVersion`.
 It needs `type` to reject commands for an offline device at once while holding results and events through a short reconnect ([SPEC-08](../specs/08-device-bridge.md) r7).

@@ -91,7 +91,7 @@ describe("mock Mac app", () => {
     const path = socketPath();
     const harnessSide = new Promise<RpcPeer>((resolve) => {
       const server: Server = createServer((socket) => {
-        resolve(new RpcPeer({ role: "harness", socket, handlers: { hello: () => ({ protocolVersion: 1 }) } }));
+        resolve(new RpcPeer({ role: "harness", socket, handlers: { hello: () => ({ protocolVersion: 2 }) } }));
       });
       server.listen(path);
       cleanups.push(() => new Promise<void>((r) => server.close(() => r())));

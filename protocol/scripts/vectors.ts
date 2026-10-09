@@ -1,4 +1,4 @@
-// Writes vectors/bridge-crypto-v1.json, the cross-language test vectors for protocol/docs/crypto.md.
+// Writes vectors/bridge-crypto-v2.json, the cross-language test vectors for protocol/docs/crypto.md.
 // With --check, fails instead if the file differs from what the reference implementation produces.
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -21,7 +21,7 @@ import {
   type DeviceKeys,
 } from "../src/crypto.ts";
 
-export const VECTORS_PATH = fileURLToPath(new URL("../vectors/bridge-crypto-v1.json", import.meta.url));
+export const VECTORS_PATH = fileURLToPath(new URL("../vectors/bridge-crypto-v2.json", import.meta.url));
 
 interface DeviceVector {
   signingSeed: string;
@@ -88,7 +88,7 @@ function envelopeVector(
   );
   return {
     sender: senderName,
-    plaintext,
+    plaintext: JSON.stringify({ ...(routing.replyTo === undefined ? {} : { replyTo: routing.replyTo }), payload: JSON.parse(plaintext) as unknown }),
     nonce: hex(nonce),
     additionalData: hex(envelopeAdditionalData(envelope)),
     signingBytes: hex(envelopeSigningBytes(envelope)),
@@ -191,11 +191,11 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
       current = undefined;
     }
     if (current !== content) {
-      console.error("vectors/bridge-crypto-v1.json is out of date. Run npm run vectors.");
+      console.error("vectors/bridge-crypto-v2.json is out of date. Run npm run vectors.");
       process.exit(1);
     }
   } else {
     writeFileSync(VECTORS_PATH, content);
-    console.log("wrote vectors/bridge-crypto-v1.json");
+    console.log("wrote vectors/bridge-crypto-v2.json");
   }
 }

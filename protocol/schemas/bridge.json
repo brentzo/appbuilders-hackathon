@@ -5,7 +5,7 @@
   "description": "The envelope every message between devices travels in, and the expiry rules (SPEC-08, docs/device-bridge.md). The crypto is described in protocol/docs/crypto.md.",
   "$defs": {
     "Envelope": {
-      "description": "One message between two paired devices. The relay reads only id, from, to, type, expiresAt, and protocolVersion (SPEC-08 r3). Everything that says what the message means is inside the encrypted payload.",
+      "description": "One message between two paired devices. The relay reads only id, from, to, type, expiresAt, and protocolVersion (SPEC-08 r3). Everything else is inside the encrypted payload.",
       "type": "object",
       "additionalProperties": false,
       "required": ["id", "from", "to", "type", "expiresAt", "protocolVersion", "signature", "payload"],
@@ -14,18 +14,11 @@
         "from": { "$ref": "common.json#/$defs/DeviceId" },
         "to": { "$ref": "common.json#/$defs/DeviceId" },
         "type": { "$ref": "#/$defs/EnvelopeType" },
-        "replyTo": { "description": "The id of the command this result answers. Required on a result.", "$ref": "common.json#/$defs/Uuid" },
         "expiresAt": { "description": "After this time the message is never delivered or run (SPEC-08 r6).", "$ref": "common.json#/$defs/Timestamp" },
         "protocolVersion": { "$ref": "common.json#/$defs/ProtocolVersion" },
         "signature": { "$ref": "#/$defs/Signature" },
         "payload": { "$ref": "#/$defs/SealedPayload" }
-      },
-      "allOf": [
-        {
-          "if": { "properties": { "type": { "const": "result" } } },
-          "then": { "required": ["replyTo"] }
-        }
-      ]
+      }
     },
     "EnvelopeType": {
       "description": "The relay never holds a command for an offline device, and holds results and events through a short reconnect (SPEC-08 r7).",

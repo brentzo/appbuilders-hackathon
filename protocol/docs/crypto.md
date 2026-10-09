@@ -4,7 +4,7 @@ How every message between two paired devices is encrypted and signed, so the rel
 Pairing and the relay connection are in [pairing.md](pairing.md).
 
 The reference implementation is [`src/crypto.ts`](../src/crypto.ts), imported as `@yumi/protocol/crypto`.
-The Swift and Kotlin clients must produce the same bytes, which [`vectors/bridge-crypto-v1.json`](../vectors/bridge-crypto-v1.json) proves.
+The Swift and Kotlin clients must produce the same bytes, which [`vectors/bridge-crypto-v2.json`](../vectors/bridge-crypto-v2.json) proves.
 
 ## Choices
 
@@ -60,7 +60,7 @@ The first field is always a domain string, so bytes signed for one purpose can n
 
 | Domain | Used for |
 |---|---|
-| `yumi-envelope-v1` | Envelope additional data and signature |
+| `yumi-envelope-v2` | Envelope additional data and signature |
 | `yumi-relay-auth-v1` | The answer to the relay's challenge |
 | `yumi-pair-request-v1` | The pairing request's additional data |
 | `yumi-pair-accept-v1` | The pairing accept signature |
@@ -70,14 +70,16 @@ The first field is always a domain string, so bytes signed for one purpose can n
 
 The envelope schema is `Envelope` in [`schemas/bridge.json`](../schemas/bridge.json).
 
-**Routing fields**, in this order: the domain `yumi-envelope-v1`, `id`, `from`, `to`, `type`, `replyTo` (empty text when absent), `expiresAt` (the exact text sent), and `protocolVersion` (as decimal text).
+**Routing fields**, in this order: the domain `yumi-envelope-v2`, `id`, `from`, `to`, `type`, `expiresAt` (the exact text sent), and `protocolVersion` (as decimal text).
 
 To seal:
 
-1. Write the payload as UTF-8 JSON text.
+1. Write an object containing `payload` and, for a result, `replyTo` as UTF-8 JSON text.
    The payload kinds are defined in [OBJ-25](../../objectives/OBJ-25-cross-device-messages.md).
+   `openEnvelope` returns the inner `payload` and decrypted `replyTo` separately.
 2. Pick a random 24-byte nonce.
 3. Encrypt with XChaCha20-Poly1305, the sender's `tx` key, and the canonical routing fields as additional data.
+   `replyTo` is inside this encrypted object and is not a routing field.
 4. `payload` is the base64 of the nonce followed by the ciphertext and its 16-byte tag.
 5. Sign the canonical routing fields followed by one more field, the `payload` base64 text, with the sender's Ed25519 key.
 6. `signature` is the base64 of that signature.
@@ -140,7 +142,7 @@ The constants are generated in every language from [`schemas/bridge.json`](../sc
 
 ## Test vectors
 
-[`vectors/bridge-crypto-v1.json`](../vectors/bridge-crypto-v1.json) holds fixed inputs and the exact expected outputs.
+[`vectors/bridge-crypto-v2.json`](../vectors/bridge-crypto-v2.json) holds fixed inputs and the exact expected outputs.
 Binary values are lowercase hex, except where the wire format itself uses base64.
 Our own fixed inputs count up byte by byte (`000102...`), so they are easy to type in any language.
 

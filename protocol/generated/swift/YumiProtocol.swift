@@ -482,27 +482,24 @@ public struct Empty: Codable, Equatable, Sendable {
     }
 }
 
-/// One message between two paired devices. The relay reads only id, from, to, type, expiresAt, and protocolVersion (SPEC-08 r3). Everything that says what the message means is inside the encrypted payload.
+/// One message between two paired devices. The relay reads only id, from, to, type, expiresAt, and protocolVersion (SPEC-08 r3). Everything else is inside the encrypted payload.
 public struct Envelope: Codable, Equatable, Sendable {
     /// Unique message id. The receiver runs each id at most once (SPEC-08 r8).
     public var id: String
     public var from: String
     public var to: String
     public var `type`: EnvelopeType
-    /// The id of the command this result answers. Required on a result.
-    public var replyTo: String?
     /// After this time the message is never delivered or run (SPEC-08 r6).
     public var expiresAt: String
     public var protocolVersion: Int
     public var signature: String
     public var payload: String
 
-    public init(id: String, from: String, to: String, `type`: EnvelopeType, replyTo: String? = nil, expiresAt: String, protocolVersion: Int, signature: String, payload: String) {
+    public init(id: String, from: String, to: String, `type`: EnvelopeType, expiresAt: String, protocolVersion: Int, signature: String, payload: String) {
         self.id = id
         self.from = from
         self.to = to
         self.type = `type`
-        self.replyTo = replyTo
         self.expiresAt = expiresAt
         self.protocolVersion = protocolVersion
         self.signature = signature
@@ -1105,7 +1102,7 @@ public struct ProbeAppCapabilityParams: Codable, Equatable, Sendable {
 }
 
 /// Version of these schemas. Bump it on every breaking change; see protocol/README.md.
-public let PROTOCOL_VERSION: Int = 1
+public let PROTOCOL_VERSION: Int = 2
 
 /// The model asked the user something (a ModelAction ask). The task waits for answerQuestion.
 public struct QuestionAsked: Codable, Equatable, Sendable {

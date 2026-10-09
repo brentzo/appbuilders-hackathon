@@ -6,7 +6,7 @@
     "to": "0e934e02183f97e0cd83ad10d6c4be5a",
     "type": "command",
     "expiresAt": "2026-10-09T07:44:00.000Z",
-    "protocolVersion": 1,
+    "protocolVersion": 2,
     "signature": "OSmBxym89Dv7/bLH51XOWgrTLYrX6TkxR+pJnmmhke3gbtutLFyZEk6FDEGJ9nFZICHnjJWZrjRUjlWT4ojKCw==",
     "payload": "gIGCg4SFhoeIiYqLjI2Oj5CRkpOUlZaXu/0GX7w8AZp/YYgHh3LXOBjAMAptpan9Ukdyu/603skN5OqVi2iJvFkseh/aUb11zTNZ"
   }

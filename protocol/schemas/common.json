@@ -7,7 +7,7 @@
     "ProtocolVersion": {
       "description": "Version of these schemas. Bump it on every breaking change; see protocol/README.md.",
       "type": "integer",
-      "const": 1
+      "const": 2
     },
     "Uuid": {
       "description": "A UUID in its canonical text form.",
