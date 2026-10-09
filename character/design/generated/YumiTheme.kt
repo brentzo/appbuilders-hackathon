@@ -173,7 +173,9 @@ object YumiRadius {
 }
 
 object YumiMotion {
-    const val MOVE_MS = 300
+    const val MOVE_MIN_MS = 350
+    const val MOVE_MAX_MS = 700
+    const val MOVE_FAR_PT = 1200
     const val POUNCE_MS = 300
     const val FADE_OUT_MS = 1000
     const val PANEL_MS = 350

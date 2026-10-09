@@ -69,43 +69,57 @@ def hx(v):
 
 # ---------- Swift ----------
 weights = {400: ".regular", 500: ".medium", 600: ".semibold", 650: ".semibold", 700: ".bold", 800: ".heavy"}
-sw = [f"// {HEADER}", "import AppKit", "import SwiftUI", "",
+sw = [f"// {HEADER}",
+      "// Every declaration is nonisolated: app targets that default to the main actor would otherwise",
+      "// isolate the dynamic colors, which AppKit resolves off the main thread.",
+      "import AppKit", "import SwiftUI", "",
       "/// Yumi's colors. Each one follows the system appearance (light or dark) on its own.",
-      "public enum YumiColor {"]
+      "nonisolated public enum YumiColor {"]
 for k in LIGHT:
     sw.append(f"    /// {T['color']['light'][k]['usage']}")
     sw.append(f"    public static let {k} = dynamicColor(light: 0x{hx(LIGHT[k])}, dark: 0x{hx(DARK[k])})")
 sw += ["}", "", "/// One cat's colors. The main cat is always ginger; ghost littermates use their own.",
-       "public struct YumiCatPalette: Sendable {",
+       "nonisolated public struct YumiCatPalette: Sendable {",
        *[f"    public let {k}: Color" for k in CAT_KEYS], "}", "",
-       "public enum YumiCatColors {"]
+       "nonisolated public enum YumiCatColors {"]
 for name, cat in CATS.items():
     args = ", ".join(f"{k}: rgbColor(0x{hx(cat[k])})" for k in CAT_KEYS)
     sw.append(f"    public static let {name} = YumiCatPalette({args})")
 sw.append(f"    /// Ghost cursors take these in order.")
 sw.append(f"    public static let littermates = [{', '.join(T['cat']['littermates'])}]")
-sw += ["}", "", "/// Text styles. Mac panels use the system font so they feel native.", "public enum YumiFont {"]
+sw += ["}", "", "/// Text styles. Mac panels use the system font so they feel native.", "nonisolated public enum YumiFont {"]
 for s in T["type"]["scale"]:
     design = ", design: .monospaced" if s["family"] == "mono" else ""
     sw.append(f"    /// {s['usage']}")
     sw.append(f"    public static let {s['name']} = Font.system(size: {s['size']}, weight: {weights[s['weight']]}{design})")
-sw += ["}", "", "public enum YumiSpace {"] + [f"    public static let {k}: CGFloat = {v}" for k, v in T["space"].items()]
-sw += ["}", "", "public enum YumiRadius {"] + [f"    public static let {k}: CGFloat = {v}" for k, v in T["radius"].items()]
+sw += ["}", "", "nonisolated public enum YumiSpace {"] + [f"    public static let {k}: CGFloat = {v}" for k, v in T["space"].items()]
+sw += ["}", "", "nonisolated public enum YumiRadius {"] + [f"    public static let {k}: CGFloat = {v}" for k, v in T["radius"].items()]
 m = T["motion"]
 e = m["easing"]
-sw += ["}", "", "public enum YumiMotion {",
-       f"    public static let move: Double = {m['moveMs'] / 1000}",
+sw += ["}", "", "nonisolated public enum YumiMotion {",
+       f"    /// A move takes moveMin for a short hop, growing with distance to moveMax at moveFar points.",
+       f"    public static let moveMin: Double = {m['moveMinMs'] / 1000}",
+       f"    public static let moveMax: Double = {m['moveMaxMs'] / 1000}",
+       f"    public static let moveFar: CGFloat = {m['moveFarPt']}",
        f"    public static let pounce: Double = {m['pounceMs'] / 1000}",
        f"    public static let fadeOut: Double = {m['fadeOutMs'] / 1000}",
        f"    public static let panel: Double = {m['panelMs'] / 1000}",
-       f"    /// The cursor's eased move. With Reduce Motion on, use a plain glide instead.",
-       f"    public static let moveAnimation = Animation.timingCurve({e[0]}, {e[1]}, {e[2]}, {e[3]}, duration: move)",
+       f"    /// The ease-in-out curve of a move, as cubic-bezier control points.",
+       f"    public static let easing: (Double, Double, Double, Double) = ({e[0]}, {e[1]}, {e[2]}, {e[3]})",
+       "    /// How long a move of `distance` points takes.",
+       "    public static func moveDuration(distance: CGFloat) -> Double {",
+       "        moveMin + (moveMax - moveMin) * Double(min(max(distance / moveFar, 0), 1))",
+       "    }",
+       f"    /// The cursor's eased move over `distance`. With Reduce Motion on, use a straight glide instead.",
+       "    public static func moveAnimation(distance: CGFloat) -> Animation {",
+       "        Animation.timingCurve(easing.0, easing.1, easing.2, easing.3, duration: moveDuration(distance: distance))",
+       "    }",
        "}", "",
-       "private func nsColor(_ hex: UInt32) -> NSColor {",
+       "nonisolated private func nsColor(_ hex: UInt32) -> NSColor {",
        "    NSColor(srgbRed: CGFloat((hex >> 16) & 0xFF) / 255, green: CGFloat((hex >> 8) & 0xFF) / 255, blue: CGFloat(hex & 0xFF) / 255, alpha: 1)",
        "}", "",
-       "private func rgbColor(_ hex: UInt32) -> Color { Color(nsColor: nsColor(hex)) }", "",
-       "private func dynamicColor(light: UInt32, dark: UInt32) -> Color {",
+       "nonisolated private func rgbColor(_ hex: UInt32) -> Color { Color(nsColor: nsColor(hex)) }", "",
+       "nonisolated private func dynamicColor(light: UInt32, dark: UInt32) -> Color {",
        "    Color(nsColor: NSColor(name: nil) { appearance in",
        "        appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? nsColor(dark) : nsColor(light)",
        "    })",
@@ -172,7 +186,8 @@ kt += ["    return Typography(",
        "object YumiSpace {"] + [f"    val {k} = {v}.dp" for k, v in T["space"].items()]
 kt += ["}", "", "object YumiRadius {"] + [f"    val {k} = {v}.dp" for k, v in T["radius"].items()]
 kt += ["}", "", "object YumiMotion {",
-       f"    const val MOVE_MS = {m['moveMs']}", f"    const val POUNCE_MS = {m['pounceMs']}",
+       f"    const val MOVE_MIN_MS = {m['moveMinMs']}", f"    const val MOVE_MAX_MS = {m['moveMaxMs']}",
+       f"    const val MOVE_FAR_PT = {m['moveFarPt']}", f"    const val POUNCE_MS = {m['pounceMs']}",
        f"    const val FADE_OUT_MS = {m['fadeOutMs']}", f"    const val PANEL_MS = {m['panelMs']}", "}", ""]
 open(os.path.join(OUT, "YumiTheme.kt"), "w", encoding="utf-8", newline="\n").write("\n".join(kt))
 
@@ -198,7 +213,7 @@ css += [f"  --yumi-radius-{k}: {v}px;" for k, v in T["radius"].items()]
 css += [f'  --yumi-font-display: "{T["type"]["families"]["display"]}", system-ui, sans-serif;',
         f'  --yumi-font-text: "{T["type"]["families"]["text"]}", system-ui, sans-serif;',
         f'  --yumi-font-mono: "{T["type"]["families"]["mono"]}", ui-monospace, monospace;',
-        f"  --yumi-move: {m['moveMs']}ms;", f"  --yumi-ease: cubic-bezier({', '.join(map(str, e))});", "}"]
+        f"  --yumi-move-min: {m['moveMinMs']}ms;", f"  --yumi-move-max: {m['moveMaxMs']}ms;", f"  --yumi-ease: cubic-bezier({', '.join(map(str, e))});", "}"]
 dark_vars = [f"  --yumi-{kebab(k)}: {v};" for k, v in DARK.items()]
 css += ["@media (prefers-color-scheme: dark) {", '  :root:not([data-theme="light"]) {'] + ["  " + l for l in dark_vars] + ["  }", "}"]
 css += [':root[data-theme="dark"] {'] + dark_vars + ["}", ""]

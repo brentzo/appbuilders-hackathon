@@ -1,9 +1,11 @@
 // Generated from character/design/tokens.json by character/design/build.py. Do not edit by hand.
+// Every declaration is nonisolated: app targets that default to the main actor would otherwise
+// isolate the dynamic colors, which AppKit resolves off the main thread.
 import AppKit
 import SwiftUI
 
 /// Yumi's colors. Each one follows the system appearance (light or dark) on its own.
-public enum YumiColor {
+nonisolated public enum YumiColor {
     /// Page and window background.
     public static let paper = dynamicColor(light: 0xF9F6E7, dark: 0x17120F)
     /// Recessed areas: stages, wells, sidebars.
@@ -39,14 +41,14 @@ public enum YumiColor {
 }
 
 /// One cat's colors. The main cat is always ginger; ghost littermates use their own.
-public struct YumiCatPalette: Sendable {
+nonisolated public struct YumiCatPalette: Sendable {
     public let fur: Color
     public let markings: Color
     public let line: Color
     public let cheeks: Color
 }
 
-public enum YumiCatColors {
+nonisolated public enum YumiCatColors {
     public static let ginger = YumiCatPalette(fur: rgbColor(0xF0A76A), markings: rgbColor(0xF6DBB5), line: rgbColor(0x6E413E), cheeks: rgbColor(0xED8770))
     public static let mint = YumiCatPalette(fur: rgbColor(0x86D6BE), markings: rgbColor(0xDDF3EA), line: rgbColor(0x2F5A50), cheeks: rgbColor(0xEE9A86))
     public static let sky = YumiCatPalette(fur: rgbColor(0x93BCF0), markings: rgbColor(0xE0EBFB), line: rgbColor(0x30466B), cheeks: rgbColor(0xEE9A86))
@@ -56,7 +58,7 @@ public enum YumiCatColors {
 }
 
 /// Text styles. Mac panels use the system font so they feel native.
-public enum YumiFont {
+nonisolated public enum YumiFont {
     /// Hero lines and the wordmark.
     public static let display = Font.system(size: 40, weight: .heavy)
     /// Screen and card titles.
@@ -73,7 +75,7 @@ public enum YumiFont {
     public static let data = Font.system(size: 12, weight: .regular, design: .monospaced)
 }
 
-public enum YumiSpace {
+nonisolated public enum YumiSpace {
     public static let xxs: CGFloat = 2
     public static let xs: CGFloat = 4
     public static let s: CGFloat = 8
@@ -84,7 +86,7 @@ public enum YumiSpace {
     public static let xxxl: CGFloat = 48
 }
 
-public enum YumiRadius {
+nonisolated public enum YumiRadius {
     public static let control: CGFloat = 7
     public static let field: CGFloat = 10
     public static let panel: CGFloat = 16
@@ -92,22 +94,33 @@ public enum YumiRadius {
     public static let pill: CGFloat = 999
 }
 
-public enum YumiMotion {
-    public static let move: Double = 0.3
+nonisolated public enum YumiMotion {
+    /// A move takes moveMin for a short hop, growing with distance to moveMax at moveFar points.
+    public static let moveMin: Double = 0.35
+    public static let moveMax: Double = 0.7
+    public static let moveFar: CGFloat = 1200
     public static let pounce: Double = 0.3
     public static let fadeOut: Double = 1.0
     public static let panel: Double = 0.35
-    /// The cursor's eased move. With Reduce Motion on, use a plain glide instead.
-    public static let moveAnimation = Animation.timingCurve(0.25, 0.85, 0.3, 1, duration: move)
+    /// The ease-in-out curve of a move, as cubic-bezier control points.
+    public static let easing: (Double, Double, Double, Double) = (0.65, 0, 0.35, 1)
+    /// How long a move of `distance` points takes.
+    public static func moveDuration(distance: CGFloat) -> Double {
+        moveMin + (moveMax - moveMin) * Double(min(max(distance / moveFar, 0), 1))
+    }
+    /// The cursor's eased move over `distance`. With Reduce Motion on, use a straight glide instead.
+    public static func moveAnimation(distance: CGFloat) -> Animation {
+        Animation.timingCurve(easing.0, easing.1, easing.2, easing.3, duration: moveDuration(distance: distance))
+    }
 }
 
-private func nsColor(_ hex: UInt32) -> NSColor {
+nonisolated private func nsColor(_ hex: UInt32) -> NSColor {
     NSColor(srgbRed: CGFloat((hex >> 16) & 0xFF) / 255, green: CGFloat((hex >> 8) & 0xFF) / 255, blue: CGFloat(hex & 0xFF) / 255, alpha: 1)
 }
 
-private func rgbColor(_ hex: UInt32) -> Color { Color(nsColor: nsColor(hex)) }
+nonisolated private func rgbColor(_ hex: UInt32) -> Color { Color(nsColor: nsColor(hex)) }
 
-private func dynamicColor(light: UInt32, dark: UInt32) -> Color {
+nonisolated private func dynamicColor(light: UInt32, dark: UInt32) -> Color {
     Color(nsColor: NSColor(name: nil) { appearance in
         appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? nsColor(dark) : nsColor(light)
     })

@@ -49,7 +49,7 @@ These are also the values for the Rive file's ghost color input.
 
 - Spacing is a 4-point scale: `xs` 4, `s` 8, `m` 12, `l` 16, `xl` 24, `xxl` 32.
 - Radius by role: `control` 7 for Mac buttons, `field` 10, `panel` 16 for Mac panels, `card` 24 for Android cards, `pill` for chips.
-- The cursor moves in about 300 ms on an eased curve, and cursors fade out within 1 second (SPEC-04).
+- The cursor moves on a symmetric ease-in-out curve with an arc, in 350 ms for a short hop up to 700 ms across the screen (`moveDuration(distance:)`), and cursors fade out within 1 second (SPEC-04).
 - With Reduce Motion on, leaps and pounces become simple glides.
 
 ## Logo and icons
