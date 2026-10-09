@@ -405,7 +405,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 | [OBJ-39](../objectives/OBJ-39-mac-gui-execution.md) | Mac GUI execution | Patrick | in-progress |
 | [OBJ-40](../objectives/OBJ-40-mac-approval-cards.md) | Approval and blocked-action cards on the Mac | Patrick | todo |
 | [OBJ-44](../objectives/OBJ-44-mac-version-mismatch-copy.md) | Mac app shows the version mismatch copy | Patrick | todo |
-| [OBJ-46](../objectives/OBJ-46-mac-model-readiness.md) | Mac app shows whether the model is ready | Patrick | todo |
+| [OBJ-46](../objectives/OBJ-46-mac-model-readiness.md) | Mac app shows whether the model is ready | Patrick | in-progress |
 | [OBJ-50](../objectives/OBJ-50-mac-auto-mode.md) | Auto mode skips the repeat-back | Brent | in-progress |
 | [OBJ-51](../objectives/OBJ-51-mac-neural-voice.md) | Yumi's neural voice on the Mac | Brent | done |
 | [OBJ-53](../objectives/OBJ-53-mac-thoughts-panel.md) | Expand a cursor to see what it is thinking | Brent | in-progress |

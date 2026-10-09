@@ -46,8 +46,8 @@ The Mac app shows "Yumi is getting ready" only until the harness answers `hello`
 
 ## Expectations
 
-- [ ] The Mac app learns the model's state within a few seconds of every change.
-- [ ] A missing model server ends in `failed`, which the Mac shows as "Model failed to load".
+- [x] The Mac app learns the model's state within a few seconds of every change.
+- [x] A missing model server ends in `failed`, which the Mac shows as "Model failed to load".
 
 ## Expected outcomes
 
@@ -59,4 +59,10 @@ The Mac app shows "Yumi is getting ready" only until the harness answers `hello`
 
 ## Outcome
 
-_Not finished yet. When this objective is done, replace this line with the outcome, following the objective-lifecycle skill._
+- **Result:** Done in code; the status stays `todo` because its hard dependency [OBJ-45](OBJ-45-pause-scope-and-model-readiness-contracts.md) is still in-progress, and the check refuses a later status until OBJ-45 is done. The contract it needs is on `main`.
+- **Delivered:** `harness/src/model/readiness.ts` (`ModelReadiness`), wired in `harness/src/main.ts`, `harness/src/harness.ts` (`HarnessOptions.model`, `modelStateChanged`), and `harness/src/rpc/server.ts` (`HelloResult.modelState`). `ModelClient` takes an `onFailure` callback. `YUMI_MODEL_LOAD_TIMEOUT_MS` (default 150000) in `harness/src/config.ts`. The mock model server answers `GET /health` and can listen on a given port. "Model readiness" in `harness/README.md`.
+- **Commits:** `53b3824 feat(harness): report whether the local model is loading, ready, or failed`.
+- **Expectations:** Within a few seconds: the harness checks `/health` every second while loading and every 3 seconds while ready, and at once when a model request finds the server unreachable; `harness/test/model-readiness.test.ts` "answers hello with the current state and sends every change as modelStateChanged" checks the event reaches an app on the socket. Missing server ends in `failed`: "fails when the server never starts within the load timeout"; the Mac side is OBJ-46's `modelFailedScript` test.
+- **Not verified:** Against the real mlx-vlm server on this Mac: start the harness with the model server stopped, check `harness.log` shows `model.readiness.changed` to `failed` after 150 seconds, then start `mlx_vlm.server` and check it changes to `ready`. Not run here because only one agent may use the live app and harness at a time.
+- **Decisions and deviations:** mlx-vlm 0.7.6 with `--model` loads the model before it accepts connections (`lifespan` in `mlx_vlm/server/app.py`), so "loading" is "nothing answers yet". A `/health` with no `loaded_model` (a server started without `--model`, which loads the requested model on demand) counts as ready, with a warning in the log. A local path ending in the configured repo id counts as the configured model. A slow `/health` answer changes nothing, so a busy server never flips to `loading`. After `failed` it keeps checking, so a server started late still ends in `ready`.
+- **For the next objectives:** `startHarness(..., { model })` takes anything with `state` and `onChange`. Tests can start the mock model server late or restart it at the same URL with `startMockModelServer(model, port)`.

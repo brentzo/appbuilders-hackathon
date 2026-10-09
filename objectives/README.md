@@ -103,7 +103,7 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-43](OBJ-43-mac-bridge-client-version-refusal.md) | Mac bridge client recovers from a version refusal | harness | Brent | 08 | 21, 34 | 13, 42 | todo |
 | [OBJ-44](OBJ-44-mac-version-mismatch-copy.md) | Mac app shows the version mismatch copy | mac | Patrick | 08, 11 | 34 | 42, 43 | todo |
 | [OBJ-45](OBJ-45-pause-scope-and-model-readiness-contracts.md) | Pause scope and model readiness contracts | protocol | Jepoy | 06, 07, 11 | 01 | 35, 38, 46, 47 | in-progress |
-| [OBJ-46](OBJ-46-mac-model-readiness.md) | Mac app shows whether the model is ready | mac | Patrick | 11 | 14 | 45, 47 | todo |
+| [OBJ-46](OBJ-46-mac-model-readiness.md) | Mac app shows whether the model is ready | mac | Patrick | 11 | 14 | 45, 47 | in-progress |
 | [OBJ-47](OBJ-47-harness-model-readiness.md) | Harness reports whether the model is ready | harness | Brent | 11 | 03, 45 | 46 | todo |
 | [OBJ-48](OBJ-48-unpair-without-device-clocks.md) | Bind unpair to the pairing instead of device clocks | protocol | Jepoy | 08 | 31 | 13, 23, 30, 41 | todo |
 | [OBJ-49](OBJ-49-mac-bridge-test-support.md) | Mac answers ping and has bridge test hooks | harness | Brent | 08 | 21, 25 | 23, 30 | todo |
