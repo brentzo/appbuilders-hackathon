@@ -7,13 +7,20 @@ import YumiProtocol
 ///
 /// Every panel draws every cursor in its own coordinates and clips to its display, so a cursor
 /// crossing from one display to another moves along one global path (OBJ-18.3).
+///
+/// Observable: SwiftUI views that read `cursors` (the menu panel) update when a cursor changes.
 @MainActor
 final class CursorOverlay {
     static let fadeInDuration: CFTimeInterval = 0.2
     /// Well inside SPEC-04's 1 second.
     static let fadeOutDuration: CFTimeInterval = 0.6
 
-    private(set) var cursors: [String: OverlayCursor] = [:]
+    /// Every cursor on screen. Reading it in a SwiftUI view (the menu panel) tracks changes.
+    private(set) var cursors: [String: OverlayCursor] {
+        get { roster.cursors }
+        set { roster.cursors = newValue }
+    }
+    private let roster = CursorRoster()
     private var panels: [OverlayPanel] = []
     /// One layer per cursor per panel.
     private var layers: [String: [ObjectIdentifier: CursorLayer]] = [:]

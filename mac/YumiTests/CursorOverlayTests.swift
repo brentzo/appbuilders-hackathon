@@ -1,4 +1,5 @@
 import AppKit
+import Observation
 import Testing
 import YumiProtocol
 @testable import Yumi
@@ -168,5 +169,15 @@ struct CursorOverlayTests {
         }
         let image = try #require(context.makeImage())
         try NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:])?.write(to: file)
+    }
+
+    @Test func cursorChangesNotifyObservers() {
+        // The menu panel reads `cursors` in SwiftUI instead of polling.
+        let overlay = overlay()
+        defer { overlay.fadeAll() }
+        let changed = Locked(false)
+        withObservationTracking { _ = overlay.cursors } onChange: { changed.set(true) }
+        overlay.apply(.spawn(SpawnCursor(cursorId: "main", cursorKind: .main)))
+        #expect(changed.get())
     }
 }
