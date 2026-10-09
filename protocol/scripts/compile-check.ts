@@ -142,9 +142,10 @@ fun main(args: Array<String>) {
 }
 `,
   });
+  // Gradle's project cache lives on the volume: created fresh on a Windows bind mount each run, it fails with I/O errors.
   docker([
     "-v", "yumi-gradle-cache:/gradle-cache", "-e", "GRADLE_USER_HOME=/gradle-cache",
-    "-w", "/work/.compile-check/kotlin", GRADLE_IMAGE, "gradle", "--no-daemon", "-q", "run", "--args=/work/examples",
+    "-w", "/work/.compile-check/kotlin", GRADLE_IMAGE, "gradle", "--no-daemon", "-q", "--project-cache-dir", "/gradle-cache/protocol-check", "run", "--args=/work/examples",
   ]);
 } else {
   console.error("Usage: tsx scripts/compile-check.ts swift|kotlin");
