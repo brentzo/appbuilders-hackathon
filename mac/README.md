@@ -5,8 +5,8 @@ It is everything the user sees and hears on the Mac, and every native capability
 
 Owner: Patrick.
 
-Status: the app shell is started ([OBJ-14](../objectives/OBJ-14-mac-app-shell.md)): menu bar item, status line, permission onboarding, and settings.
-The harness link is not built yet.
+Status: the app shell is in progress ([OBJ-14](../objectives/OBJ-14-mac-app-shell.md)): menu bar item, status line, permission onboarding, settings, harness supervision, the harness RPC client, and the error presenter.
+It runs against the mock harness until the real one exists (OBJ-14.8).
 
 ## Responsibilities
 
@@ -50,7 +50,8 @@ Free Apple accounts ("Personal Team") are enough for the hackathon. Build Yumi f
 
 Needs Xcode 26 (built with 26.4.1).
 The app runs on macOS 15 or later.
-No other tools are needed: `mac/Yumi.xcodeproj` is a plain Xcode project.
+No other tools are needed to build: `mac/Yumi.xcodeproj` is a plain Xcode project.
+To run Yumi against the mock harness, and for the harness tests, install the protocol package once with `npm install` in `protocol/` (needs Node.js).
 
 From `mac/`:
 
@@ -65,13 +66,43 @@ open build/Build/Products/Debug/Yumi.app
 xcodebuild -project Yumi.xcodeproj -scheme Yumi -configuration Release -derivedDataPath build build
 open build/Build/Products/Release/Yumi.app
 
-# Test (unit tests, including the check that the error copy matches SPEC-11)
+# Test (unit tests, the error copy check against SPEC-11, and RPC tests against the mock harness)
 xcodebuild -project Yumi.xcodeproj -scheme Yumi -derivedDataPath build test
 ```
 
 Or open `Yumi.xcodeproj` in Xcode and press Run.
 
 The project uses folder-synchronized groups, so a new Swift file under `Yumi/` or `YumiTests/` is picked up without editing the project.
+
+### Protocol types
+
+The generated Swift types are used in place from `protocol/generated/swift/YumiProtocol.swift`, so `npm run generate` in `protocol/` is picked up by the next build.
+They compile into the `YumiProtocol` static library, which is force-loaded into the app so the hosted tests find every type.
+A dynamic framework would not load in ad hoc signed Release builds, because the hardened runtime rejects it.
+
+The generated struct `Observation` shadows Apple's Observation module, which `@Observable` expands into.
+A file that declares an `@Observable` type must import protocol types one by one, for example `import enum YumiProtocol.ErrorKind`, never `import YumiProtocol`.
+A rename in the generator has been proposed to the protocol owner.
+
+### Harness
+
+Until OBJ-14.8, Yumi starts the mock harness from `protocol/mocks` itself.
+It finds `node` through your login shell, runs `node --import tsx mocks/mock-harness.ts` in `protocol/`, restarts it whenever it exits, and stops it when Yumi quits.
+The menu says "Using the mock harness" so it is never demoed by accident.
+The status line says "Yumi is getting ready" until the harness answers `hello` and `ping`.
+
+Launch arguments, in Debug and Release:
+
+- `-YumiMockScript <name>` plays a script from `protocol/mocks/scripts` (default `keynote-export`, which starts on `submitGoal`).
+- `-YumiMockFail method=kind,...` makes harness methods fail with an `ErrorKind`, to see the error presenter.
+- `-YumiSendSampleGoal YES` submits a sample goal once connected. The menu has the same action: "Send sample goal to the mock".
+- `YUMI_REPO_ROOT` (environment) points at another checkout of the repo.
+
+What happens is logged under the subsystem `ph.appbuilders.yumi`, including the mock's own output:
+
+```sh
+/usr/bin/log stream --level info --predicate 'subsystem == "ph.appbuilders.yumi"'
+```
 
 ### Signing and permissions
 
@@ -103,9 +134,10 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 ```
 
 - `-YumiAppearance light|dark` forces the app's appearance.
-- `-YumiOpen settings|onboarding` opens that window at launch.
+- `-YumiOpen settings|onboarding|error:<ErrorKind>` opens that window at launch.
+  An error window uses the sample last action "Clicked Export in Keynote".
 - `-YumiPermissions mixed|granted` pretends permissions are in that state, without asking macOS.
-- `-YumiStatus ready|listening|working|paused` sets the menu's status line.
+- `-YumiStatus startingUp|ready|listening|working|paused` sets the menu's status line.
 - `-YumiSnapshotDir <dir>` makes the opened window the key, active window, writes it as PNG files at 1x and 2x, then quits.
   If the window never becomes key, it writes nothing and says so on standard error.
   It needs no Screen Recording permission.
@@ -120,16 +152,21 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 | `Yumi/Permissions/` | Permission states and "Open settings" behavior |
 | `Yumi/Onboarding/` | The permission onboarding window |
 | `Yumi/Settings/` | Settings, their local storage, and the harness settings hand-off |
-| `Yumi/Errors/` | SPEC-11 error copy, the only place user-facing error text lives |
+| `Yumi/Harness/` | Harness launcher and supervisor, the Unix socket, the JSON-RPC client, and event handling |
+| `Yumi/Errors/` | Error copy (the only place user-facing error text lives), the error presenter, and the error window |
 | `YumiTests/` | Unit tests (Swift Testing) |
 
 ## Stand-ins in the app today
 
 - The menu bar icon is the SF Symbol `cat` until the Rive cat ([OBJ-19](../objectives/OBJ-19-rive-cat-cursor.md)) exists.
+- The harness is the mock from `protocol/mocks` until the real harness exists (OBJ-14.8).
 - Settings changes go to `PendingHarnessSettingsSink`, which only logs.
-  The real sink comes with the harness link (OBJ-14.5) and the generated protocol types ([OBJ-01](../objectives/OBJ-01-task-record-schemas.md)).
-- Nothing changes the status line yet.
-  The harness event stream (OBJ-14.5) and voice intake ([OBJ-15](../objectives/OBJ-15-mac-voice-intake.md)) will.
+  The protocol has no method for settings yet.
+- Model readiness is a placeholder that is always unknown (`ModelReadiness`).
+  The protocol cannot report it yet; this is open with the protocol and harness owners.
+- Error buttons whose feature comes in a later objective are shown disabled: for example "Try again", "Stop", and "Type instead".
+- Harness-to-app methods such as `executeAction` answer "method not found" until [OBJ-27](../objectives/OBJ-27-mac-native-services.md) serves them.
+- The status line follows task events. "Listening" waits for voice intake ([OBJ-15](../objectives/OBJ-15-mac-voice-intake.md)).
 
 ## Specs
 
