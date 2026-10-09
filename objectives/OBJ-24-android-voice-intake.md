@@ -5,7 +5,7 @@ product: android
 assignee: Brent
 touches: []
 specs: [SPEC-01, SPEC-10]
-status: in-progress
+status: done
 priority: p0
 depends-on: [OBJ-22]
 integrates-with: [OBJ-12]
@@ -72,7 +72,7 @@ The transcript goes to a single entry point that the Part A routing objective wi
 
 ## Outcome
 
-- **Result:** Done on the branch, waiting for one check: Brent saying the goals that the language fix is for (see "Not verified"). Status stays in-progress until then.
+- **Result:** Done on 2026-10-09.
 - **Delivered:**
   - Push-to-talk on the on-device recognizer only: `android/app/src/main/java/ai/yumi/android/voice/OnDeviceVoiceInput.kt` and `SpeechEngine.kt` (`createOnDeviceSpeechRecognizer`, English, never `createSpeechRecognizer`).
   - The language check over a whole session: `voice/LanguageGuesses.kt`.
@@ -90,20 +90,21 @@ The transcript goes to a single entry point that the Part A routing objective wi
   - `dd9e425 feat(protocol): add the speechRecognitionNotSetUp error kind for the new SPEC-11 row`
   - `4308507 docs(android): document voice intake, the wake word models, and the ONNX Runtime pin`
   - `43473ce fix(android): judge the spoken language over the whole session and trust a transcript`
-  - `docs(objectives): record OBJ-24 results` (this Outcome and the wiki report)
+  - `6f031f6 docs(objectives): record OBJ-24 results`
+  - `docs(objectives): finish OBJ-24`
 - **Expectations:**
   - SPEC-01, on the demo phone (Xiaomi, Android 15), with Brent's voice on 2026-10-09:
     - "Push-to-talk on the phone": "set a timer for 10 minutes" was transcribed when he stopped speaking.
     - "Wake word starts listening": the chime plays, and the cat and the notification show listening once the microphone is on, about 0.7 seconds after the wake word. 6 of 6 goals after the wake word were transcribed, 3 with the phone locked.
     - "Wake word turned off": the scenario is written for the Mac; on the phone, with the switch off, Yumi closes the microphone (no Yumi recording in `dumpsys audio`), the service drops its microphone type, "Hey Jarvis" did nothing, and push-to-talk still worked.
     - "Speech before the wake word is ignored": the recognizer only starts after a detection, so earlier speech never reaches it. Before the wake word, audio lives only in the detector's buffer of at most 110 ms, which is cleared on detection and when listening stops. `AudioFeaturesParityTest.clearDiscardsAllBufferedAudio` checks the clearing.
+  - The language fix, with Brent's voice at 11:53 pm: "export my Keynote deck as a PDF" was transcribed 3 times out of 3, and "pakigising yung Mac ko" showed "Language not supported on this phone". `LanguageGuessesTest` replays his recorded guesses.
   - SPEC-10: "English speech is transcribed on the phone" passed as above. "No on-device model for the language": Tagalog ("pakigising yung Mac ko", 2 tries by Brent) and Spanish (3 tries from the Mac) show "Language not supported on this phone", with no traffic.
   - No audio to a cloud recognizer: only `createOnDeviceSpeechRecognizer` is used, and `OnDeviceVoiceInputTest.noOnDeviceRecognizerNeverFallsBackToAnotherOne` checks there is no fallback. The recognizer is Android System Intelligence, which has no internet permission. Yumi has none either. `dumpsys netstats` showed 0 bytes for both across three sessions.
   - Numbers (short measurements, as Brent asked): about 2% of the battery an hour (Android's estimate, 16.8 mAh in 10 minutes), about 9% of one CPU core, 0 false wake-ups in 10 minutes of synthesized speech, and misses of 0 of 10 at arm's length and 8 of 10 from across the room. Reliable within about 2 arm's lengths. Details in the wiki report.
   - Build: `python3 scripts/verify.py` passes (Android build, 46 unit tests, lint; protocol, harness, bridge, and the Mac build and tests).
   - The Kotlin feature port matches openWakeWord's Python pipeline within 0.002 per score on two clips (`AudioFeaturesParityTest`, with `src/test/resources/wakeword/reference.py`).
 - **Not verified:**
-  - The language fix with Brent's voice. `LanguageGuessesTest` replays his recorded guesses. Brent: open Yumi, tap the mic, and say "export my Keynote deck as a PDF" three times, then "pakigising yung Mac ko" once. The first three must show "You said", the last one the English-only message.
   - "Open settings" on "Speech recognition not set up on this phone" was not tried on a phone missing the pack. On the Xiaomi the intent opens "Assist & voice input".
   - The "Hey Yumi" model (OBJ-12 is not done). The swap is one file and one line, and the miss and false-trigger numbers must be measured again with it.
   - An hour-long run, a drain measured off USB, false triggers with real everyday Taglish, TV, and music, and the development phone.

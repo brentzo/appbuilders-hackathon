@@ -65,7 +65,7 @@ With synthesized voices from the Mac speakers about 1 metre away, 18 of 21 tries
 | What Brent said | Result |
 |---|---|
 | "set a timer for 10 minutes" | Transcribed |
-| "export my Keynote deck as a PDF", 3 times | Wrongly shown "Language not supported on this phone" each time. Fixed, see below |
+| "export my Keynote deck as a PDF", 3 times | Wrongly shown "Language not supported on this phone" each time. Fixed, see below; after the fix, at 11:53 pm, transcribed 3 times out of 3 |
 | Nothing for 10 seconds | "Didn't catch speech", with "Try again" and "Type instead" |
 | "pakigising yung Mac ko" (Tagalog), 2 times | "Language not supported on this phone" |
 | "Hey Jarvis", then a goal, 6 times, 3 of them locked | All 6 transcribed |
@@ -94,6 +94,7 @@ So Yumi now judges the whole session and trusts a transcript:
 - Without one, it is "Language not supported on this phone" if another language was guessed with confidence and English never was, and "Didn't catch speech" otherwise.
 
 Replayed against all 25 of Brent's sessions, this passes every English goal and still gives Tagalog the language message.
+Brent then confirmed it by voice: the Keynote goal was transcribed 3 times out of 3, and Tagalog still got the language message.
 `LanguageGuessesTest` holds his real sequences.
 
 ### Testing with a laptop speaker
@@ -109,7 +110,6 @@ Yumi pins 1.28.0, which has none, and its manifest removes that provider in case
 
 ## Not verified
 
-- The language fix with Brent's voice: unit tests replay his recorded guesses, and he still has to say the goals again.
 - An hour-long idle run, and a battery drain measured off USB.
 - False triggers from real everyday Taglish, TV, and music.
 - The development phone (Samsung, Android 16).
