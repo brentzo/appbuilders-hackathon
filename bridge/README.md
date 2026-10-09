@@ -30,6 +30,12 @@ Status: empty scaffold, nothing built yet.
 - NetBird stays on the VPS for the team's private access to the server, logs, and dev machines. Yumi's device traffic does not use it.
 - Every command expires after 2 minutes. Commands are never queued; goals waiting for an offline device are held on the origin device ([SPEC-09](../specs/09-cross-device-routing.md)).
 
+## Deployment
+
+- **Address:** `wss://yumibridge.studiokova.co`. DNS is an `A` record on Cloudflare, set to "DNS only" (not proxied), so Caddy handles TLS and long-idle WebSocket connections are not cut by Cloudflare's proxy.
+- **Server:** Brent's VPS. Brent prepares it (ports 80 and 443 open, Caddy, Node.js LTS) and gives Jepoy SSH access.
+- **Reverse proxy:** Caddy terminates TLS and forwards to the bridge on a local port (`reverse_proxy 127.0.0.1:<port>`). Agree the port before deploying.
+
 ## Initial technical plan
 
 - TypeScript on Node.js (current LTS), sharing types and the reference crypto code from [protocol](../protocol/README.md).
