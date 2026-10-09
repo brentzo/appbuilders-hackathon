@@ -52,7 +52,8 @@
         "windowLocked",
         "openedSecondWindow",
         "atCapacity",
-        "promotedAfterFailure"
+        "promotedAfterFailure",
+        "needsKeyboard"
       ]
     },
     "PermissionLevel": {

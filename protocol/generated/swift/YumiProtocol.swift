@@ -1396,6 +1396,7 @@ public enum RouteReason: String, Codable, Equatable, Sendable, CaseIterable {
     case openedSecondWindow
     case atCapacity
     case promotedAfterFailure
+    case needsKeyboard
 }
 
 /// A point in global screen coordinates, in points, which may be negative on displays left of or above the main one.
@@ -1663,6 +1664,8 @@ public struct Subtask: Codable, Equatable, Sendable {
     public var dependsOn: [String]
     /// From the planner.
     public var proposedLane: Lane
+    /// From the planner: the subtask needs keystrokes, for example to paste or use a shortcut, so it runs on main (SPEC-03 r17). Absent means false.
+    public var needsKeyboard: Bool?
     /// Set by the router.
     public var lane: Lane?
     public var routeReason: RouteReason?
@@ -1677,13 +1680,14 @@ public struct Subtask: Codable, Equatable, Sendable {
     /// Where a handoff resumes from.
     public var lastGoodStep: String?
 
-    public init(id: String, taskId: String, title: String, instruction: String, dependsOn: [String], proposedLane: Lane, lane: Lane? = nil, routeReason: RouteReason? = nil, target: Target? = nil, status: SubtaskStatus, workerId: String? = nil, attempts: Int, result: SubtaskResult? = nil, lastGoodStep: String? = nil) {
+    public init(id: String, taskId: String, title: String, instruction: String, dependsOn: [String], proposedLane: Lane, needsKeyboard: Bool? = nil, lane: Lane? = nil, routeReason: RouteReason? = nil, target: Target? = nil, status: SubtaskStatus, workerId: String? = nil, attempts: Int, result: SubtaskResult? = nil, lastGoodStep: String? = nil) {
         self.id = id
         self.taskId = taskId
         self.title = title
         self.instruction = instruction
         self.dependsOn = dependsOn
         self.proposedLane = proposedLane
+        self.needsKeyboard = needsKeyboard
         self.lane = lane
         self.routeReason = routeReason
         self.target = target

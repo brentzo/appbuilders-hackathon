@@ -337,3 +337,29 @@ describe("Path", () => {
     expect(open("~/Documents/Q3 Report.key/")).toBe(true);
   });
 });
+
+describe("Subtask and routing (SPEC-03 r17)", () => {
+  const subtask = {
+    id: "5b6c7d8e-9f0a-4b1c-8d2e-3f4a5b6c7d8e",
+    taskId: "8e9f0a1b-2c3d-4e5f-9a6b-7c8d9e0f1a2b",
+    title: "Put the chart in Keynote",
+    instruction: "In Keynote, paste the expense chart on slide 3.",
+    dependsOn: [],
+    proposedLane: "main",
+    target: { bundleId: "com.apple.iWork.Keynote" },
+    status: "ready",
+    attempts: 0,
+  };
+
+  it("lets the planner mark a subtask as needing the keyboard, and leaving it out stays valid", () => {
+    expect(validate("Subtask", subtask).errors).toEqual([]);
+    expect(validate("Subtask", { ...subtask, needsKeyboard: true }).errors).toEqual([]);
+    expect(validate("Subtask", { ...subtask, needsKeyboard: "yes" }).valid).toBe(false);
+  });
+
+  it("records needsKeyboard as a route reason on the subtask and in routeDecided", () => {
+    expect(validate("Subtask", { ...subtask, needsKeyboard: true, lane: "main", routeReason: "needsKeyboard" }).errors).toEqual([]);
+    const decided = { taskId: subtask.taskId, subtaskId: subtask.id, lane: "main", reason: "needsKeyboard" };
+    expect(validate("RouteDecided", decided).errors).toEqual([]);
+  });
+});

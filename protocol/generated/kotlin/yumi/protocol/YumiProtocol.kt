@@ -841,7 +841,8 @@ enum class RouteReason {
     @SerialName("windowLocked") WindowLocked,
     @SerialName("openedSecondWindow") OpenedSecondWindow,
     @SerialName("atCapacity") AtCapacity,
-    @SerialName("promotedAfterFailure") PromotedAfterFailure;
+    @SerialName("promotedAfterFailure") PromotedAfterFailure,
+    @SerialName("needsKeyboard") NeedsKeyboard;
 }
 
 /** A point in global screen coordinates, in points, which may be negative on displays left of or above the main one. */
@@ -1033,6 +1034,8 @@ data class Subtask(
     val dependsOn: List<String>,
     /** From the planner. */
     val proposedLane: Lane,
+    /** From the planner: the subtask needs keystrokes, for example to paste or use a shortcut, so it runs on main (SPEC-03 r17). Absent means false. */
+    val needsKeyboard: Boolean? = null,
     /** Set by the router. */
     val lane: Lane? = null,
     val routeReason: RouteReason? = null,

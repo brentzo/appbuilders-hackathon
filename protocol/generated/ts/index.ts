@@ -692,8 +692,8 @@ export interface RouteDecided {
 }
 
 /** Why the router picked a lane, shown on the dashboard (SPEC-03 r10). */
-export type RouteReason = "noUI" | "backgroundCapable" | "appNotBackgroundCapable" | "windowLocked" | "openedSecondWindow" | "atCapacity" | "promotedAfterFailure";
-export const routeReasonValues: readonly RouteReason[] = ["noUI", "backgroundCapable", "appNotBackgroundCapable", "windowLocked", "openedSecondWindow", "atCapacity", "promotedAfterFailure"];
+export type RouteReason = "noUI" | "backgroundCapable" | "appNotBackgroundCapable" | "windowLocked" | "openedSecondWindow" | "atCapacity" | "promotedAfterFailure" | "needsKeyboard";
+export const routeReasonValues: readonly RouteReason[] = ["noUI", "backgroundCapable", "appNotBackgroundCapable", "windowLocked", "openedSecondWindow", "atCapacity", "promotedAfterFailure", "needsKeyboard"];
 
 /** A point in global screen coordinates, in points, which may be negative on displays left of or above the main one. */
 export interface ScreenPoint {
@@ -860,6 +860,8 @@ export interface Subtask {
   dependsOn: Uuid[];
   /** From the planner. */
   proposedLane: Lane;
+  /** From the planner: the subtask needs keystrokes, for example to paste or use a shortcut, so it runs on main (SPEC-03 r17). Absent means false. */
+  needsKeyboard?: boolean;
   /** Set by the router. */
   lane?: Lane;
   routeReason?: RouteReason;

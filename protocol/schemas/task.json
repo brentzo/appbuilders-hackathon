@@ -46,6 +46,10 @@
         "instruction": { "description": "Narrow prompt for the worker.", "type": "string", "minLength": 1 },
         "dependsOn": { "type": "array", "uniqueItems": true, "items": { "$ref": "common.json#/$defs/Uuid" } },
         "proposedLane": { "description": "From the planner.", "$ref": "common.json#/$defs/Lane" },
+        "needsKeyboard": {
+          "description": "From the planner: the subtask needs keystrokes, for example to paste or use a shortcut, so it runs on main (SPEC-03 r17). Absent means false.",
+          "type": "boolean"
+        },
         "lane": { "description": "Set by the router.", "$ref": "common.json#/$defs/Lane" },
         "routeReason": { "$ref": "common.json#/$defs/RouteReason" },
         "target": { "description": "Absent for helpers.", "$ref": "#/$defs/Target" },
