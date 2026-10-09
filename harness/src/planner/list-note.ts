@@ -11,8 +11,8 @@ import type { Finding } from "./summary.ts";
  * time writing a long list out. The same list goes with the summary, so the card shows all of it.
  */
 
-/** The offer added to the repeat-back of a goal that asks for a list (SPEC-02 r13). */
-export const NOTE_OFFER = "Want me to put the list in a new note too?";
+/** The offer added to the repeat-back of a goal that asks for a list (SPEC-02 r13), short so the turn is quick. */
+export const NOTE_OFFER = "Want it in a note too?";
 
 /** The title of the subtask that writes the note; with the text markers, how a note subtask is recognized. */
 export const NOTE_SUBTASK_TITLE = "Put the list in a new note";

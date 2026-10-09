@@ -27,12 +27,13 @@ import { reviseGoalWords } from "./revision.ts";
  * - A correction is combined with the goal and repeated back again ("Got it. You want me to ...").
  * - Change it (the button): the app listens again, and the next spoken answer is the correction.
  * - Unclear: asked once more (the same repeat-back again); after that, Yumi waits for a button.
- * - A goal that asks for a list ends its repeat-back with "Want me to put the list in a new note too?" instead of
+ * - A goal that asks for a list ends its repeat-back with "Want it in a note too?" instead of
  *   "Should I go ahead?" (SPEC-02 r13, OBJ-74). "Yes, in a note" goes ahead with the note, which the task store
  *   keeps; a plain yes, or Go ahead, goes ahead without it.
  *
  * Auto mode (SPEC-01 r14, OBJ-50): a goal sent with `autoMode` skips all of this. The task is created straight in
- * planning with the transcript, trimmed, as its `confirmedGoal`, and its work starts at once. The app shows what it
+ * planning with the transcript, trimmed, as its `confirmedGoal`, and its work starts at once. A list it finds goes
+ * into a new note with no question (SPEC-02 r13). The app shows what it
  * heard and says "On it."; approvals for sends and deletes still ask, since they are the scheduler's, not this loop's.
  *
  * Without Auto mode, nothing plans or acts before a confirm (OBJ-17.7): the only call that starts work is in `confirm`. Answers for one
@@ -433,6 +434,9 @@ export class GoalConfirmation {
       status: "planning",
       autoMode: true,
     });
+    // In Auto mode a list goes into a new note without asking (SPEC-02 r13, Brent's decision 2026-10-10). The note is
+    // added only once the task really found a list, so other goals are not changed.
+    store.setListToNote(task.id);
     logger.info("confirm.autoMode", { taskId: task.id, transcriptChars: params.transcript.length });
     this.deps.debug?.write("voice.goal", {
       taskId: task.id,

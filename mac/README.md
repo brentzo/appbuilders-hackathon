@@ -177,7 +177,7 @@ Whatever summary text arrives is shown as is, for any way a task ends. A `speak`
 
 When the task found a list, the `speak` event carries it (`FoundList`), and the card shows all of it under the line, scrolling past 12 rows (SPEC-02 r13, [OBJ-74](../objectives/OBJ-74-save-list-to-note.md)).
 Only the sentence is said.
-Unless the list is already in a new note, the card has "Save to Notes", and saying "save it" while the card is up does the same (`TaskSummary.takeSpokenSave`, checked before a new goal in `HarnessLink.submitSpeech`): both call `saveListToNote`, and the harness starts a short task that writes the note.
+In Auto mode the harness already put the list in a new note, so the card says so. Otherwise the card has "Save to Notes", and saying "save it" while the card is up does the same (`TaskSummary.takeSpokenSave`, checked before a new goal in `HarnessLink.submitSpeech`): both call `saveListToNote`, and the harness starts a short task that writes the note.
 A card with a list stays until it is closed, saved, or a new goal starts.
 
 ### Voice intake

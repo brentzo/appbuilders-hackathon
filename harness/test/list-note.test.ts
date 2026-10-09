@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { validate } from "@yumi/protocol";
-import { PROTOCOL_VERSION, type Subtask, type Task } from "@yumi/protocol/types";
+import { PROTOCOL_VERSION, type Subtask } from "@yumi/protocol/types";
 import { checkClassification, CLASSIFY_NOTE_SYSTEM_PROMPT, CLASSIFY_SYSTEM_PROMPT, noteReply } from "../src/confirm/classify.ts";
 import { repeatBack, RESTATE_SYSTEM_PROMPT } from "../src/confirm/restate.ts";
 import { startHarness, type Harness } from "../src/harness.ts";
@@ -40,7 +40,7 @@ vi.setConfig({ testTimeout: 20_000 });
 
 const LISTED = ["invoice-oct.pdf", "notes.txt", "photo.jpg"];
 const GOAL = "list the files in your Downloads folder";
-const OFFER = "You want me to list the files in your Downloads folder. Want me to put the list in a new note too?";
+const OFFER = "You want me to list the files in your Downloads folder. Want it in a note too?";
 const ANSWER = "You have 3 files and 1 folder in Downloads. Some of them are invoice-oct.pdf, notes.txt and photo.jpg.";
 
 const content = (value: unknown): MockReply => ({ kind: "content", content: JSON.stringify(value) });
@@ -375,7 +375,8 @@ describe("SPEC-02 r13 lists in a new note", () => {
     client.close();
   });
 
-  it('In Auto mode there is no offer, and "Save to Notes" starts a short task that writes the note', async () => {
+  it("In Auto mode there is no offer and no button: the list goes into a new note on its own", async () => {
+    // Brent's decision, 2026-10-10: "The goal why we're building this is to literally automate things."
     const purposes = scriptedModel();
     const h = await start();
     const client = await app(h);
@@ -387,6 +388,56 @@ describe("SPEC-02 r13 lists in a new note", () => {
     const taskId = (submitted.result as { taskId: string }).taskId;
     await until(() => client.named("speak").length === 1);
     expect(client.named("goalRestated")).toEqual([]);
+    expect(purposes).not.toContain("classify");
+    expect(h.store.listSubtasks(taskId).map((s) => s.title)).toEqual(["List Downloads", NOTE_SUBTASK_TITLE]);
+    // In Auto mode the confirmed goal is what the user said, so the title is too.
+    expect(noteTextOf(noted[0]!.instruction)!.split("\n")[0]).toBe("Files in my Downloads folder");
+    expect(client.named("speak")[0]).toMatchObject({
+      taskId,
+      text: "You have 3 files and 1 folder in Downloads. I put the full list in a new note called Files in my Downloads folder.",
+      list: { inNote: true },
+    });
+    client.close();
+  });
+
+  it("In Auto mode a goal that finds no list writes no note", async () => {
+    const purposes = scriptedModel();
+    const h = await start();
+    const task = h.store.createTask({
+      originDeviceId: "mac-brent",
+      goal: "tidy",
+      confirmedGoal: "Tidy up",
+      status: "planning",
+      autoMode: true,
+    });
+    h.store.setListToNote(task.id);
+    server.respond((body) => {
+      const system = (body as unknown as ChatRequest).messages[0]!.content as string;
+      if (system === PLANNER_SYSTEM_PROMPT)
+        return content({
+          subtasks: [{ id: "a", title: "Look", instruction: "Do nothing.", dependsOn: [], proposedLane: "helper" }],
+        });
+      if (system === SUMMARY_SYSTEM_PROMPT) return content({ summary: "Done. Nothing to tidy." });
+      return content({ action: { kind: "finish", status: "done", note: "Nothing to do." } });
+    });
+    expect(purposes).toEqual([]);
+    expect((await runTask(task.id, work(h))).outcome).toBe("done");
+    expect(h.store.listSubtasks(task.id).some(isNoteSubtask)).toBe(false);
+    expect(noted).toEqual([]);
+  });
+
+  it('"Save to Notes" on a list that is not in a note starts a short task that writes the note', async () => {
+    const purposes = scriptedModel();
+    const h = await start();
+    const client = await app(h);
+    const submitted = await client.call("submitGoal", {
+      transcript: "list the files in my Downloads folder",
+      originDeviceId: "mac-brent",
+    });
+    const taskId = (submitted.result as { taskId: string }).taskId;
+    await until(() => client.named("goalRestated").length === 1);
+    await client.call("replyToConfirmation", { taskId, reply: { kind: "spoken", text: "yes" } });
+    await until(() => client.named("speak").length === 1);
     expect(client.named("speak")[0]).toMatchObject({ taskId, list: { inNote: false } });
 
     // The card's button, or "save it" while the card is up.
@@ -394,19 +445,19 @@ describe("SPEC-02 r13 lists in a new note", () => {
     const noteTaskId = (saved.result as { taskId: string }).taskId;
     expect(noteTaskId).not.toBe(taskId);
     await until(() => h.store.getTask(noteTaskId)?.status === "done");
-    const noteTask: Task = h.store.getTask(noteTaskId)!;
-    // In Auto mode the confirmed goal is what the user said, so the title is too.
-    expect(noteTask).toMatchObject({ confirmedGoal: "Put the files in my Downloads folder in a new note", status: "done" });
-    expect(h.store.isAutoMode(noteTaskId)).toBe(true);
+    expect(h.store.getTask(noteTaskId)).toMatchObject({
+      confirmedGoal: "Put the files in your Downloads folder in a new note",
+      status: "done",
+    });
     expect(h.store.listSubtasks(noteTaskId).map((s) => s.title)).toEqual([NOTE_SUBTASK_TITLE]);
-    expect(noteTextOf(noted[0]!.instruction)!.split("\n")[0]).toBe("Files in my Downloads folder");
+    expect(noteTextOf(noted[0]!.instruction)!.split("\n")[0]).toBe("Files in your Downloads folder");
     // No planner and no summary model call for the follow-up.
     expect(purposes.filter((p) => p === "planner")).toHaveLength(1);
     expect(purposes.filter((p) => p === "summary")).toHaveLength(1);
     await until(() => client.named("speak").length === 2);
     expect(client.named("speak")[1]).toEqual({
       taskId: noteTaskId,
-      text: "Done. I put the full list in a new note called Files in my Downloads folder.",
+      text: "Done. I put the full list in a new note called Files in your Downloads folder.",
     });
     client.close();
   });
