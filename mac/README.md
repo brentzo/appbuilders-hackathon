@@ -96,6 +96,7 @@ Launch arguments, in Debug and Release:
 - `-YumiMockScript <name>` plays a script from `protocol/mocks/scripts` (default `keynote-export`, which starts on `submitGoal`).
 - `-YumiMockFail method=kind,...` makes harness methods fail with an `ErrorKind`, to see the error presenter.
 - `-YumiSendSampleGoal YES` submits a sample goal once connected. The menu has the same action: "Send sample goal to the mock".
+- The menu's "Cursor debug" submenu, shown while the mock is in use, sends each cursor command by hand: spawn, move, move to the next display, three cursors at once, every state, label, a helper chip, and fade.
 - `YUMI_REPO_ROOT` (environment) points at another checkout of the repo.
 
 What happens is logged under the subsystem `ph.appbuilders.yumi`, including the mock's own output:
@@ -140,6 +141,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
   An error window uses the sample last action "Clicked Export in Keynote".
 - `-YumiPermissions mixed|granted` pretends permissions are in that state, without asking macOS.
 - `-YumiStatus startingUp|ready|listening|working|paused` sets the menu's status line.
+- `-YumiOverlayDemo <dir>` shows sample cursors and a helper chip, writes each display's overlay over white and over black as PNG files, then quits.
 - `-YumiSnapshotDir <dir>` makes the opened window the key, active window, writes it as PNG files at 1x and 2x, then quits.
   If the window never becomes key, it writes nothing and says so on standard error.
   It needs no Screen Recording permission.
@@ -154,6 +156,7 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
 | `Yumi/Permissions/` | Permission states and "Open settings" behavior |
 | `Yumi/Onboarding/` | The permission onboarding window |
 | `Yumi/Settings/` | Settings, their local storage, and the harness settings hand-off |
+| `Yumi/Overlay/` | The click-through cursor overlay: panels per display, the placeholder cursor drawing, motion, helper chips, and the cursor debug actions |
 | `Yumi/Harness/` | Harness launcher and supervisor, the Unix socket, the JSON-RPC client, and event handling |
 | `Yumi/Errors/` | Error copy (the only place user-facing error text lives), the error presenter, and the error window |
 | `YumiTests/` | Unit tests (Swift Testing) |
@@ -168,6 +171,9 @@ open -n -W build/Build/Products/Debug/Yumi.app --args \
   The protocol cannot report it yet; this is open with the protocol and harness owners.
 - Error buttons whose feature comes in a later objective are shown disabled: for example "Try again", "Stop", and "Type instead".
 - Harness-to-app methods such as `executeAction` answer "method not found" until [OBJ-27](../objectives/OBJ-27-mac-native-services.md) serves them.
+- Cursors are a placeholder drawing (a black and white pointer, ghosts outlined in their color) until the Rive cat ([OBJ-19](../objectives/OBJ-19-rive-cat-cursor.md)).
+- A cursor moving to an element goes to the center of the target window, or the app's frontmost window, until native execution resolves element paths ([OBJ-44](../objectives/OBJ-44-mac-gui-execution.md)).
+- Helper chips say "Helper working": the protocol's `routeDecided` event has no subtask title.
 - The status line follows task events. "Listening" waits for voice intake ([OBJ-15](../objectives/OBJ-15-mac-voice-intake.md)).
 
 ## Specs
