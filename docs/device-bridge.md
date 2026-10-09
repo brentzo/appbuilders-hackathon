@@ -2,12 +2,12 @@
 type: design
 status: draft
 created: 2026-10-09
-tags: [idea, desktop-companion, harness, design, mobile, bridge]
+tags: [idea, yumi, harness, design, mobile, bridge]
 ---
 
 # Device Bridge
 
-Part of [Desktop Companion](desktop-companion.md).
+Part of [Yumi](yumi.md).
 Extends the [Lane Router](lane-router.md) with a device dimension.
 
 The Mac and the phone control each other in both directions through a VPS bridge.

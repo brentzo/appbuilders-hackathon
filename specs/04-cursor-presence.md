@@ -11,7 +11,7 @@ tags: [spec, p0, ux, gui, mac]
 
 ## Summary
 
-The companion is visible as a cursor that moves like a person would.
+Yumi is visible as a cursor that moves like a person would.
 Its motion, states, and labels are the main way the user understands what it is doing.
 All of it is drawn by the harness on a transparent overlay; the model only chooses actions.
 

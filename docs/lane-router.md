@@ -2,12 +2,12 @@
 type: design
 status: draft
 created: 2026-10-09
-tags: [idea, desktop-companion, harness, design]
+tags: [idea, yumi, harness, design]
 ---
 
 # Lane Router
 
-Part of [Desktop Companion](desktop-companion.md).
+Part of [Yumi](yumi.md).
 Uses the [Task Record Schema](task-record-schema.md).
 
 The lane router decides how each subtask runs.

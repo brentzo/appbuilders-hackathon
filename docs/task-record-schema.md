@@ -2,12 +2,12 @@
 type: design
 status: draft
 created: 2026-10-09
-tags: [idea, desktop-companion, harness, design, schema]
+tags: [idea, yumi, harness, design, schema]
 ---
 
 # Task Record Schema
 
-Part of [Desktop Companion](desktop-companion.md).
+Part of [Yumi](yumi.md).
 Used by the [Lane Router](lane-router.md).
 
 The task record is the single source of truth for long-running work.
@@ -31,7 +31,7 @@ AppCapability (cached probe result per app)
 struct Task: Codable {
     let id: UUID
     var goal: String                 // what the user said, transcribed
-    var confirmedGoal: String        // what the companion repeated back and the user accepted
+    var confirmedGoal: String        // what Yumi repeated back and the user accepted
     var status: TaskStatus
     var plan: [UUID]                 // subtask ids, in plan order
     var summary: String?             // final summary spoken to the user

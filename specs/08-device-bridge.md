@@ -36,7 +36,7 @@ Feature: Pairing
 
   Scenario: Pair the phone with the Mac
     Given the Mac shows a pairing QR code
-    When the user scans it with the companion app on the phone
+    When the user scans it with the Yumi app on the phone
     Then both devices show "Paired with <device name>"
     And each device stores the other's public key
 

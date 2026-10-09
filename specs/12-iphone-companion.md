@@ -1,13 +1,13 @@
 ---
 id: SPEC-12
-title: iPhone companion
+title: Yumi on iPhone
 priority: p2
 devices: [iphone]
 status: draft
 tags: [spec, p2, iphone, bridge]
 ---
 
-# SPEC-12 iPhone companion
+# SPEC-12 Yumi on iPhone
 
 ## Summary
 
@@ -26,7 +26,7 @@ iOS does not let apps control other apps, so the iPhone is a voice remote and a 
 
 ```gherkin
 @p2 @iphone
-Feature: iPhone companion
+Feature: Yumi on iPhone
 
   Scenario: Voice remote for the Mac
     Given the iPhone and Mac are paired

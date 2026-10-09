@@ -18,7 +18,7 @@ They can stop, pause, take over, or resume at any time, by voice or by touching 
 
 1. Saying "stop" pauses every lane on every device and checkpoints the task.
 2. If the user moves their own mouse or types, every UI lane on the Mac pauses immediately. Helpers keep running.
-3. If the user touches the phone screen while the companion is controlling it, phone UI control pauses immediately.
+3. If the user touches the phone screen while Yumi is controlling it, phone UI control pauses immediately.
 4. A paused task shows "Resume" and "Cancel" buttons.
 5. Resuming always re-captures the screen first, since the user may have changed things.
 6. A global keyboard shortcut on the Mac and a persistent notification action on Android stop everything.
@@ -35,7 +35,7 @@ Feature: User control on the Mac
     When the user says "stop"
     Then both cursors freeze in the paused state
     And no further actions are sent
-    And the companion says "Paused. Say continue when you're ready, or cancel to stop for good."
+    And Yumi says "Paused. Say continue when you're ready, or cancel to stop for good."
 
   Scenario: User takes the mouse
     Given the main cursor is moving to a button
@@ -54,7 +54,7 @@ Feature: User control on the Mac
     When the user says "cancel"
     Then the task status is "cancelled"
     And every cursor fades out
-    And the companion says "Okay, I stopped. Nothing else will happen."
+    And Yumi says "Okay, I stopped. Nothing else will happen."
 
   Scenario: Emergency shortcut
     Given a task is running
@@ -67,13 +67,13 @@ Feature: User control on the Mac
 Feature: User control on Android
 
   Scenario: User touches the phone during control
-    Given the companion is tapping through an app on the phone
+    Given Yumi is tapping through an app on the phone
     When the user touches the screen
     Then phone UI control pauses before its next action
     And the phone shows "Paused" with "Resume" and "Cancel" buttons
 
   Scenario: Stop from the notification
-    Given the companion is working on the phone
-    When the user taps "Stop" in the companion's notification
+    Given Yumi is working on the phone
+    When the user taps "Stop" in Yumi's notification
     Then every lane on every device pauses
 ```

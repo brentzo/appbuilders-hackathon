@@ -1,13 +1,13 @@
 ---
 id: SPEC-10
-title: Android companion
+title: Yumi on Android
 priority: p0
 devices: [android]
 status: draft
 tags: [spec, p0, gui, harness, android]
 ---
 
-# SPEC-10 Android companion
+# SPEC-10 Yumi on Android
 
 ## Summary
 
@@ -31,7 +31,7 @@ Development phone: 8 GB RAM, running 4B or 2B.
 
 ```gherkin
 @p0 @android
-Feature: Android companion
+Feature: Yumi on Android
 
   Scenario: Alarm uses an intent, not the GUI
     Given the goal is "set an alarm for 6:30 am"
@@ -52,13 +52,13 @@ Feature: Android companion
     Then it captures a screenshot and sends it to the phone model
 
   Scenario: Stays connected in the background
-    Given the companion app is in the background
+    Given the Yumi app is in the background
     When the Mac sends a command
     Then the phone receives and runs it within 2 seconds
 
   Scenario: First-time permission request
     Given the Mac calls get_location for the first time
-    Then the phone shows "Your Mac asked for your location. Allow the companion to use your location?"
+    Then the phone shows "Your Mac asked for your location. Allow Yumi to use your location?"
     And the location is sent only if the user allows it
 
   Scenario: Memory pressure fallback

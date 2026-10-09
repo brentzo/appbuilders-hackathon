@@ -25,7 +25,9 @@ Schema: [task-record-schema](../docs/task-record-schema.md).
 6. Workers return exactly one action, validated against a JSON schema.
 7. Subtasks with no unmet dependencies may run in parallel, subject to [SPEC-03](03-lane-routing.md).
 8. Limits are enforced: 25 steps per subtask, 3 attempts per subtask, subtask depth 1.
-9. When a task finishes, the companion speaks a one or two sentence summary on the device the user spoke to.
+9. When a task finishes, Yumi speaks a one or two sentence summary on the device the user spoke to.
+10. Task records (tasks, subtasks, steps, the action log, and step screenshots) are kept forever. Nothing is deleted automatically.
+11. The user can browse and search past tasks from the Mac menu bar and the phone app.
 
 ## Scenarios
 
@@ -43,19 +45,19 @@ Feature: Task lifecycle
   Scenario: Task finishes and reports back
     Given every subtask of a task is done
     Then the task status is "done"
-    And the companion says a short summary such as "Done. I put the summary of all 5 PDFs in a new note called PDF Summary."
+    And Yumi says a short summary such as "Done. I put the summary of all 5 PDFs in a new note called PDF Summary."
 
   Scenario: Resume after the app crashes
     Given a task is running and step 4 of a subtask has started
-    When the companion app crashes and is reopened
-    Then the companion says "I was interrupted while working on your task. Want me to pick up where I left off?"
+    When the Yumi app crashes and is reopened
+    Then Yumi says "I was interrupted while working on your task. Want me to pick up where I left off?"
     When the user says "yes"
     Then step 4 is marked "noEffect"
     And the screen is captured again before the next step
 
   Scenario: Resume after a reboot
     Given a task was paused before the Mac restarted
-    When the companion starts after the reboot
+    When Yumi starts after the reboot
     Then the paused task is listed with a "Resume" button
     And nothing runs until the user resumes it
 
@@ -70,8 +72,13 @@ Feature: Task lifecycle
     When it has not finished
     Then the subtask status is "failed"
     And the user hears the error from SPEC-11 for "task took too long"
+
+  Scenario: Finished tasks are kept
+    Given a task finished 6 months ago
+    When the user searches past tasks for "invoices"
+    Then the task is found with its steps and action log
 ```
 
-## Open questions
+## Revisit after the hackathon
 
-- Should finished tasks be kept forever, or cleaned up after a number of days?
+- Screenshots are kept forever for now, as a demo-phase trade-off. They are much larger than text records and can show private information. Before real users, decide on a retention period, a size limit, or a way for users to delete them.

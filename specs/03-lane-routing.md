@@ -96,7 +96,7 @@ Feature: Ghost handoff
   Scenario: Main cursor also gets stuck
     Given the main cursor is running a handed-off subtask
     When 3 steps in a row have no effect
-    Then the companion asks the user for help with the error from SPEC-11 for "stuck on screen"
+    Then Yumi asks the user for help with the error from SPEC-11 for "stuck on screen"
 ```
 
 ## Open questions

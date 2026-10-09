@@ -6,11 +6,11 @@ updated: 2026-10-09
 tags: [idea, local-ai, computer-use, mobile, hackathon]
 ---
 
-# Desktop Companion
+# Yumi
 
 A fully local companion that you give a goal by voice, on your Mac or your phone.
 A cursor spawns, repeats the goal back, and performs it across apps the way you would.
-When the goal allows it, the companion splits into several cursors and background helpers that work in parallel.
+When the goal allows it, Yumi splits into several cursors and background helpers that work in parallel.
 The Mac and the phone control each other in both directions, so a goal spoken on one device can run on the other.
 
 The leverage is the harness, not the model.

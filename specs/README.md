@@ -1,7 +1,7 @@
 # Specs
 
-Requirement specs for the Desktop Companion.
-Design background lives in [docs](../docs/desktop-companion.md).
+Requirement specs for Yumi.
+Design background lives in [docs](../docs/yumi.md).
 
 Each spec is one feature.
 It has frontmatter tags, plain-language requirements, and Gherkin scenarios.
@@ -30,13 +30,13 @@ Scenarios carry the same tags as Gherkin `@tags`, so they can later move into `.
 | SPEC-07 | [Safety and action log](07-safety.md) | p0 | mac, android |
 | SPEC-08 | [Device bridge](08-device-bridge.md) | p0 | mac, android |
 | SPEC-09 | [Cross-device routing](09-cross-device-routing.md) | p0 | mac, android |
-| SPEC-10 | [Android companion](10-android-companion.md) | p0 | android |
+| SPEC-10 | [Yumi on Android](10-android-companion.md) | p0 | android |
 | SPEC-11 | [User-facing errors](11-user-facing-errors.md) | p0 | mac, android |
-| SPEC-12 | [iPhone companion](12-iphone-companion.md) | p2 | iphone |
+| SPEC-12 | [Yumi on iPhone](12-iphone-companion.md) | p2 | iphone |
 
 ## Conventions
 
-- The product name is not decided yet. Specs say "the companion".
+- The product is called **Yumi**. The wake word is "Hey Yumi".
 - Spoken and on-screen copy in scenarios is real copy, not placeholders. Change it here first, then in code.
 - Every error a user can hit follows [SPEC-11](11-user-facing-errors.md): what happened, why, what to do next. No status codes, exception text, or vendor wording ever reaches the user.
 - Times shown to users use am/pm.

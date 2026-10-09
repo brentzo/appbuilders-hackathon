@@ -53,7 +53,7 @@ Feature: Mac to phone
 Feature: Phone to Mac
 
   Scenario: Phone goal runs on the phone
-    Given the companion app is open on the phone
+    Given the Yumi app is open on the phone
     When the user says "turn on do not disturb for an hour"
     Then the phone model classifies it as a phone goal
     And it runs on the phone
