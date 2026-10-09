@@ -56,6 +56,10 @@ const UI_RULES: readonly string[] = [
   "- Menus: click a menu bar item to open its menu, then click an item in it.",
   "- If your last action had no effect, try something different.",
   '- When a step says "new file", that file was just saved, in the folder it names. If saving it was the job, finish now with status "done" and say in the note which folder it is in, even if it is not the folder you meant. Never go looking for it.',
+  // A worker does only its own instruction; later subtasks do the rest (Brent's run, 2026-10-10: the
+  // "Open Spotify" worker saw the whole goal on screen and returned stuck without acting).
+  '- Do only your own instruction, not the whole goal. Finish with status "done" as soon as your instruction is met, even when the goal needs more steps after this one. The next steps do the rest.',
+  '- If your instruction is to open an app and that app\'s window is the one you are looking at, finish "done" without acting.',
 ];
 
 /**
