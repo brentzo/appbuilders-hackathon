@@ -17,7 +17,7 @@
         },
         "goal": { "description": "What the user said, transcribed.", "type": "string", "minLength": 1 },
         "confirmedGoal": {
-          "description": "What Yumi repeated back and the user accepted. Set when the task leaves awaitingConfirmation.",
+          "description": "What Yumi repeated back and the user accepted, or in Auto mode the transcript as heard, trimmed (SPEC-01 r14). Set when the task leaves awaitingConfirmation.",
           "type": "string",
           "minLength": 1
         },

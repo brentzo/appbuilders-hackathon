@@ -2018,14 +2018,17 @@ public struct StoreSecretParams: Codable, Equatable, Sendable {
     }
 }
 
-/// A new goal from the user's speech or typing (OBJ-15). The harness creates a task in awaitingConfirmation.
+/// A new goal from the user's speech or typing (OBJ-15). The harness creates a task in awaitingConfirmation and repeats the goal back, or, with autoMode, creates it straight in planning (SPEC-01 r14).
 public struct SubmitGoalParams: Codable, Equatable, Sendable {
     public var transcript: String
     public var originDeviceId: String
+    /// The Mac's Auto mode setting (SPEC-01 r14, OBJ-50). True skips the repeat-back: the task starts in planning with the transcript, trimmed, as its confirmedGoal. Approvals for sends and deletes still ask. Missing means false.
+    public var autoMode: Bool?
 
-    public init(transcript: String, originDeviceId: String) {
+    public init(transcript: String, originDeviceId: String, autoMode: Bool? = nil) {
         self.transcript = transcript
         self.originDeviceId = originDeviceId
+        self.autoMode = autoMode
     }
 }
 
@@ -2166,7 +2169,7 @@ public struct TaskRecord: Codable, Equatable, Sendable {
     public var originDeviceId: String
     /// What the user said, transcribed.
     public var goal: String
-    /// What Yumi repeated back and the user accepted. Set when the task leaves awaitingConfirmation.
+    /// What Yumi repeated back and the user accepted, or in Auto mode the transcript as heard, trimmed (SPEC-01 r14). Set when the task leaves awaitingConfirmation.
     public var confirmedGoal: String?
     public var status: TaskStatus
     /// Subtask ids in plan order.

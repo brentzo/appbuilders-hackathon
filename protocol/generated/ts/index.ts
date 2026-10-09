@@ -1019,10 +1019,12 @@ export interface StoreSecretParams {
   value: string;
 }
 
-/** A new goal from the user's speech or typing (OBJ-15). The harness creates a task in awaitingConfirmation. */
+/** A new goal from the user's speech or typing (OBJ-15). The harness creates a task in awaitingConfirmation and repeats the goal back, or, with autoMode, creates it straight in planning (SPEC-01 r14). */
 export interface SubmitGoalParams {
   transcript: string;
   originDeviceId: DeviceId;
+  /** The Mac's Auto mode setting (SPEC-01 r14, OBJ-50). True skips the repeat-back: the task starts in planning with the transcript, trimmed, as its confirmedGoal. Approvals for sends and deletes still ask. Missing means false. */
+  autoMode?: boolean;
 }
 
 export interface SubmitGoalResult {
@@ -1107,7 +1109,7 @@ export interface Task {
   originDeviceId: DeviceId;
   /** What the user said, transcribed. */
   goal: string;
-  /** What Yumi repeated back and the user accepted. Set when the task leaves awaitingConfirmation. */
+  /** What Yumi repeated back and the user accepted, or in Auto mode the transcript as heard, trimmed (SPEC-01 r14). Set when the task leaves awaitingConfirmation. */
   confirmedGoal?: string;
   status: TaskStatus;
   /** Subtask ids in plan order. */

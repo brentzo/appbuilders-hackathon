@@ -83,13 +83,17 @@
       "properties": { "taskId": { "$ref": "common.json#/$defs/Uuid" } }
     },
     "SubmitGoalParams": {
-      "description": "A new goal from the user's speech or typing (OBJ-15). The harness creates a task in awaitingConfirmation.",
+      "description": "A new goal from the user's speech or typing (OBJ-15). The harness creates a task in awaitingConfirmation and repeats the goal back, or, with autoMode, creates it straight in planning (SPEC-01 r14).",
       "type": "object",
       "additionalProperties": false,
       "required": ["transcript", "originDeviceId"],
       "properties": {
         "transcript": { "type": "string", "minLength": 1 },
-        "originDeviceId": { "$ref": "common.json#/$defs/DeviceId" }
+        "originDeviceId": { "$ref": "common.json#/$defs/DeviceId" },
+        "autoMode": {
+          "description": "The Mac's Auto mode setting (SPEC-01 r14, OBJ-50). True skips the repeat-back: the task starts in planning with the transcript, trimmed, as its confirmedGoal. Approvals for sends and deletes still ask. Missing means false.",
+          "type": "boolean"
+        }
       }
     },
     "SubmitGoalResult": {
