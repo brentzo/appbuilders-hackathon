@@ -32,14 +32,16 @@ Status: empty scaffold, nothing built yet.
 
 ## Deployment
 
-- **Address:** `wss://yumibridge.studiokova.co`. DNS is an `A` record on Cloudflare, set to "DNS only" (not proxied), so Caddy handles TLS and long-idle WebSocket connections are not cut by Cloudflare's proxy.
-- **Server:** Brent's VPS. Brent prepares it (ports 80 and 443 open, Caddy, Node.js LTS) and gives Jepoy SSH access.
-- **Reverse proxy:** Caddy terminates TLS and forwards to the bridge on a local port (`reverse_proxy 127.0.0.1:<port>`). Agree the port before deploying.
+- **Address:** `wss://yumibridge.studiokova.co`, IPv4 only (`62.146.237.15`). DNS is an `A` record on Cloudflare, set to "DNS only" (not proxied). There is no `AAAA` record, because the VPS's nginx sites serve HTTPS on IPv4 only.
+- **Server:** Brent's VPS (Ubuntu 24.04). Brent prepares it and gives Jepoy SSH access.
+- **Reverse proxy:** the existing nginx, with a certificate from certbot (`certbot --nginx`). The site forwards to the bridge on a local port with WebSocket upgrade headers and `proxy_read_timeout 1h`, since nginx's default 60 seconds would cut idle phone connections.
+- **Runtime:** a Docker container on a current Node.js LTS image, bound to `127.0.0.1` only. The VPS's system Node is v18 (past end of life) and other apps may rely on it, so the bridge does not use it.
+- **Port:** agree the local port with Brent before deploying, and keep it in the nginx site and the container config.
 
 ## Initial technical plan
 
 - TypeScript on Node.js (current LTS), sharing types and the reference crypto code from [protocol](../protocol/README.md).
-- WebSocket server behind a reverse proxy that handles TLS (for example Caddy).
+- WebSocket server behind the VPS's nginx, which handles TLS.
 - SQLite for the device registry and the short-lived holding of results and events.
 - Logs contain routing fields and errors only, never payloads.
 
