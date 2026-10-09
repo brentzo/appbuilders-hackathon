@@ -7,11 +7,12 @@ import ai.onnxruntime.TensorInfo
 import java.nio.FloatBuffer
 
 /**
- * The wake word model in use, and the phrase the user says to it.
+ * The openWakeWord model, and the phrase the user says, which the screens show whichever spotter runs.
  *
- * STAND-IN until OBJ-12: openWakeWord's pre-trained "hey jarvis" model. The screens already show "Hey Yumi",
- * so for now the phrase on screen is not the one the model hears. To switch, put `hey_yumi.onnx` in
- * `assets/wakeword/` and change [Current]'s model file to it. Nothing else changes.
+ * The model is only used when [WakeWordChoice.Current] is [WakeWordChoice.OpenWakeWord]; until OBJ-12 lands the app
+ * uses [WakeWordChoice.Vosk] instead. STAND-IN until OBJ-12: openWakeWord's pre-trained "hey jarvis" model. To switch,
+ * put `hey_yumi.onnx` in `assets/wakeword/`, change [Current]'s model file to it, and set [WakeWordChoice.Current] to
+ * [WakeWordChoice.OpenWakeWord]. Nothing else changes.
  */
 data class WakeWordConfig(
     /** File name under `assets/wakeword/`. */

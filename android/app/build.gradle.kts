@@ -1,3 +1,7 @@
+import java.net.URI
+import java.security.MessageDigest
+import java.util.zip.ZipInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -76,6 +80,8 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     implementation(libs.onnxruntime.android)
+    implementation(libs.vosk.android)
+    implementation(libs.jna) { artifact { type = "aar" } }
 
     testImplementation(libs.junit)
     testImplementation(libs.onnxruntime.jvm)
@@ -87,5 +93,72 @@ dependencies {
 configurations.configureEach {
     if (name.endsWith("UnitTestRuntimeClasspath")) {
         exclude(group = "com.microsoft.onnxruntime", module = "onnxruntime-android")
+    }
+}
+
+/**
+ * Puts Vosk's small English model (Apache 2.0, from https://alphacephei.com/vosk/models) in the app's assets, so the
+ * app ships with it and never downloads anything at run time. The zip is downloaded once per machine into Gradle's
+ * cache and checked against its SHA-256, which keeps 70 MB of model files out of git.
+ */
+abstract class FetchVoskModel : DefaultTask() {
+    @get:Input abstract val modelName: Property<String>
+    @get:Input abstract val sha256: Property<String>
+    @get:Internal abstract val cacheDir: DirectoryProperty
+    @get:OutputDirectory abstract val outputDir: DirectoryProperty
+
+    @TaskAction
+    fun fetch() {
+        val name = modelName.get()
+        val zip = cacheDir.file("$name.zip").get().asFile
+        if (!zip.isFile || sha256Of(zip) != sha256.get()) {
+            zip.parentFile.mkdirs()
+            val partial = File(zip.path + ".partial")
+            logger.lifecycle("Downloading $name")
+            URI("https://alphacephei.com/vosk/models/$name.zip").toURL().openStream().use { input ->
+                partial.outputStream().use { input.copyTo(it) }
+            }
+            val actual = sha256Of(partial)
+            check(actual == sha256.get()) { "$name.zip has SHA-256 $actual, expected ${sha256.get()}" }
+            check(partial.renameTo(zip)) { "Could not move $partial into place" }
+        }
+        val out = outputDir.get().asFile
+        out.deleteRecursively()
+        val target = File(out, "vosk")
+        ZipInputStream(zip.inputStream().buffered()).use { entries ->
+            generateSequence { entries.nextEntry }.filterNot { it.isDirectory }.forEach { entry ->
+                val file = File(target, entry.name)
+                check(file.canonicalPath.startsWith(target.canonicalPath + File.separator)) { "Bad zip entry ${entry.name}" }
+                file.parentFile.mkdirs()
+                file.outputStream().use { entries.copyTo(it) }
+            }
+        }
+    }
+
+    private fun sha256Of(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().buffered().use { input ->
+            val buffer = ByteArray(1 shl 16)
+            while (true) {
+                val n = input.read(buffer)
+                if (n < 0) break
+                digest.update(buffer, 0, n)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
+    }
+}
+
+val fetchVoskModel = tasks.register<FetchVoskModel>("fetchVoskModel") {
+    // Must match VoskSpotter.MODEL_NAME.
+    modelName = "vosk-model-small-en-us-0.15"
+    sha256 = "30f26242c4eb449f948e42cb302dd7a686cb29a3423a8367f99ff41780942498"
+    cacheDir = File(gradle.gradleUserHomeDir, "caches/yumi")
+    outputDir = layout.buildDirectory.dir("generated/voskModel")
+}
+
+androidComponents {
+    onVariants { variant ->
+        variant.sources.assets?.addGeneratedSourceDirectory(fetchVoskModel, FetchVoskModel::outputDir)
     }
 }

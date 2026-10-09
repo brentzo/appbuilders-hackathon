@@ -8,6 +8,7 @@ Specs still decide behavior: if a report shows a spec is wrong, raise it and cha
 |---|---|
 | [Android background survival](android-background-survival.md) | Whether Yumi's foreground service stays alive with the app in the background, on the development phone |
 | [Android voice intake and wake word](android-voice-intake.md) | Push-to-talk, the wake word, battery, CPU, misses, false triggers, and traffic on the demo phone |
+| ["Hey Yumi" on Android with Vosk](android-hey-yumi-vosk.md) | The Vosk spotter that replaces the "Hey Jarvis" stand-in: library, model, licences, and how often it wakes |
 | [Yumi's neural voice on the Mac](mac-neural-voice.md) | The voice models compared, the one Brent picked, and its speed and memory next to Qwen3.5-9B |
 | [Setup for judges](judges-setup.md) | How to run Yumi on your own Mac and Android phone, and how to run the tests |
 | [Demo readiness](demo-readiness.md) | What works end to end for the hackathon demo, what is missing, the risks, and the actions before demo day |

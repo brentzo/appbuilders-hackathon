@@ -11,7 +11,7 @@ class WakeWordEngine(
     private val classifier: WakeWordClassifier,
     private val threshold: Float,
     random: Random = Random.Default,
-) {
+) : WakeWordSpotter {
     private val features = AudioFeatures(models, classifier.inputFrames, random)
     private var chunks = 0
 
@@ -23,17 +23,14 @@ class WakeWordEngine(
         return if (chunks++ < WARM_UP_CHUNKS) 0f else score
     }
 
-    /** True if the chunk completes the wake word. */
-    fun detect(chunk: ShortArray): Boolean = score(chunk) >= threshold
+    override fun detect(chunk: ShortArray): Boolean = score(chunk) >= threshold
 
-    /** Forgets all audio heard so far. Call it after a detection and whenever listening stops. */
-    fun reset() {
+    override fun reset() {
         features.reset()
         chunks = 0
     }
 
-    /** Forgets all audio heard so far, without preparing to listen again. */
-    fun clear() {
+    override fun clear() {
         features.clear()
         chunks = 0
     }

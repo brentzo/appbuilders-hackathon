@@ -50,7 +50,7 @@ data class SettingsState(
     val runInBackground: Boolean,
     val batteryUnrestricted: Boolean,
     val showTesting: Boolean,
-    /** The wake word as the user says it. A stand-in until the "Hey Yumi" model exists. */
+    /** The wake word as the user says it. */
     val wakePhrase: String,
 )
 

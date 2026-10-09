@@ -3,7 +3,6 @@ package ai.yumi.android.voice.wakeword
 import ai.yumi.android.service.WakeWordDetector
 import ai.yumi.android.voice.MicrophoneOwner
 import android.annotation.SuppressLint
-import android.content.Context
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
@@ -25,33 +24,34 @@ import kotlin.coroutines.coroutineContext
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * Listens for the wake word with openWakeWord's models on ONNX Runtime, inside the foreground service
- * (SPEC-01 requirements 10 and 12).
+ * Listens for the wake word inside the foreground service (SPEC-01 requirements 10 and 12), with whichever
+ * [WakeWordSpotter] [WakeWordChoice] picks.
  *
- * Audio is read in 80 ms chunks and only kept in [WakeWordEngine]'s short buffers. On a detection, and whenever
- * listening stops, those buffers are cleared, so speech before the wake word is never transcribed or stored.
+ * Audio is read in 80 ms chunks and handed straight to the spotter, which only keeps its own short state. On a
+ * detection, and whenever listening stops, that state is cleared, so speech before the wake word is never stored.
  * The detector also lets go of the microphone whenever voice intake needs it ([MicrophoneOwner]).
  */
-class OpenWakeWordDetector(
-    context: Context,
+class MicrophoneWakeWordDetector(
     private val microphone: MicrophoneOwner,
-    private val config: WakeWordConfig,
+    /** Loads the spotter on the audio thread, or returns null (and logs why) if it cannot. */
+    private val loadSpotter: () -> WakeWordSpotter?,
+    /** Logged when listening starts, to say which detector runs and whether it is a stand-in. */
+    private val description: String,
     private val onDetected: () -> Unit,
 ) : WakeWordDetector {
 
-    private val appContext = context.applicationContext
     private val _listening = MutableStateFlow(false)
     override val listening: StateFlow<Boolean> = _listening.asStateFlow()
 
     private var job: Job? = null
-    private var engine: WakeWordEngine? = null
+    private var spotter: WakeWordSpotter? = null
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val audioThread = Dispatchers.IO.limitedParallelism(1)
 
     override fun start(scope: CoroutineScope) {
         if (job?.isActive == true) return
-        if (config.isStandIn) Log.i(TAG, "Wake word is a STAND-IN: ${config.modelFile} until OBJ-12's hey_yumi.onnx")
+        Log.i(TAG, "Wake word detector: $description")
         job = scope.launch(audioThread) { run() }
     }
 
@@ -61,19 +61,19 @@ class OpenWakeWordDetector(
     }
 
     private suspend fun run() {
-        val engine = engine ?: load() ?: return
-        this.engine = engine
+        val active = spotter ?: loadSpotter() ?: return
+        spotter = active
         try {
             while (coroutineContext.isActive) {
                 microphone.intakeActive.first { !it }
-                if (listenUntilDetected(engine)) {
+                if (listenUntilDetected(active)) {
                     Log.i(TAG, "Wake word detected")
                     // Intake marks the microphone as taken before this returns, so the loop waits for it to finish.
                     withContext(Dispatchers.Main) { onDetected() }
                 }
             }
         } finally {
-            engine.clear()
+            active.clear()
             _listening.value = false
             microphone.setDetectorOpen(false)
         }
@@ -81,12 +81,12 @@ class OpenWakeWordDetector(
 
     /** Opens the microphone and reads until the wake word is heard (true) or intake needs the microphone (false). */
     @SuppressLint("MissingPermission") // The service only starts the detector while the microphone is allowed.
-    private suspend fun listenUntilDetected(engine: WakeWordEngine): Boolean {
+    private suspend fun listenUntilDetected(active: WakeWordSpotter): Boolean {
         val record = openRecord() ?: run {
             delay(RETRY_DELAY)
             return false
         }
-        engine.reset()
+        active.reset()
         val chunk = ShortArray(AudioFeatures.CHUNK_SAMPLES)
         try {
             record.startRecording()
@@ -100,11 +100,11 @@ class OpenWakeWordDetector(
                     delay(RETRY_DELAY)
                     return false
                 }
-                if (engine.detect(chunk)) return true
+                if (active.detect(chunk)) return true
             }
         } finally {
             chunk.fill(0)
-            engine.clear()
+            active.clear()
             record.stop()
             record.release()
             _listening.value = false
@@ -146,21 +146,6 @@ class OpenWakeWordDetector(
             return null
         }
         return record
-    }
-
-    private fun load(): WakeWordEngine? = try {
-        val assets = appContext.assets
-        fun read(name: String) = assets.open("${WakeWordConfig.ASSET_DIR}/$name").use { it.readBytes() }
-        val models = OnnxWakeWordModels(
-            read(WakeWordConfig.MELSPECTROGRAM_FILE),
-            read(WakeWordConfig.EMBEDDING_FILE),
-            read(config.modelFile),
-        )
-        WakeWordEngine(models, models, config.threshold)
-    } catch (e: Exception) {
-        // The status line then never says it is listening, which is the truth. Nothing to show the user.
-        Log.e(TAG, "Could not load the wake word models", e)
-        null
     }
 
     private companion object {

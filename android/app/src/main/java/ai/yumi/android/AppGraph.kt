@@ -16,7 +16,7 @@ import ai.yumi.android.voice.OnDeviceSpeechEngine
 import ai.yumi.android.voice.OnDeviceVoiceInput
 import ai.yumi.android.voice.VoiceInput
 import ai.yumi.android.voice.VoiceTrigger
-import ai.yumi.android.voice.wakeword.OpenWakeWordDetector
+import ai.yumi.android.voice.wakeword.WakeWordChoice
 import ai.yumi.android.voice.wakeword.WakeWordConfig
 import android.Manifest
 import android.content.Context
@@ -52,7 +52,7 @@ class AppGraph(context: Context) {
         },
         scope = appScope,
     )
-    val wakeWord: WakeWordDetector = OpenWakeWordDetector(context, microphone, wakeWordConfig) {
+    val wakeWord: WakeWordDetector = WakeWordChoice.Current.detector(context, microphone) {
         voice.start(VoiceTrigger.WakeWord)
     }
 
@@ -69,7 +69,7 @@ class AppGraph(context: Context) {
         Log.i(
             "Yumi",
             "Stand-ins in use: placeholder cat (OBJ-10), no bridge (OBJ-23), " +
-                "wake word ${wakeWordConfig.modelFile} instead of Hey Yumi (OBJ-12), temporary protocol types (OBJ-01)",
+                "wake word ${WakeWordChoice.Current} instead of OBJ-12's Hey Yumi model, temporary protocol types (OBJ-01)",
         )
     }
 }

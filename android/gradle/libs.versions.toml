@@ -11,6 +11,10 @@ junit = "4.13.2"
 # 1.28.0 is the newest ONNX Runtime without telemetry. 1.29.0 and later add INTERNET and a provider that starts an
 # HTTP telemetry client at app start, which breaks "everything runs locally". Check the AAR manifest before bumping.
 onnxruntime = "1.28.0"
+# Vosk spots "Hey Yumi" until OBJ-12's model is ready (OBJ-59). Its POM excludes JNA's transitive dependencies and
+# wants the AAR, so JNA is declared on its own at the version Vosk's POM names.
+vosk = "0.3.75"
+jna = "5.18.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -30,6 +34,8 @@ kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 onnxruntime-android = { group = "com.microsoft.onnxruntime", name = "onnxruntime-android", version.ref = "onnxruntime" }
+vosk-android = { group = "com.alphacephei", name = "vosk-android", version.ref = "vosk" }
+jna = { group = "net.java.dev.jna", name = "jna", version.ref = "jna" }
 # The desktop build of the same ONNX Runtime version, so unit tests run the real models on the JVM.
 onnxruntime-jvm = { group = "com.microsoft.onnxruntime", name = "onnxruntime", version.ref = "onnxruntime" }
 

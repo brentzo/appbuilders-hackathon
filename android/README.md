@@ -9,7 +9,7 @@ It is built in two parts ([SPEC-10](../specs/10-android-companion.md)):
 Owner: Brent.
 
 Status: app shell built ([OBJ-22](../objectives/OBJ-22-android-app-shell.md)): home screen with a placeholder cat, permission onboarding, settings, the foreground service, and the error presenter.
-Voice intake and the wake word work ([OBJ-24](../objectives/OBJ-24-android-voice-intake.md)), with "Hey Jarvis" standing in for "Hey Yumi" until OBJ-12's model exists.
+Voice intake and the wake word work ([OBJ-24](../objectives/OBJ-24-android-voice-intake.md)), with Vosk spotting "Hey Yumi" ([OBJ-59](../objectives/OBJ-59-android-hey-yumi-vosk.md)) until OBJ-12's trained model exists.
 The bridge and the Rive cat are stand-ins until their objectives land.
 
 ## Devices
@@ -46,7 +46,7 @@ The bridge and the Rive cat are stand-ins until their objectives land.
 - Speech (Part A): `SpeechRecognizer.createOnDeviceSpeechRecognizer`, English only, never the cloud. Other languages get the "Language not supported on this phone" error from [SPEC-11](../specs/11-user-facing-errors.md).
 - Speech (Part B): whisper.cpp through JNI.
 - Speech output: Android `TextToSpeech`, behind a `speak` interface.
-- Wake word: openWakeWord models with ONNX Runtime for Android, inside the foreground service.
+- Wake word: openWakeWord models with ONNX Runtime for Android, inside the foreground service. Until OBJ-12's model is ready, an offline Vosk recognizer limited to "hey yumi" runs there instead (SPEC-01 Decisions).
 - Foreground service type `specialUse` or `connectedDevice` for the bridge, never `dataSync` (it has a daily time limit on Android 15), plus `microphone` for the wake word.
 - Bridge: OkHttp WebSocket in the foreground service, lazysodium for crypto, types generated from [protocol](../protocol/README.md).
 - QR scanning: CameraX with an on-device barcode scanner.
@@ -122,9 +122,19 @@ If Yumi stops when the phone is locked, open Yumi's app settings from Yumi's Set
 | `notifications/` | Notification channels, the service notification, and permission request notifications |
 | `ui/` | Compose screens: onboarding, home, settings, the cat renderer, and the theme |
 | `voice/` | Voice intake: `OnDeviceVoiceInput` (push-to-talk and after the wake word), `SpeechEngine` (the on-device recognizer only), `MicrophoneOwner`, the listening chime, and the `GoalSink.onGoal` entry point |
-| `voice/wakeword/` | The wake word: `OpenWakeWordDetector` (in the foreground service), `AudioFeatures` (the Kotlin port of openWakeWord's feature step), `WakeWordEngine`, the ONNX models, and `WakeWordConfig` |
+| `voice/wakeword/` | The wake word: `MicrophoneWakeWordDetector` (the microphone loop in the foreground service), `WakeWordChoice` (the switch between spotters), `VoskSpotter`, and for openWakeWord `AudioFeatures` (the Kotlin port of its feature step), `WakeWordEngine`, the ONNX models, and `WakeWordConfig` |
 
 ### Wake word models
+
+`WakeWordChoice.Current` picks the spotter: `Vosk` now, `OpenWakeWord` once OBJ-12's model is ready.
+
+**Vosk (in use).** `com.alphacephei:vosk-android` 0.3.75 (Apache 2.0) with JNA 5.18.1 (Apache 2.0 or LGPL 2.1), and the `vosk-model-small-en-us-0.15` model (40 MB zip, Apache 2.0, from `https://alphacephei.com/vosk/models`).
+The model is not in git: the `fetchVoskModel` Gradle task downloads the zip once per machine into `~/.gradle/caches/yumi/`, checks its SHA-256 (`30f26242c4eb449f948e42cb302dd7a686cb29a3423a8367f99ff41780942498`), and adds it to the APK's assets.
+So the first build needs internet; the app never does.
+On its first start the app copies the model out of the APK into its private storage, because Vosk reads it from files.
+The grammar is `["hey yumi", "[unk]"]`, and only finished utterances count. Measurements are in [wiki/android-hey-yumi-vosk.md](../wiki/android-hey-yumi-vosk.md).
+
+**openWakeWord.**
 
 The files in `app/src/main/assets/wakeword/` come from openWakeWord's v0.5.1 release (`https://github.com/dscripka/openWakeWord/releases/download/v0.5.1/<file>`), the release its current code downloads from:
 
@@ -134,7 +144,7 @@ The files in `app/src/main/assets/wakeword/` come from openWakeWord's v0.5.1 rel
 | `embedding_model.onnx` | `70d164290c1d095d1d4ee149bc5e00543250a7316b59f31d056cff7bd3075c1f` | Apache 2.0 (Google's speech_embedding, re-implemented by openWakeWord) |
 | `hey_jarvis_v0.1.onnx` | `94a13cfe60075b132f6a472e7e462e8123ee70861bc3fb58434a73712ee0d2cb` | CC BY-NC-SA 4.0, non-commercial. Stand-in only |
 
-To switch to "Hey Yumi": put `hey_yumi.onnx` in that folder and change `WakeWordConfig.Current` to it and the phrase to `"Hey\u00A0Yumi"`.
+To switch to OBJ-12's model: put `hey_yumi.onnx` in that folder, change `WakeWordConfig.Current` to it, and set `WakeWordChoice.Current` to `OpenWakeWord`.
 The UI reads the phrase from there.
 `AudioFeaturesParityTest` checks the Kotlin port against openWakeWord's Python pipeline, using `src/test/resources/wakeword/reference.py` and its recorded scores.
 | `protocol/TemporaryTypes.kt` | Temporary local types until the generated protocol types land (OBJ-01) |
@@ -144,6 +154,7 @@ The UI reads the phrase from there.
 - **Part B model:** Qwen3.5-4B, fixed (SPEC-10 requirement 9). 9B (~6 GB plus context) was too tight on 12 GB of real RAM, and 4B scores about the same on phone tasks (AndroidWorld 58.6 vs 57.8). Decided 2026-10-09.
 - **ONNX Runtime:** pinned to 1.28.0, the newest release without telemetry. 1.29.0 and later add the INTERNET permission and a content provider that starts an HTTP telemetry client when the app opens. The manifest also removes that provider, so a version bump cannot turn it on. Chosen in OBJ-24 on 2026-10-09.
 - **ABIs:** arm64 only. Both phones are arm64, and ONNX Runtime adds 34 to 41 MB per ABI. Chosen in OBJ-24 on 2026-10-09.
+- **Vosk until OBJ-12:** the phone spots "Hey Yumi" with Vosk, limited by a grammar to that phrase, because the trained openWakeWord model may not be ready before the deadline (SPEC-01 Decisions). Sound-alikes such as "hey you, come here" can wake it, which is fine for the demo. Its model is fetched at build time with a checksum instead of committed, to keep 70 MB of binaries out of git. Chosen in OBJ-59 on 2026-10-10.
 - **Android SDK:** stay on compile and target SDK 36 with AGP 8.13. Newer AndroidX releases need SDK 37 and AGP 9, which adds disk use and upgrade risk for no feature we need. Decided 2026-10-09.
 
 ## Specs
