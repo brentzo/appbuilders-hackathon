@@ -4,9 +4,10 @@ import YumiProtocol
 @testable import Yumi
 
 /// Runs `HarnessClient` against the real mock harness from protocol/mocks, so the tests see the
-/// same messages and error shapes the app does. Needs node and `npm install` in protocol/.
+/// same messages and error shapes the app does. Needs node and `npm install` in protocol/: without
+/// them these tests fail with a message saying so, rather than being skipped quietly.
 @MainActor
-@Suite(.serialized, .enabled(if: MockHarnessProcess.isAvailable))
+@Suite(.serialized, .timeLimit(.minutes(1)))
 struct HarnessClientTests {
     @Test func helloPingAndEvents() async throws {
         let mock = try await MockHarnessProcess.start(script: "windows-and-bridge", speed: "0")
@@ -18,6 +19,13 @@ struct HarnessClientTests {
         try await waitUntil { client.linkState == .connected }
         try await client.ping()
 
+        // The script has 8 events. If fewer arrive, stopping the client ends the stream, so the
+        // test fails on the counts below instead of waiting forever.
+        let deadline = Task { @MainActor in
+            try await Task.sleep(for: .seconds(15))
+            client.stop()
+        }
+        defer { deadline.cancel() }
         var names: [String] = []
         var errors: [ErrorKind] = []
         for await event in client.events {
@@ -25,6 +33,7 @@ struct HarnessClientTests {
             if case .userError(let error) = event { errors.append(error.kind) }
             if names.count == 8 { break }
         }
+        #expect(names.count == 8, "Only \(names.count) of the script's 8 events arrived in 15 seconds")
         #expect(names.contains("bridgeStateChanged"))
         #expect(names.contains("interruptedTaskFound"))
         #expect(errors.count == 2)
@@ -90,8 +99,18 @@ nonisolated struct MockHarnessProcess {
             .appendingPathComponent("protocol")
     }
 
-    static var isAvailable: Bool {
-        FileManager.default.fileExists(atPath: protocolFolder.appendingPathComponent("node_modules/tsx").path)
+    enum SetupError: Error, CustomStringConvertible {
+        case dependenciesMissing(String)
+        case nodeNotFound
+
+        var description: String {
+            switch self {
+            case .dependenciesMissing(let path):
+                "The mock harness tests need the protocol package: run `npm install` in \(path)"
+            case .nodeNotFound:
+                "The mock harness tests need Node.js, and node was not found through the login or interactive shell"
+            }
+        }
     }
 
     @MainActor static func start(
@@ -100,7 +119,12 @@ nonisolated struct MockHarnessProcess {
         fail: String? = nil,
         socketPath: String = NSTemporaryDirectory() + "yumi-\(UUID().uuidString.prefix(8)).sock"
     ) async throws -> MockHarnessProcess {
-        guard let node = await NodeLocator.shared.nodeURL() else { throw CancellationError() }
+        guard FileManager.default.fileExists(atPath: protocolFolder.appendingPathComponent("node_modules/tsx").path) else {
+            throw SetupError.dependenciesMissing(protocolFolder.path)
+        }
+        guard let node = await NodeLocator.shared.nodeURL() else {
+            throw SetupError.nodeNotFound
+        }
         let process = Process()
         process.executableURL = node
         process.currentDirectoryURL = protocolFolder
