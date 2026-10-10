@@ -5,7 +5,7 @@ product: harness
 assignee: Brent
 touches: [mac, models]
 specs: [SPEC-05]
-status: todo
+status: in-progress
 priority: p1
 depends-on: []
 integrates-with: [OBJ-75]

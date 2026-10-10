@@ -138,7 +138,7 @@ If a spec turns out to be wrong or unclear, stop and raise it. Do not quietly ch
 | [OBJ-78](OBJ-78-android-cross-device-edge-cases.md) | Android edge cases for goals sent to the Mac | android | Brent | 09 | 76 | 67, 69, 71, 77 | todo |
 | [OBJ-79](OBJ-79-android-wake-the-mac.md) | Wake the Mac from the phone | android | Brent | 09 | 76, 78 | 80 | todo |
 | [OBJ-80](OBJ-80-harness-wake-and-lock.md) | Harness wake addresses and a locked Mac | harness | Brent | 09 | 76 | 68, 79 | done |
-| [OBJ-81](OBJ-81-uitars-vision-step-poc.md) | Use UI-TARS as the vision step model (POC) | harness | Brent | 05 | - | 75 | todo |
+| [OBJ-81](OBJ-81-uitars-vision-step-poc.md) | Use UI-TARS as the vision step model (POC) | harness | Brent | 05 | - | 75 | in-progress |
 <!-- generated:objectives-index:end -->
 
 ## Priority and blocking
