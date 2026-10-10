@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/images/yumi-thumbnail.png" alt="Yumi Thumbnail" width="100%" style="border-radius: 8px;">
+</p>
+
 # Yumi
 
 Yumi is a voice-driven AI companion for the Mac that does real work in your apps, and all of its AI runs on your own devices.
