@@ -620,4 +620,5 @@ Every line about a task has its `taskId`, and every line about a subtask has its
 | [OBJ-74](../objectives/OBJ-74-save-list-to-note.md) | Save a list into a new note | Brent | done |
 | [OBJ-77](../objectives/OBJ-77-harness-cross-device-edge-cases.md) | Harness edge cases for cross-device routing | Brent | done |
 | [OBJ-80](../objectives/OBJ-80-harness-wake-and-lock.md) | Harness wake addresses and a locked Mac | Brent | done |
+| [OBJ-81](../objectives/OBJ-81-uitars-vision-step-poc.md) | Use UI-TARS as the vision step model (POC) | Brent | in-progress |
 <!-- generated:product-objectives:end -->

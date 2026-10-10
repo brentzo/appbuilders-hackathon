@@ -183,7 +183,7 @@ Close other heavy apps, such as the Android emulator or a large build, or every 
 The Android app is Yumi's voice remote.
 You say a goal on the phone, the phone repeats it back, and once you confirm, the goal is sent end to end encrypted to the Mac, which runs it.
 The phone shows "Working on your Mac" with the current step and Stop, and says the summary when the task ends.
-Approvals for a phone goal show on the Mac, not on the phone, and the phone does not run alarms, timers, or other phone-only goals yet: every goal goes to the Mac.
+Approvals for a phone goal are asked on the phone, but the phone cannot answer them yet, and the phone does not run alarms, timers, or other phone-only goals yet: every goal goes to the Mac.
 Path 2 must be running, because the Mac runs the goals.
 
 1. Tell Gradle where the Android SDK is, from `android/`:

@@ -5,7 +5,7 @@ It is everything the user sees and hears on the Mac, and every native capability
 
 Owner: Patrick.
 
-Status: the app shell is in progress ([OBJ-14](../objectives/OBJ-14-mac-app-shell.md)): menu bar item, status line, permission onboarding, settings, harness supervision, the harness RPC client, and the error presenter.
+Status: the app shell is built ([OBJ-14](../objectives/OBJ-14-mac-app-shell.md)): menu bar item, status line, permission onboarding, settings, harness supervision, the harness RPC client, and the error presenter.
 It starts the real harness from `harness/` by default, or the mock harness with `-YumiMockHarness YES`.
 
 ## Responsibilities

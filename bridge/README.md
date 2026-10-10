@@ -6,7 +6,7 @@ It can never read them.
 
 Owner: Jepoy.
 
-Status: relay implementation in progress (OBJ-13). Live VPS rollout is tracked by OBJ-32.
+Status: the relay is built ([OBJ-13](../objectives/OBJ-13-bridge-relay-server.md)) and deployed to the VPS ([OBJ-32](../objectives/OBJ-32-production-bridge-deployment.md)), verified live on 2026-10-09.
 
 ## Responsibilities
 

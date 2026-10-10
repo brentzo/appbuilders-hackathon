@@ -1,5 +1,8 @@
 # Demo readiness
 
+> **Superseded.** This audit is from 2026-10-09, before the demo worked live on 2026-10-10.
+> The current state is in [the README](../README.md#what-works-and-what-does-not) and [the demo script](demo-script.md); this page is kept as the record of what was missing on that date.
+
 Date: 2026-10-09, 11:20 pm.
 Audited on `main` at `b29370a` by Jepoy, with Claude Code.
 Scope: every product, every objective, the live relay, and every check `scripts/verify.py` runs.

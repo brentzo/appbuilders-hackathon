@@ -99,7 +99,6 @@ With Auto mode on there is no repeat-back and no offer: Yumi says "On it." and t
 
 ## What not to promise on stage
 
-- Approvals on the phone: an approval for a phone goal shows on the Mac.
+- Approvals on the phone: a risky action from a phone goal asks on the phone, but the phone cannot answer it yet.
 - Alarms, timers, or anything that runs on the phone itself: every phone goal goes to the Mac.
 - Sending mail: the approval card cannot read a Mail draft's recipients yet, so a send does not run.
-- Several goals queued up: a second goal starts at once and competes for the model.

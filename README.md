@@ -37,15 +37,15 @@ Built and tested, with no recorded live run on the final build yet:
 
 - Ghost cats working in other windows at the same time, and handing a stuck step to the main cat ([OBJ-09](objectives/OBJ-09-ghost-handoff.md)).
 - Stop and take-over on the Mac, the approval cards for sends and deletes, and the action log ([OBJ-38](objectives/OBJ-38-approvals-pause-and-action-log.md)).
+- A goal from the phone while the Mac is busy queues behind the running task and starts when it ends; an offline phone call fails at once, and an unanswered approval pauses after 5 minutes ([OBJ-77](objectives/OBJ-77-harness-cross-device-edge-cases.md)).
 - Spotify through a screenshot and vision clicks ([OBJ-75](objectives/OBJ-75-vision-fallback.md)), being fixed now.
 
 Cut or not finished:
 
-- **Approvals on the phone.** An approval for a goal sent from the phone shows on the Mac ([OBJ-70](objectives/OBJ-70-harness-phone-approvals-and-stop.md), [OBJ-71](objectives/OBJ-71-android-approvals.md)).
+- **Approvals answered on the phone.** A risky action from a phone goal asks on the phone, but the phone's approval cards are not built yet, so it has no answer there ([OBJ-70](objectives/OBJ-70-harness-phone-approvals-and-stop.md), [OBJ-71](objectives/OBJ-71-android-approvals.md)).
 - **Tools that run on the phone, and phone-only goals** such as alarms and timers. Every phone goal is sent to the Mac ([OBJ-66](objectives/OBJ-66-android-phone-tool-host.md), [OBJ-67](objectives/OBJ-67-android-goal-routing.md)).
 - **Scanning the pairing QR code with the phone.** The phone pairs from a debug build over `adb` ([setup guide](wiki/judges-setup.md#pair-the-phone)).
 - **Sending mail.** Sends are gated by approvals, but no Mail run was done, and the approval card cannot read a Mail draft's recipients yet, so a send does not run.
-- **A queue on the Mac.** A phone goal starts at once, even while another task runs.
 - **A trained "Hey Yumi" model.** The phrase is spotted by Apple's on-device recognizer on the Mac and by Vosk on Android ([OBJ-58](objectives/OBJ-58-mac-hey-yumi-recognizer.md), [OBJ-59](objectives/OBJ-59-android-hey-yumi-vosk.md)).
 - **The animated Rive cat.** The cursor is the cat drawn as one still pose per state.
 - **A model on the phone, and the iPhone app.** Both were planned for later.

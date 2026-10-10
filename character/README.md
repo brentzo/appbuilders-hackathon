@@ -5,7 +5,7 @@ This product is the animated cat itself, a Rive file that both the Mac cursor an
 
 Owner: Patrick.
 
-Status: master art and video assets are done; the Rive file is next ([OBJ-10](../objectives/OBJ-10-yumi-cat-v0.md)).
+Status: master art and video assets are done; the Rive file is still to come. The apps draw a static pose per state for now ([OBJ-10](../objectives/OBJ-10-yumi-cat-v0.md)).
 
 ## Responsibilities
 
